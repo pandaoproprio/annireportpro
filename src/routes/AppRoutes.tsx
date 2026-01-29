@@ -12,6 +12,7 @@ import { ActivityManager } from '@/pages/ActivityManager';
 import { ReportGenerator } from '@/pages/ReportGenerator';
 import { TeamReportGenerator } from '@/pages/TeamReportGenerator';
 import { Settings } from '@/pages/Settings';
+import { UserManagement } from '@/pages/UserManagement';
 import { Button } from '@/components/ui/button';
 import { 
   Select, 
@@ -22,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2 
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown 
 } from 'lucide-react';
 
 
@@ -124,6 +125,9 @@ const Layout: React.FC = () => {
             <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" />
             <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" />
             <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" />
+            {role === 'SUPER_ADMIN' && (
+              <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" />
+            )}
           </nav>
 
           {/* User Info */}
@@ -175,6 +179,7 @@ const Layout: React.FC = () => {
             <Route path="/report" element={<ReportGenerator />} />
             <Route path="/team-report" element={<TeamReportGenerator />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/users" element={<UserManagement />} />
           </Routes>
         </div>
 
