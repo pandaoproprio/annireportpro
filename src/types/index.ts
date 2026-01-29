@@ -52,11 +52,15 @@ export interface ReportSection {
 
 export interface ReportData {
   logo?: string;
+  logoSecondary?: string;
   objectOverride?: string;
   executiveSummary?: string;
   goalNarratives?: Record<string, string>;
+  goalPhotos?: Record<string, string[]>;
   otherActionsText?: string;
+  otherActionsPhotos?: string[];
   communicationText?: string;
+  communicationPhotos?: string[];
   satisfactionText?: string;
   futureActionsText?: string;
   expenses?: ExpenseItem[];
@@ -85,6 +89,10 @@ export interface Activity {
 export interface Project {
   id: string;
   organizationName: string;
+  organizationAddress?: string;
+  organizationWebsite?: string;
+  organizationEmail?: string;
+  organizationPhone?: string;
   name: string;
   fomentoNumber: string;
   funder: string;

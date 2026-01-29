@@ -17,6 +17,10 @@ export const Onboarding: React.FC = () => {
   const [formData, setFormData] = useState<Partial<Project>>({
     id: Date.now().toString(),
     organizationName: '',
+    organizationAddress: '',
+    organizationWebsite: '',
+    organizationEmail: '',
+    organizationPhone: '',
     name: '',
     fomentoNumber: '',
     funder: '',
@@ -111,12 +115,28 @@ export const Onboarding: React.FC = () => {
                 <CardTitle className="text-xl mb-4">Dados Básicos</CardTitle>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Nome da Organização</Label>
+                    <Label>Nome da Organização *</Label>
                     <Input value={formData.organizationName} onChange={e => setFormData({ ...formData, organizationName: e.target.value })} placeholder="ONG Exemplo" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Nome do Projeto</Label>
+                    <Label>Nome do Projeto *</Label>
                     <Input value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} placeholder="Projeto Cultura Viva" />
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label>Endereço da Organização</Label>
+                    <Input value={formData.organizationAddress} onChange={e => setFormData({ ...formData, organizationAddress: e.target.value })} placeholder="Rua..., nº... - Bairro, Cidade - UF, CEP" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Website</Label>
+                    <Input value={formData.organizationWebsite} onChange={e => setFormData({ ...formData, organizationWebsite: e.target.value })} placeholder="www.exemplo.org.br" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>E-mail</Label>
+                    <Input value={formData.organizationEmail} onChange={e => setFormData({ ...formData, organizationEmail: e.target.value })} placeholder="contato@exemplo.org.br" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Telefone</Label>
+                    <Input value={formData.organizationPhone} onChange={e => setFormData({ ...formData, organizationPhone: e.target.value })} placeholder="(21) 99999-9999" />
                   </div>
                   <div className="space-y-2">
                     <Label>Nº Termo/Fomento</Label>
