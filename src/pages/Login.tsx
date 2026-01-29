@@ -28,8 +28,8 @@ export const Login: React.FC = () => {
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary shadow-lg mb-4">
             <BarChart3 className="w-8 h-8 text-primary-foreground" />
           </div>
-          <h1 className="text-3xl font-bold text-foreground">SocialImpact</h1>
-          <p className="text-muted-foreground mt-2">Gestão de Projetos Sociais</p>
+          <h1 className="text-3xl font-bold text-foreground">AnnIReport</h1>
+          <p className="text-muted-foreground mt-2 text-sm">Dados confiáveis para decisões que transformam realidades</p>
         </div>
 
         <Card className="shadow-xl border-0">
@@ -68,9 +68,18 @@ export const Login: React.FC = () => {
           </CardContent>
         </Card>
 
-        <p className="text-center text-xs text-muted-foreground mt-8">
-          Sistema de Relatórios Narrativos para Projetos Sociais
-        </p>
+        <div className="text-center text-xs text-muted-foreground mt-8 space-y-1">
+          <p>
+            <span className="font-semibold text-foreground">AnnIReport</span> © 2026 — Desenvolvido por <span className="font-medium">AnnITech</span> | IT Solutions
+          </p>
+          <p className="space-x-2">
+            <a href="#" className="hover:text-primary transition-colors">Política de Privacidade</a>
+            <span>•</span>
+            <a href="#" className="hover:text-primary transition-colors">Termos de Uso</a>
+            <span>•</span>
+            <a href="#" className="hover:text-primary transition-colors">Suporte</a>
+          </p>
+        </div>
       </div>
     </div>
   );

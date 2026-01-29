@@ -61,8 +61,8 @@ const Layout: React.FC = () => {
                   <BarChart3 className="w-5 h-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="font-bold text-sidebar-primary text-lg">SocialImpact</h1>
-                  <p className="text-[10px] text-sidebar-foreground/70 uppercase tracking-wider">Relatórios</p>
+                  <h1 className="font-bold text-sidebar-primary text-lg">AnnIReport</h1>
+                  <p className="text-[9px] text-sidebar-foreground/70 leading-tight">Dados confiáveis para decisões<br/>que transformam realidades</p>
                 </div>
               </Link>
               <button 
@@ -140,7 +140,7 @@ const Layout: React.FC = () => {
           </button>
           <div className="flex items-center gap-2">
             <BarChart3 className="w-5 h-5 text-primary" />
-            <span className="font-bold">SocialImpact</span>
+            <span className="font-bold">AnnIReport</span>
           </div>
           <div className="w-10" /> {/* Spacer for balance */}
         </header>
@@ -154,6 +154,20 @@ const Layout: React.FC = () => {
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
+
+        {/* Footer */}
+        <footer className="bg-card border-t border-border py-4 px-6 text-center text-sm text-muted-foreground">
+          <p className="mb-1">
+            <span className="font-semibold text-foreground">AnnIReport</span> © 2026 — Desenvolvido por <span className="font-medium">AnnITech</span> | IT Solutions
+          </p>
+          <p className="text-xs space-x-2">
+            <a href="#" className="hover:text-primary transition-colors">Política de Privacidade</a>
+            <span>•</span>
+            <a href="#" className="hover:text-primary transition-colors">Termos de Uso</a>
+            <span>•</span>
+            <a href="#" className="hover:text-primary transition-colors">Suporte</a>
+          </p>
+        </footer>
       </main>
     </div>
   );
