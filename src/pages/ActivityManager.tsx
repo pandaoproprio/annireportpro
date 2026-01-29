@@ -246,12 +246,12 @@ export const ActivityManager: React.FC = () => {
                 </div>
                 <div className="space-y-2">
                   <Label>Vincular a Meta (Opcional)</Label>
-                  <Select value={newActivity.goalId || ''} onValueChange={(value) => setNewActivity({...newActivity, goalId: value || undefined})}>
+                  <Select value={newActivity.goalId || '__none__'} onValueChange={(value) => setNewActivity({...newActivity, goalId: value === '__none__' ? undefined : value})}>
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhuma</SelectItem>
+                      <SelectItem value="__none__">Nenhuma</SelectItem>
                       {project.goals.map(g => (
                         <SelectItem key={g.id} value={g.id}>{g.title}</SelectItem>
                       ))}
