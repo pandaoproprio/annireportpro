@@ -9,9 +9,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 import { 
   Edit, Eye, Printer, Save, Trash2, Plus, ArrowUp, ArrowDown, 
-  EyeOff, Image as ImageIcon, Upload, Download, Loader2
+  EyeOff, Image as ImageIcon, Upload, Download, Loader2, FileText
 } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
+import { exportToDocx } from '@/lib/docxExport';
 
 const DEFAULT_SECTIONS: ReportSection[] = [
   { id: 'object', type: 'fixed', key: 'object', title: 'OBJETO', isVisible: true },
@@ -31,6 +32,7 @@ export const ReportGenerator: React.FC = () => {
 
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const [isExporting, setIsExporting] = useState(false);
+  const [exportType, setExportType] = useState<'pdf' | 'docx' | null>(null);
   const [logo, setLogo] = useState<string>('');
   const [logoSecondary, setLogoSecondary] = useState<string>('');
   const [objectText, setObjectText] = useState<string>('');
@@ -109,6 +111,7 @@ export const ReportGenerator: React.FC = () => {
     if (!reportRef.current || !project) return;
     
     setIsExporting(true);
+    setExportType('pdf');
     
     try {
       const element = reportRef.current;
@@ -160,6 +163,37 @@ export const ReportGenerator: React.FC = () => {
       alert('Erro ao exportar PDF. Tente novamente.');
     } finally {
       setIsExporting(false);
+      setExportType(null);
+    }
+  };
+
+  const handleExportDocx = async () => {
+    if (!project) return;
+    
+    setIsExporting(true);
+    setExportType('docx');
+    
+    try {
+      await exportToDocx({
+        project,
+        activities,
+        sections,
+        objectText,
+        summary,
+        goalNarratives,
+        otherActionsNarrative,
+        communicationNarrative,
+        satisfaction,
+        futureActions,
+        expenses,
+        links,
+      });
+    } catch (error) {
+      console.error('Erro ao exportar DOCX:', error);
+      alert('Erro ao exportar DOCX. Tente novamente.');
+    } finally {
+      setIsExporting(false);
+      setExportType(null);
     }
   };
 
@@ -843,12 +877,25 @@ export const ReportGenerator: React.FC = () => {
                 disabled={isExporting}
                 className="animate-scaleIn bg-primary"
               >
-                {isExporting ? (
+                {isExporting && exportType === 'pdf' ? (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 ) : (
                   <Download className="w-4 h-4 mr-2" />
                 )}
-                {isExporting ? 'Exportando...' : 'Exportar PDF'}
+                {isExporting && exportType === 'pdf' ? 'Exportando...' : 'Exportar PDF'}
+              </Button>
+              <Button 
+                onClick={handleExportDocx} 
+                disabled={isExporting}
+                variant="outline"
+                className="animate-scaleIn"
+              >
+                {isExporting && exportType === 'docx' ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="w-4 h-4 mr-2" />
+                )}
+                {isExporting && exportType === 'docx' ? 'Exportando...' : 'Exportar DOCX'}
               </Button>
             </>
           )}
