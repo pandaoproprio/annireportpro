@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
+import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 import { 
   Edit, Eye, Printer, Save, Trash2, Plus, ArrowUp, ArrowDown, 
   EyeOff, Image as ImageIcon, Upload
@@ -540,105 +541,135 @@ export const ReportGenerator: React.FC = () => {
 
       case 'goals':
         return (
-          <section key={section.id} className="mb-8 page-break">
-            <h3 className="text-lg font-bold uppercase mb-6">{section.title}</h3>
-            {project.goals.map((goal, idx) => {
-              const goalActs = getActivitiesByGoal(goal.id);
-              const photos = [...(goalPhotos[goal.id] || []), ...goalActs.flatMap(a => a.photos || [])];
-              return (
-                <div key={goal.id} className="mb-10">
-                  <h4 className="font-bold text-primary mb-3">META {idx + 1} – {goal.title}</h4>
-                  
-                  <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
-                    {goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'}
-                  </div>
-
-                  {photos.length > 0 && (
-                    <div className="my-4">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {photos.slice(0, 6).map((photo, pIdx) => (
-                          <img key={pIdx} src={photo} alt="" className="w-full h-32 object-cover rounded border" />
-                        ))}
-                      </div>
-                      {photos.length > 6 && <p className="text-xs text-muted-foreground mt-2">+ {photos.length - 6} fotos adicionais</p>}
+          <React.Fragment key={section.id}>
+            {/* Narrativas das Metas */}
+            <section className="mb-8 page-break">
+              <h3 className="text-lg font-bold uppercase mb-6">{section.title}</h3>
+              {project.goals.map((goal, idx) => {
+                const goalActs = getActivitiesByGoal(goal.id);
+                return (
+                  <div key={goal.id} className="mb-10">
+                    <h4 className="font-bold text-primary mb-3">META {idx + 1} – {goal.title}</h4>
+                    
+                    <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
+                      {goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'}
                     </div>
-                  )}
 
-                  {goalActs.length > 0 && (
-                    <div className="mt-4 text-sm">
-                      <p className="font-medium mb-2">Atividades realizadas:</p>
-                      {goalActs.map(act => (
-                        <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
-                          <p><strong>{formatActivityDate(act.date, act.endDate)}</strong>{act.location && ` – ${act.location}`}{act.attendeesCount > 0 && ` – ${act.attendeesCount} participantes`}</p>
-                          <p>{act.description}</p>
-                          {act.results && <p className="text-muted-foreground">Resultados: {act.results}</p>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </section>
-        );
-
-      case 'other':
-        return (
-          <section key={section.id} className="mb-8 page-break">
-            <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
-            <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
-              {otherActionsNarrative || '[Descreva outras informações diversas sobre o projeto]'}
-            </div>
-            {otherActionsPhotos.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 my-4">
-                {otherActionsPhotos.map((photo, idx) => (
-                  <img key={idx} src={photo} alt="" className="w-full h-32 object-cover rounded border" />
-                ))}
-              </div>
-            )}
-            {getOtherActivities().length > 0 && (
-              <div className="mt-4 text-sm">
-                {getOtherActivities().map(act => (
-                  <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
-                    <p><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        );
-
-      case 'communication':
-        return (
-          <section key={section.id} className="mb-8 page-break">
-            <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
-            <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
-              {communicationNarrative || '[Descreva as ações de divulgação]'}
-            </div>
-            {communicationPhotos.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3 my-4">
-                {communicationPhotos.map((photo, idx) => (
-                  <img key={idx} src={photo} alt="" className="w-full h-32 object-cover rounded border" />
-                ))}
-              </div>
-            )}
-            {getCommunicationActivities().length > 0 && (
-              <div className="mt-4 text-sm">
-                {getCommunicationActivities().map(act => (
-                  <div key={act.id} className="mb-3">
-                    <p><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
-                    {act.photos && act.photos.length > 0 && (
-                      <div className="flex gap-2 mt-1">
-                        {act.photos.slice(0, 3).map((p, i) => (
-                          <img key={i} src={p} alt="" className="h-16 w-16 object-cover rounded" />
+                    {goalActs.length > 0 && (
+                      <div className="mt-4 text-sm">
+                        <p className="font-medium mb-2">Atividades realizadas:</p>
+                        {goalActs.map(act => (
+                          <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
+                            <p><strong>{formatActivityDate(act.date, act.endDate)}</strong>{act.location && ` – ${act.location}`}{act.attendeesCount > 0 && ` – ${act.attendeesCount} participantes`}</p>
+                            <p>{act.description}</p>
+                            {act.results && <p className="text-muted-foreground">Resultados: {act.results}</p>}
+                          </div>
                         ))}
                       </div>
                     )}
                   </div>
-                ))}
+                );
+              })}
+            </section>
+
+            {/* Seções de Registros Fotográficos Separadas por Meta */}
+            {project.goals.map((goal, idx) => {
+              const goalActs = getActivitiesByGoal(goal.id);
+              const allPhotos = [...(goalPhotos[goal.id] || [])];
+              
+              if (allPhotos.length === 0 && goalActs.every(a => !a.photos || a.photos.length === 0)) {
+                return null;
+              }
+
+              return (
+                <PhotoGallerySection
+                  key={`photos-${goal.id}`}
+                  title={`META ${idx + 1}: ${goal.title}`}
+                  photos={goalPhotos[goal.id] || []}
+                  activities={goalActs}
+                  organizationName={project.organizationName}
+                  organizationAddress={project.organizationAddress}
+                  organizationWebsite={project.organizationWebsite}
+                  organizationEmail={project.organizationEmail}
+                  organizationPhone={project.organizationPhone}
+                />
+              );
+            })}
+          </React.Fragment>
+        );
+
+      case 'other':
+        const otherActs = getOtherActivities();
+        const hasOtherPhotos = otherActionsPhotos.length > 0 || otherActs.some(a => a.photos && a.photos.length > 0);
+        return (
+          <React.Fragment key={section.id}>
+            <section className="mb-8 page-break">
+              <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+              <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
+                {otherActionsNarrative || '[Descreva outras informações diversas sobre o projeto]'}
               </div>
+              {otherActs.length > 0 && (
+                <div className="mt-4 text-sm">
+                  {otherActs.map(act => (
+                    <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
+                      <p><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Galeria de Fotos de Outras Ações */}
+            {hasOtherPhotos && (
+              <PhotoGallerySection
+                title="OUTRAS AÇÕES"
+                photos={otherActionsPhotos}
+                activities={otherActs}
+                organizationName={project.organizationName}
+                organizationAddress={project.organizationAddress}
+                organizationWebsite={project.organizationWebsite}
+                organizationEmail={project.organizationEmail}
+                organizationPhone={project.organizationPhone}
+              />
             )}
-          </section>
+          </React.Fragment>
+        );
+
+      case 'communication':
+        const commActs = getCommunicationActivities();
+        const hasCommPhotos = communicationPhotos.length > 0 || commActs.some(a => a.photos && a.photos.length > 0);
+        return (
+          <React.Fragment key={section.id}>
+            <section className="mb-8 page-break">
+              <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+              <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
+                {communicationNarrative || '[Descreva as ações de divulgação]'}
+              </div>
+              {commActs.length > 0 && (
+                <div className="mt-4 text-sm">
+                  {commActs.map(act => (
+                    <div key={act.id} className="mb-3">
+                      <p><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* Galeria de Fotos de Comunicação */}
+            {hasCommPhotos && (
+              <PhotoGallerySection
+                title="PUBLICAÇÕES E DIVULGAÇÃO"
+                photos={communicationPhotos}
+                activities={commActs}
+                organizationName={project.organizationName}
+                organizationAddress={project.organizationAddress}
+                organizationWebsite={project.organizationWebsite}
+                organizationEmail={project.organizationEmail}
+                organizationPhone={project.organizationPhone}
+              />
+            )}
+          </React.Fragment>
         );
 
       case 'satisfaction':
