@@ -1,0 +1,178 @@
+import React, { useState } from 'react';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { useStore } from '@/store/AppContext';
+import { SidebarLink } from '@/components/SidebarLink';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { Dashboard } from '@/pages/Dashboard';
+import { Login } from '@/pages/Login';
+import { Onboarding } from '@/pages/Onboarding';
+import { ActivityManager } from '@/pages/ActivityManager';
+import { ReportGenerator } from '@/pages/ReportGenerator';
+import { Settings } from '@/pages/Settings';
+import { Button } from '@/components/ui/button';
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { 
+  LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X 
+} from 'lucide-react';
+
+const Layout: React.FC = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { logout, currentUser, projects, activeProjectId, switchProject } = useStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  const handleProjectChange = (projectId: string) => {
+    if (projectId === 'new') {
+      navigate('/setup');
+    } else {
+      switchProject(projectId);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex bg-background">
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
+        <div className="flex flex-col h-full">
+          {/* Logo */}
+          <div className="p-4 border-b border-sidebar-border">
+            <div className="flex items-center justify-between">
+              <Link to="/" className="flex items-center gap-2">
+                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                  <BarChart3 className="w-5 h-5 text-primary-foreground" />
+                </div>
+                <div>
+                  <h1 className="font-bold text-sidebar-primary text-lg">SocialImpact</h1>
+                  <p className="text-[10px] text-sidebar-foreground/70 uppercase tracking-wider">Relatórios</p>
+                </div>
+              </Link>
+              <button 
+                className="lg:hidden text-sidebar-foreground p-1"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Project Selector */}
+          {projects.length > 0 && (
+            <div className="p-4 border-b border-sidebar-border">
+              <Select value={activeProjectId || ''} onValueChange={handleProjectChange}>
+                <SelectTrigger className="w-full bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground">
+                  <Folder className="w-4 h-4 mr-2" />
+                  <SelectValue placeholder="Selecionar projeto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                  <SelectItem value="new" className="text-primary">
+                    <span className="flex items-center gap-2">
+                      <PlusCircle className="w-4 h-4" /> Novo Projeto
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Navigation */}
+          <nav className="flex-1 p-4 space-y-2">
+            <SidebarLink to="/" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
+            <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" />
+            <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório" />
+            <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" />
+          </nav>
+
+          {/* User Info */}
+          <div className="p-4 border-t border-sidebar-border">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-accent-foreground font-bold text-sm">
+                  {currentUser?.name?.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-sidebar-primary">{currentUser?.name}</p>
+                  <p className="text-[10px] text-sidebar-foreground/70 uppercase">{currentUser?.role}</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleLogout}
+                className="text-sidebar-foreground/70 hover:text-sidebar-primary p-2 rounded-lg hover:bg-sidebar-accent transition-colors"
+                title="Sair"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col min-h-screen">
+        {/* Mobile Header */}
+        <header className="lg:hidden bg-card border-b border-border p-4 flex items-center justify-between sticky top-0 z-20">
+          <button 
+            onClick={() => setSidebarOpen(true)}
+            className="text-foreground p-2 rounded-lg hover:bg-muted"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 text-primary" />
+            <span className="font-bold">SocialImpact</span>
+          </div>
+          <div className="w-10" /> {/* Spacer for balance */}
+        </header>
+
+        {/* Page Content */}
+        <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/activities" element={<ActivityManager />} />
+            <Route path="/report" element={<ReportGenerator />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export const AppRoutes: React.FC = () => {
+  return (
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/setup" element={
+        <ProtectedRoute>
+          <Onboarding />
+        </ProtectedRoute>
+      } />
+      <Route path="/*" element={
+        <ProtectedRoute>
+          <Layout />
+        </ProtectedRoute>
+      } />
+    </Routes>
+  );
+};
