@@ -47,12 +47,12 @@ const Layout: React.FC = () => {
     }
   };
 
-  // Redirect to setup if no projects
+  // Redirect to setup only if user has no projects and is not super_admin
   useEffect(() => {
-    if (!projectsLoading && projects.length === 0) {
+    if (!projectsLoading && projects.length === 0 && role !== 'SUPER_ADMIN') {
       navigate('/setup');
     }
-  }, [projectsLoading, projects.length, navigate]);
+  }, [projectsLoading, projects.length, role, navigate]);
 
   if (projectsLoading) {
     return (
