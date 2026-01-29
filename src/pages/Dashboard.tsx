@@ -42,7 +42,7 @@ export const Dashboard: React.FC = () => {
     { label: 'Atividades Totais', value: activities.length, color: 'text-info' },
     { label: 'Pessoas Impactadas', value: activities.reduce((acc, curr) => acc + (curr.attendeesCount || 0), 0), color: 'text-success' },
     { label: 'Metas Ativas', value: project.goals.length, color: 'text-brand-600' },
-    { label: 'Dias Restantes', value: Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))), color: 'text-warning' },
+    { label: 'Dias Restantes', value: project.endDate ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '-', color: 'text-warning' },
   ];
 
   return (
