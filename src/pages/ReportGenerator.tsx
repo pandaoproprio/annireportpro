@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from '@/store/AppContext';
-import { ActivityType, ReportSection, ExpenseItem } from '@/types';
+import { Activity, ActivityType, ReportSection, ExpenseItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -14,6 +14,7 @@ import {
 const DEFAULT_SECTIONS: ReportSection[] = [
   { id: 'summary', type: 'fixed', key: 'summary', title: 'RESUMO EXECUTIVO', isVisible: true },
   { id: 'goals', type: 'fixed', key: 'goals', title: 'CUMPRIMENTO DAS METAS', isVisible: true },
+  { id: 'diary', type: 'fixed', key: 'diary', title: 'DIÁRIO DE BORDO', isVisible: true },
   { id: 'other', type: 'fixed', key: 'other', title: 'OUTRAS AÇÕES', isVisible: true },
   { id: 'communication', type: 'fixed', key: 'communication', title: 'COMUNICAÇÃO E DIVULGAÇÃO', isVisible: true },
   { id: 'satisfaction', type: 'fixed', key: 'satisfaction', title: 'SATISFAÇÃO DO PÚBLICO', isVisible: true },
@@ -159,8 +160,50 @@ export const ReportGenerator: React.FC = () => {
   const removeExpense = (id: string) => setExpenses(expenses.filter(e => e.id !== id));
 
   const getActivitiesByGoal = (goalId: string) => activities.filter(a => a.goalId === goalId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  const getActivitiesByType = (type: ActivityType) => activities.filter(a => a.type === type).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  const getOtherActivities = () => activities.filter(a => a.type === ActivityType.OUTROS || a.type === ActivityType.ADMINISTRATIVO).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  const getCommunicationActivities = () => activities.filter(a => a.type === ActivityType.COMUNICACAO).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
+  const getAllActivitiesSorted = () => [...activities].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  
+  const getTotalAttendees = () => activities.reduce((sum, a) => sum + (a.attendeesCount || 0), 0);
+
+  const formatActivityDate = (date: string, endDate?: string) => {
+    const start = new Date(date).toLocaleDateString('pt-BR');
+    if (endDate) {
+      return `${start} a ${new Date(endDate).toLocaleDateString('pt-BR')}`;
+    }
+    return start;
+  };
+
+  const renderActivityCard = (act: Activity, showType: boolean = true) => (
+    <div key={act.id} className="p-3 border rounded-lg bg-muted/30 mb-3">
+      <div className="flex flex-wrap items-center gap-2 mb-2">
+        <span className="text-sm font-semibold text-primary">{formatActivityDate(act.date, act.endDate)}</span>
+        {showType && <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">{act.type}</span>}
+        {act.location && <span className="text-xs text-muted-foreground">📍 {act.location}</span>}
+        {act.attendeesCount > 0 && <span className="text-xs text-muted-foreground">👥 {act.attendeesCount} participantes</span>}
+      </div>
+      <p className="text-sm mb-2">{act.description}</p>
+      {act.results && <p className="text-xs text-muted-foreground"><strong>Resultados:</strong> {act.results}</p>}
+      {act.challenges && <p className="text-xs text-muted-foreground"><strong>Desafios:</strong> {act.challenges}</p>}
+      {act.photos && act.photos.length > 0 && (
+        <div className="flex flex-wrap gap-2 mt-2">
+          {act.photos.slice(0, 4).map((photo, idx) => (
+            <img key={idx} src={photo} alt="" className="h-16 w-16 object-cover rounded border" />
+          ))}
+          {act.photos.length > 4 && (
+            <div className="h-16 w-16 rounded border bg-muted flex items-center justify-center text-xs text-muted-foreground">
+              +{act.photos.length - 4}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 
   const renderEditSection = (section: ReportSection, index: number) => {
     if (!section.isVisible) return null;
@@ -205,27 +248,102 @@ export const ReportGenerator: React.FC = () => {
 
           {section.key === 'goals' && (
             <div className="space-y-6">
-              {project.goals.map((goal, idx) => (
-                <div key={goal.id} className="p-4 border rounded-lg bg-muted/50">
-                  <h4 className="font-bold text-primary mb-2">META {idx + 1}: {goal.title}</h4>
-                  <Label>Relato Narrativo</Label>
-                  <Textarea 
-                    rows={4} 
-                    placeholder="Descreva as realizações..."
-                    value={goalNarratives[goal.id] || ''}
-                    onChange={e => setGoalNarratives({...goalNarratives, [goal.id]: e.target.value})}
-                  />
+              {project.goals.map((goal, idx) => {
+                const goalActivities = getActivitiesByGoal(goal.id);
+                return (
+                  <div key={goal.id} className="p-4 border rounded-lg bg-muted/50">
+                    <h4 className="font-bold text-primary mb-2">META {idx + 1}: {goal.title}</h4>
+                    <p className="text-sm text-muted-foreground mb-3">Público-alvo: {goal.targetAudience}</p>
+                    
+                    {goalActivities.length > 0 && (
+                      <div className="mb-4 p-3 bg-success/5 border border-success/20 rounded">
+                        <p className="text-sm font-medium text-success mb-2">
+                          📋 {goalActivities.length} atividade(s) vinculada(s) do Diário de Bordo
+                        </p>
+                        <div className="max-h-40 overflow-y-auto">
+                          {goalActivities.map(act => (
+                            <div key={act.id} className="text-xs py-1 border-b last:border-0">
+                              <strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 80)}...
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <Label>Relato Narrativo</Label>
+                    <Textarea 
+                      rows={4} 
+                      placeholder="Descreva as realizações..."
+                      value={goalNarratives[goal.id] || ''}
+                      onChange={e => setGoalNarratives({...goalNarratives, [goal.id]: e.target.value})}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {section.key === 'diary' && (
+            <div className="space-y-4">
+              <div className="p-4 bg-info/5 border border-info/20 rounded-lg">
+                <p className="text-sm text-info font-medium mb-2">
+                  📚 Resumo do Diário de Bordo
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                  <div className="p-2 bg-card rounded border">
+                    <p className="text-2xl font-bold text-primary">{activities.length}</p>
+                    <p className="text-xs text-muted-foreground">Atividades</p>
+                  </div>
+                  <div className="p-2 bg-card rounded border">
+                    <p className="text-2xl font-bold text-success">{getTotalAttendees()}</p>
+                    <p className="text-xs text-muted-foreground">Participantes</p>
+                  </div>
+                  <div className="p-2 bg-card rounded border">
+                    <p className="text-2xl font-bold text-warning">{activities.filter(a => a.photos.length > 0).length}</p>
+                    <p className="text-xs text-muted-foreground">Com fotos</p>
+                  </div>
+                  <div className="p-2 bg-card rounded border">
+                    <p className="text-2xl font-bold text-info">{activities.filter(a => a.goalId).length}</p>
+                    <p className="text-xs text-muted-foreground">Vinc. a metas</p>
+                  </div>
                 </div>
-              ))}
+              </div>
+              <p className="text-sm text-muted-foreground">
+                As atividades registradas no Diário de Bordo serão automaticamente incluídas na visualização do relatório.
+              </p>
             </div>
           )}
 
           {section.key === 'other' && (
-            <Textarea rows={4} value={otherActionsNarrative} onChange={e => setOtherActionsNarrative(e.target.value)} placeholder="Ações extras, imprevistos..." />
+            <div className="space-y-4">
+              {getOtherActivities().length > 0 && (
+                <div className="mb-4 p-3 bg-muted/50 border rounded">
+                  <p className="text-sm font-medium mb-2">📋 Atividades do Diário ({getOtherActivities().length}):</p>
+                  <div className="max-h-32 overflow-y-auto text-xs space-y-1">
+                    {getOtherActivities().map(act => (
+                      <div key={act.id}><strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 60)}...</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Textarea rows={4} value={otherActionsNarrative} onChange={e => setOtherActionsNarrative(e.target.value)} placeholder="Ações extras, imprevistos..." />
+            </div>
           )}
 
           {section.key === 'communication' && (
-            <Textarea rows={4} value={communicationNarrative} onChange={e => setCommunicationNarrative(e.target.value)} placeholder="Divulgação, links..." />
+            <div className="space-y-4">
+              {getCommunicationActivities().length > 0 && (
+                <div className="mb-4 p-3 bg-muted/50 border rounded">
+                  <p className="text-sm font-medium mb-2">📋 Atividades de Comunicação ({getCommunicationActivities().length}):</p>
+                  <div className="max-h-32 overflow-y-auto text-xs space-y-1">
+                    {getCommunicationActivities().map(act => (
+                      <div key={act.id}><strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 60)}...</div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Textarea rows={4} value={communicationNarrative} onChange={e => setCommunicationNarrative(e.target.value)} placeholder="Divulgação, links..." />
+            </div>
           )}
 
           {section.key === 'satisfaction' && (
@@ -310,26 +428,102 @@ export const ReportGenerator: React.FC = () => {
         return (
           <section key={section.id} className="mb-10 page-break">
             <h3 className="text-lg font-bold uppercase border-b border-foreground mb-4">{section.title}</h3>
-            {project.goals.map((goal, idx) => (
-              <div key={goal.id} className="mb-8">
-                <h4 className="font-bold text-primary mb-2">Meta {idx + 1}: {goal.title}</h4>
-                <p className="text-sm text-muted-foreground mb-2">Público-alvo: {goal.targetAudience}</p>
-                <p className="whitespace-pre-line text-justify">{goalNarratives[goal.id] || 'Narrativa não preenchida.'}</p>
-                
-                {getActivitiesByGoal(goal.id).length > 0 && (
-                  <div className="mt-4 pl-4 border-l-2 border-brand-200">
-                    <p className="text-sm font-medium text-muted-foreground mb-2">Atividades vinculadas:</p>
-                    <ul className="text-sm space-y-1">
-                      {getActivitiesByGoal(goal.id).map(act => (
-                        <li key={act.id}>
-                          <strong>{new Date(act.date).toLocaleDateString('pt-BR')}</strong>: {act.description}
-                        </li>
+            {project.goals.map((goal, idx) => {
+              const goalActivities = getActivitiesByGoal(goal.id);
+              const goalAttendees = goalActivities.reduce((sum, a) => sum + (a.attendeesCount || 0), 0);
+              return (
+                <div key={goal.id} className="mb-8">
+                  <h4 className="font-bold text-primary mb-2">Meta {idx + 1}: {goal.title}</h4>
+                  <p className="text-sm text-muted-foreground mb-2">Público-alvo: {goal.targetAudience}</p>
+                  <p className="whitespace-pre-line text-justify mb-4">{goalNarratives[goal.id] || 'Narrativa não preenchida.'}</p>
+                  
+                  {goalActivities.length > 0 && (
+                    <div className="mt-4 p-4 bg-muted/30 rounded border">
+                      <p className="text-sm font-bold mb-3">
+                        Atividades Realizadas ({goalActivities.length}) - Total de {goalAttendees} participantes
+                      </p>
+                      {goalActivities.map(act => (
+                        <div key={act.id} className="mb-4 pb-4 border-b last:border-0">
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            <span className="font-semibold">{formatActivityDate(act.date, act.endDate)}</span>
+                            {act.location && <span className="text-sm">• {act.location}</span>}
+                            {act.attendeesCount > 0 && <span className="text-sm">• {act.attendeesCount} participantes</span>}
+                          </div>
+                          <p className="text-sm mb-2">{act.description}</p>
+                          {act.results && <p className="text-sm text-muted-foreground"><em>Resultados: {act.results}</em></p>}
+                          {act.photos && act.photos.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {act.photos.map((photo, idx) => (
+                                <img key={idx} src={photo} alt="" className="h-20 w-20 object-cover rounded border print:h-16 print:w-16" />
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       ))}
-                    </ul>
-                  </div>
-                )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </section>
+        );
+
+      case 'diary':
+        return (
+          <section key={section.id} className="mb-10 page-break">
+            <h3 className="text-lg font-bold uppercase border-b border-foreground mb-4">{section.title}</h3>
+            
+            {/* Summary Stats */}
+            <div className="mb-6 p-4 bg-muted/20 rounded border">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold">{activities.length}</p>
+                  <p className="text-xs text-muted-foreground">Atividades</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{getTotalAttendees()}</p>
+                  <p className="text-xs text-muted-foreground">Participantes</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{activities.filter(a => a.photos.length > 0).length}</p>
+                  <p className="text-xs text-muted-foreground">Com fotos</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{new Set(activities.map(a => a.location).filter(Boolean)).size}</p>
+                  <p className="text-xs text-muted-foreground">Locais</p>
+                </div>
               </div>
-            ))}
+            </div>
+
+            {/* Activities by Type */}
+            {Object.values(ActivityType).map(type => {
+              const typeActivities = getActivitiesByType(type);
+              if (typeActivities.length === 0) return null;
+              return (
+                <div key={type} className="mb-6">
+                  <h4 className="font-semibold text-primary mb-3">{type} ({typeActivities.length})</h4>
+                  {typeActivities.map(act => (
+                    <div key={act.id} className="mb-3 pb-3 border-b last:border-0 pl-4 border-l-2 border-muted">
+                      <div className="flex flex-wrap gap-2 text-sm mb-1">
+                        <span className="font-semibold">{formatActivityDate(act.date, act.endDate)}</span>
+                        {act.location && <span>• {act.location}</span>}
+                        {act.attendeesCount > 0 && <span>• {act.attendeesCount} participantes</span>}
+                      </div>
+                      <p className="text-sm">{act.description}</p>
+                      {act.results && <p className="text-xs text-muted-foreground mt-1">Resultados: {act.results}</p>}
+                      {act.photos && act.photos.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {act.photos.slice(0, 3).map((photo, idx) => (
+                            <img key={idx} src={photo} alt="" className="h-12 w-12 object-cover rounded print:h-10 print:w-10" />
+                          ))}
+                          {act.photos.length > 3 && <span className="text-xs text-muted-foreground self-center">+{act.photos.length - 3}</span>}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
           </section>
         );
 
@@ -337,7 +531,17 @@ export const ReportGenerator: React.FC = () => {
         return (
           <section key={section.id} className="mb-10 page-break">
             <h3 className="text-lg font-bold uppercase border-b border-foreground mb-4">{section.title}</h3>
-            <div className="whitespace-pre-line text-justify">{otherActionsNarrative}</div>
+            {otherActionsNarrative && <div className="whitespace-pre-line text-justify mb-4">{otherActionsNarrative}</div>}
+            {getOtherActivities().length > 0 && (
+              <div className="mt-4 pl-4 border-l-2 border-muted">
+                {getOtherActivities().map(act => (
+                  <div key={act.id} className="mb-3">
+                    <p className="text-sm"><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
+                    {act.results && <p className="text-xs text-muted-foreground">Resultado: {act.results}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         );
 
@@ -345,7 +549,24 @@ export const ReportGenerator: React.FC = () => {
         return (
           <section key={section.id} className="mb-10 page-break">
             <h3 className="text-lg font-bold uppercase border-b border-foreground mb-4">{section.title}</h3>
-            <div className="whitespace-pre-line text-justify">{communicationNarrative}</div>
+            {communicationNarrative && <div className="whitespace-pre-line text-justify mb-4">{communicationNarrative}</div>}
+            {getCommunicationActivities().length > 0 && (
+              <div className="mt-4 pl-4 border-l-2 border-muted">
+                {getCommunicationActivities().map(act => (
+                  <div key={act.id} className="mb-3">
+                    <p className="text-sm"><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
+                    {act.results && <p className="text-xs text-muted-foreground">Resultado: {act.results}</p>}
+                    {act.photos && act.photos.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {act.photos.slice(0, 3).map((photo, idx) => (
+                          <img key={idx} src={photo} alt="" className="h-12 w-12 object-cover rounded" />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
         );
 
