@@ -8,6 +8,7 @@ import { Login } from '@/pages/Login';
 import { Onboarding } from '@/pages/Onboarding';
 import { ActivityManager } from '@/pages/ActivityManager';
 import { ReportGenerator } from '@/pages/ReportGenerator';
+import { TeamReportGenerator } from '@/pages/TeamReportGenerator';
 import { Settings } from '@/pages/Settings';
 import { Button } from '@/components/ui/button';
 import { 
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X 
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users 
 } from 'lucide-react';
 
 const Layout: React.FC = () => {
@@ -100,7 +101,8 @@ const Layout: React.FC = () => {
           <nav className="flex-1 p-4 space-y-2">
             <SidebarLink to="/" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
             <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" />
-            <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório" />
+            <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" />
+            <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" />
             <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" />
           </nav>
 
@@ -151,6 +153,7 @@ const Layout: React.FC = () => {
             <Route path="/" element={<Dashboard />} />
             <Route path="/activities" element={<ActivityManager />} />
             <Route path="/report" element={<ReportGenerator />} />
+            <Route path="/team-report" element={<TeamReportGenerator />} />
             <Route path="/settings" element={<Settings />} />
           </Routes>
         </div>
