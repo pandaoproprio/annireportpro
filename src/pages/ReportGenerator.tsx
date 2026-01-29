@@ -115,7 +115,7 @@ export const ReportGenerator: React.FC = () => {
       const filename = `Relatorio_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       
       const opt = {
-        margin: [10, 10, 10, 10],
+        margin: [15, 10, 20, 10], // top, left, bottom, right - more bottom margin for page numbers
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
@@ -132,7 +132,29 @@ export const ReportGenerator: React.FC = () => {
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
       };
       
-      await html2pdf().set(opt).from(element).save();
+      // Generate PDF with page numbers
+      const worker = html2pdf().set(opt).from(element);
+      
+      // Get PDF instance and add page numbers
+      const pdf = await worker.toPdf().get('pdf');
+      const totalPages = pdf.internal.getNumberOfPages();
+      
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(9);
+        pdf.setTextColor(128, 128, 128);
+        
+        // Add page number at bottom center
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const text = `Página ${i} de ${totalPages}`;
+        const textWidth = pdf.getTextWidth(text);
+        
+        pdf.text(text, (pageWidth - textWidth) / 2, pageHeight - 10);
+      }
+      
+      // Save the PDF
+      pdf.save(filename);
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
       alert('Erro ao exportar PDF. Tente novamente.');
