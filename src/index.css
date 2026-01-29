@@ -183,4 +183,15 @@
   .print-only { display: block !important; }
   body { background: white; }
   .page-break { page-break-before: always; }
+  
+  @page {
+    size: A4;
+    margin: 15mm 10mm 20mm 10mm;
+    
+    @bottom-center {
+      content: "Página " counter(page) " de " counter(pages);
+      font-size: 9pt;
+      color: #888;
+    }
+  }
 }
