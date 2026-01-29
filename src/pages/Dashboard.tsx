@@ -1,17 +1,29 @@
 import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { useStore } from '@/store/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useProjects } from '@/hooks/useProjects';
+import { useActivities } from '@/hooks/useActivities';
 import { StatCard } from '@/components/StatCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FolderPlus, PlusCircle, ArrowRight } from 'lucide-react';
+import { FolderPlus, PlusCircle, ArrowRight, Loader2 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
-  const { project, activities, currentUser } = useStore();
+  const { profile, role } = useAuth();
+  const { activeProject: project, projects, isLoading: projectsLoading } = useProjects();
+  const { activities, isLoading: activitiesLoading } = useActivities(project?.id || null);
+
+  if (projectsLoading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
   
   // Empty Project State (Admins Only)
   if (!project) {
-    if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') {
+    if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
       return (
         <div className="flex flex-col items-center justify-center h-[80vh] animate-fadeIn text-center">
           <Card className="max-w-lg shadow-lg">
@@ -21,7 +33,7 @@ export const Dashboard: React.FC = () => {
               </div>
               <h2 className="text-2xl font-bold text-foreground mb-2">Painel Administrativo</h2>
               <p className="text-muted-foreground mb-6">
-                Olá, <strong>{currentUser.name}</strong> ({currentUser.role}). 
+                Olá, <strong>{profile?.name}</strong> ({role}). 
                 Nenhum projeto foi configurado ainda. Você pode iniciar a configuração quando desejar.
               </p>
               <Link to="/setup">
@@ -96,7 +108,11 @@ export const Dashboard: React.FC = () => {
             <CardTitle className="text-lg">Atividades Recentes</CardTitle>
           </CardHeader>
           <CardContent>
-            {activities.length === 0 ? (
+            {activitiesLoading ? (
+              <div className="flex justify-center py-4">
+                <Loader2 className="w-6 h-6 animate-spin text-primary" />
+              </div>
+            ) : activities.length === 0 ? (
               <p className="text-muted-foreground text-sm">Nenhuma atividade registrada neste projeto.</p>
             ) : (
               <ul className="space-y-3">

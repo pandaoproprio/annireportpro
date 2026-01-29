@@ -1,31 +1,34 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { useStore } from '@/store/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { Loader2 } from 'lucide-react';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isAuthenticated, currentUser, projects } = useStore();
+  const { user, isLoading, role } = useAuth();
   const location = useLocation();
   
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
+
   // 1. Check Authentication
-  if (!isAuthenticated) {
+  if (!user) {
     return <Navigate to="/login" />;
   }
 
-  // 2. Role Based Logic for Project Setup
-  const isPrivileged = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
-
-  // If no projects exist at all:
-  if (projects.length === 0 && location.pathname !== '/setup') {
-    // If it is a normal user, force them to setup
-    if (!isPrivileged) {
-      return <Navigate to="/setup" />;
-    }
-    // If it is an Admin/SuperAdmin, allow them to proceed
-  }
+  // For now, allow all authenticated users to proceed
+  // Project checking will be done at the component level
   
   return <>{children}</>;
 };

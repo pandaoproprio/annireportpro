@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { useStore } from '@/store/AppContext';
+import { useProjects } from '@/hooks/useProjects';
+import { useActivities } from '@/hooks/useActivities';
 import { Activity, ActivityType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,13 +17,16 @@ import {
 } from '@/components/ui/select';
 import { 
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
-  FolderGit2, Search, Users
+  FolderGit2, Search, Users, Loader2
 } from 'lucide-react';
 
 export const ActivityManager: React.FC = () => {
-  const { project, activities, addActivity, deleteActivity, updateActivity } = useStore();
+  const { activeProject: project } = useProjects();
+  const { activities, addActivity, deleteActivity, updateActivity, isLoading } = useActivities(project?.id || null);
+  
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -83,13 +87,13 @@ export const ActivityManager: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta atividade permanentemente?')) {
-      deleteActivity(id);
+      await deleteActivity(id);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!project || !newActivity.description || !newActivity.date) return;
 
@@ -97,6 +101,8 @@ export const ActivityManager: React.FC = () => {
       alert("A data de término não pode ser anterior à data de início.");
       return;
     }
+
+    setIsSaving(true);
 
     if (editingId) {
       const updatedActivity: Activity = {
@@ -112,10 +118,9 @@ export const ActivityManager: React.FC = () => {
         location: newActivity.location || '',
         endDate: newActivity.endDate,
       };
-      updateActivity(updatedActivity);
+      await updateActivity(updatedActivity);
     } else {
-      const activity: Activity = {
-        id: Date.now().toString(),
+      await addActivity({
         projectId: project.id,
         date: newActivity.date || '',
         endDate: newActivity.endDate,
@@ -130,10 +135,10 @@ export const ActivityManager: React.FC = () => {
         attachments: [],
         goalId: newActivity.goalId,
         costEvidence: newActivity.costEvidence
-      };
-      addActivity(activity);
+      });
     }
 
+    setIsSaving(false);
     resetForm();
   };
 
@@ -180,6 +185,14 @@ export const ActivityManager: React.FC = () => {
   };
 
   if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-[60vh]">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn pb-20">
@@ -304,7 +317,10 @@ export const ActivityManager: React.FC = () => {
 
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>
-                <Button type="submit">{editingId ? 'Salvar Alterações' : 'Registrar Atividade'}</Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  {editingId ? 'Salvar Alterações' : 'Registrar Atividade'}
+                </Button>
               </div>
             </form>
           </CardContent>

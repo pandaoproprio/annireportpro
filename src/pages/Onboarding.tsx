@@ -1,21 +1,21 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '@/store/AppContext';
+import { useProjects } from '@/hooks/useProjects';
 import { Project, Goal, TeamMember } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Trash2, ArrowRight, Save, ArrowLeft } from 'lucide-react';
+import { Card, CardContent, CardTitle } from '@/components/ui/card';
+import { Plus, Trash2, ArrowRight, Save, ArrowLeft, Loader2 } from 'lucide-react';
 
 export const Onboarding: React.FC = () => {
-  const { addProject, projects } = useStore();
+  const { addProject, projects, isLoading } = useProjects();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const [formData, setFormData] = useState<Partial<Project>>({
-    id: Date.now().toString(),
+  const [formData, setFormData] = useState<Partial<Omit<Project, 'id'>>>({
     organizationName: '',
     organizationAddress: '',
     organizationWebsite: '',
@@ -71,19 +71,48 @@ export const Onboarding: React.FC = () => {
     }
   };
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     if (formData.name && formData.organizationName) {
-      const newProject = { 
-        ...formData, 
-        id: formData.id || Date.now().toString() 
-      } as Project;
+      setIsSaving(true);
       
-      addProject(newProject);
-      navigate('/');
+      const newProject = await addProject({
+        organizationName: formData.organizationName,
+        organizationAddress: formData.organizationAddress,
+        organizationWebsite: formData.organizationWebsite,
+        organizationEmail: formData.organizationEmail,
+        organizationPhone: formData.organizationPhone,
+        name: formData.name,
+        fomentoNumber: formData.fomentoNumber || '',
+        funder: formData.funder || '',
+        startDate: formData.startDate || new Date().toISOString().split('T')[0],
+        endDate: formData.endDate || new Date().toISOString().split('T')[0],
+        object: formData.object || '',
+        summary: formData.summary || '',
+        goals: formData.goals || [],
+        team: formData.team || [],
+        locations: formData.locations || [],
+        reportData: {}
+      });
+      
+      setIsSaving(false);
+      
+      if (newProject) {
+        navigate('/');
+      } else {
+        alert("Erro ao criar projeto. Tente novamente.");
+      }
     } else {
       alert("Por favor, preencha as informações obrigatórias.");
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-50 via-background to-brand-100 flex flex-col items-center justify-center p-4">
@@ -269,8 +298,13 @@ export const Onboarding: React.FC = () => {
 
                 <div className="flex justify-between pt-6 border-t mt-4">
                   <Button variant="outline" onClick={handleBack}>Voltar</Button>
-                  <Button onClick={handleFinish} className="bg-success hover:bg-success/90 text-success-foreground">
-                    <Save className="w-4 h-4 mr-2" /> Criar Projeto
+                  <Button onClick={handleFinish} className="bg-success hover:bg-success/90 text-success-foreground" disabled={isSaving}>
+                    {isSaving ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4 mr-2" />
+                    )}
+                    Criar Projeto
                   </Button>
                 </div>
               </div>
