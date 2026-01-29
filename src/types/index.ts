@@ -106,6 +106,22 @@ export interface Project {
   reportData?: ReportData;
 }
 
+export interface TeamReport {
+  id: string;
+  projectId: string;
+  teamMemberId: string;
+  providerName: string;
+  providerDocument: string;
+  responsibleName: string;
+  functionRole: string;
+  periodStart: string;
+  periodEnd: string;
+  executionReport: string;
+  photos: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AppState {
   isAuthenticated: boolean;
   currentUser: User | null;
