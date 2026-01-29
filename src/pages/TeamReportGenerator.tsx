@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { useStore } from '@/store/AppContext';
-import { TeamReport, TeamMember } from '@/types';
+import { useProjects } from '@/hooks/useProjects';
+import { TeamReport } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +23,7 @@ import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
 import { toast } from 'sonner';
 
 export const TeamReportGenerator: React.FC = () => {
-  const { project } = useStore();
+  const { activeProject: project } = useProjects();
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [providerName, setProviderName] = useState('');
   const [providerDocument, setProviderDocument] = useState('');

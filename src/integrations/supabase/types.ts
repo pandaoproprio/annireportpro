@@ -14,16 +14,272 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activities: {
+        Row: {
+          attachments: string[]
+          attendees_count: number
+          challenges: string
+          cost_evidence: string | null
+          created_at: string
+          date: string
+          description: string
+          end_date: string | null
+          goal_id: string | null
+          id: string
+          location: string
+          photos: string[]
+          project_id: string
+          results: string
+          team_involved: string[]
+          type: Database["public"]["Enums"]["activity_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attachments?: string[]
+          attendees_count?: number
+          challenges: string
+          cost_evidence?: string | null
+          created_at?: string
+          date: string
+          description: string
+          end_date?: string | null
+          goal_id?: string | null
+          id?: string
+          location: string
+          photos?: string[]
+          project_id: string
+          results: string
+          team_involved?: string[]
+          type: Database["public"]["Enums"]["activity_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attachments?: string[]
+          attendees_count?: number
+          challenges?: string
+          cost_evidence?: string | null
+          created_at?: string
+          date?: string
+          description?: string
+          end_date?: string | null
+          goal_id?: string | null
+          id?: string
+          location?: string
+          photos?: string[]
+          project_id?: string
+          results?: string
+          team_involved?: string[]
+          type?: Database["public"]["Enums"]["activity_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      projects: {
+        Row: {
+          created_at: string
+          end_date: string
+          fomento_number: string
+          funder: string
+          goals: Json
+          id: string
+          locations: string[]
+          name: string
+          object: string
+          organization_address: string | null
+          organization_email: string | null
+          organization_name: string
+          organization_phone: string | null
+          organization_website: string | null
+          report_data: Json | null
+          start_date: string
+          summary: string
+          team: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          fomento_number: string
+          funder: string
+          goals?: Json
+          id?: string
+          locations?: string[]
+          name: string
+          object: string
+          organization_address?: string | null
+          organization_email?: string | null
+          organization_name: string
+          organization_phone?: string | null
+          organization_website?: string | null
+          report_data?: Json | null
+          start_date: string
+          summary: string
+          team?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          fomento_number?: string
+          funder?: string
+          goals?: Json
+          id?: string
+          locations?: string[]
+          name?: string
+          object?: string
+          organization_address?: string | null
+          organization_email?: string | null
+          organization_name?: string
+          organization_phone?: string | null
+          organization_website?: string | null
+          report_data?: Json | null
+          start_date?: string
+          summary?: string
+          team?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      team_reports: {
+        Row: {
+          created_at: string
+          execution_report: string
+          function_role: string
+          id: string
+          period_end: string
+          period_start: string
+          photos: string[]
+          project_id: string
+          provider_document: string
+          provider_name: string
+          responsible_name: string
+          team_member_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          execution_report: string
+          function_role: string
+          id?: string
+          period_end: string
+          period_start: string
+          photos?: string[]
+          project_id: string
+          provider_document: string
+          provider_name: string
+          responsible_name: string
+          team_member_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          execution_report?: string
+          function_role?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          photos?: string[]
+          project_id?: string
+          provider_document?: string
+          provider_name?: string
+          responsible_name?: string
+          team_member_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      activity_type:
+        | "Execução de Meta"
+        | "Reunião de Equipe"
+        | "Ocorrência/Imprevisto"
+        | "Divulgação/Mídia"
+        | "Administrativo/Financeiro"
+        | "Outras Ações"
+      app_role: "user" | "admin" | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +406,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      activity_type: [
+        "Execução de Meta",
+        "Reunião de Equipe",
+        "Ocorrência/Imprevisto",
+        "Divulgação/Mídia",
+        "Administrativo/Financeiro",
+        "Outras Ações",
+      ],
+      app_role: ["user", "admin", "super_admin"],
+    },
   },
 } as const

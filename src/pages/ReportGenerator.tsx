@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useStore } from '@/store/AppContext';
+import { useProjects } from '@/hooks/useProjects';
+import { useActivities } from '@/hooks/useActivities';
 import { Activity, ActivityType, ReportSection, ExpenseItem } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,7 +28,8 @@ const DEFAULT_SECTIONS: ReportSection[] = [
 ];
 
 export const ReportGenerator: React.FC = () => {
-  const { project, activities, updateReportData } = useStore();
+  const { activeProject: project, updateReportData } = useProjects();
+  const { activities } = useActivities(project?.id || null);
   const reportRef = useRef<HTMLDivElement>(null);
 
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');

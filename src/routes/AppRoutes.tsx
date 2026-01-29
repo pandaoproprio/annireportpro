@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
-import { useStore } from '@/store/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useProjects } from '@/hooks/useProjects';
+import { useActivities } from '@/hooks/useActivities';
 import { SidebarLink } from '@/components/SidebarLink';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Dashboard } from '@/pages/Dashboard';
@@ -20,16 +22,19 @@ import {
 } from '@/components/ui/select';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users 
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2 
 } from 'lucide-react';
+
 
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { logout, currentUser, projects, activeProjectId, switchProject } = useStore();
+  const { signOut, profile, role } = useAuth();
+  const { projects, activeProjectId, activeProject, switchProject, isLoading: projectsLoading } = useProjects();
+  const { activities, allActivities } = useActivities(activeProjectId);
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     navigate('/login');
   };
 
@@ -40,6 +45,21 @@ const Layout: React.FC = () => {
       switchProject(projectId);
     }
   };
+
+  // Redirect to setup if no projects
+  useEffect(() => {
+    if (!projectsLoading && projects.length === 0) {
+      navigate('/setup');
+    }
+  }, [projectsLoading, projects.length, navigate]);
+
+  if (projectsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-10 h-10 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -111,11 +131,11 @@ const Layout: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-accent-foreground font-bold text-sm">
-                  {currentUser?.name?.charAt(0).toUpperCase()}
+                  {profile?.name?.charAt(0).toUpperCase() || '?'}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-sidebar-primary">{currentUser?.name}</p>
-                  <p className="text-[10px] text-sidebar-foreground/70 uppercase">{currentUser?.role}</p>
+                  <p className="text-sm font-medium text-sidebar-primary">{profile?.name || 'Usuário'}</p>
+                  <p className="text-[10px] text-sidebar-foreground/70 uppercase">{role}</p>
                 </div>
               </div>
               <button 
