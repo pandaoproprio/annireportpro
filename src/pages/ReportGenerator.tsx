@@ -9,8 +9,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 import { 
   Edit, Eye, Printer, Save, Trash2, Plus, ArrowUp, ArrowDown, 
-  EyeOff, Image as ImageIcon, Upload
+  EyeOff, Image as ImageIcon, Upload, Download, Loader2
 } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 
 const DEFAULT_SECTIONS: ReportSection[] = [
   { id: 'object', type: 'fixed', key: 'object', title: 'OBJETO', isVisible: true },
@@ -29,6 +30,7 @@ export const ReportGenerator: React.FC = () => {
   const reportRef = useRef<HTMLDivElement>(null);
 
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
+  const [isExporting, setIsExporting] = useState(false);
   const [logo, setLogo] = useState<string>('');
   const [logoSecondary, setLogoSecondary] = useState<string>('');
   const [objectText, setObjectText] = useState<string>('');
@@ -101,6 +103,42 @@ export const ReportGenerator: React.FC = () => {
       sections 
     });
     alert('Relatório salvo com sucesso!');
+  };
+
+  const exportToPdf = async () => {
+    if (!reportRef.current || !project) return;
+    
+    setIsExporting(true);
+    
+    try {
+      const element = reportRef.current;
+      const filename = `Relatorio_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+      
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          letterRendering: true,
+          logging: false
+        },
+        jsPDF: { 
+          unit: 'mm', 
+          format: 'a4', 
+          orientation: 'portrait' 
+        },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+      };
+      
+      await html2pdf().set(opt).from(element).save();
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      alert('Erro ao exportar PDF. Tente novamente.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>, isSecondary = false) => {
@@ -774,9 +812,23 @@ export const ReportGenerator: React.FC = () => {
             <Eye className="w-4 h-4 mr-2" /> Visualizar
           </Button>
           {mode === 'preview' && (
-            <Button onClick={() => window.print()} className="animate-scaleIn">
-              <Printer className="w-4 h-4 mr-2" /> Imprimir
-            </Button>
+            <>
+              <Button onClick={() => window.print()} className="animate-scaleIn">
+                <Printer className="w-4 h-4 mr-2" /> Imprimir
+              </Button>
+              <Button 
+                onClick={exportToPdf} 
+                disabled={isExporting}
+                className="animate-scaleIn bg-primary"
+              >
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                {isExporting ? 'Exportando...' : 'Exportar PDF'}
+              </Button>
+            </>
           )}
         </div>
       </div>
