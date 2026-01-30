@@ -8,7 +8,7 @@ import {
   PageBreak,
   Footer,
   PageNumber,
-  ImageRun,
+  convertInchesToTwip,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Project, TeamReport } from '@/types';
@@ -18,8 +18,18 @@ interface TeamReportExportData {
   report: TeamReport;
 }
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleDateString('pt-BR');
+// ABNT NBR 14724 formatting constants
+const ABNT = {
+  FONT_FAMILY: 'Times New Roman',
+  FONT_SIZE_BODY: 24, // 12pt (half-points)
+  FONT_SIZE_HEADING: 28, // 14pt
+  FONT_SIZE_TITLE: 32, // 16pt
+  LINE_SPACING: 360, // 1.5 line spacing (240 = single)
+  FIRST_LINE_INDENT: convertInchesToTwip(0.5), // First line indent
+  MARGIN_LEFT: 1701, // 3cm in twips
+  MARGIN_RIGHT: 1134, // 2cm in twips
+  MARGIN_TOP: 1701, // 3cm in twips
+  MARGIN_BOTTOM: 1134, // 2cm in twips
 };
 
 const formatPeriod = (start: string, end: string) => {
@@ -35,78 +45,119 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
 
   const docSections: Paragraph[] = [];
 
-  // Header
+  // Title - centered, bold, uppercase
   docSections.push(
     new Paragraph({
-      text: 'RELATÓRIO DA EQUIPE DE TRABALHO',
-      heading: HeadingLevel.HEADING_1,
+      children: [
+        new TextRun({
+          text: 'RELATÓRIO DA EQUIPE DE TRABALHO',
+          bold: true,
+          font: ABNT.FONT_FAMILY,
+          size: ABNT.FONT_SIZE_TITLE,
+        }),
+      ],
       alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
+      spacing: { after: 400, line: ABNT.LINE_SPACING },
+    })
+  );
+
+  // Header info - left aligned
+  docSections.push(
+    new Paragraph({
+      children: [
+        new TextRun({ text: 'Termo de Fomento nº: ', bold: true, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+        new TextRun({ text: project.fomentoNumber, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+      ],
+      alignment: AlignmentType.LEFT,
+      spacing: { after: 100, line: ABNT.LINE_SPACING },
     }),
     new Paragraph({
-      text: `Termo de Fomento nº: ${project.fomentoNumber}`,
+      children: [
+        new TextRun({ text: 'Projeto: ', bold: true, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+        new TextRun({ text: project.name, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+      ],
       alignment: AlignmentType.LEFT,
-      spacing: { after: 100 },
+      spacing: { after: 100, line: ABNT.LINE_SPACING },
     }),
     new Paragraph({
-      text: `Projeto: ${project.name}`,
+      children: [
+        new TextRun({ text: 'Período de Referência: ', bold: true, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+        new TextRun({ text: formatPeriod(report.periodStart, report.periodEnd), font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+      ],
       alignment: AlignmentType.LEFT,
-      spacing: { after: 100 },
-    }),
-    new Paragraph({
-      text: `Período de Referência: ${formatPeriod(report.periodStart, report.periodEnd)}`,
-      alignment: AlignmentType.LEFT,
-      spacing: { after: 400 },
+      spacing: { after: 400, line: ABNT.LINE_SPACING },
     })
   );
 
   // Section 1: Identification Data
   docSections.push(
     new Paragraph({
-      text: '1. Dados de Identificação',
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 400, after: 200 },
+      children: [
+        new TextRun({
+          text: '1. Dados de Identificação',
+          bold: true,
+          font: ABNT.FONT_FAMILY,
+          size: ABNT.FONT_SIZE_HEADING,
+        }),
+      ],
+      spacing: { before: 400, after: 200, line: ABNT.LINE_SPACING },
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: '• Prestador: ', bold: true }),
-        new TextRun({ text: report.providerName }),
+        new TextRun({ text: '• Prestador: ', bold: true, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+        new TextRun({ text: report.providerName || '[Não informado]', font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
       ],
-      spacing: { after: 100 },
+      spacing: { after: 100, line: ABNT.LINE_SPACING },
+      indent: { left: 360 },
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: '• Responsável Técnico: ', bold: true }),
-        new TextRun({ text: report.responsibleName }),
+        new TextRun({ text: '• Responsável Técnico: ', bold: true, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+        new TextRun({ text: report.responsibleName, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
       ],
-      spacing: { after: 100 },
+      spacing: { after: 100, line: ABNT.LINE_SPACING },
+      indent: { left: 360 },
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: '• Função: ', bold: true }),
-        new TextRun({ text: report.functionRole }),
+        new TextRun({ text: '• Função: ', bold: true, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+        new TextRun({ text: report.functionRole, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
       ],
-      spacing: { after: 300 },
+      spacing: { after: 300, line: ABNT.LINE_SPACING },
+      indent: { left: 360 },
     })
   );
 
   // Section 2: Execution Report
   docSections.push(
     new Paragraph({
-      text: '2. Relato de Execução da Coordenação do Projeto',
-      heading: HeadingLevel.HEADING_2,
-      spacing: { before: 400, after: 200 },
+      children: [
+        new TextRun({
+          text: '2. Relato de Execução da Coordenação do Projeto',
+          bold: true,
+          font: ABNT.FONT_FAMILY,
+          size: ABNT.FONT_SIZE_HEADING,
+        }),
+      ],
+      spacing: { before: 400, after: 200, line: ABNT.LINE_SPACING },
     })
   );
 
-  // Split report text into paragraphs
+  // Split report text into paragraphs - ABNT justified with first line indent
   const reportParagraphs = report.executionReport.split('\n').filter(p => p.trim());
   for (const para of reportParagraphs) {
     docSections.push(
       new Paragraph({
-        text: para.trim(),
+        children: [
+          new TextRun({
+            text: para.trim(),
+            font: ABNT.FONT_FAMILY,
+            size: ABNT.FONT_SIZE_BODY,
+          }),
+        ],
         alignment: AlignmentType.JUSTIFIED,
-        spacing: { after: 200 },
+        spacing: { after: 200, line: ABNT.LINE_SPACING },
+        indent: { firstLine: ABNT.FIRST_LINE_INDENT },
       })
     );
   }
@@ -116,19 +167,26 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
     docSections.push(
       new Paragraph({ children: [new PageBreak()] }),
       new Paragraph({
-        text: '3. Anexos de Comprovação',
-        heading: HeadingLevel.HEADING_2,
-        spacing: { before: 400, after: 200 },
+        children: [
+          new TextRun({
+            text: '3. Anexos de Comprovação',
+            bold: true,
+            font: ABNT.FONT_FAMILY,
+            size: ABNT.FONT_SIZE_HEADING,
+          }),
+        ],
+        spacing: { before: 400, after: 200, line: ABNT.LINE_SPACING },
       }),
       new Paragraph({
-        text: `${report.photos.length} registro(s) fotográfico(s) anexado(s).`,
-        spacing: { after: 200 },
         children: [
           new TextRun({ 
             text: `${report.photos.length} registro(s) fotográfico(s) anexado(s).`,
             italics: true,
+            font: ABNT.FONT_FAMILY,
+            size: ABNT.FONT_SIZE_BODY,
           }),
         ],
+        spacing: { after: 200, line: ABNT.LINE_SPACING },
       })
     );
   }
@@ -143,48 +201,67 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
   docSections.push(
     new Paragraph({ text: '', spacing: { after: 800 } }),
     new Paragraph({
-      text: `Rio de Janeiro, ${currentDate}.`,
+      children: [
+        new TextRun({
+          text: `Rio de Janeiro, ${currentDate}.`,
+          font: ABNT.FONT_FAMILY,
+          size: ABNT.FONT_SIZE_BODY,
+        }),
+      ],
       alignment: AlignmentType.LEFT,
-      spacing: { after: 600 },
+      spacing: { after: 800, line: ABNT.LINE_SPACING },
     }),
     new Paragraph({
-      text: '_____________________________________',
+      children: [
+        new TextRun({
+          text: '_____________________________________',
+          font: ABNT.FONT_FAMILY,
+          size: ABNT.FONT_SIZE_BODY,
+        }),
+      ],
       alignment: AlignmentType.CENTER,
       spacing: { after: 100 },
     }),
     new Paragraph({
-      text: 'Assinatura do responsável legal',
+      children: [
+        new TextRun({
+          text: 'Assinatura do responsável legal',
+          font: ABNT.FONT_FAMILY,
+          size: ABNT.FONT_SIZE_BODY,
+        }),
+      ],
       alignment: AlignmentType.CENTER,
-      spacing: { after: 200 },
+      spacing: { after: 300, line: ABNT.LINE_SPACING },
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: 'Nome e cargo: ', bold: true }),
-        new TextRun({ text: report.responsibleName }),
+        new TextRun({ text: 'Nome e cargo: ', bold: true, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+        new TextRun({ text: `${report.responsibleName} - ${report.functionRole}`, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
       ],
-      alignment: AlignmentType.LEFT,
-      spacing: { after: 100 },
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 100, line: ABNT.LINE_SPACING },
     }),
     new Paragraph({
       children: [
-        new TextRun({ text: 'CNPJ: ', bold: true }),
-        new TextRun({ text: report.providerDocument || '[Não informado]' }),
+        new TextRun({ text: 'CNPJ: ', bold: true, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+        new TextRun({ text: report.providerDocument || '[Não informado]', font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
       ],
-      alignment: AlignmentType.LEFT,
+      alignment: AlignmentType.CENTER,
+      spacing: { line: ABNT.LINE_SPACING },
     })
   );
 
-  // Create document
+  // Create document with ABNT margins
   const doc = new Document({
     sections: [
       {
         properties: {
           page: {
             margin: {
-              top: 1440,
-              right: 1440,
-              bottom: 1440,
-              left: 1440,
+              top: ABNT.MARGIN_TOP,
+              right: ABNT.MARGIN_RIGHT,
+              bottom: ABNT.MARGIN_BOTTOM,
+              left: ABNT.MARGIN_LEFT,
             },
           },
         },
@@ -194,16 +271,16 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
               new Paragraph({
                 alignment: AlignmentType.CENTER,
                 children: [
-                  new TextRun({ text: project.organizationName, size: 18 }),
+                  new TextRun({ text: project.organizationName, font: ABNT.FONT_FAMILY, size: 20 }),
                 ],
               }),
               new Paragraph({
                 alignment: AlignmentType.CENTER,
                 children: [
-                  new TextRun({ text: 'Página ', size: 18 }),
-                  new TextRun({ children: [PageNumber.CURRENT], size: 18 }),
-                  new TextRun({ text: ' de ', size: 18 }),
-                  new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 18 }),
+                  new TextRun({ text: 'Página ', font: ABNT.FONT_FAMILY, size: 20 }),
+                  new TextRun({ children: [PageNumber.CURRENT], font: ABNT.FONT_FAMILY, size: 20 }),
+                  new TextRun({ text: ' de ', font: ABNT.FONT_FAMILY, size: 20 }),
+                  new TextRun({ children: [PageNumber.TOTAL_PAGES], font: ABNT.FONT_FAMILY, size: 20 }),
                 ],
               }),
             ],
