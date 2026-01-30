@@ -4,7 +4,6 @@ import { TeamReport } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -21,6 +20,7 @@ import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, FileText, Download, Image as ImageIcon, X, Eye, ArrowLeft, FileDown, Users } from 'lucide-react';
 import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
 import { toast } from 'sonner';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
 export const TeamReportGenerator: React.FC = () => {
   const { activeProject: project } = useProjects();
@@ -298,15 +298,14 @@ export const TeamReportGenerator: React.FC = () => {
           <CardHeader>
             <CardTitle className="text-lg">2. Relato de Execução</CardTitle>
             <CardDescription>
-              Descreva detalhadamente as atividades realizadas no exercício da função
+              Descreva detalhadamente as atividades realizadas no exercício da função. Use a barra de ferramentas para formatar o texto.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Textarea
-              placeholder="No exercício da função de [função], o prestador atuou na viabilização..."
+            <RichTextEditor
               value={executionReport}
-              onChange={e => setExecutionReport(e.target.value)}
-              className="min-h-[300px]"
+              onChange={setExecutionReport}
+              placeholder="No exercício da função de [função], o prestador atuou na viabilização..."
             />
           </CardContent>
         </Card>
@@ -414,9 +413,10 @@ export const TeamReportGenerator: React.FC = () => {
 
           <div>
             <h2 className="text-lg font-bold mt-6 mb-3">2. Relato de Execução da Coordenação do Projeto</h2>
-            <div className="text-justify whitespace-pre-wrap">
-              {executionReport || '[Nenhum relato informado]'}
-            </div>
+            <div 
+              className="text-justify prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
+              dangerouslySetInnerHTML={{ __html: executionReport || '<p>[Nenhum relato informado]</p>' }}
+            />
           </div>
 
           {photos.length > 0 && (
