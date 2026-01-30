@@ -3,7 +3,6 @@ import {
   Packer,
   Paragraph,
   TextRun,
-  HeadingLevel,
   AlignmentType,
   PageBreak,
   Footer,
@@ -38,6 +37,117 @@ const formatPeriod = (start: string, end: string) => {
   const startMonth = startDate.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' });
   const endMonth = endDate.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' });
   return `[${startMonth} à ${endMonth}]`;
+};
+
+// Parse HTML content to docx paragraphs
+const parseHtmlToDocxParagraphs = (html: string): Paragraph[] => {
+  const paragraphs: Paragraph[] = [];
+  
+  // Create a temporary DOM element to parse HTML
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  
+  const processNode = (node: Node, isBold = false, isItalic = false, isUnderline = false): TextRun[] => {
+    const runs: TextRun[] = [];
+    
+    node.childNodes.forEach((child) => {
+      if (child.nodeType === Node.TEXT_NODE) {
+        const text = child.textContent || '';
+        if (text.trim()) {
+          runs.push(new TextRun({
+            text,
+            bold: isBold,
+            italics: isItalic,
+            underline: isUnderline ? {} : undefined,
+            font: ABNT.FONT_FAMILY,
+            size: ABNT.FONT_SIZE_BODY,
+          }));
+        }
+      } else if (child.nodeType === Node.ELEMENT_NODE) {
+        const el = child as Element;
+        const tag = el.tagName.toLowerCase();
+        
+        let newBold = isBold;
+        let newItalic = isItalic;
+        let newUnderline = isUnderline;
+        
+        if (tag === 'strong' || tag === 'b') newBold = true;
+        if (tag === 'em' || tag === 'i') newItalic = true;
+        if (tag === 'u') newUnderline = true;
+        
+        runs.push(...processNode(el, newBold, newItalic, newUnderline));
+      }
+    });
+    
+    return runs;
+  };
+  
+  const processElement = (element: Element) => {
+    const tag = element.tagName.toLowerCase();
+    
+    if (tag === 'p') {
+      const runs = processNode(element);
+      if (runs.length > 0) {
+        paragraphs.push(new Paragraph({
+          children: runs,
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 200, line: ABNT.LINE_SPACING },
+          indent: { firstLine: ABNT.FIRST_LINE_INDENT },
+        }));
+      }
+    } else if (tag === 'ul') {
+      element.querySelectorAll(':scope > li').forEach((li) => {
+        const runs = processNode(li);
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({ text: '• ', font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+            ...runs,
+          ],
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 100, line: ABNT.LINE_SPACING },
+          indent: { left: 720 },
+        }));
+      });
+    } else if (tag === 'ol') {
+      let counter = 1;
+      element.querySelectorAll(':scope > li').forEach((li) => {
+        const runs = processNode(li);
+        paragraphs.push(new Paragraph({
+          children: [
+            new TextRun({ text: `${counter}. `, font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY }),
+            ...runs,
+          ],
+          alignment: AlignmentType.JUSTIFIED,
+          spacing: { after: 100, line: ABNT.LINE_SPACING },
+          indent: { left: 720 },
+        }));
+        counter++;
+      });
+    }
+  };
+  
+  // Process body children
+  doc.body.childNodes.forEach((child) => {
+    if (child.nodeType === Node.ELEMENT_NODE) {
+      processElement(child as Element);
+    } else if (child.nodeType === Node.TEXT_NODE && child.textContent?.trim()) {
+      // Handle plain text
+      paragraphs.push(new Paragraph({
+        children: [
+          new TextRun({
+            text: child.textContent.trim(),
+            font: ABNT.FONT_FAMILY,
+            size: ABNT.FONT_SIZE_BODY,
+          }),
+        ],
+        alignment: AlignmentType.JUSTIFIED,
+        spacing: { after: 200, line: ABNT.LINE_SPACING },
+        indent: { firstLine: ABNT.FIRST_LINE_INDENT },
+      }));
+    }
+  });
+  
+  return paragraphs;
 };
 
 export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
@@ -143,24 +253,9 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
     })
   );
 
-  // Split report text into paragraphs - ABNT justified with first line indent
-  const reportParagraphs = report.executionReport.split('\n').filter(p => p.trim());
-  for (const para of reportParagraphs) {
-    docSections.push(
-      new Paragraph({
-        children: [
-          new TextRun({
-            text: para.trim(),
-            font: ABNT.FONT_FAMILY,
-            size: ABNT.FONT_SIZE_BODY,
-          }),
-        ],
-        alignment: AlignmentType.JUSTIFIED,
-        spacing: { after: 200, line: ABNT.LINE_SPACING },
-        indent: { firstLine: ABNT.FIRST_LINE_INDENT },
-      })
-    );
-  }
+  // Parse HTML content from rich text editor
+  const reportParagraphs = parseHtmlToDocxParagraphs(report.executionReport);
+  docSections.push(...reportParagraphs);
 
   // Section 3: Attachments (Photos)
   if (report.photos && report.photos.length > 0) {
