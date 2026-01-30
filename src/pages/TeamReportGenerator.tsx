@@ -447,7 +447,7 @@ export const TeamReportGenerator: React.FC = () => {
               <p className="border-t border-black inline-block pt-2 px-16">
                 Assinatura do responsável legal
               </p>
-              <p className="mt-4"><strong>Nome e cargo:</strong> {responsibleName}</p>
+              <p className="mt-4"><strong>Nome e cargo:</strong> {responsibleName} - {functionRole}</p>
               <p><strong>CNPJ:</strong> {providerDocument || '[Não informado]'}</p>
             </div>
           </div>
