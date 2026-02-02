@@ -8,9 +8,40 @@ import {
   Footer,
   PageNumber,
   convertInchesToTwip,
+  ImageRun,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Project, TeamReport } from '@/types';
+
+// Helper function to fetch image as ArrayBuffer
+const fetchImageAsArrayBuffer = async (url: string): Promise<ArrayBuffer | null> => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    return await response.arrayBuffer();
+  } catch (error) {
+    console.error('Error fetching image:', error);
+    return null;
+  }
+};
+
+// Helper function to get image dimensions
+const getImageDimensions = (arrayBuffer: ArrayBuffer): Promise<{ width: number; height: number }> => {
+  return new Promise((resolve) => {
+    const blob = new Blob([arrayBuffer]);
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: img.width, height: img.height });
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve({ width: 400, height: 300 }); // Default dimensions
+    };
+    img.src = url;
+  });
+};
 
 interface TeamReportExportData {
   project: Project;
@@ -257,33 +288,96 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
   const reportParagraphs = parseHtmlToDocxParagraphs(report.executionReport);
   docSections.push(...reportParagraphs);
 
-  // Section 3: Attachments (Photos)
+  // Section 3: Attachments (Photos) - with embedded images
   if (report.photos && report.photos.length > 0) {
     docSections.push(
       new Paragraph({ children: [new PageBreak()] }),
       new Paragraph({
         children: [
           new TextRun({
-            text: '3. Anexos de Comprovação',
+            text: '3. Anexos de Comprovação - Registros Fotográficos',
             bold: true,
             font: ABNT.FONT_FAMILY,
             size: ABNT.FONT_SIZE_HEADING,
           }),
         ],
-        spacing: { before: 400, after: 200, line: ABNT.LINE_SPACING },
-      }),
-      new Paragraph({
-        children: [
-          new TextRun({ 
-            text: `${report.photos.length} registro(s) fotográfico(s) anexado(s).`,
-            italics: true,
-            font: ABNT.FONT_FAMILY,
-            size: ABNT.FONT_SIZE_BODY,
-          }),
-        ],
-        spacing: { after: 200, line: ABNT.LINE_SPACING },
+        spacing: { before: 400, after: 300, line: ABNT.LINE_SPACING },
       })
     );
+
+    // Add each photo with caption
+    const maxWidth = 450; // Max width in pixels for the document
+    let photoCount = 0;
+
+    for (const photoUrl of report.photos) {
+      photoCount++;
+      const imageBuffer = await fetchImageAsArrayBuffer(photoUrl);
+      
+      if (imageBuffer) {
+        const dimensions = await getImageDimensions(imageBuffer);
+        
+        // Calculate scaled dimensions to fit document width
+        let width = dimensions.width;
+        let height = dimensions.height;
+        
+        if (width > maxWidth) {
+          const scale = maxWidth / width;
+          width = maxWidth;
+          height = Math.round(height * scale);
+        }
+
+        // Add the image
+        docSections.push(
+          new Paragraph({
+            children: [
+              new ImageRun({
+                data: imageBuffer,
+                transformation: {
+                  width,
+                  height,
+                },
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 300, after: 100 },
+          }),
+          // Caption below the image
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `Foto ${photoCount}: Registro fotográfico das atividades realizadas`,
+                italics: true,
+                font: ABNT.FONT_FAMILY,
+                size: 20, // 10pt for caption
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 400, line: ABNT.LINE_SPACING },
+          })
+        );
+
+        // Add page break after every 2 photos to avoid overcrowding
+        if (photoCount % 2 === 0 && photoCount < report.photos.length) {
+          docSections.push(new Paragraph({ children: [new PageBreak()] }));
+        }
+      } else {
+        // If image couldn't be loaded, add a placeholder text
+        docSections.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: `[Foto ${photoCount}: Imagem não disponível - ${photoUrl}]`,
+                italics: true,
+                font: ABNT.FONT_FAMILY,
+                size: ABNT.FONT_SIZE_BODY,
+              }),
+            ],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200, line: ABNT.LINE_SPACING },
+          })
+        );
+      }
+    }
   }
 
   // Signature Section
