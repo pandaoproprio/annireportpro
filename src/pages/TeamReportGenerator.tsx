@@ -489,7 +489,7 @@ export const TeamReportGenerator: React.FC = () => {
             <div>
               <h2 className="text-lg font-bold mt-6 mb-3">3. Anexos de Comprovação</h2>
               <div className="grid grid-cols-2 gap-4">
-                {photosWithCaptions.slice(0, 4).map((photo, idx) => (
+                {photosWithCaptions.map((photo, idx) => (
                   <div key={idx} className="space-y-2">
                     <img
                       src={photo.url}
@@ -502,11 +502,6 @@ export const TeamReportGenerator: React.FC = () => {
                   </div>
                 ))}
               </div>
-              {photosWithCaptions.length > 4 && (
-                <p className="text-sm text-gray-500 mt-2">
-                  + {photosWithCaptions.length - 4} foto(s) adicional(is)
-                </p>
-              )}
             </div>
           )}
 
