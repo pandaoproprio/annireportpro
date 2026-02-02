@@ -47,9 +47,12 @@ const createPdfContainer = (data: TeamReportExportData): HTMLDivElement => {
   const container = document.createElement('div');
   container.id = 'pdf-export-container';
   container.style.cssText = `
-    position: absolute;
-    left: -9999px;
-    top: 0;
+    position: fixed !important;
+    left: -99999px !important;
+    top: -99999px !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    z-index: -99999 !important;
     width: 794px;
     background: white;
     font-family: 'Times New Roman', Times, serif;
