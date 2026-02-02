@@ -187,8 +187,10 @@ export type Database = {
           execution_report: string
           function_role: string
           id: string
+          is_draft: boolean
           period_end: string
           period_start: string
+          photo_captions: Json
           photos: string[]
           project_id: string
           provider_document: string
@@ -203,8 +205,10 @@ export type Database = {
           execution_report: string
           function_role: string
           id?: string
+          is_draft?: boolean
           period_end: string
           period_start: string
+          photo_captions?: Json
           photos?: string[]
           project_id: string
           provider_document: string
@@ -219,8 +223,10 @@ export type Database = {
           execution_report?: string
           function_role?: string
           id?: string
+          is_draft?: boolean
           period_end?: string
           period_start?: string
+          photo_captions?: Json
           photos?: string[]
           project_id?: string
           provider_document?: string

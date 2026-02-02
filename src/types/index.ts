@@ -107,6 +107,7 @@ export interface Project {
 }
 
 export interface PhotoWithCaption {
+  id: string;
   url: string;
   caption: string;
 }
