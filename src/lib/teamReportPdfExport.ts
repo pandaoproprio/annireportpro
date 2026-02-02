@@ -1,4 +1,5 @@
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { Project, TeamReport } from '@/types';
 
 interface TeamReportExportData {
@@ -29,77 +30,72 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     ? report.photoCaptions 
     : report.photos?.map((url) => ({ url, caption: 'Registro fotográfico das atividades realizadas' })) || [];
 
-  // Build HTML content for PDF - removed padding since html2pdf already applies margins
-  const htmlContent = `
-    <div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000; word-wrap: break-word; overflow-wrap: break-word;">
+  // Create container element with proper styling for A4
+  const container = document.createElement('div');
+  container.id = 'pdf-export-container';
+  container.style.cssText = `
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    width: 794px;
+    background: white;
+    padding: 60px 40px 40px 60px;
+    box-sizing: border-box;
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 12pt;
+    line-height: 1.5;
+    color: #000;
+  `;
+
+  // Build HTML content for PDF
+  container.innerHTML = `
+    <div style="width: 100%;">
       <!-- Title -->
-      <h1 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 24px; word-wrap: break-word;">
+      <h1 style="text-align: center; font-size: 16pt; font-weight: bold; margin: 0 0 24px 0; font-family: 'Times New Roman', Times, serif;">
         RELATÓRIO DA EQUIPE DE TRABALHO
       </h1>
 
       <!-- Header Info -->
-      <p style="margin-bottom: 6px; word-wrap: break-word;">
+      <p style="margin: 0 0 6px 0; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
         <strong>Termo de Fomento nº:</strong> ${project.fomentoNumber}
       </p>
-      <p style="margin-bottom: 6px; word-wrap: break-word;">
+      <p style="margin: 0 0 6px 0; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
         <strong>Projeto:</strong> ${project.name}
       </p>
-      <p style="margin-bottom: 24px; word-wrap: break-word;">
+      <p style="margin: 0 0 24px 0; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
         <strong>Período de Referência:</strong> ${formatPeriod(report.periodStart, report.periodEnd)}
       </p>
 
       <!-- Section 1: Identification -->
-      <h2 style="font-size: 14pt; font-weight: bold; margin-top: 24px; margin-bottom: 12px;">
+      <h2 style="font-size: 14pt; font-weight: bold; margin: 24px 0 12px 0; font-family: 'Times New Roman', Times, serif;">
         1. Dados de Identificação
       </h2>
-      <ul style="margin-left: 20px; list-style-type: disc;">
-        <li style="margin-bottom: 6px; word-wrap: break-word;"><strong>Prestador:</strong> ${report.providerName || '[Não informado]'}</li>
-        <li style="margin-bottom: 6px; word-wrap: break-word;"><strong>Responsável Técnico:</strong> ${report.responsibleName}</li>
-        <li style="margin-bottom: 6px; word-wrap: break-word;"><strong>Função:</strong> ${report.functionRole}</li>
+      <ul style="margin: 0 0 0 20px; padding: 0; list-style-type: disc; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
+        <li style="margin-bottom: 6px;"><strong>Prestador:</strong> ${report.providerName || '[Não informado]'}</li>
+        <li style="margin-bottom: 6px;"><strong>Responsável Técnico:</strong> ${report.responsibleName}</li>
+        <li style="margin-bottom: 6px;"><strong>Função:</strong> ${report.functionRole}</li>
       </ul>
 
       <!-- Section 2: Execution Report -->
-      <h2 style="font-size: 14pt; font-weight: bold; margin-top: 24px; margin-bottom: 12px;">
+      <h2 style="font-size: 14pt; font-weight: bold; margin: 24px 0 12px 0; font-family: 'Times New Roman', Times, serif;">
         2. Relato de Execução da Coordenação do Projeto
       </h2>
-      <div style="text-align: justify; word-wrap: break-word; overflow-wrap: break-word;">
+      <div style="text-align: justify; font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5;">
         ${report.executionReport || '<p>[Nenhum relato informado]</p>'}
       </div>
 
-      ${photosToExport.length > 0 ? `
-        <!-- Section 3: Photos -->
-        <div style="page-break-before: always;"></div>
-        <h2 style="font-size: 14pt; font-weight: bold; margin-top: 24px; margin-bottom: 12px;">
-          3. Anexos de Comprovação - Registros Fotográficos
-        </h2>
-        <div style="text-align: center;">
-          ${photosToExport.map((photo, idx) => `
-            <div style="margin-bottom: 30px; ${idx > 0 && idx % 2 === 0 ? 'page-break-before: always;' : ''}">
-              <img 
-                src="${photo.url}" 
-                style="max-width: 100%; max-height: 300px; border: 1px solid #ccc; display: block; margin: 0 auto;" 
-                alt="Foto ${idx + 1}"
-              />
-              <p style="font-style: italic; font-size: 10pt; margin-top: 8px; text-align: center; word-wrap: break-word;">
-                Foto ${idx + 1}: ${photo.caption}
-              </p>
-            </div>
-          `).join('')}
-        </div>
-      ` : ''}
-
       <!-- Signature Section -->
       <div style="margin-top: 60px;">
-        <p style="text-align: left; margin-bottom: 60px;">
+        <p style="text-align: left; margin: 0 0 60px 0; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
           Rio de Janeiro, ${getCurrentDate()}.
         </p>
         <div style="text-align: center;">
-          <p style="margin-bottom: 8px;">_____________________________________</p>
-          <p style="margin-bottom: 16px;">Assinatura do responsável legal</p>
-          <p style="margin-bottom: 6px; word-wrap: break-word;">
+          <p style="margin: 0 0 8px 0; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">_____________________________________</p>
+          <p style="margin: 0 0 16px 0; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">Assinatura do responsável legal</p>
+          <p style="margin: 0 0 6px 0; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
             <strong>Nome e cargo:</strong> ${report.responsibleName} - ${report.functionRole}
           </p>
-          <p style="word-wrap: break-word;">
+          <p style="margin: 0; font-family: 'Times New Roman', Times, serif; font-size: 12pt;">
             <strong>CNPJ:</strong> ${report.providerDocument || '[Não informado]'}
           </p>
         </div>
@@ -107,63 +103,139 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     </div>
   `;
 
-  // Create container element - no padding here, margins are applied by html2pdf
-  const container = document.createElement('div');
-  container.innerHTML = htmlContent;
-  container.style.width = '160mm'; // A4 width (210mm) minus margins (30mm + 20mm)
-  container.style.boxSizing = 'border-box';
   document.body.appendChild(container);
 
   const memberName = report.responsibleName.replace(/\s+/g, '_');
   const filename = `Relatorio_Equipe_${memberName}_${new Date().toISOString().split('T')[0]}.pdf`;
 
   try {
-    const pdfInstance = html2pdf()
-      .set({
-        margin: [30, 20, 20, 30],
-        filename,
-        image: { type: 'jpeg', quality: 0.95 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          logging: false,
-        },
-        jsPDF: {
-          unit: 'mm',
-          format: 'a4',
-          orientation: 'portrait',
-        },
-        pagebreak: {
-          mode: ['avoid-all', 'css', 'legacy'],
-        },
-      })
-      .from(container);
-
-    // Generate PDF with page numbers
-    const pdf = await pdfInstance.toPdf().get('pdf');
+    // A4 dimensions in mm
+    const a4Width = 210;
+    const a4Height = 297;
     
-    const totalPages = pdf.internal.getNumberOfPages();
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    // Create PDF
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    
+    // Render first page (text content)
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+    });
 
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    const imgWidth = a4Width;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    // Add first segment
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+    heightLeft -= a4Height;
+
+    // Handle multi-page text content
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+      heightLeft -= a4Height;
+    }
+
+    // Add photos section if there are photos
+    if (photosToExport.length > 0) {
+      // Create photo pages - 2 photos per page in a grid
+      for (let i = 0; i < photosToExport.length; i += 2) {
+        pdf.addPage();
+
+        const pagePhotos = photosToExport.slice(i, i + 2);
+        
+        // Add section title on first photo page
+        if (i === 0) {
+          pdf.setFont('times', 'bold');
+          pdf.setFontSize(14);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text('3. Anexos de Comprovação - Registros Fotográficos', 30, 30);
+        }
+
+        const startY = i === 0 ? 45 : 20;
+        const photoHeight = 100;
+        const photoWidth = 75;
+        const captionHeight = 15;
+        const spacing = 10;
+
+        for (let j = 0; j < pagePhotos.length; j++) {
+          const photo = pagePhotos[j];
+          const photoIndex = i + j + 1;
+          const yPosition = startY + j * (photoHeight + captionHeight + spacing);
+
+          try {
+            // Load image
+            const img = new Image();
+            img.crossOrigin = 'anonymous';
+            
+            await new Promise<void>((resolve, reject) => {
+              img.onload = () => resolve();
+              img.onerror = () => reject(new Error('Failed to load image'));
+              img.src = photo.url;
+            });
+
+            // Calculate centered position for photo
+            const xPosition = (a4Width - photoWidth) / 2;
+
+            // Add image to PDF
+            pdf.addImage(img, 'JPEG', xPosition, yPosition, photoWidth, photoHeight);
+
+            // Add caption below photo
+            pdf.setFont('times', 'italic');
+            pdf.setFontSize(10);
+            pdf.setTextColor(0, 0, 0);
+            
+            const caption = `Foto ${photoIndex}: ${photo.caption}`;
+            const captionLines = pdf.splitTextToSize(caption, a4Width - 60);
+            const captionY = yPosition + photoHeight + 5;
+            
+            captionLines.forEach((line: string, lineIndex: number) => {
+              const textWidth = pdf.getTextWidth(line);
+              const textX = (a4Width - textWidth) / 2;
+              pdf.text(line, textX, captionY + (lineIndex * 5));
+            });
+
+          } catch (error) {
+            console.error(`Failed to load photo ${photoIndex}:`, error);
+            // Add placeholder for failed image
+            pdf.setFont('times', 'normal');
+            pdf.setFontSize(10);
+            pdf.setTextColor(100, 100, 100);
+            pdf.text(`[Foto ${photoIndex} não disponível]`, a4Width / 2, yPosition + 50, { align: 'center' });
+          }
+        }
+      }
+    }
+
+    // Add page numbers and footer to all pages
+    const totalPages = (pdf as any).internal.getNumberOfPages();
+    
     for (let i = 1; i <= totalPages; i++) {
       pdf.setPage(i);
+      pdf.setFont('times', 'normal');
       pdf.setFontSize(10);
       pdf.setTextColor(100, 100, 100);
-      
+
       // Add organization name
       const orgText = project.organizationName;
       const orgTextWidth = pdf.getTextWidth(orgText);
-      pdf.text(orgText, (pageWidth - orgTextWidth) / 2, pageHeight - 15);
-      
+      pdf.text(orgText, (a4Width - orgTextWidth) / 2, a4Height - 15);
+
       // Add page number
       const pageText = `Página ${i} de ${totalPages}`;
       const pageTextWidth = pdf.getTextWidth(pageText);
-      pdf.text(pageText, (pageWidth - pageTextWidth) / 2, pageHeight - 10);
+      pdf.text(pageText, (a4Width - pageTextWidth) / 2, a4Height - 10);
     }
 
     pdf.save(filename);
+
   } finally {
     document.body.removeChild(container);
   }
