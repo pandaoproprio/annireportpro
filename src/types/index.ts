@@ -106,6 +106,11 @@ export interface Project {
   reportData?: ReportData;
 }
 
+export interface PhotoWithCaption {
+  url: string;
+  caption: string;
+}
+
 export interface TeamReport {
   id: string;
   projectId: string;
@@ -118,6 +123,7 @@ export interface TeamReport {
   periodEnd: string;
   executionReport: string;
   photos: string[];
+  photoCaptions?: PhotoWithCaption[];
   createdAt: string;
   updatedAt: string;
 }
