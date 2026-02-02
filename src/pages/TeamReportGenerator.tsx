@@ -19,6 +19,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, FileText, Download, Image as ImageIcon, X, Eye, ArrowLeft, FileDown, Users, Edit2 } from 'lucide-react';
 import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
+import { exportTeamReportToPdf } from '@/lib/teamReportPdfExport';
 import { toast } from 'sonner';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 
@@ -128,8 +129,47 @@ export const TeamReportGenerator: React.FC = () => {
     }
   };
 
-  const handleExportPdf = () => {
-    toast.info('Exportação PDF em desenvolvimento. Use DOCX por enquanto.');
+  const handleExportPdf = async () => {
+    if (!periodStart || !periodEnd) {
+      toast.error('Preencha o período de referência');
+      return;
+    }
+    if (!responsibleName) {
+      toast.error('Preencha o nome do responsável');
+      return;
+    }
+    if (!executionReport) {
+      toast.error('Preencha o relato de execução');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const reportData: TeamReport = {
+        id: crypto.randomUUID(),
+        projectId: project.id,
+        teamMemberId: selectedMemberId,
+        providerName,
+        providerDocument,
+        responsibleName,
+        functionRole,
+        periodStart: periodStart.toISOString(),
+        periodEnd: periodEnd.toISOString(),
+        executionReport,
+        photos: photosWithCaptions.map(p => p.url),
+        photoCaptions: photosWithCaptions,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      await exportTeamReportToPdf({ project, report: reportData });
+      toast.success('Relatório PDF exportado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      toast.error('Erro ao exportar relatório PDF');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Form View
