@@ -29,22 +29,22 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     ? report.photoCaptions 
     : report.photos?.map((url) => ({ url, caption: 'Registro fotográfico das atividades realizadas' })) || [];
 
-  // Build HTML content for PDF
+  // Build HTML content for PDF - removed padding since html2pdf already applies margins
   const htmlContent = `
-    <div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000;">
+    <div style="font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5; color: #000; word-wrap: break-word; overflow-wrap: break-word;">
       <!-- Title -->
-      <h1 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 24px;">
+      <h1 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 24px; word-wrap: break-word;">
         RELATÓRIO DA EQUIPE DE TRABALHO
       </h1>
 
       <!-- Header Info -->
-      <p style="margin-bottom: 6px;">
+      <p style="margin-bottom: 6px; word-wrap: break-word;">
         <strong>Termo de Fomento nº:</strong> ${project.fomentoNumber}
       </p>
-      <p style="margin-bottom: 6px;">
+      <p style="margin-bottom: 6px; word-wrap: break-word;">
         <strong>Projeto:</strong> ${project.name}
       </p>
-      <p style="margin-bottom: 24px;">
+      <p style="margin-bottom: 24px; word-wrap: break-word;">
         <strong>Período de Referência:</strong> ${formatPeriod(report.periodStart, report.periodEnd)}
       </p>
 
@@ -53,16 +53,16 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         1. Dados de Identificação
       </h2>
       <ul style="margin-left: 20px; list-style-type: disc;">
-        <li style="margin-bottom: 6px;"><strong>Prestador:</strong> ${report.providerName || '[Não informado]'}</li>
-        <li style="margin-bottom: 6px;"><strong>Responsável Técnico:</strong> ${report.responsibleName}</li>
-        <li style="margin-bottom: 6px;"><strong>Função:</strong> ${report.functionRole}</li>
+        <li style="margin-bottom: 6px; word-wrap: break-word;"><strong>Prestador:</strong> ${report.providerName || '[Não informado]'}</li>
+        <li style="margin-bottom: 6px; word-wrap: break-word;"><strong>Responsável Técnico:</strong> ${report.responsibleName}</li>
+        <li style="margin-bottom: 6px; word-wrap: break-word;"><strong>Função:</strong> ${report.functionRole}</li>
       </ul>
 
       <!-- Section 2: Execution Report -->
       <h2 style="font-size: 14pt; font-weight: bold; margin-top: 24px; margin-bottom: 12px;">
         2. Relato de Execução da Coordenação do Projeto
       </h2>
-      <div style="text-align: justify; text-indent: 1.25cm;">
+      <div style="text-align: justify; word-wrap: break-word; overflow-wrap: break-word;">
         ${report.executionReport || '<p>[Nenhum relato informado]</p>'}
       </div>
 
@@ -77,10 +77,10 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
             <div style="margin-bottom: 30px; ${idx > 0 && idx % 2 === 0 ? 'page-break-before: always;' : ''}">
               <img 
                 src="${photo.url}" 
-                style="max-width: 100%; max-height: 350px; border: 1px solid #ccc; display: block; margin: 0 auto;" 
+                style="max-width: 100%; max-height: 300px; border: 1px solid #ccc; display: block; margin: 0 auto;" 
                 alt="Foto ${idx + 1}"
               />
-              <p style="font-style: italic; font-size: 10pt; margin-top: 8px; text-align: center;">
+              <p style="font-style: italic; font-size: 10pt; margin-top: 8px; text-align: center; word-wrap: break-word;">
                 Foto ${idx + 1}: ${photo.caption}
               </p>
             </div>
@@ -96,10 +96,10 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         <div style="text-align: center;">
           <p style="margin-bottom: 8px;">_____________________________________</p>
           <p style="margin-bottom: 16px;">Assinatura do responsável legal</p>
-          <p style="margin-bottom: 6px;">
+          <p style="margin-bottom: 6px; word-wrap: break-word;">
             <strong>Nome e cargo:</strong> ${report.responsibleName} - ${report.functionRole}
           </p>
-          <p>
+          <p style="word-wrap: break-word;">
             <strong>CNPJ:</strong> ${report.providerDocument || '[Não informado]'}
           </p>
         </div>
@@ -107,11 +107,10 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     </div>
   `;
 
-  // Create container element
+  // Create container element - no padding here, margins are applied by html2pdf
   const container = document.createElement('div');
   container.innerHTML = htmlContent;
-  container.style.width = '210mm';
-  container.style.padding = '30mm 20mm 20mm 30mm';
+  container.style.width = '160mm'; // A4 width (210mm) minus margins (30mm + 20mm)
   container.style.boxSizing = 'border-box';
   document.body.appendChild(container);
 
