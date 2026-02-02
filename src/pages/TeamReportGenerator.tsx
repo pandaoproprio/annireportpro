@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useProjects } from '@/hooks/useProjects';
+import { useTeamReports, TeamReportDraft } from '@/hooks/useTeamReports';
 import { TeamReport, PhotoWithCaption } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,14 +18,44 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, FileText, Download, Image as ImageIcon, X, Eye, ArrowLeft, FileDown, Users, Edit2 } from 'lucide-react';
+import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save, Trash2, FileEdit, Loader2 } from 'lucide-react';
 import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
 import { exportTeamReportToPdf } from '@/lib/teamReportPdfExport';
 import { toast } from 'sonner';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { SortablePhoto } from '@/components/SortablePhoto';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 export const TeamReportGenerator: React.FC = () => {
   const { activeProject: project } = useProjects();
+  const { drafts, isLoading: isDraftsLoading, isSaving, saveDraft, deleteDraft } = useTeamReports(project?.id);
+  
+  const [currentDraftId, setCurrentDraftId] = useState<string | undefined>();
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [providerName, setProviderName] = useState('');
   const [providerDocument, setProviderDocument] = useState('');
@@ -36,7 +67,45 @@ export const TeamReportGenerator: React.FC = () => {
   const [photosWithCaptions, setPhotosWithCaptions] = useState<PhotoWithCaption[]>([]);
   const [isPreview, setIsPreview] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [showDraftsList, setShowDraftsList] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Reset form
+  const resetForm = () => {
+    setCurrentDraftId(undefined);
+    setSelectedMemberId('');
+    setProviderName('');
+    setProviderDocument('');
+    setResponsibleName('');
+    setFunctionRole('');
+    setPeriodStart(undefined);
+    setPeriodEnd(undefined);
+    setExecutionReport('');
+    setPhotosWithCaptions([]);
+  };
+
+  // Load draft into form
+  const loadDraft = (draft: TeamReportDraft) => {
+    setCurrentDraftId(draft.id);
+    setSelectedMemberId(draft.teamMemberId);
+    setProviderName(draft.providerName);
+    setProviderDocument(draft.providerDocument);
+    setResponsibleName(draft.responsibleName);
+    setFunctionRole(draft.functionRole);
+    setPeriodStart(draft.periodStart ? new Date(draft.periodStart) : undefined);
+    setPeriodEnd(draft.periodEnd ? new Date(draft.periodEnd) : undefined);
+    setExecutionReport(draft.executionReport);
+    setPhotosWithCaptions(draft.photoCaptions || []);
+    setShowDraftsList(false);
+  };
 
   if (!project) {
     return (
@@ -60,11 +129,12 @@ export const TeamReportGenerator: React.FC = () => {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach((file, index) => {
+      Array.from(files).forEach((file) => {
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
             const newPhoto: PhotoWithCaption = {
+              id: crypto.randomUUID(),
               url: event.target!.result as string,
               caption: `Registro fotográfico das atividades realizadas`,
             };
@@ -86,6 +156,59 @@ export const TeamReportGenerator: React.FC = () => {
     );
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    
+    if (over && active.id !== over.id) {
+      setPhotosWithCaptions((items) => {
+        const oldIndex = items.findIndex(item => item.id === active.id);
+        const newIndex = items.findIndex(item => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!periodStart || !periodEnd) {
+      toast.error('Preencha o período de referência');
+      return;
+    }
+    if (!responsibleName) {
+      toast.error('Preencha o nome do responsável');
+      return;
+    }
+
+    const draftData = {
+      id: currentDraftId,
+      projectId: project.id,
+      teamMemberId: selectedMemberId,
+      providerName,
+      providerDocument,
+      responsibleName,
+      functionRole,
+      periodStart: periodStart.toISOString().split('T')[0],
+      periodEnd: periodEnd.toISOString().split('T')[0],
+      executionReport,
+      photos: photosWithCaptions.map(p => p.url),
+      photoCaptions: photosWithCaptions,
+      isDraft: true,
+    };
+
+    const savedId = await saveDraft(draftData);
+    if (savedId) {
+      setCurrentDraftId(savedId);
+      toast.success('Rascunho salvo com sucesso!');
+    }
+  };
+
+  const handleDeleteDraft = async (draftId: string) => {
+    await deleteDraft(draftId);
+    if (currentDraftId === draftId) {
+      resetForm();
+      setShowDraftsList(true);
+    }
+  };
+
   const handleExportDocx = async () => {
     if (!periodStart || !periodEnd) {
       toast.error('Preencha o período de referência');
@@ -103,7 +226,7 @@ export const TeamReportGenerator: React.FC = () => {
     setIsExporting(true);
     try {
       const reportData: TeamReport = {
-        id: crypto.randomUUID(),
+        id: currentDraftId || crypto.randomUUID(),
         projectId: project.id,
         teamMemberId: selectedMemberId,
         providerName,
@@ -146,7 +269,7 @@ export const TeamReportGenerator: React.FC = () => {
     setIsExporting(true);
     try {
       const reportData: TeamReport = {
-        id: crypto.randomUUID(),
+        id: currentDraftId || crypto.randomUUID(),
         projectId: project.id,
         teamMemberId: selectedMemberId,
         providerName,
@@ -172,8 +295,8 @@ export const TeamReportGenerator: React.FC = () => {
     }
   };
 
-  // Form View
-  if (!isPreview) {
+  // Drafts List View
+  if (showDraftsList && !isPreview) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
         <div className="flex items-center justify-between">
@@ -186,6 +309,117 @@ export const TeamReportGenerator: React.FC = () => {
               Gere relatórios individuais dos membros da equipe do projeto
             </p>
           </div>
+          <Button onClick={() => { resetForm(); setShowDraftsList(false); }}>
+            <FileEdit className="w-4 h-4 mr-2" />
+            Novo Relatório
+          </Button>
+        </div>
+
+        {/* Saved Drafts */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Relatórios Salvos</CardTitle>
+            <CardDescription>Continue editando um relatório salvo ou crie um novo</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isDraftsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : drafts.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <FileEdit className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum relatório salvo ainda.</p>
+                <p className="text-sm">Clique em "Novo Relatório" para começar.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {drafts.map((draft) => (
+                  <div
+                    key={draft.id}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex-1">
+                      <p className="font-medium">{draft.responsibleName || 'Sem nome'}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {draft.functionRole || 'Função não definida'} • 
+                        {draft.periodStart && draft.periodEnd ? (
+                          ` ${format(new Date(draft.periodStart), 'MM/yyyy')} - ${format(new Date(draft.periodEnd), 'MM/yyyy')}`
+                        ) : ' Período não definido'}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Atualizado em {format(new Date(draft.updatedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        {draft.isDraft && <span className="ml-2 text-amber-600 font-medium">• Rascunho</span>}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => loadDraft(draft)}>
+                        <FileEdit className="w-4 h-4 mr-1" />
+                        Editar
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Excluir relatório?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Esta ação não pode ser desfeita. O relatório de {draft.responsibleName} será excluído permanentemente.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => handleDeleteDraft(draft.id)}>
+                              Excluir
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Form View
+  if (!isPreview) {
+    return (
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" onClick={() => setShowDraftsList(true)}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Voltar
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {currentDraftId ? 'Editar Relatório' : 'Novo Relatório'}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {project.name}
+              </p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={handleSaveDraft} 
+            disabled={isSaving}
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4 mr-2" />
+            )}
+            Salvar Rascunho
+          </Button>
         </div>
 
         {/* Project Info Card */}
@@ -361,11 +595,11 @@ export const TeamReportGenerator: React.FC = () => {
           </CardContent>
         </Card>
 
-        {/* Photos Section */}
+        {/* Photos Section with Drag and Drop */}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">3. Anexos de Comprovação</CardTitle>
-            <CardDescription>Adicione fotos que comprovem as atividades realizadas</CardDescription>
+            <CardDescription>Adicione fotos e arraste para reordenar</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <input
@@ -386,44 +620,38 @@ export const TeamReportGenerator: React.FC = () => {
             </Button>
 
             {photosWithCaptions.length > 0 && (
-              <div className="space-y-4">
-                {photosWithCaptions.map((photo, idx) => (
-                  <div key={idx} className="flex gap-4 items-start p-4 border rounded-lg bg-muted/30">
-                    <div className="relative w-32 h-32 flex-shrink-0">
-                      <img
-                        src={photo.url}
-                        alt={`Foto ${idx + 1}`}
-                        className="w-full h-full object-cover rounded-lg border"
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={photosWithCaptions.map(p => p.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-4">
+                    {photosWithCaptions.map((photo, idx) => (
+                      <SortablePhoto
+                        key={photo.id}
+                        photo={photo}
+                        index={idx}
+                        onRemove={removePhoto}
+                        onUpdateCaption={updatePhotoCaption}
                       />
-                      <button
-                        onClick={() => removePhoto(idx)}
-                        className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full shadow-md hover:bg-destructive/90"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                    <div className="flex-1 space-y-2">
-                      <Label htmlFor={`caption-${idx}`} className="text-sm font-medium flex items-center gap-1">
-                        <Edit2 className="w-3 h-3" />
-                        Legenda da Foto {idx + 1}
-                      </Label>
-                      <Input
-                        id={`caption-${idx}`}
-                        value={photo.caption}
-                        onChange={(e) => updatePhotoCaption(idx, e.target.value)}
-                        placeholder="Descreva esta foto..."
-                        className="w-full"
-                      />
-                    </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </SortableContext>
+              </DndContext>
             )}
           </CardContent>
         </Card>
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 justify-end">
+          <Button variant="outline" onClick={handleSaveDraft} disabled={isSaving}>
+            {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
+            Salvar Rascunho
+          </Button>
           <Button variant="outline" onClick={() => setIsPreview(true)}>
             <Eye className="w-4 h-4 mr-2" />
             Pré-visualizar
@@ -446,8 +674,8 @@ export const TeamReportGenerator: React.FC = () => {
           Voltar ao Formulário
         </Button>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleExportPdf}>
-            <Download className="w-4 h-4 mr-2" />
+          <Button variant="outline" onClick={handleExportPdf} disabled={isExporting}>
+            <FileDown className="w-4 h-4 mr-2" />
             Exportar PDF
           </Button>
           <Button onClick={handleExportDocx} disabled={isExporting}>
@@ -490,7 +718,7 @@ export const TeamReportGenerator: React.FC = () => {
               <h2 className="text-lg font-bold mt-6 mb-3">3. Anexos de Comprovação</h2>
               <div className="grid grid-cols-2 gap-4">
                 {photosWithCaptions.map((photo, idx) => (
-                  <div key={idx} className="space-y-2">
+                  <div key={photo.id} className="space-y-2">
                     <img
                       src={photo.url}
                       alt={`Registro ${idx + 1}`}
