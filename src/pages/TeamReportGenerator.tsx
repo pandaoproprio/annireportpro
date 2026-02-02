@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useProjects } from '@/hooks/useProjects';
-import { TeamReport } from '@/types';
+import { TeamReport, PhotoWithCaption } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,7 +17,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, FileText, Download, Image as ImageIcon, X, Eye, ArrowLeft, FileDown, Users } from 'lucide-react';
+import { CalendarIcon, FileText, Download, Image as ImageIcon, X, Eye, ArrowLeft, FileDown, Users, Edit2 } from 'lucide-react';
 import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
 import { toast } from 'sonner';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
@@ -32,7 +32,7 @@ export const TeamReportGenerator: React.FC = () => {
   const [periodStart, setPeriodStart] = useState<Date | undefined>();
   const [periodEnd, setPeriodEnd] = useState<Date | undefined>();
   const [executionReport, setExecutionReport] = useState('');
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photosWithCaptions, setPhotosWithCaptions] = useState<PhotoWithCaption[]>([]);
   const [isPreview, setIsPreview] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -59,11 +59,15 @@ export const TeamReportGenerator: React.FC = () => {
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      Array.from(files).forEach(file => {
+      Array.from(files).forEach((file, index) => {
         const reader = new FileReader();
         reader.onload = (event) => {
           if (event.target?.result) {
-            setPhotos(prev => [...prev, event.target!.result as string]);
+            const newPhoto: PhotoWithCaption = {
+              url: event.target!.result as string,
+              caption: `Registro fotográfico das atividades realizadas`,
+            };
+            setPhotosWithCaptions(prev => [...prev, newPhoto]);
           }
         };
         reader.readAsDataURL(file);
@@ -72,7 +76,13 @@ export const TeamReportGenerator: React.FC = () => {
   };
 
   const removePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
+    setPhotosWithCaptions(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updatePhotoCaption = (index: number, caption: string) => {
+    setPhotosWithCaptions(prev => 
+      prev.map((photo, i) => i === index ? { ...photo, caption } : photo)
+    );
   };
 
   const handleExportDocx = async () => {
@@ -102,7 +112,8 @@ export const TeamReportGenerator: React.FC = () => {
         periodStart: periodStart.toISOString(),
         periodEnd: periodEnd.toISOString(),
         executionReport,
-        photos,
+        photos: photosWithCaptions.map(p => p.url),
+        photoCaptions: photosWithCaptions,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -334,21 +345,36 @@ export const TeamReportGenerator: React.FC = () => {
               Adicionar Fotos
             </Button>
 
-            {photos.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {photos.map((photo, idx) => (
-                  <div key={idx} className="relative group">
-                    <img
-                      src={photo}
-                      alt={`Foto ${idx + 1}`}
-                      className="w-full aspect-square object-cover rounded-lg border"
-                    />
-                    <button
-                      onClick={() => removePhoto(idx)}
-                      className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+            {photosWithCaptions.length > 0 && (
+              <div className="space-y-4">
+                {photosWithCaptions.map((photo, idx) => (
+                  <div key={idx} className="flex gap-4 items-start p-4 border rounded-lg bg-muted/30">
+                    <div className="relative w-32 h-32 flex-shrink-0">
+                      <img
+                        src={photo.url}
+                        alt={`Foto ${idx + 1}`}
+                        className="w-full h-full object-cover rounded-lg border"
+                      />
+                      <button
+                        onClick={() => removePhoto(idx)}
+                        className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full shadow-md hover:bg-destructive/90"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <Label htmlFor={`caption-${idx}`} className="text-sm font-medium flex items-center gap-1">
+                        <Edit2 className="w-3 h-3" />
+                        Legenda da Foto {idx + 1}
+                      </Label>
+                      <Input
+                        id={`caption-${idx}`}
+                        value={photo.caption}
+                        onChange={(e) => updatePhotoCaption(idx, e.target.value)}
+                        placeholder="Descreva esta foto..."
+                        className="w-full"
+                      />
+                    </div>
                   </div>
                 ))}
               </div>
@@ -419,22 +445,26 @@ export const TeamReportGenerator: React.FC = () => {
             />
           </div>
 
-          {photos.length > 0 && (
+          {photosWithCaptions.length > 0 && (
             <div>
               <h2 className="text-lg font-bold mt-6 mb-3">3. Anexos de Comprovação</h2>
               <div className="grid grid-cols-2 gap-4">
-                {photos.slice(0, 4).map((photo, idx) => (
-                  <img
-                    key={idx}
-                    src={photo}
-                    alt={`Registro ${idx + 1}`}
-                    className="w-full aspect-video object-cover rounded-lg border"
-                  />
+                {photosWithCaptions.slice(0, 4).map((photo, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <img
+                      src={photo.url}
+                      alt={`Registro ${idx + 1}`}
+                      className="w-full aspect-video object-cover rounded-lg border"
+                    />
+                    <p className="text-xs text-center italic text-gray-600">
+                      Foto {idx + 1}: {photo.caption}
+                    </p>
+                  </div>
                 ))}
               </div>
-              {photos.length > 4 && (
+              {photosWithCaptions.length > 4 && (
                 <p className="text-sm text-gray-500 mt-2">
-                  + {photos.length - 4} foto(s) adicional(is)
+                  + {photosWithCaptions.length - 4} foto(s) adicional(is)
                 </p>
               )}
             </div>

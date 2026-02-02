@@ -288,8 +288,12 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
   const reportParagraphs = parseHtmlToDocxParagraphs(report.executionReport);
   docSections.push(...reportParagraphs);
 
-  // Section 3: Attachments (Photos) - with embedded images
-  if (report.photos && report.photos.length > 0) {
+  // Section 3: Attachments (Photos) - with embedded images and custom captions
+  const photosToExport = report.photoCaptions && report.photoCaptions.length > 0 
+    ? report.photoCaptions 
+    : report.photos?.map((url, idx) => ({ url, caption: 'Registro fotográfico das atividades realizadas' })) || [];
+
+  if (photosToExport.length > 0) {
     docSections.push(
       new Paragraph({ children: [new PageBreak()] }),
       new Paragraph({
@@ -305,13 +309,13 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
       })
     );
 
-    // Add each photo with caption
+    // Add each photo with custom caption
     const maxWidth = 450; // Max width in pixels for the document
     let photoCount = 0;
 
-    for (const photoUrl of report.photos) {
+    for (const photoData of photosToExport) {
       photoCount++;
-      const imageBuffer = await fetchImageAsArrayBuffer(photoUrl);
+      const imageBuffer = await fetchImageAsArrayBuffer(photoData.url);
       
       if (imageBuffer) {
         const dimensions = await getImageDimensions(imageBuffer);
@@ -341,11 +345,11 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
             alignment: AlignmentType.CENTER,
             spacing: { before: 300, after: 100 },
           }),
-          // Caption below the image
+          // Caption below the image - using custom caption
           new Paragraph({
             children: [
               new TextRun({
-                text: `Foto ${photoCount}: Registro fotográfico das atividades realizadas`,
+                text: `Foto ${photoCount}: ${photoData.caption}`,
                 italics: true,
                 font: ABNT.FONT_FAMILY,
                 size: 20, // 10pt for caption
@@ -357,7 +361,7 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
         );
 
         // Add page break after every 2 photos to avoid overcrowding
-        if (photoCount % 2 === 0 && photoCount < report.photos.length) {
+        if (photoCount % 2 === 0 && photoCount < photosToExport.length) {
           docSections.push(new Paragraph({ children: [new PageBreak()] }));
         }
       } else {
@@ -366,7 +370,7 @@ export const exportTeamReportToDocx = async (data: TeamReportExportData) => {
           new Paragraph({
             children: [
               new TextRun({
-                text: `[Foto ${photoCount}: Imagem não disponível - ${photoUrl}]`,
+                text: `[Foto ${photoCount}: Imagem não disponível]`,
                 italics: true,
                 font: ABNT.FONT_FAMILY,
                 size: ABNT.FONT_SIZE_BODY,
