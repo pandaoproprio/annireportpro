@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { Project, TeamReport } from '@/types';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface TeamReportExportData {
   project: Project;
@@ -15,303 +16,523 @@ const formatPeriod = (start: string, end: string) => {
   return `[${startMonth} à ${endMonth}]`;
 };
 
-const getCurrentDate = () => {
-  return new Date().toLocaleDateString('pt-BR', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-};
-
-// Wait for all images to load
-const waitForImages = (container: HTMLElement): Promise<void> => {
-  const images = container.querySelectorAll('img');
-  const promises = Array.from(images).map((img) => {
-    if (img.complete) return Promise.resolve();
-    return new Promise<void>((resolve) => {
-      img.onload = () => resolve();
-      img.onerror = () => resolve();
-    });
-  });
-  return Promise.all(promises).then(() => {});
-};
-
-// Create a hidden container with the report content for PDF capture
-const createPdfContainer = (data: TeamReportExportData): HTMLDivElement => {
-  const { project, report } = data;
+// Strip HTML tags and convert to plain text with bullet handling
+const htmlToPlainText = (html: string): string => {
+  if (!html) return '';
   
-  const photosToExport = report.photoCaptions && report.photoCaptions.length > 0 
-    ? report.photoCaptions 
-    : report.photos?.map((url) => ({ url, caption: 'Registro fotográfico das atividades realizadas' })) || [];
+  // Create a temporary element to parse HTML
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  
+  // Process list items to add bullet points
+  const listItems = temp.querySelectorAll('li');
+  listItems.forEach(li => {
+    li.textContent = '• ' + (li.textContent || '');
+  });
+  
+  // Get text content
+  let text = temp.textContent || temp.innerText || '';
+  
+  // Clean up extra whitespace but preserve paragraph breaks
+  text = text.replace(/\n{3,}/g, '\n\n');
+  text = text.trim();
+  
+  return text;
+};
 
-  const container = document.createElement('div');
-  container.id = 'pdf-export-container';
-  container.style.cssText = `
-    position: fixed !important;
-    left: -99999px !important;
-    top: -99999px !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-    z-index: -99999 !important;
-    width: 794px;
-    background: white;
-    font-family: 'Times New Roman', Times, serif;
-    font-size: 12pt;
-    line-height: 1.5;
-    color: #000;
-  `;
+// Parse HTML and return structured content with formatting hints
+interface TextBlock {
+  type: 'paragraph' | 'bullet';
+  content: string;
+  isBold?: boolean;
+}
 
-  // Helper to create sections
-  const createSection = (content: string, pageBreakBefore = false): HTMLDivElement => {
-    const section = document.createElement('div');
-    section.className = 'pdf-section';
-    section.style.cssText = `
-      width: 100%;
-      padding: 30px 38px 30px 57px;
-      box-sizing: border-box;
-      background: white;
-      ${pageBreakBefore ? 'page-break-before: always;' : ''}
-    `;
-    section.innerHTML = content;
-    return section;
-  };
-
-  // Main content section
-  const mainContent = `
-    <div style="text-align: center; margin-bottom: 30px;">
-      <h1 style="font-size: 16pt; font-weight: bold; margin: 0; font-family: 'Times New Roman', Times, serif;">
-        RELATÓRIO DA EQUIPE DE TRABALHO
-      </h1>
-    </div>
-    
-    <div style="margin-bottom: 30px;">
-      <p style="margin: 8px 0; font-family: 'Times New Roman', Times, serif;">
-        <strong>Termo de Fomento nº:</strong> ${project.fomentoNumber}
-      </p>
-      <p style="margin: 8px 0; font-family: 'Times New Roman', Times, serif;">
-        <strong>Projeto:</strong> ${project.name}
-      </p>
-      <p style="margin: 8px 0; font-family: 'Times New Roman', Times, serif;">
-        <strong>Período de Referência:</strong> ${formatPeriod(report.periodStart, report.periodEnd)}
-      </p>
-    </div>
-
-    <div style="margin-bottom: 30px;">
-      <h2 style="font-size: 14pt; font-weight: bold; margin-bottom: 15px; font-family: 'Times New Roman', Times, serif;">
-        1. Dados de Identificação
-      </h2>
-      <ul style="list-style-type: disc; padding-left: 25px; margin: 0; font-family: 'Times New Roman', Times, serif;">
-        <li style="margin-bottom: 8px;">
-          <strong>Prestador:</strong> ${report.providerName || '[Não informado]'}
-        </li>
-        <li style="margin-bottom: 8px;">
-          <strong>Responsável Técnico:</strong> ${report.responsibleName}
-        </li>
-        <li style="margin-bottom: 8px;">
-          <strong>Função:</strong> ${report.functionRole}
-        </li>
-      </ul>
-    </div>
-
-    <div style="margin-bottom: 30px;">
-      <h2 style="font-size: 14pt; font-weight: bold; margin-bottom: 15px; font-family: 'Times New Roman', Times, serif;">
-        2. Relato de Execução da Coordenação do Projeto
-      </h2>
-      <div style="text-align: justify; font-family: 'Times New Roman', Times, serif; font-size: 12pt; line-height: 1.5;">
-        ${report.executionReport || '<p>[Nenhum relato informado]</p>'}
-      </div>
-    </div>
-
-    <div style="margin-top: 60px; margin-bottom: 40px;">
-      <p style="font-family: 'Times New Roman', Times, serif; margin-bottom: 60px;">
-        Rio de Janeiro, ${getCurrentDate()}.
-      </p>
+const parseHtmlToBlocks = (html: string): TextBlock[] => {
+  if (!html) return [];
+  
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+  
+  const blocks: TextBlock[] = [];
+  
+  const processNode = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent?.trim();
+      if (text) {
+        blocks.push({ type: 'paragraph', content: text });
+      }
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      const element = node as Element;
+      const tagName = element.tagName.toLowerCase();
       
-      <div style="text-align: center; margin-top: 60px;">
-        <div style="border-top: 1px solid #000; display: inline-block; padding-top: 10px; padding-left: 80px; padding-right: 80px; margin-bottom: 20px;">
-          Assinatura do responsável legal
-        </div>
-        <p style="margin-top: 20px; font-family: 'Times New Roman', Times, serif;">
-          <strong>Nome e cargo:</strong> ${report.responsibleName} - ${report.functionRole}
-        </p>
-        <p style="font-family: 'Times New Roman', Times, serif;">
-          <strong>CNPJ:</strong> ${report.providerDocument || '[Não informado]'}
-        </p>
-      </div>
-    </div>
-  `;
+      if (tagName === 'li') {
+        // Get the full text content of the list item
+        const liText = element.textContent?.trim() || '';
+        if (liText) {
+          // Check if it starts with bold text
+          const firstStrong = element.querySelector('strong, b');
+          if (firstStrong && liText.startsWith(firstStrong.textContent || '')) {
+            blocks.push({ 
+              type: 'bullet', 
+              content: liText,
+              isBold: false // We'll handle bold inline
+            });
+          } else {
+            blocks.push({ type: 'bullet', content: liText });
+          }
+        }
+      } else if (tagName === 'p') {
+        const pText = element.textContent?.trim() || '';
+        if (pText) {
+          blocks.push({ type: 'paragraph', content: pText });
+        }
+      } else if (tagName === 'ul' || tagName === 'ol') {
+        // Process children (li items)
+        element.childNodes.forEach(child => processNode(child));
+      } else {
+        // For other elements, process children
+        element.childNodes.forEach(child => processNode(child));
+      }
+    }
+  };
+  
+  temp.childNodes.forEach(child => processNode(child));
+  
+  return blocks;
+};
 
-  container.appendChild(createSection(mainContent));
-
-  // Photos section (each photo on separate section for page break handling)
-  if (photosToExport.length > 0) {
-    const photosHeaderSection = createSection(`
-      <h2 style="font-size: 14pt; font-weight: bold; margin-bottom: 20px; font-family: 'Times New Roman', Times, serif;">
-        3. Anexos de Comprovação - Registros Fotográficos
-      </h2>
-    `, true);
-    container.appendChild(photosHeaderSection);
-
-    photosToExport.forEach((photo, idx) => {
-      const photoSection = document.createElement('div');
-      photoSection.className = 'pdf-photo-section';
-      photoSection.style.cssText = `
-        width: 100%;
-        padding: 20px 38px 20px 57px;
-        box-sizing: border-box;
-        background: white;
-        text-align: center;
-      `;
-      photoSection.innerHTML = `
-        <div style="margin-bottom: 30px;">
-          <img 
-            src="${photo.url}" 
-            alt="Foto ${idx + 1}" 
-            style="max-width: 500px; max-height: 340px; object-fit: contain; border: 1px solid #ccc;"
-            crossorigin="anonymous"
-          />
-          <p style="font-style: italic; font-size: 10pt; margin-top: 10px; font-family: 'Times New Roman', Times, serif; text-align: center;">
-            Foto ${idx + 1}: ${photo.caption}
-          </p>
-        </div>
-      `;
-      container.appendChild(photoSection);
-    });
-  }
-
-  return container;
+// Load image and return as base64 with dimensions
+const loadImage = (url: string): Promise<{ data: string; width: number; height: number } | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0);
+          resolve({
+            data: canvas.toDataURL('image/jpeg', 0.85),
+            width: img.naturalWidth,
+            height: img.naturalHeight
+          });
+        } else {
+          resolve(null);
+        }
+      } catch {
+        resolve(null);
+      }
+    };
+    
+    img.onerror = () => resolve(null);
+    img.src = url;
+  });
 };
 
 export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise<void> => {
   const { project, report } = data;
 
   // A4 dimensions in mm
-  const A4_WIDTH_MM = 210;
-  const A4_HEIGHT_MM = 297;
-  const MARGIN_TOP_MM = 25;
-  const MARGIN_BOTTOM_MM = 25;
-  const MARGIN_LEFT_MM = 30;
-  const MARGIN_RIGHT_MM = 20;
-  const CONTENT_WIDTH_MM = A4_WIDTH_MM - MARGIN_LEFT_MM - MARGIN_RIGHT_MM;
-  const CONTENT_HEIGHT_MM = A4_HEIGHT_MM - MARGIN_TOP_MM - MARGIN_BOTTOM_MM;
+  const PAGE_WIDTH = 210;
+  const PAGE_HEIGHT = 297;
+  const MARGIN_LEFT = 30;
+  const MARGIN_RIGHT = 20;
+  const MARGIN_TOP = 25;
+  const MARGIN_BOTTOM = 25;
+  const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
+  const USABLE_HEIGHT = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
 
-  // Create hidden container
-  const container = createPdfContainer(data);
-  document.body.appendChild(container);
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
 
-  try {
-    // Wait for all images to load
-    await waitForImages(container);
+  let currentY = MARGIN_TOP;
+  let totalPages = 1;
+
+  // Helper: Check if we need a new page
+  const checkNewPage = (neededHeight: number): boolean => {
+    if (currentY + neededHeight > PAGE_HEIGHT - MARGIN_BOTTOM) {
+      pdf.addPage();
+      totalPages++;
+      currentY = MARGIN_TOP;
+      return true;
+    }
+    return false;
+  };
+
+  // Helper: Add text with word wrap
+  const addText = (text: string, fontSize: number, options: { 
+    bold?: boolean; 
+    italic?: boolean;
+    align?: 'left' | 'center' | 'justify';
+    indent?: number;
+  } = {}): void => {
+    const { bold = false, italic = false, align = 'left', indent = 0 } = options;
     
-    // Give browser time to render
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Capture the entire container with high quality
-    const canvas = await html2canvas(container, {
-      scale: 2,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      width: 794, // A4 width at 96 DPI
-      windowWidth: 794,
-    });
-
-    // Create PDF
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    pdf.setFontSize(fontSize);
+    pdf.setFont('times', bold ? 'bold' : (italic ? 'italic' : 'normal'));
     
-    // Calculate scaling
-    const imgWidth = canvas.width;
-    const imgHeight = canvas.height;
-    const pdfWidth = CONTENT_WIDTH_MM;
-    const scaleFactor = pdfWidth / imgWidth;
-    const pdfHeight = imgHeight * scaleFactor;
-
-    // Add image to PDF with pagination
-    let currentY = MARGIN_TOP_MM;
-    let remainingHeight = pdfHeight;
-    let pageNum = 1;
-    const totalPages = Math.ceil(pdfHeight / CONTENT_HEIGHT_MM);
+    const effectiveWidth = CONTENT_WIDTH - indent;
+    const lines = pdf.splitTextToSize(text, effectiveWidth);
+    const lineHeight = fontSize * 0.5; // Approximate line height in mm
     
-    // Helper to add footer
-    const addFooter = (pageNumber: number) => {
+    for (const line of lines) {
+      checkNewPage(lineHeight);
+      
+      let x = MARGIN_LEFT + indent;
+      if (align === 'center') {
+        const textWidth = pdf.getTextWidth(line);
+        x = (PAGE_WIDTH - textWidth) / 2;
+      }
+      
+      pdf.text(line, x, currentY, { align: align === 'justify' ? 'justify' : 'left', maxWidth: effectiveWidth });
+      currentY += lineHeight;
+    }
+  };
+
+  // Helper: Add bullet point
+  const addBullet = (text: string, fontSize: number): void => {
+    pdf.setFontSize(fontSize);
+    pdf.setFont('times', 'normal');
+    
+    const bulletIndent = 8;
+    const textIndent = 15;
+    const effectiveWidth = CONTENT_WIDTH - textIndent;
+    
+    // Check for bold prefix (e.g., "**Label:** content" pattern)
+    const boldMatch = text.match(/^([^:]+:)\s*(.*)$/);
+    
+    // Add bullet
+    checkNewPage(6);
+    pdf.text('•', MARGIN_LEFT + bulletIndent, currentY);
+    
+    if (boldMatch) {
+      // Bold label + normal content
+      const label = boldMatch[1];
+      const content = boldMatch[2];
+      
+      pdf.setFont('times', 'bold');
+      const labelWidth = pdf.getTextWidth(label + ' ');
+      pdf.text(label, MARGIN_LEFT + textIndent, currentY);
+      
       pdf.setFont('times', 'normal');
-      pdf.setFontSize(10);
-      pdf.setTextColor(100, 100, 100);
+      
+      // Check if content fits on same line
+      const remainingWidth = effectiveWidth - labelWidth;
+      if (pdf.getTextWidth(content) <= remainingWidth) {
+        pdf.text(content, MARGIN_LEFT + textIndent + labelWidth, currentY);
+        currentY += fontSize * 0.5;
+      } else {
+        // Content needs to wrap
+        const fullText = label + ' ' + content;
+        const lines = pdf.splitTextToSize(fullText, effectiveWidth);
+        
+        // First line already added partially, redo
+        currentY -= 0; // Stay on same line
+        pdf.setFont('times', 'bold');
+        pdf.text(label, MARGIN_LEFT + textIndent, currentY);
+        pdf.setFont('times', 'normal');
+        
+        // Calculate where content starts
+        let contentOnFirstLine = '';
+        const firstLineRemainder = effectiveWidth - labelWidth;
+        const words = content.split(' ');
+        let currentWidth = 0;
+        
+        for (const word of words) {
+          const wordWidth = pdf.getTextWidth(word + ' ');
+          if (currentWidth + wordWidth <= firstLineRemainder) {
+            contentOnFirstLine += word + ' ';
+            currentWidth += wordWidth;
+          } else {
+            break;
+          }
+        }
+        
+        if (contentOnFirstLine) {
+          pdf.text(contentOnFirstLine.trim(), MARGIN_LEFT + textIndent + labelWidth, currentY);
+        }
+        
+        currentY += fontSize * 0.5;
+        
+        // Remaining content
+        const remainingContent = content.substring(contentOnFirstLine.length).trim();
+        if (remainingContent) {
+          const remainingLines = pdf.splitTextToSize(remainingContent, effectiveWidth);
+          for (const line of remainingLines) {
+            checkNewPage(fontSize * 0.5);
+            pdf.text(line, MARGIN_LEFT + textIndent, currentY);
+            currentY += fontSize * 0.5;
+          }
+        }
+      }
+    } else {
+      // Simple bullet without bold
+      const lines = pdf.splitTextToSize(text, effectiveWidth);
+      for (let i = 0; i < lines.length; i++) {
+        if (i > 0) {
+          checkNewPage(fontSize * 0.5);
+        }
+        pdf.text(lines[i], MARGIN_LEFT + textIndent, currentY);
+        currentY += fontSize * 0.5;
+      }
+    }
+  };
+
+  // ========== PAGE 1: Title and Content ==========
+  
+  // Title - RELATÓRIO DA EQUIPE DE TRABALHO
+  pdf.setFontSize(14);
+  pdf.setFont('times', 'bold');
+  const title = 'RELATÓRIO DA EQUIPE DE TRABALHO';
+  const titleWidth = pdf.getTextWidth(title);
+  pdf.text(title, (PAGE_WIDTH - titleWidth) / 2, currentY);
+  currentY += 15;
+
+  // Header info
+  pdf.setFontSize(12);
+  pdf.setFont('times', 'bold');
+  pdf.text('Termo de Fomento nº: ', MARGIN_LEFT, currentY);
+  pdf.setFont('times', 'normal');
+  pdf.text(project.fomentoNumber, MARGIN_LEFT + pdf.getTextWidth('Termo de Fomento nº: '), currentY);
+  currentY += 6;
+
+  pdf.setFont('times', 'bold');
+  pdf.text('Projeto: ', MARGIN_LEFT, currentY);
+  pdf.setFont('times', 'normal');
+  pdf.text(project.name, MARGIN_LEFT + pdf.getTextWidth('Projeto: '), currentY);
+  currentY += 6;
+
+  pdf.setFont('times', 'bold');
+  pdf.text('Período de Referência: ', MARGIN_LEFT, currentY);
+  pdf.setFont('times', 'normal');
+  pdf.text(formatPeriod(report.periodStart, report.periodEnd), MARGIN_LEFT + pdf.getTextWidth('Período de Referência: '), currentY);
+  currentY += 12;
+
+  // Section 1: Identification
+  pdf.setFontSize(12);
+  pdf.setFont('times', 'bold');
+  pdf.text('1. Dados de Identificação', MARGIN_LEFT, currentY);
+  currentY += 8;
+
+  // Bullets for identification
+  addBullet(`Prestador: ${report.providerName || '[Não informado]'}`, 12);
+  currentY += 2;
+  addBullet(`Responsável Técnico: ${report.responsibleName}`, 12);
+  currentY += 2;
+  addBullet(`Função: ${report.functionRole}`, 12);
+  currentY += 10;
+
+  // Section 2: Execution Report
+  pdf.setFontSize(12);
+  pdf.setFont('times', 'bold');
+  pdf.text('2. Relato de Execução da Coordenação do Projeto', MARGIN_LEFT, currentY);
+  currentY += 10;
+
+  // Parse and render execution report content
+  const blocks = parseHtmlToBlocks(report.executionReport || '<p>[Nenhum relato informado]</p>');
+  
+  for (const block of blocks) {
+    if (block.type === 'bullet') {
+      addBullet(block.content, 12);
+      currentY += 2;
+    } else {
+      // Paragraph - justified text
+      pdf.setFontSize(12);
+      pdf.setFont('times', 'normal');
+      
+      const lines = pdf.splitTextToSize(block.content, CONTENT_WIDTH);
+      const lineHeight = 6;
+      
+      // First line indent for paragraphs
+      for (let i = 0; i < lines.length; i++) {
+        checkNewPage(lineHeight);
+        const indent = i === 0 ? 10 : 0; // First line indent
+        pdf.text(lines[i], MARGIN_LEFT + indent, currentY, { maxWidth: CONTENT_WIDTH - indent });
+        currentY += lineHeight;
+      }
+      currentY += 4; // Paragraph spacing
+    }
+  }
+
+  // ========== PHOTOS SECTION ==========
+  const photosToExport = report.photoCaptions && report.photoCaptions.length > 0 
+    ? report.photoCaptions 
+    : report.photos?.map((url) => ({ url, caption: 'Registro fotográfico das atividades realizadas', id: url })) || [];
+
+  if (photosToExport.length > 0) {
+    // Check if we need new page for photos section
+    checkNewPage(50);
+    
+    // Section 3: Photos
+    pdf.setFontSize(12);
+    pdf.setFont('times', 'bold');
+    pdf.text('3. Anexos de Comprovação', MARGIN_LEFT, currentY);
+    currentY += 10;
+
+    // Grid layout: 2 columns
+    const PHOTO_WIDTH = 75; // mm
+    const PHOTO_HEIGHT = 50; // mm
+    const COLUMN_GAP = 10;
+    const ROW_GAP = 25; // Space for caption
+    
+    let col = 0;
+    let rowStartY = currentY;
+
+    for (let i = 0; i < photosToExport.length; i++) {
+      const photo = photosToExport[i];
+      
+      // Calculate position
+      const x = MARGIN_LEFT + col * (PHOTO_WIDTH + COLUMN_GAP);
+      
+      // Check if we need new page
+      if (currentY + PHOTO_HEIGHT + 15 > PAGE_HEIGHT - MARGIN_BOTTOM) {
+        pdf.addPage();
+        totalPages++;
+        currentY = MARGIN_TOP;
+        rowStartY = currentY;
+        col = 0;
+      }
+      
+      // Load and add image
+      const imgData = await loadImage(photo.url);
+      if (imgData) {
+        // Calculate aspect ratio fit
+        const aspectRatio = imgData.width / imgData.height;
+        let drawWidth = PHOTO_WIDTH;
+        let drawHeight = PHOTO_WIDTH / aspectRatio;
+        
+        if (drawHeight > PHOTO_HEIGHT) {
+          drawHeight = PHOTO_HEIGHT;
+          drawWidth = PHOTO_HEIGHT * aspectRatio;
+        }
+        
+        // Center image in cell
+        const offsetX = (PHOTO_WIDTH - drawWidth) / 2;
+        const offsetY = (PHOTO_HEIGHT - drawHeight) / 2;
+        
+        try {
+          pdf.addImage(imgData.data, 'JPEG', x + offsetX, rowStartY + offsetY, drawWidth, drawHeight);
+        } catch (e) {
+          console.warn('Failed to add image:', e);
+        }
+      }
+      
+      // Add caption below
+      pdf.setFontSize(9);
+      pdf.setFont('times', 'italic');
+      const caption = `Foto ${i + 1}: ${photo.caption}`;
+      const captionLines = pdf.splitTextToSize(caption, PHOTO_WIDTH);
+      const captionY = rowStartY + PHOTO_HEIGHT + 3;
+      
+      for (let j = 0; j < captionLines.length; j++) {
+        pdf.text(captionLines[j], x, captionY + j * 4, { maxWidth: PHOTO_WIDTH });
+      }
+      
+      col++;
+      if (col >= 2) {
+        col = 0;
+        rowStartY += PHOTO_HEIGHT + ROW_GAP;
+        currentY = rowStartY;
+      }
+    }
+    
+    // Update currentY after photos
+    if (col > 0) {
+      // Last row wasn't complete
+      currentY = rowStartY + PHOTO_HEIGHT + ROW_GAP;
+    }
+  }
+
+  // ========== SIGNATURE SECTION ==========
+  // Ensure signature is at bottom or on new page with enough space
+  const signatureHeight = 60;
+  
+  if (currentY + signatureHeight > PAGE_HEIGHT - MARGIN_BOTTOM - 20) {
+    // Need more space - check if we should add page or just leave space
+    if (currentY > PAGE_HEIGHT - MARGIN_BOTTOM - 80) {
+      pdf.addPage();
+      totalPages++;
+      currentY = MARGIN_TOP + 40;
+    }
+  } else {
+    currentY += 20;
+  }
+
+  // Date
+  pdf.setFontSize(12);
+  pdf.setFont('times', 'normal');
+  const dateText = `Rio de Janeiro, ${format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.`;
+  pdf.text(dateText, MARGIN_LEFT, currentY);
+  currentY += 30;
+
+  // Signature line
+  const signatureLineWidth = 80;
+  const centerX = PAGE_WIDTH / 2;
+  pdf.setDrawColor(0, 0, 0);
+  pdf.line(centerX - signatureLineWidth / 2, currentY, centerX + signatureLineWidth / 2, currentY);
+  currentY += 5;
+
+  // Signature label
+  pdf.setFont('times', 'normal');
+  const signatureLabel = 'Assinatura do responsável legal';
+  const labelWidth = pdf.getTextWidth(signatureLabel);
+  pdf.text(signatureLabel, centerX - labelWidth / 2, currentY);
+  currentY += 10;
+
+  // Name and role
+  pdf.setFont('times', 'bold');
+  const nameAndRole = `Nome e cargo: `;
+  pdf.text(nameAndRole, centerX - 50, currentY);
+  pdf.setFont('times', 'normal');
+  pdf.text(`${report.responsibleName} - ${report.functionRole}`, centerX - 50 + pdf.getTextWidth(nameAndRole), currentY);
+  currentY += 6;
+
+  // CNPJ
+  pdf.setFont('times', 'bold');
+  const cnpjLabel = 'CNPJ: ';
+  pdf.text(cnpjLabel, centerX - 50, currentY);
+  pdf.setFont('times', 'normal');
+  pdf.text(report.providerDocument || '[Não informado]', centerX - 50 + pdf.getTextWidth(cnpjLabel), currentY);
+
+  // ========== ADD FOOTERS TO ALL PAGES ==========
+  const addFooters = () => {
+    for (let page = 1; page <= totalPages; page++) {
+      pdf.setPage(page);
+      
+      // Footer line
+      pdf.setDrawColor(200, 200, 200);
+      pdf.line(MARGIN_LEFT, PAGE_HEIGHT - 18, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - 18);
       
       // Organization name
+      pdf.setFontSize(9);
+      pdf.setFont('times', 'normal');
+      pdf.setTextColor(100, 100, 100);
       const orgName = project.organizationName;
       const orgWidth = pdf.getTextWidth(orgName);
-      pdf.text(orgName, (A4_WIDTH_MM - orgWidth) / 2, A4_HEIGHT_MM - 12);
+      pdf.text(orgName, (PAGE_WIDTH - orgWidth) / 2, PAGE_HEIGHT - 12);
       
       // Page number
-      const pageText = `Página ${pageNumber} de ${totalPages}`;
+      const pageText = `Página ${page} de ${totalPages}`;
       const pageWidth = pdf.getTextWidth(pageText);
-      pdf.text(pageText, (A4_WIDTH_MM - pageWidth) / 2, A4_HEIGHT_MM - 7);
+      pdf.text(pageText, (PAGE_WIDTH - pageWidth) / 2, PAGE_HEIGHT - 7);
       
-      // Line
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(MARGIN_LEFT_MM, A4_HEIGHT_MM - 18, A4_WIDTH_MM - MARGIN_RIGHT_MM, A4_HEIGHT_MM - 18);
-    };
-
-    // First page
-    pdf.addImage(
-      imgData, 
-      'JPEG', 
-      MARGIN_LEFT_MM, 
-      MARGIN_TOP_MM, 
-      pdfWidth, 
-      pdfHeight,
-      undefined,
-      'FAST'
-    );
-    
-    addFooter(1);
-
-    // Additional pages if needed
-    while (remainingHeight > CONTENT_HEIGHT_MM) {
-      pdf.addPage();
-      pageNum++;
-      remainingHeight -= CONTENT_HEIGHT_MM;
-      
-      // Offset the image to show the next portion
-      const yOffset = MARGIN_TOP_MM - (pageNum - 1) * CONTENT_HEIGHT_MM;
-      
-      pdf.addImage(
-        imgData,
-        'JPEG',
-        MARGIN_LEFT_MM,
-        yOffset,
-        pdfWidth,
-        pdfHeight,
-        undefined,
-        'FAST'
-      );
-      
-      // Cover previous page content at top with white rectangle
-      pdf.setFillColor(255, 255, 255);
-      pdf.rect(0, 0, A4_WIDTH_MM, MARGIN_TOP_MM, 'F');
-      
-      // Cover next page content at bottom
-      pdf.rect(0, A4_HEIGHT_MM - MARGIN_BOTTOM_MM, A4_WIDTH_MM, MARGIN_BOTTOM_MM, 'F');
-      
-      addFooter(pageNum);
+      // Reset text color
+      pdf.setTextColor(0, 0, 0);
     }
+  };
 
-    // Save PDF
-    const memberName = report.responsibleName.replace(/\s+/g, '_');
-    const filename = `Relatorio_Equipe_${memberName}_${new Date().toISOString().split('T')[0]}.pdf`;
-    
-    pdf.save(filename);
-    
-  } finally {
-    // Cleanup
-    document.body.removeChild(container);
-  }
+  addFooters();
+
+  // Save PDF
+  const memberName = report.responsibleName.replace(/\s+/g, '_');
+  const filename = `Relatorio_Equipe_${memberName}_${new Date().toISOString().split('T')[0]}.pdf`;
+  
+  pdf.save(filename);
 };
