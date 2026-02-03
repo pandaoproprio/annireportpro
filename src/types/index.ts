@@ -135,6 +135,7 @@ export interface TeamReport {
   executionReportTitle?: string;
   attachmentsTitle?: string;
   additionalSections?: AdditionalSection[];
+  footerText?: string;
   createdAt: string;
   updatedAt: string;
 }

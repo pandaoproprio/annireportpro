@@ -22,6 +22,7 @@ export interface TeamReportDraft {
   executionReportTitle: string;
   attachmentsTitle: string;
   additionalSections: AdditionalSection[];
+  footerText: string;
   isDraft: boolean;
   createdAt: string;
   updatedAt: string;
@@ -65,6 +66,7 @@ export const useTeamReports = (projectId?: string) => {
         executionReportTitle: row.execution_report_title || '2. Relato de Execução da Coordenação do Projeto',
         attachmentsTitle: row.attachments_title || '3. Anexos de Comprovação',
         additionalSections: (row.additional_sections as unknown as AdditionalSection[]) || [],
+        footerText: row.footer_text || '',
         isDraft: row.is_draft ?? true,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -105,6 +107,7 @@ export const useTeamReports = (projectId?: string) => {
         execution_report_title: draft.executionReportTitle || '2. Relato de Execução da Coordenação do Projeto',
         attachments_title: draft.attachmentsTitle || '3. Anexos de Comprovação',
         additional_sections: draft.additionalSections as unknown as Json,
+        footer_text: draft.footerText || null,
         is_draft: draft.isDraft,
       };
 
