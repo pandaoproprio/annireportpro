@@ -69,6 +69,12 @@ export const TeamReportGenerator: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [showDraftsList, setShowDraftsList] = useState(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Custom titles
+  const [reportTitle, setReportTitle] = useState('RELATÓRIO DA EQUIPE DE TRABALHO');
+  const [executionReportTitle, setExecutionReportTitle] = useState('2. Relato de Execução da Coordenação do Projeto');
+  const [attachmentsTitle, setAttachmentsTitle] = useState('3. Anexos de Comprovação');
+  const [additionalSections, setAdditionalSections] = useState<{ id: string; title: string; content: string }[]>([]);
 
   // DnD sensors
   const sensors = useSensors(
@@ -90,6 +96,10 @@ export const TeamReportGenerator: React.FC = () => {
     setPeriodEnd(undefined);
     setExecutionReport('');
     setPhotosWithCaptions([]);
+    setReportTitle('RELATÓRIO DA EQUIPE DE TRABALHO');
+    setExecutionReportTitle('2. Relato de Execução da Coordenação do Projeto');
+    setAttachmentsTitle('3. Anexos de Comprovação');
+    setAdditionalSections([]);
   };
 
   // Load draft into form
@@ -104,6 +114,10 @@ export const TeamReportGenerator: React.FC = () => {
     setPeriodEnd(draft.periodEnd ? new Date(draft.periodEnd) : undefined);
     setExecutionReport(draft.executionReport);
     setPhotosWithCaptions(draft.photoCaptions || []);
+    setReportTitle(draft.reportTitle || 'RELATÓRIO DA EQUIPE DE TRABALHO');
+    setExecutionReportTitle(draft.executionReportTitle || '2. Relato de Execução da Coordenação do Projeto');
+    setAttachmentsTitle(draft.attachmentsTitle || '3. Anexos de Comprovação');
+    setAdditionalSections(draft.additionalSections || []);
     setShowDraftsList(false);
   };
 
@@ -191,6 +205,10 @@ export const TeamReportGenerator: React.FC = () => {
       executionReport,
       photos: photosWithCaptions.map(p => p.url),
       photoCaptions: photosWithCaptions,
+      reportTitle,
+      executionReportTitle,
+      attachmentsTitle,
+      additionalSections,
       isDraft: true,
     };
 
@@ -238,6 +256,10 @@ export const TeamReportGenerator: React.FC = () => {
         executionReport,
         photos: photosWithCaptions.map(p => p.url),
         photoCaptions: photosWithCaptions,
+        reportTitle,
+        executionReportTitle,
+        attachmentsTitle,
+        additionalSections,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -281,6 +303,10 @@ export const TeamReportGenerator: React.FC = () => {
         executionReport,
         photos: photosWithCaptions.map(p => p.url),
         photoCaptions: photosWithCaptions,
+        reportTitle,
+        executionReportTitle,
+        attachmentsTitle,
+        additionalSections,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -578,10 +604,49 @@ export const TeamReportGenerator: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Custom Titles Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Personalizar Títulos</CardTitle>
+            <CardDescription>
+              Personalize os títulos das seções do relatório. Você também pode adicionar seções extras.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reportTitle">Título Principal do Relatório</Label>
+              <Input
+                id="reportTitle"
+                value={reportTitle}
+                onChange={e => setReportTitle(e.target.value)}
+                placeholder="RELATÓRIO DA EQUIPE DE TRABALHO"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="executionReportTitle">Título da Seção de Execução</Label>
+              <Input
+                id="executionReportTitle"
+                value={executionReportTitle}
+                onChange={e => setExecutionReportTitle(e.target.value)}
+                placeholder="2. Relato de Execução da Coordenação do Projeto"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="attachmentsTitle">Título da Seção de Anexos</Label>
+              <Input
+                id="attachmentsTitle"
+                value={attachmentsTitle}
+                onChange={e => setAttachmentsTitle(e.target.value)}
+                placeholder="3. Anexos de Comprovação"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Execution Report Section */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">2. Relato de Execução</CardTitle>
+            <CardTitle className="text-lg">{executionReportTitle.replace(/^\d+\.\s*/, '')}</CardTitle>
             <CardDescription>
               Descreva detalhadamente as atividades realizadas no exercício da função. Use a barra de ferramentas para formatar o texto.
             </CardDescription>
@@ -594,6 +659,58 @@ export const TeamReportGenerator: React.FC = () => {
             />
           </CardContent>
         </Card>
+
+        {/* Additional Sections */}
+        {additionalSections.map((section, idx) => (
+          <Card key={section.id}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <Input
+                  value={section.title}
+                  onChange={e => {
+                    const updated = [...additionalSections];
+                    updated[idx].title = e.target.value;
+                    setAdditionalSections(updated);
+                  }}
+                  placeholder={`Título da Seção ${idx + 4}`}
+                  className="font-semibold text-lg border-0 p-0 h-auto focus-visible:ring-0"
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setAdditionalSections(prev => prev.filter((_, i) => i !== idx))}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <RichTextEditor
+                value={section.content}
+                onChange={(value) => {
+                  const updated = [...additionalSections];
+                  updated[idx].content = value;
+                  setAdditionalSections(updated);
+                }}
+                placeholder="Conteúdo da seção adicional..."
+              />
+            </CardContent>
+          </Card>
+        ))}
+
+        {/* Add Section Button */}
+        <Button
+          variant="outline"
+          onClick={() => setAdditionalSections(prev => [...prev, { 
+            id: crypto.randomUUID(), 
+            title: `${additionalSections.length + 4}. Nova Seção`, 
+            content: '' 
+          }])}
+          className="w-full"
+        >
+          + Adicionar Nova Seção
+        </Button>
 
         {/* Photos Section with Drag and Drop */}
         <Card>
@@ -688,7 +805,7 @@ export const TeamReportGenerator: React.FC = () => {
       {/* Preview Content */}
       <Card className="p-8 bg-white text-black print:shadow-none">
         <div className="space-y-6">
-          <h1 className="text-2xl font-bold text-center mb-8">RELATÓRIO DA EQUIPE DE TRABALHO</h1>
+          <h1 className="text-2xl font-bold text-center mb-8">{reportTitle}</h1>
           
           <div className="space-y-1">
             <p><strong>Termo de Fomento nº:</strong> {project.fomentoNumber}</p>
@@ -706,16 +823,27 @@ export const TeamReportGenerator: React.FC = () => {
           </div>
 
           <div>
-            <h2 className="text-lg font-bold mt-6 mb-3">2. Relato de Execução da Coordenação do Projeto</h2>
+            <h2 className="text-lg font-bold mt-6 mb-3">{executionReportTitle}</h2>
             <div 
               className="text-justify prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
               dangerouslySetInnerHTML={{ __html: executionReport || '<p>[Nenhum relato informado]</p>' }}
             />
           </div>
 
+          {/* Additional Sections in Preview */}
+          {additionalSections.map((section) => (
+            <div key={section.id}>
+              <h2 className="text-lg font-bold mt-6 mb-3">{section.title}</h2>
+              <div 
+                className="text-justify prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
+                dangerouslySetInnerHTML={{ __html: section.content || '<p>[Nenhum conteúdo]</p>' }}
+              />
+            </div>
+          ))}
+
           {photosWithCaptions.length > 0 && (
             <div>
-              <h2 className="text-lg font-bold mt-6 mb-3">3. Anexos de Comprovação</h2>
+              <h2 className="text-lg font-bold mt-6 mb-3">{attachmentsTitle}</h2>
               <div className="grid grid-cols-2 gap-4">
                 {photosWithCaptions.map((photo, idx) => (
                   <div key={photo.id} className="space-y-2">

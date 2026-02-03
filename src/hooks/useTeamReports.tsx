@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
-import { PhotoWithCaption } from '@/types';
+import { PhotoWithCaption, AdditionalSection } from '@/types';
 import type { Json } from '@/integrations/supabase/types';
 
 export interface TeamReportDraft {
@@ -18,6 +18,10 @@ export interface TeamReportDraft {
   executionReport: string;
   photos: string[];
   photoCaptions: PhotoWithCaption[];
+  reportTitle: string;
+  executionReportTitle: string;
+  attachmentsTitle: string;
+  additionalSections: AdditionalSection[];
   isDraft: boolean;
   createdAt: string;
   updatedAt: string;
@@ -44,7 +48,7 @@ export const useTeamReports = (projectId?: string) => {
 
       if (error) throw error;
 
-      const mappedDrafts: TeamReportDraft[] = (data || []).map((row) => ({
+      const mappedDrafts: TeamReportDraft[] = (data || []).map((row: any) => ({
         id: row.id,
         projectId: row.project_id,
         teamMemberId: row.team_member_id,
@@ -57,6 +61,10 @@ export const useTeamReports = (projectId?: string) => {
         executionReport: row.execution_report,
         photos: row.photos || [],
         photoCaptions: (row.photo_captions as unknown as PhotoWithCaption[]) || [],
+        reportTitle: row.report_title || 'RELATÓRIO DA EQUIPE DE TRABALHO',
+        executionReportTitle: row.execution_report_title || '2. Relato de Execução da Coordenação do Projeto',
+        attachmentsTitle: row.attachments_title || '3. Anexos de Comprovação',
+        additionalSections: (row.additional_sections as unknown as AdditionalSection[]) || [],
         isDraft: row.is_draft ?? true,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -93,6 +101,10 @@ export const useTeamReports = (projectId?: string) => {
         execution_report: draft.executionReport,
         photos: draft.photos,
         photo_captions: draft.photoCaptions as unknown as Json,
+        report_title: draft.reportTitle || 'RELATÓRIO DA EQUIPE DE TRABALHO',
+        execution_report_title: draft.executionReportTitle || '2. Relato de Execução da Coordenação do Projeto',
+        attachments_title: draft.attachmentsTitle || '3. Anexos de Comprovação',
+        additional_sections: draft.additionalSections as unknown as Json,
         is_draft: draft.isDraft,
       };
 

@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { Project, TeamReport } from '@/types';
+import { Project, TeamReport, AdditionalSection } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -14,30 +14,6 @@ const formatPeriod = (start: string, end: string) => {
   const startMonth = startDate.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' });
   const endMonth = endDate.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' });
   return `[${startMonth} à ${endMonth}]`;
-};
-
-// Strip HTML tags and convert to plain text with bullet handling
-const htmlToPlainText = (html: string): string => {
-  if (!html) return '';
-  
-  // Create a temporary element to parse HTML
-  const temp = document.createElement('div');
-  temp.innerHTML = html;
-  
-  // Process list items to add bullet points
-  const listItems = temp.querySelectorAll('li');
-  listItems.forEach(li => {
-    li.textContent = '• ' + (li.textContent || '');
-  });
-  
-  // Get text content
-  let text = temp.textContent || temp.innerText || '';
-  
-  // Clean up extra whitespace but preserve paragraph breaks
-  text = text.replace(/\n{3,}/g, '\n\n');
-  text = text.trim();
-  
-  return text;
 };
 
 // Parse HTML and return structured content with formatting hints
@@ -66,20 +42,9 @@ const parseHtmlToBlocks = (html: string): TextBlock[] => {
       const tagName = element.tagName.toLowerCase();
       
       if (tagName === 'li') {
-        // Get the full text content of the list item
         const liText = element.textContent?.trim() || '';
         if (liText) {
-          // Check if it starts with bold text
-          const firstStrong = element.querySelector('strong, b');
-          if (firstStrong && liText.startsWith(firstStrong.textContent || '')) {
-            blocks.push({ 
-              type: 'bullet', 
-              content: liText,
-              isBold: false // We'll handle bold inline
-            });
-          } else {
-            blocks.push({ type: 'bullet', content: liText });
-          }
+          blocks.push({ type: 'bullet', content: liText });
         }
       } else if (tagName === 'p') {
         const pText = element.textContent?.trim() || '';
@@ -87,10 +52,8 @@ const parseHtmlToBlocks = (html: string): TextBlock[] => {
           blocks.push({ type: 'paragraph', content: pText });
         }
       } else if (tagName === 'ul' || tagName === 'ol') {
-        // Process children (li items)
         element.childNodes.forEach(child => processNode(child));
       } else {
-        // For other elements, process children
         element.childNodes.forEach(child => processNode(child));
       }
     }
@@ -287,12 +250,12 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
 
   // ========== PAGE 1: Title and Content ==========
   
-  // Title - RELATÓRIO DA EQUIPE DE TRABALHO
+  // Title - Use custom title or default
+  const reportTitle = report.reportTitle || 'RELATÓRIO DA EQUIPE DE TRABALHO';
   pdf.setFontSize(14);
   pdf.setFont('times', 'bold');
-  const title = 'RELATÓRIO DA EQUIPE DE TRABALHO';
-  const titleWidth = pdf.getTextWidth(title);
-  pdf.text(title, (PAGE_WIDTH - titleWidth) / 2, currentY);
+  const titleWidth = pdf.getTextWidth(reportTitle);
+  pdf.text(reportTitle, (PAGE_WIDTH - titleWidth) / 2, currentY);
   currentY += 15;
 
   // Header info
@@ -329,10 +292,11 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   addBullet(`Função: ${report.functionRole}`, 12);
   currentY += 10;
 
-  // Section 2: Execution Report
+  // Section 2: Execution Report - Use custom title or default
+  const executionTitle = report.executionReportTitle || '2. Relato de Execução da Coordenação do Projeto';
   pdf.setFontSize(12);
   pdf.setFont('times', 'bold');
-  pdf.text('2. Relato de Execução da Coordenação do Projeto', MARGIN_LEFT, currentY);
+  pdf.text(executionTitle, MARGIN_LEFT, currentY);
   currentY += 10;
 
   // Parse and render execution report content
@@ -361,6 +325,40 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     }
   }
 
+  // ========== ADDITIONAL SECTIONS ==========
+  const additionalSections = report.additionalSections || [];
+  for (const section of additionalSections) {
+    checkNewPage(20);
+    
+    pdf.setFontSize(12);
+    pdf.setFont('times', 'bold');
+    pdf.text(section.title, MARGIN_LEFT, currentY);
+    currentY += 10;
+
+    const sectionBlocks = parseHtmlToBlocks(section.content || '<p>[Nenhum conteúdo]</p>');
+    
+    for (const block of sectionBlocks) {
+      if (block.type === 'bullet') {
+        addBullet(block.content, 12);
+        currentY += 2;
+      } else {
+        pdf.setFontSize(12);
+        pdf.setFont('times', 'normal');
+        
+        const lines = pdf.splitTextToSize(block.content, CONTENT_WIDTH);
+        const lineHeight = 6;
+        
+        for (let i = 0; i < lines.length; i++) {
+          checkNewPage(lineHeight);
+          const indent = i === 0 ? 10 : 0;
+          pdf.text(lines[i], MARGIN_LEFT + indent, currentY, { maxWidth: CONTENT_WIDTH - indent });
+          currentY += lineHeight;
+        }
+        currentY += 4;
+      }
+    }
+  }
+
   // ========== PHOTOS SECTION ==========
   const photosToExport = report.photoCaptions && report.photoCaptions.length > 0 
     ? report.photoCaptions 
@@ -370,10 +368,11 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     // Check if we need new page for photos section
     checkNewPage(50);
     
-    // Section 3: Photos
+    // Section: Photos - Use custom title or default
+    const attachmentsTitle = report.attachmentsTitle || '3. Anexos de Comprovação';
     pdf.setFontSize(12);
     pdf.setFont('times', 'bold');
-    pdf.text('3. Anexos de Comprovação', MARGIN_LEFT, currentY);
+    pdf.text(attachmentsTitle, MARGIN_LEFT, currentY);
     currentY += 10;
 
     // Grid layout: 2 columns
