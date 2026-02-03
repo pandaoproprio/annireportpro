@@ -112,6 +112,12 @@ export interface PhotoWithCaption {
   caption: string;
 }
 
+export interface AdditionalSection {
+  id: string;
+  title: string;
+  content: string;
+}
+
 export interface TeamReport {
   id: string;
   projectId: string;
@@ -125,6 +131,10 @@ export interface TeamReport {
   executionReport: string;
   photos: string[];
   photoCaptions?: PhotoWithCaption[];
+  reportTitle?: string;
+  executionReportTitle?: string;
+  attachmentsTitle?: string;
+  additionalSections?: AdditionalSection[];
   createdAt: string;
   updatedAt: string;
 }

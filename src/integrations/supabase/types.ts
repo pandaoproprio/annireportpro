@@ -183,8 +183,11 @@ export type Database = {
       }
       team_reports: {
         Row: {
+          additional_sections: Json | null
+          attachments_title: string | null
           created_at: string
           execution_report: string
+          execution_report_title: string | null
           function_role: string
           id: string
           is_draft: boolean
@@ -195,14 +198,18 @@ export type Database = {
           project_id: string
           provider_document: string
           provider_name: string
+          report_title: string | null
           responsible_name: string
           team_member_id: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          additional_sections?: Json | null
+          attachments_title?: string | null
           created_at?: string
           execution_report: string
+          execution_report_title?: string | null
           function_role: string
           id?: string
           is_draft?: boolean
@@ -213,14 +220,18 @@ export type Database = {
           project_id: string
           provider_document: string
           provider_name: string
+          report_title?: string | null
           responsible_name: string
           team_member_id: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          additional_sections?: Json | null
+          attachments_title?: string | null
           created_at?: string
           execution_report?: string
+          execution_report_title?: string | null
           function_role?: string
           id?: string
           is_draft?: boolean
@@ -231,6 +242,7 @@ export type Database = {
           project_id?: string
           provider_document?: string
           provider_name?: string
+          report_title?: string | null
           responsible_name?: string
           team_member_id?: string
           updated_at?: string
