@@ -313,48 +313,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     }
   }
 
-  // ========== SIGNATURE SECTION (Before Photos) ==========
-  // Add some space before signature
-  currentY += 10;
-  ensureSpace(50);
-
-  // Date
-  pdf.setFontSize(12);
-  pdf.setFont('times', 'normal');
-  const dateText = `Rio de Janeiro, ${format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.`;
-  pdf.text(dateText, MARGIN_LEFT, currentY);
-  currentY += 25;
-
-  // Signature line - centered
-  ensureSpace(30);
-  const signatureLineWidth = 80;
-  const centerX = PAGE_WIDTH / 2;
-  pdf.setDrawColor(0, 0, 0);
-  pdf.line(centerX - signatureLineWidth / 2, currentY, centerX + signatureLineWidth / 2, currentY);
-  currentY += 5;
-
-  // Signature label
-  pdf.setFont('times', 'normal');
-  const signatureLabel = 'Assinatura do responsável legal';
-  const labelWidth = pdf.getTextWidth(signatureLabel);
-  pdf.text(signatureLabel, centerX - labelWidth / 2, currentY);
-  currentY += 10;
-
-  // Name and role - centered
-  const nameRoleText = `Nome e cargo: ${report.responsibleName} - ${report.functionRole}`;
-  pdf.setFont('times', 'bold');
-  pdf.text('Nome e cargo: ', centerX - 60, currentY);
-  pdf.setFont('times', 'normal');
-  pdf.text(`${report.responsibleName} - ${report.functionRole}`, centerX - 60 + pdf.getTextWidth('Nome e cargo: '), currentY);
-  currentY += 6;
-
-  // CNPJ - centered
-  pdf.setFont('times', 'bold');
-  pdf.text('CNPJ: ', centerX - 60, currentY);
-  pdf.setFont('times', 'normal');
-  pdf.text(report.providerDocument || '[Não informado]', centerX - 60 + pdf.getTextWidth('CNPJ: '), currentY);
-
-  // ========== PHOTOS SECTION (on new page) ==========
+  // ========== PHOTOS SECTION ==========
   const photosToExport = report.photoCaptions && report.photoCaptions.length > 0 
     ? report.photoCaptions 
     : report.photos?.map((url, i) => ({ url, caption: 'Registro fotográfico das atividades realizadas', id: `photo-${i}` })) || [];
@@ -370,11 +329,11 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     pdf.text(attachmentsTitle, MARGIN_LEFT, currentY);
     currentY += 15;
 
-    // Photo grid: 2 columns x 2 rows per page
+    // Photo grid: 2 columns - FIXED SIZE for all photos
     const PHOTO_WIDTH = 70;
-    const PHOTO_HEIGHT = 55;
+    const PHOTO_HEIGHT = 50; // Fixed height for uniformity
     const COL_GAP = 15;
-    const ROW_GAP = 30; // Extra space for caption
+    const ROW_GAP = 25; // Space for caption
 
     const col1X = MARGIN_LEFT;
     const col2X = MARGIN_LEFT + PHOTO_WIDTH + COL_GAP;
@@ -394,25 +353,35 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         const photo = photosToExport[photoIndex];
         const x = col === 0 ? col1X : col2X;
 
-        // Load and add image
+        // Load image
         const imgData = await loadImage(photo.url);
         if (imgData) {
-          // Calculate aspect ratio fit
+          // FIXED SIZE: Crop/fit to exact dimensions - always same size
+          // Scale to fill the box while maintaining aspect ratio, then crop to fit
           const aspectRatio = imgData.width / imgData.height;
-          let drawWidth = PHOTO_WIDTH;
-          let drawHeight = PHOTO_WIDTH / aspectRatio;
+          const boxRatio = PHOTO_WIDTH / PHOTO_HEIGHT;
           
-          if (drawHeight > PHOTO_HEIGHT) {
+          let drawWidth: number;
+          let drawHeight: number;
+          let offsetX = 0;
+          let offsetY = 0;
+          
+          if (aspectRatio > boxRatio) {
+            // Image is wider - fit height, center horizontally
             drawHeight = PHOTO_HEIGHT;
             drawWidth = PHOTO_HEIGHT * aspectRatio;
+            offsetX = (PHOTO_WIDTH - drawWidth) / 2;
+          } else {
+            // Image is taller - fit width, center vertically
+            drawWidth = PHOTO_WIDTH;
+            drawHeight = PHOTO_WIDTH / aspectRatio;
+            offsetY = (PHOTO_HEIGHT - drawHeight) / 2;
           }
           
-          // Center image in cell
-          const offsetX = (PHOTO_WIDTH - drawWidth) / 2;
-          const offsetY = (PHOTO_HEIGHT - drawHeight) / 2;
-          
+          // Use fixed size box - draw image centered
           try {
-            pdf.addImage(imgData.data, 'JPEG', x + offsetX, rowStartY + offsetY, drawWidth, drawHeight);
+            // All images get same visual box size
+            pdf.addImage(imgData.data, 'JPEG', x, rowStartY, PHOTO_WIDTH, PHOTO_HEIGHT);
           } catch (e) {
             console.warn('Failed to add image:', e);
           }
@@ -436,6 +405,46 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
       currentY = rowStartY + PHOTO_HEIGHT + ROW_GAP;
     }
   }
+
+  // ========== SIGNATURE SECTION (After Photos) ==========
+  // Add some space before signature
+  currentY += 10;
+  ensureSpace(60);
+
+  // Date
+  pdf.setFontSize(12);
+  pdf.setFont('times', 'normal');
+  const dateText = `Rio de Janeiro, ${format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.`;
+  pdf.text(dateText, MARGIN_LEFT, currentY);
+  currentY += 25;
+
+  // Signature line - centered
+  ensureSpace(35);
+  const signatureLineWidth = 80;
+  const centerX = PAGE_WIDTH / 2;
+  pdf.setDrawColor(0, 0, 0);
+  pdf.line(centerX - signatureLineWidth / 2, currentY, centerX + signatureLineWidth / 2, currentY);
+  currentY += 5;
+
+  // Signature label
+  pdf.setFont('times', 'normal');
+  const signatureLabel = 'Assinatura do responsável legal';
+  const labelWidth = pdf.getTextWidth(signatureLabel);
+  pdf.text(signatureLabel, centerX - labelWidth / 2, currentY);
+  currentY += 10;
+
+  // Name and role - centered
+  pdf.setFont('times', 'bold');
+  pdf.text('Nome e cargo: ', centerX - 60, currentY);
+  pdf.setFont('times', 'normal');
+  pdf.text(`${report.responsibleName} - ${report.functionRole}`, centerX - 60 + pdf.getTextWidth('Nome e cargo: '), currentY);
+  currentY += 6;
+
+  // CNPJ - centered
+  pdf.setFont('times', 'bold');
+  pdf.text('CNPJ: ', centerX - 60, currentY);
+  pdf.setFont('times', 'normal');
+  pdf.text(report.providerDocument || '[Não informado]', centerX - 60 + pdf.getTextWidth('CNPJ: '), currentY);
 
   // ========== ADD FOOTERS TO ALL PAGES ==========
   const addFooters = () => {
