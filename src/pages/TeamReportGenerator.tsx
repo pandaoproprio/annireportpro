@@ -74,6 +74,7 @@ export const TeamReportGenerator: React.FC = () => {
   const [reportTitle, setReportTitle] = useState('RELATÓRIO DA EQUIPE DE TRABALHO');
   const [executionReportTitle, setExecutionReportTitle] = useState('2. Relato de Execução da Coordenação do Projeto');
   const [attachmentsTitle, setAttachmentsTitle] = useState('3. Anexos de Comprovação');
+  const [footerText, setFooterText] = useState('');
   const [additionalSections, setAdditionalSections] = useState<{ id: string; title: string; content: string }[]>([]);
 
   // DnD sensors
@@ -99,6 +100,7 @@ export const TeamReportGenerator: React.FC = () => {
     setReportTitle('RELATÓRIO DA EQUIPE DE TRABALHO');
     setExecutionReportTitle('2. Relato de Execução da Coordenação do Projeto');
     setAttachmentsTitle('3. Anexos de Comprovação');
+    setFooterText('');
     setAdditionalSections([]);
   };
 
@@ -117,6 +119,7 @@ export const TeamReportGenerator: React.FC = () => {
     setReportTitle(draft.reportTitle || 'RELATÓRIO DA EQUIPE DE TRABALHO');
     setExecutionReportTitle(draft.executionReportTitle || '2. Relato de Execução da Coordenação do Projeto');
     setAttachmentsTitle(draft.attachmentsTitle || '3. Anexos de Comprovação');
+    setFooterText(draft.footerText || '');
     setAdditionalSections(draft.additionalSections || []);
     setShowDraftsList(false);
   };
@@ -209,6 +212,7 @@ export const TeamReportGenerator: React.FC = () => {
       executionReportTitle,
       attachmentsTitle,
       additionalSections,
+      footerText,
       isDraft: true,
     };
 
@@ -260,6 +264,7 @@ export const TeamReportGenerator: React.FC = () => {
         executionReportTitle,
         attachmentsTitle,
         additionalSections,
+        footerText,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -307,6 +312,7 @@ export const TeamReportGenerator: React.FC = () => {
         executionReportTitle,
         attachmentsTitle,
         additionalSections,
+        footerText,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -639,6 +645,18 @@ export const TeamReportGenerator: React.FC = () => {
                 onChange={e => setAttachmentsTitle(e.target.value)}
                 placeholder="3. Anexos de Comprovação"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="footerText">Rodapé Personalizado</Label>
+              <Input
+                id="footerText"
+                value={footerText}
+                onChange={e => setFooterText(e.target.value)}
+                placeholder="Deixe em branco para usar o nome da organização"
+              />
+              <p className="text-xs text-muted-foreground">
+                Se deixar em branco, será usado o nome da organização: "{project.organizationName}"
+              </p>
             </div>
           </CardContent>
         </Card>

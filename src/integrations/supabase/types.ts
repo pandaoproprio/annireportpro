@@ -188,6 +188,7 @@ export type Database = {
           created_at: string
           execution_report: string
           execution_report_title: string | null
+          footer_text: string | null
           function_role: string
           id: string
           is_draft: boolean
@@ -210,6 +211,7 @@ export type Database = {
           created_at?: string
           execution_report: string
           execution_report_title?: string | null
+          footer_text?: string | null
           function_role: string
           id?: string
           is_draft?: boolean
@@ -232,6 +234,7 @@ export type Database = {
           created_at?: string
           execution_report?: string
           execution_report_title?: string | null
+          footer_text?: string | null
           function_role?: string
           id?: string
           is_draft?: boolean

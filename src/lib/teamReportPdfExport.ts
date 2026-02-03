@@ -448,6 +448,9 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
 
   // ========== ADD FOOTERS TO ALL PAGES ==========
   const addFooters = () => {
+    // Use custom footer text if provided, otherwise use organization name
+    const footerContent = report.footerText?.trim() || project.organizationName;
+    
     for (let page = 1; page <= pageCount; page++) {
       pdf.setPage(page);
       
@@ -455,13 +458,12 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
       pdf.setDrawColor(180, 180, 180);
       pdf.line(MARGIN_LEFT, PAGE_HEIGHT - 20, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - 20);
       
-      // Organization name
+      // Custom footer text or organization name
       pdf.setFontSize(10);
       pdf.setFont('times', 'normal');
       pdf.setTextColor(80, 80, 80);
-      const orgName = project.organizationName;
-      const orgWidth = pdf.getTextWidth(orgName);
-      pdf.text(orgName, (PAGE_WIDTH - orgWidth) / 2, PAGE_HEIGHT - 14);
+      const footerWidth = pdf.getTextWidth(footerContent);
+      pdf.text(footerContent, (PAGE_WIDTH - footerWidth) / 2, PAGE_HEIGHT - 14);
       
       // Page number
       const pageText = `Página ${page} de ${pageCount}`;
