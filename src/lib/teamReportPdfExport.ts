@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { Project, TeamReport, AdditionalSection } from '@/types';
+import { Project, TeamReport } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -16,11 +16,10 @@ const formatPeriod = (start: string, end: string) => {
   return `[${startMonth} à ${endMonth}]`;
 };
 
-// Parse HTML and return structured content with formatting hints
+// Parse HTML and return structured content
 interface TextBlock {
   type: 'paragraph' | 'bullet';
   content: string;
-  isBold?: boolean;
 }
 
 const parseHtmlToBlocks = (html: string): TextBlock[] => {
@@ -105,9 +104,9 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   const MARGIN_LEFT = 30;
   const MARGIN_RIGHT = 20;
   const MARGIN_TOP = 25;
-  const MARGIN_BOTTOM = 25;
+  const MARGIN_BOTTOM = 30; // Increased for footer
   const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
-  const USABLE_HEIGHT = PAGE_HEIGHT - MARGIN_TOP - MARGIN_BOTTOM;
+  const MAX_Y = PAGE_HEIGHT - MARGIN_BOTTOM;
 
   const pdf = new jsPDF({
     orientation: 'portrait',
@@ -116,147 +115,36 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   });
 
   let currentY = MARGIN_TOP;
-  let totalPages = 1;
+  let pageCount = 1;
+
+  // Helper: Add new page
+  const addNewPage = () => {
+    pdf.addPage();
+    pageCount++;
+    currentY = MARGIN_TOP;
+  };
 
   // Helper: Check if we need a new page
-  const checkNewPage = (neededHeight: number): boolean => {
-    if (currentY + neededHeight > PAGE_HEIGHT - MARGIN_BOTTOM) {
-      pdf.addPage();
-      totalPages++;
-      currentY = MARGIN_TOP;
-      return true;
-    }
-    return false;
+  const needsNewPage = (neededHeight: number): boolean => {
+    return currentY + neededHeight > MAX_Y;
   };
 
-  // Helper: Add text with word wrap
-  const addText = (text: string, fontSize: number, options: { 
-    bold?: boolean; 
-    italic?: boolean;
-    align?: 'left' | 'center' | 'justify';
-    indent?: number;
-  } = {}): void => {
-    const { bold = false, italic = false, align = 'left', indent = 0 } = options;
-    
-    pdf.setFontSize(fontSize);
-    pdf.setFont('times', bold ? 'bold' : (italic ? 'italic' : 'normal'));
-    
-    const effectiveWidth = CONTENT_WIDTH - indent;
-    const lines = pdf.splitTextToSize(text, effectiveWidth);
-    const lineHeight = fontSize * 0.5; // Approximate line height in mm
-    
-    for (const line of lines) {
-      checkNewPage(lineHeight);
-      
-      let x = MARGIN_LEFT + indent;
-      if (align === 'center') {
-        const textWidth = pdf.getTextWidth(line);
-        x = (PAGE_WIDTH - textWidth) / 2;
-      }
-      
-      pdf.text(line, x, currentY, { align: align === 'justify' ? 'justify' : 'left', maxWidth: effectiveWidth });
-      currentY += lineHeight;
+  // Helper: Ensure space or add page
+  const ensureSpace = (neededHeight: number) => {
+    if (needsNewPage(neededHeight)) {
+      addNewPage();
     }
   };
 
-  // Helper: Add bullet point
-  const addBullet = (text: string, fontSize: number): void => {
-    pdf.setFontSize(fontSize);
-    pdf.setFont('times', 'normal');
-    
-    const bulletIndent = 8;
-    const textIndent = 15;
-    const effectiveWidth = CONTENT_WIDTH - textIndent;
-    
-    // Check for bold prefix (e.g., "**Label:** content" pattern)
-    const boldMatch = text.match(/^([^:]+:)\s*(.*)$/);
-    
-    // Add bullet
-    checkNewPage(6);
-    pdf.text('•', MARGIN_LEFT + bulletIndent, currentY);
-    
-    if (boldMatch) {
-      // Bold label + normal content
-      const label = boldMatch[1];
-      const content = boldMatch[2];
-      
-      pdf.setFont('times', 'bold');
-      const labelWidth = pdf.getTextWidth(label + ' ');
-      pdf.text(label, MARGIN_LEFT + textIndent, currentY);
-      
-      pdf.setFont('times', 'normal');
-      
-      // Check if content fits on same line
-      const remainingWidth = effectiveWidth - labelWidth;
-      if (pdf.getTextWidth(content) <= remainingWidth) {
-        pdf.text(content, MARGIN_LEFT + textIndent + labelWidth, currentY);
-        currentY += fontSize * 0.5;
-      } else {
-        // Content needs to wrap
-        const fullText = label + ' ' + content;
-        const lines = pdf.splitTextToSize(fullText, effectiveWidth);
-        
-        // First line already added partially, redo
-        currentY -= 0; // Stay on same line
-        pdf.setFont('times', 'bold');
-        pdf.text(label, MARGIN_LEFT + textIndent, currentY);
-        pdf.setFont('times', 'normal');
-        
-        // Calculate where content starts
-        let contentOnFirstLine = '';
-        const firstLineRemainder = effectiveWidth - labelWidth;
-        const words = content.split(' ');
-        let currentWidth = 0;
-        
-        for (const word of words) {
-          const wordWidth = pdf.getTextWidth(word + ' ');
-          if (currentWidth + wordWidth <= firstLineRemainder) {
-            contentOnFirstLine += word + ' ';
-            currentWidth += wordWidth;
-          } else {
-            break;
-          }
-        }
-        
-        if (contentOnFirstLine) {
-          pdf.text(contentOnFirstLine.trim(), MARGIN_LEFT + textIndent + labelWidth, currentY);
-        }
-        
-        currentY += fontSize * 0.5;
-        
-        // Remaining content
-        const remainingContent = content.substring(contentOnFirstLine.length).trim();
-        if (remainingContent) {
-          const remainingLines = pdf.splitTextToSize(remainingContent, effectiveWidth);
-          for (const line of remainingLines) {
-            checkNewPage(fontSize * 0.5);
-            pdf.text(line, MARGIN_LEFT + textIndent, currentY);
-            currentY += fontSize * 0.5;
-          }
-        }
-      }
-    } else {
-      // Simple bullet without bold
-      const lines = pdf.splitTextToSize(text, effectiveWidth);
-      for (let i = 0; i < lines.length; i++) {
-        if (i > 0) {
-          checkNewPage(fontSize * 0.5);
-        }
-        pdf.text(lines[i], MARGIN_LEFT + textIndent, currentY);
-        currentY += fontSize * 0.5;
-      }
-    }
-  };
-
-  // ========== PAGE 1: Title and Content ==========
+  // ========== PAGE 1: Title and Header ==========
   
-  // Title - Use custom title or default
+  // Title
   const reportTitle = report.reportTitle || 'RELATÓRIO DA EQUIPE DE TRABALHO';
   pdf.setFontSize(14);
   pdf.setFont('times', 'bold');
   const titleWidth = pdf.getTextWidth(reportTitle);
   pdf.text(reportTitle, (PAGE_WIDTH - titleWidth) / 2, currentY);
-  currentY += 15;
+  currentY += 12;
 
   // Header info
   pdf.setFontSize(12);
@@ -284,194 +172,161 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   pdf.text('1. Dados de Identificação', MARGIN_LEFT, currentY);
   currentY += 8;
 
-  // Bullets for identification
-  addBullet(`Prestador: ${report.providerName || '[Não informado]'}`, 12);
-  currentY += 2;
-  addBullet(`Responsável Técnico: ${report.responsibleName}`, 12);
-  currentY += 2;
-  addBullet(`Função: ${report.functionRole}`, 12);
-  currentY += 10;
+  // Helper: Add bullet point
+  const addBulletItem = (label: string, value: string) => {
+    ensureSpace(8);
+    pdf.setFontSize(12);
+    pdf.setFont('times', 'normal');
+    pdf.text('•', MARGIN_LEFT + 5, currentY);
+    pdf.setFont('times', 'bold');
+    pdf.text(label, MARGIN_LEFT + 10, currentY);
+    pdf.setFont('times', 'normal');
+    pdf.text(value, MARGIN_LEFT + 10 + pdf.getTextWidth(label), currentY);
+    currentY += 6;
+  };
 
-  // Section 2: Execution Report - Use custom title or default
+  addBulletItem('Prestador: ', report.providerName || '[Não informado]');
+  addBulletItem('Responsável Técnico: ', report.responsibleName);
+  addBulletItem('Função: ', report.functionRole);
+  currentY += 6;
+
+  // Section 2: Execution Report
   const executionTitle = report.executionReportTitle || '2. Relato de Execução da Coordenação do Projeto';
+  ensureSpace(15);
   pdf.setFontSize(12);
   pdf.setFont('times', 'bold');
   pdf.text(executionTitle, MARGIN_LEFT, currentY);
-  currentY += 10;
+  currentY += 8;
+
+  // Helper: Add wrapped text paragraph
+  const addParagraph = (text: string, indent: number = 10) => {
+    pdf.setFontSize(12);
+    pdf.setFont('times', 'normal');
+    const lines = pdf.splitTextToSize(text, CONTENT_WIDTH - indent);
+    
+    for (let i = 0; i < lines.length; i++) {
+      ensureSpace(6);
+      const x = MARGIN_LEFT + (i === 0 ? indent : 0);
+      const width = CONTENT_WIDTH - (i === 0 ? indent : 0);
+      pdf.text(lines[i], x, currentY, { maxWidth: width });
+      currentY += 6;
+    }
+    currentY += 2;
+  };
+
+  // Helper: Add bullet with wrapped text
+  const addBulletText = (text: string) => {
+    pdf.setFontSize(12);
+    
+    // Check for "Label:" pattern
+    const colonIndex = text.indexOf(':');
+    const hasLabel = colonIndex > 0 && colonIndex < 50;
+    
+    ensureSpace(6);
+    pdf.setFont('times', 'normal');
+    pdf.text('•', MARGIN_LEFT + 5, currentY);
+    
+    const textX = MARGIN_LEFT + 12;
+    const textWidth = CONTENT_WIDTH - 12;
+    
+    if (hasLabel) {
+      const label = text.substring(0, colonIndex + 1);
+      const content = text.substring(colonIndex + 1).trim();
+      
+      pdf.setFont('times', 'bold');
+      pdf.text(label, textX, currentY);
+      const labelW = pdf.getTextWidth(label + ' ');
+      
+      pdf.setFont('times', 'normal');
+      
+      // Check if content fits on same line
+      const remainingOnLine = textWidth - labelW;
+      if (pdf.getTextWidth(content) <= remainingOnLine) {
+        pdf.text(content, textX + labelW, currentY);
+        currentY += 6;
+      } else {
+        // Wrap content
+        const allText = label + ' ' + content;
+        const allLines = pdf.splitTextToSize(allText, textWidth);
+        
+        // First line with bold label
+        pdf.setFont('times', 'bold');
+        pdf.text(label, textX, currentY);
+        
+        // Get what fits after label
+        const firstLineRemainder = allLines[0].substring(label.length).trim();
+        pdf.setFont('times', 'normal');
+        if (firstLineRemainder) {
+          pdf.text(firstLineRemainder, textX + labelW, currentY);
+        }
+        currentY += 6;
+        
+        // Remaining lines
+        for (let i = 1; i < allLines.length; i++) {
+          ensureSpace(6);
+          pdf.text(allLines[i], textX, currentY);
+          currentY += 6;
+        }
+      }
+    } else {
+      // No label, simple bullet
+      const lines = pdf.splitTextToSize(text, textWidth);
+      for (let i = 0; i < lines.length; i++) {
+        if (i > 0) ensureSpace(6);
+        pdf.text(lines[i], textX, currentY);
+        currentY += 6;
+      }
+    }
+    currentY += 1;
+  };
 
   // Parse and render execution report content
   const blocks = parseHtmlToBlocks(report.executionReport || '<p>[Nenhum relato informado]</p>');
   
   for (const block of blocks) {
     if (block.type === 'bullet') {
-      addBullet(block.content, 12);
-      currentY += 2;
+      addBulletText(block.content);
     } else {
-      // Paragraph - justified text
-      pdf.setFontSize(12);
-      pdf.setFont('times', 'normal');
-      
-      const lines = pdf.splitTextToSize(block.content, CONTENT_WIDTH);
-      const lineHeight = 6;
-      
-      // First line indent for paragraphs
-      for (let i = 0; i < lines.length; i++) {
-        checkNewPage(lineHeight);
-        const indent = i === 0 ? 10 : 0; // First line indent
-        pdf.text(lines[i], MARGIN_LEFT + indent, currentY, { maxWidth: CONTENT_WIDTH - indent });
-        currentY += lineHeight;
-      }
-      currentY += 4; // Paragraph spacing
+      addParagraph(block.content);
     }
   }
 
   // ========== ADDITIONAL SECTIONS ==========
   const additionalSections = report.additionalSections || [];
   for (const section of additionalSections) {
-    checkNewPage(20);
+    ensureSpace(20);
+    currentY += 4;
     
     pdf.setFontSize(12);
     pdf.setFont('times', 'bold');
     pdf.text(section.title, MARGIN_LEFT, currentY);
-    currentY += 10;
+    currentY += 8;
 
     const sectionBlocks = parseHtmlToBlocks(section.content || '<p>[Nenhum conteúdo]</p>');
     
     for (const block of sectionBlocks) {
       if (block.type === 'bullet') {
-        addBullet(block.content, 12);
-        currentY += 2;
+        addBulletText(block.content);
       } else {
-        pdf.setFontSize(12);
-        pdf.setFont('times', 'normal');
-        
-        const lines = pdf.splitTextToSize(block.content, CONTENT_WIDTH);
-        const lineHeight = 6;
-        
-        for (let i = 0; i < lines.length; i++) {
-          checkNewPage(lineHeight);
-          const indent = i === 0 ? 10 : 0;
-          pdf.text(lines[i], MARGIN_LEFT + indent, currentY, { maxWidth: CONTENT_WIDTH - indent });
-          currentY += lineHeight;
-        }
-        currentY += 4;
+        addParagraph(block.content);
       }
     }
   }
 
-  // ========== PHOTOS SECTION ==========
-  const photosToExport = report.photoCaptions && report.photoCaptions.length > 0 
-    ? report.photoCaptions 
-    : report.photos?.map((url) => ({ url, caption: 'Registro fotográfico das atividades realizadas', id: url })) || [];
-
-  if (photosToExport.length > 0) {
-    // Check if we need new page for photos section
-    checkNewPage(50);
-    
-    // Section: Photos - Use custom title or default
-    const attachmentsTitle = report.attachmentsTitle || '3. Anexos de Comprovação';
-    pdf.setFontSize(12);
-    pdf.setFont('times', 'bold');
-    pdf.text(attachmentsTitle, MARGIN_LEFT, currentY);
-    currentY += 10;
-
-    // Grid layout: 2 columns
-    const PHOTO_WIDTH = 75; // mm
-    const PHOTO_HEIGHT = 50; // mm
-    const COLUMN_GAP = 10;
-    const ROW_GAP = 25; // Space for caption
-    
-    let col = 0;
-    let rowStartY = currentY;
-
-    for (let i = 0; i < photosToExport.length; i++) {
-      const photo = photosToExport[i];
-      
-      // Calculate position
-      const x = MARGIN_LEFT + col * (PHOTO_WIDTH + COLUMN_GAP);
-      
-      // Check if we need new page
-      if (currentY + PHOTO_HEIGHT + 15 > PAGE_HEIGHT - MARGIN_BOTTOM) {
-        pdf.addPage();
-        totalPages++;
-        currentY = MARGIN_TOP;
-        rowStartY = currentY;
-        col = 0;
-      }
-      
-      // Load and add image
-      const imgData = await loadImage(photo.url);
-      if (imgData) {
-        // Calculate aspect ratio fit
-        const aspectRatio = imgData.width / imgData.height;
-        let drawWidth = PHOTO_WIDTH;
-        let drawHeight = PHOTO_WIDTH / aspectRatio;
-        
-        if (drawHeight > PHOTO_HEIGHT) {
-          drawHeight = PHOTO_HEIGHT;
-          drawWidth = PHOTO_HEIGHT * aspectRatio;
-        }
-        
-        // Center image in cell
-        const offsetX = (PHOTO_WIDTH - drawWidth) / 2;
-        const offsetY = (PHOTO_HEIGHT - drawHeight) / 2;
-        
-        try {
-          pdf.addImage(imgData.data, 'JPEG', x + offsetX, rowStartY + offsetY, drawWidth, drawHeight);
-        } catch (e) {
-          console.warn('Failed to add image:', e);
-        }
-      }
-      
-      // Add caption below
-      pdf.setFontSize(9);
-      pdf.setFont('times', 'italic');
-      const caption = `Foto ${i + 1}: ${photo.caption}`;
-      const captionLines = pdf.splitTextToSize(caption, PHOTO_WIDTH);
-      const captionY = rowStartY + PHOTO_HEIGHT + 3;
-      
-      for (let j = 0; j < captionLines.length; j++) {
-        pdf.text(captionLines[j], x, captionY + j * 4, { maxWidth: PHOTO_WIDTH });
-      }
-      
-      col++;
-      if (col >= 2) {
-        col = 0;
-        rowStartY += PHOTO_HEIGHT + ROW_GAP;
-        currentY = rowStartY;
-      }
-    }
-    
-    // Update currentY after photos
-    if (col > 0) {
-      // Last row wasn't complete
-      currentY = rowStartY + PHOTO_HEIGHT + ROW_GAP;
-    }
-  }
-
-  // ========== SIGNATURE SECTION ==========
-  // Ensure signature is at bottom or on new page with enough space
-  const signatureHeight = 60;
-  
-  if (currentY + signatureHeight > PAGE_HEIGHT - MARGIN_BOTTOM - 20) {
-    // Need more space - check if we should add page or just leave space
-    if (currentY > PAGE_HEIGHT - MARGIN_BOTTOM - 80) {
-      pdf.addPage();
-      totalPages++;
-      currentY = MARGIN_TOP + 40;
-    }
-  } else {
-    currentY += 20;
-  }
+  // ========== SIGNATURE SECTION (Before Photos) ==========
+  // Add some space before signature
+  currentY += 10;
+  ensureSpace(50);
 
   // Date
   pdf.setFontSize(12);
   pdf.setFont('times', 'normal');
   const dateText = `Rio de Janeiro, ${format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.`;
   pdf.text(dateText, MARGIN_LEFT, currentY);
-  currentY += 30;
+  currentY += 25;
 
-  // Signature line
+  // Signature line - centered
+  ensureSpace(30);
   const signatureLineWidth = 80;
   const centerX = PAGE_WIDTH / 2;
   pdf.setDrawColor(0, 0, 0);
@@ -485,42 +340,124 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   pdf.text(signatureLabel, centerX - labelWidth / 2, currentY);
   currentY += 10;
 
-  // Name and role
+  // Name and role - centered
+  const nameRoleText = `Nome e cargo: ${report.responsibleName} - ${report.functionRole}`;
   pdf.setFont('times', 'bold');
-  const nameAndRole = `Nome e cargo: `;
-  pdf.text(nameAndRole, centerX - 50, currentY);
+  pdf.text('Nome e cargo: ', centerX - 60, currentY);
   pdf.setFont('times', 'normal');
-  pdf.text(`${report.responsibleName} - ${report.functionRole}`, centerX - 50 + pdf.getTextWidth(nameAndRole), currentY);
+  pdf.text(`${report.responsibleName} - ${report.functionRole}`, centerX - 60 + pdf.getTextWidth('Nome e cargo: '), currentY);
   currentY += 6;
 
-  // CNPJ
+  // CNPJ - centered
   pdf.setFont('times', 'bold');
-  const cnpjLabel = 'CNPJ: ';
-  pdf.text(cnpjLabel, centerX - 50, currentY);
+  pdf.text('CNPJ: ', centerX - 60, currentY);
   pdf.setFont('times', 'normal');
-  pdf.text(report.providerDocument || '[Não informado]', centerX - 50 + pdf.getTextWidth(cnpjLabel), currentY);
+  pdf.text(report.providerDocument || '[Não informado]', centerX - 60 + pdf.getTextWidth('CNPJ: '), currentY);
+
+  // ========== PHOTOS SECTION (on new page) ==========
+  const photosToExport = report.photoCaptions && report.photoCaptions.length > 0 
+    ? report.photoCaptions 
+    : report.photos?.map((url, i) => ({ url, caption: 'Registro fotográfico das atividades realizadas', id: `photo-${i}` })) || [];
+
+  if (photosToExport.length > 0) {
+    // Always start photos on a new page
+    addNewPage();
+    
+    // Section title
+    const attachmentsTitle = report.attachmentsTitle || '3. Anexos de Comprovação - Registros Fotográficos';
+    pdf.setFontSize(12);
+    pdf.setFont('times', 'bold');
+    pdf.text(attachmentsTitle, MARGIN_LEFT, currentY);
+    currentY += 15;
+
+    // Photo grid: 2 columns x 2 rows per page
+    const PHOTO_WIDTH = 70;
+    const PHOTO_HEIGHT = 55;
+    const COL_GAP = 15;
+    const ROW_GAP = 30; // Extra space for caption
+
+    const col1X = MARGIN_LEFT;
+    const col2X = MARGIN_LEFT + PHOTO_WIDTH + COL_GAP;
+
+    let photoIndex = 0;
+
+    while (photoIndex < photosToExport.length) {
+      // Check if we need a new page (need space for at least one row)
+      if (currentY + PHOTO_HEIGHT + 20 > MAX_Y) {
+        addNewPage();
+      }
+
+      const rowStartY = currentY;
+
+      // Process up to 2 photos per row
+      for (let col = 0; col < 2 && photoIndex < photosToExport.length; col++) {
+        const photo = photosToExport[photoIndex];
+        const x = col === 0 ? col1X : col2X;
+
+        // Load and add image
+        const imgData = await loadImage(photo.url);
+        if (imgData) {
+          // Calculate aspect ratio fit
+          const aspectRatio = imgData.width / imgData.height;
+          let drawWidth = PHOTO_WIDTH;
+          let drawHeight = PHOTO_WIDTH / aspectRatio;
+          
+          if (drawHeight > PHOTO_HEIGHT) {
+            drawHeight = PHOTO_HEIGHT;
+            drawWidth = PHOTO_HEIGHT * aspectRatio;
+          }
+          
+          // Center image in cell
+          const offsetX = (PHOTO_WIDTH - drawWidth) / 2;
+          const offsetY = (PHOTO_HEIGHT - drawHeight) / 2;
+          
+          try {
+            pdf.addImage(imgData.data, 'JPEG', x + offsetX, rowStartY + offsetY, drawWidth, drawHeight);
+          } catch (e) {
+            console.warn('Failed to add image:', e);
+          }
+        }
+
+        // Add caption below image
+        pdf.setFontSize(9);
+        pdf.setFont('times', 'italic');
+        const caption = `Foto ${photoIndex + 1}: ${photo.caption}`;
+        const captionLines = pdf.splitTextToSize(caption, PHOTO_WIDTH);
+        const captionY = rowStartY + PHOTO_HEIGHT + 5;
+        
+        for (let j = 0; j < Math.min(captionLines.length, 2); j++) {
+          pdf.text(captionLines[j], x, captionY + j * 4);
+        }
+
+        photoIndex++;
+      }
+
+      // Move to next row
+      currentY = rowStartY + PHOTO_HEIGHT + ROW_GAP;
+    }
+  }
 
   // ========== ADD FOOTERS TO ALL PAGES ==========
   const addFooters = () => {
-    for (let page = 1; page <= totalPages; page++) {
+    for (let page = 1; page <= pageCount; page++) {
       pdf.setPage(page);
       
       // Footer line
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(MARGIN_LEFT, PAGE_HEIGHT - 18, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - 18);
+      pdf.setDrawColor(180, 180, 180);
+      pdf.line(MARGIN_LEFT, PAGE_HEIGHT - 20, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - 20);
       
       // Organization name
-      pdf.setFontSize(9);
+      pdf.setFontSize(10);
       pdf.setFont('times', 'normal');
-      pdf.setTextColor(100, 100, 100);
+      pdf.setTextColor(80, 80, 80);
       const orgName = project.organizationName;
       const orgWidth = pdf.getTextWidth(orgName);
-      pdf.text(orgName, (PAGE_WIDTH - orgWidth) / 2, PAGE_HEIGHT - 12);
+      pdf.text(orgName, (PAGE_WIDTH - orgWidth) / 2, PAGE_HEIGHT - 14);
       
       // Page number
-      const pageText = `Página ${page} de ${totalPages}`;
+      const pageText = `Página ${page} de ${pageCount}`;
       const pageWidth = pdf.getTextWidth(pageText);
-      pdf.text(pageText, (PAGE_WIDTH - pageWidth) / 2, PAGE_HEIGHT - 7);
+      pdf.text(pageText, (PAGE_WIDTH - pageWidth) / 2, PAGE_HEIGHT - 8);
       
       // Reset text color
       pdf.setTextColor(0, 0, 0);
