@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useProjects } from '@/hooks/useProjects';
+import { useAppData } from '@/contexts/AppDataContext';
 import { Project, Goal, TeamMember } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,7 +10,7 @@ import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, ArrowRight, Save, ArrowLeft, Loader2 } from 'lucide-react';
 
 export const Onboarding: React.FC = () => {
-  const { addProject, projects, isLoading } = useProjects();
+  const { addProject, projects, isLoadingProjects: isLoading } = useAppData();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);

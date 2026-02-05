@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useProjects } from '@/hooks/useProjects';
-import { useActivities } from '@/hooks/useActivities';
+import { useAppData } from '@/contexts/AppDataContext';
 import { Activity, ActivityType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,8 +20,7 @@ import {
 } from 'lucide-react';
 
 export const ActivityManager: React.FC = () => {
-  const { activeProject: project } = useProjects();
-  const { activities, addActivity, deleteActivity, updateActivity, isLoading } = useActivities(project?.id || null);
+  const { activeProject: project, activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useAppData();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);

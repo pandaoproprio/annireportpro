@@ -1,8 +1,7 @@
 import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useProjects } from '@/hooks/useProjects';
-import { useActivities } from '@/hooks/useActivities';
+import { useAppData } from '@/contexts/AppDataContext';
 import { StatCard } from '@/components/StatCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +9,7 @@ import { FolderPlus, PlusCircle, ArrowRight, Loader2 } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
   const { profile, role } = useAuth();
-  const { activeProject: project, projects, isLoading: projectsLoading } = useProjects();
-  const { activities, isLoading: activitiesLoading } = useActivities(project?.id || null);
+  const { activeProject: project, projects, isLoadingProjects: projectsLoading, activities, isLoadingActivities: activitiesLoading } = useAppData();
 
   if (projectsLoading) {
     return (
