@@ -1,4 +1,4 @@
-import React from 'react';
+ import React, { forwardRef } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -21,12 +21,8 @@ interface RichTextEditorProps {
   className?: string;
 }
 
-export const RichTextEditor: React.FC<RichTextEditorProps> = ({
-  value,
-  onChange,
-  placeholder = 'Digite aqui...',
-  className,
-}) => {
+ export const RichTextEditor = forwardRef<HTMLDivElement, RichTextEditorProps>(
+   ({ value, onChange, placeholder = 'Digite aqui...', className }, ref) => {
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -56,8 +52,8 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     return null;
   }
 
-  return (
-    <div className={cn('border rounded-md bg-background', className)}>
+   return (
+     <div ref={ref} className={cn('border rounded-md bg-background', className)}>
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-1 border-b p-2 bg-muted/30">
         <Toggle
@@ -152,8 +148,10 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             height: 0;
             pointer-events: none;
           }
-        `}</style>
-      )}
-    </div>
-  );
-};
+       `}</style>
+       )}
+     </div>
+   );
+ });
+ 
+ RichTextEditor.displayName = 'RichTextEditor';
