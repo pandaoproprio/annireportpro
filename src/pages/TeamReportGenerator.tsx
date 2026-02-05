@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useProjects } from '@/hooks/useProjects';
+import { useAppData } from '@/contexts/AppDataContext';
 import { useTeamReports, TeamReportDraft } from '@/hooks/useTeamReports';
 import { TeamReport, PhotoWithCaption } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -52,7 +52,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export const TeamReportGenerator: React.FC = () => {
-  const { activeProject: project } = useProjects();
+  const { activeProject: project } = useAppData();
   const { drafts, isLoading: isDraftsLoading, isSaving, saveDraft, deleteDraft } = useTeamReports(project?.id);
   
   const [currentDraftId, setCurrentDraftId] = useState<string | undefined>();

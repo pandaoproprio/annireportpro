@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useProjects } from '@/hooks/useProjects';
-import { useActivities } from '@/hooks/useActivities';
+import { useAppData } from '@/contexts/AppDataContext';
 import { SidebarLink } from '@/components/SidebarLink';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Dashboard } from '@/pages/Dashboard';
@@ -30,8 +29,7 @@ import {
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { signOut, profile, role } = useAuth();
-  const { projects, activeProjectId, activeProject, switchProject, isLoading: projectsLoading } = useProjects();
-  const { activities, allActivities } = useActivities(activeProjectId);
+  const { projects, activeProjectId, activeProject, switchProject, isLoadingProjects: projectsLoading } = useAppData();
   const navigate = useNavigate();
 
   const handleLogout = async () => {
