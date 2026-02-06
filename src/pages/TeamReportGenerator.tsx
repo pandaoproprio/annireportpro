@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppData } from '@/contexts/AppDataContext';
+import { useAuth } from '@/hooks/useAuth';
 import { useTeamReports, TeamReportDraft } from '@/hooks/useTeamReports';
 import { TeamReport, PhotoWithCaption } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save
 import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
 import { exportTeamReportToPdf } from '@/lib/teamReportPdfExport';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
   DndContext,
@@ -53,6 +55,7 @@ import {
 
 export const TeamReportGenerator: React.FC = () => {
   const { activeProject: project } = useAppData();
+  const { user } = useAuth();
   const { drafts, isLoading: isDraftsLoading, isSaving, saveDraft, deleteDraft } = useTeamReports(project?.id);
   
   const [currentDraftId, setCurrentDraftId] = useState<string | undefined>();
@@ -143,23 +146,35 @@ export const TeamReportGenerator: React.FC = () => {
     }
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
-      Array.from(files).forEach((file) => {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          if (event.target?.result) {
-            const newPhoto: PhotoWithCaption = {
-              id: crypto.randomUUID(),
-              url: event.target!.result as string,
-              caption: `Registro fotográfico das atividades realizadas`,
-            };
-            setPhotosWithCaptions(prev => [...prev, newPhoto]);
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files)) {
+      const photoId = crypto.randomUUID();
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filePath = `${user?.id}/${photoId}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from('team-report-photos')
+        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+
+      if (error) {
+        console.error('Upload error:', error);
+        toast.error(`Erro ao enviar foto: ${file.name}`);
+        continue;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('team-report-photos')
+        .getPublicUrl(filePath);
+
+      const newPhoto: PhotoWithCaption = {
+        id: photoId,
+        url: urlData.publicUrl,
+        caption: 'Registro fotográfico das atividades realizadas',
+      };
+      setPhotosWithCaptions(prev => [...prev, newPhoto]);
     }
   };
 
