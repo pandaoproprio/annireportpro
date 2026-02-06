@@ -64,35 +64,35 @@ const parseHtmlToBlocks = (html: string): TextBlock[] => {
 };
 
 // Load image and return as base64 with dimensions
-const loadImage = (url: string): Promise<{ data: string; width: number; height: number } | null> => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
+const loadImage = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
+  try {
+    // Fetch image as blob to avoid CORS issues
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
     
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        // Create image to get dimensions
+        const img = new Image();
+        img.onload = () => {
           resolve({
-            data: canvas.toDataURL('image/jpeg', 0.85),
+            data: dataUrl,
             width: img.naturalWidth,
             height: img.naturalHeight
           });
-        } else {
-          resolve(null);
-        }
-      } catch {
-        resolve(null);
-      }
-    };
-    
-    img.onerror = () => resolve(null);
-    img.src = url;
-  });
+        };
+        img.onerror = () => resolve(null);
+        img.src = dataUrl;
+      };
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
 };
 
 export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise<void> => {
