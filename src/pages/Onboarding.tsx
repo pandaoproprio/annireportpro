@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppData } from '@/contexts/AppDataContext';
+import { useAuth } from '@/hooks/useAuth';
 import { Project, Goal, TeamMember } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Plus, Trash2, ArrowRight, Save, ArrowLeft, Loader2 } from 'lucide-react
 
 export const Onboarding: React.FC = () => {
   const { addProject, projects, isLoadingProjects: isLoading } = useAppData();
+  const { role } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [isSaving, setIsSaving] = useState(false);
@@ -123,7 +125,7 @@ export const Onboarding: React.FC = () => {
             <h1 className="text-3xl font-bold text-foreground">Novo Projeto</h1>
             <p className="text-muted-foreground mt-2">Vamos configurar os dados para iniciar os relatórios.</p>
           </div>
-          {projects.length > 0 && (
+          {(projects.length > 0 || role === 'SUPER_ADMIN' || role === 'ADMIN') && (
             <Button variant="outline" onClick={handleCancel}>
               <ArrowLeft className="w-4 h-4 mr-2" /> Cancelar
             </Button>
