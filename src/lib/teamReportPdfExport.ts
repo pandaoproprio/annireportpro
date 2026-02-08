@@ -144,27 +144,27 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   pdf.setFont('times', 'bold');
   const titleWidth = pdf.getTextWidth(reportTitle);
   pdf.text(reportTitle, (PAGE_WIDTH - titleWidth) / 2, currentY);
-  currentY += 12;
+  currentY += 14;
 
-  // Header info
+  // Header info - with proper spacing
   pdf.setFontSize(12);
   pdf.setFont('times', 'bold');
-  pdf.text('Termo de Fomento nº: ', MARGIN_LEFT, currentY);
+  pdf.text('Termo de Fomento nº', MARGIN_LEFT, currentY);
   pdf.setFont('times', 'normal');
-  pdf.text(project.fomentoNumber, MARGIN_LEFT + pdf.getTextWidth('Termo de Fomento nº: '), currentY);
-  currentY += 6;
+  pdf.text(project.fomentoNumber, MARGIN_LEFT + pdf.getTextWidth('Termo de Fomento nº') + 1, currentY);
+  currentY += 8;
 
   pdf.setFont('times', 'bold');
-  pdf.text('Projeto: ', MARGIN_LEFT, currentY);
+  pdf.text('Projeto:', MARGIN_LEFT, currentY);
   pdf.setFont('times', 'normal');
-  pdf.text(project.name, MARGIN_LEFT + pdf.getTextWidth('Projeto: '), currentY);
-  currentY += 6;
+  pdf.text(project.name, MARGIN_LEFT + pdf.getTextWidth('Projeto:') + 1, currentY);
+  currentY += 8;
 
   pdf.setFont('times', 'bold');
-  pdf.text('Período de Referência: ', MARGIN_LEFT, currentY);
+  pdf.text('Período de Referência:', MARGIN_LEFT, currentY);
   pdf.setFont('times', 'normal');
-  pdf.text(formatPeriod(report.periodStart, report.periodEnd), MARGIN_LEFT + pdf.getTextWidth('Período de Referência: '), currentY);
-  currentY += 12;
+  pdf.text(formatPeriod(report.periodStart, report.periodEnd), MARGIN_LEFT + pdf.getTextWidth('Período de Referência:') + 1, currentY);
+  currentY += 14;
 
   // Section 1: Identification
   pdf.setFontSize(12);
@@ -172,23 +172,23 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   pdf.text('1. Dados de Identificação', MARGIN_LEFT, currentY);
   currentY += 8;
 
-  // Helper: Add bullet point
+  // Helper: Add bullet point with proper spacing
   const addBulletItem = (label: string, value: string) => {
     ensureSpace(8);
     pdf.setFontSize(12);
     pdf.setFont('times', 'normal');
     pdf.text('•', MARGIN_LEFT + 5, currentY);
     pdf.setFont('times', 'bold');
-    pdf.text(label, MARGIN_LEFT + 10, currentY);
+    pdf.text(label, MARGIN_LEFT + 12, currentY);
     pdf.setFont('times', 'normal');
-    pdf.text(value, MARGIN_LEFT + 10 + pdf.getTextWidth(label), currentY);
-    currentY += 6;
+    pdf.text(value, MARGIN_LEFT + 12 + pdf.getTextWidth(label) + 1, currentY);
+    currentY += 8;
   };
 
-  addBulletItem('Prestador: ', report.providerName || '[Não informado]');
-  addBulletItem('Responsável Técnico: ', report.responsibleName);
-  addBulletItem('Função: ', report.functionRole);
-  currentY += 6;
+  addBulletItem('Prestador:', report.providerName || '[Não informado]');
+  addBulletItem('Responsável Técnico:', report.responsibleName);
+  addBulletItem('Função:', report.functionRole);
+  currentY += 8;
 
   // Section 2: Execution Report
   const executionTitle = report.executionReportTitle || '2. Relato de Execução da Coordenação do Projeto';
@@ -328,32 +328,43 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     pdf.text(attachmentsTitle, MARGIN_LEFT, currentY);
     currentY += 10;
 
-    // Photo grid: 2 columns
-    const PHOTO_WIDTH = (CONTENT_WIDTH - 10) / 2;
-    const PHOTO_HEIGHT = PHOTO_WIDTH * 0.75;
+    // Photo grid settings
     const COL_GAP = 10;
     const ROW_GAP = 30;
+    const isSinglePhoto = photosToExport.length === 1;
+    
+    // Single photo: use full width; multiple: 2 columns
+    const PHOTO_WIDTH = isSinglePhoto ? CONTENT_WIDTH : (CONTENT_WIDTH - COL_GAP) / 2;
+    const PHOTO_HEIGHT = PHOTO_WIDTH * 0.75;
 
     const col1X = MARGIN_LEFT;
-    const col2X = MARGIN_LEFT + PHOTO_WIDTH + COL_GAP;
+    const col2X = MARGIN_LEFT + (CONTENT_WIDTH - COL_GAP) / 2 + COL_GAP;
 
     let photoIndex = 0;
 
     while (photoIndex < photosToExport.length) {
-      if (currentY + PHOTO_HEIGHT + 20 > MAX_Y) {
+      const currentPhotoW = (photosToExport.length - photoIndex === 1 && photoIndex > 0)
+        ? (CONTENT_WIDTH - COL_GAP) / 2  // last odd photo in multi stays small
+        : (isSinglePhoto ? CONTENT_WIDTH : (CONTENT_WIDTH - COL_GAP) / 2);
+      const currentPhotoH = currentPhotoW * 0.75;
+
+      if (currentY + currentPhotoH + 20 > MAX_Y) {
         addNewPage();
       }
 
       const rowStartY = currentY;
+      const photosInRow = isSinglePhoto ? 1 : 2;
 
-      for (let col = 0; col < 2 && photoIndex < photosToExport.length; col++) {
+      for (let col = 0; col < photosInRow && photoIndex < photosToExport.length; col++) {
         const photo = photosToExport[photoIndex];
         const x = col === 0 ? col1X : col2X;
+        const w = (isSinglePhoto && col === 0) ? CONTENT_WIDTH : (CONTENT_WIDTH - COL_GAP) / 2;
+        const h = w * 0.75;
 
         const imgData = await loadImage(photo.url);
         if (imgData) {
           try {
-            pdf.addImage(imgData.data, 'JPEG', x, rowStartY, PHOTO_WIDTH, PHOTO_HEIGHT);
+            pdf.addImage(imgData.data, 'JPEG', x, rowStartY, w, h);
           } catch (e) {
             console.warn('Failed to add image:', e);
           }
@@ -362,8 +373,8 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         pdf.setFontSize(10);
         pdf.setFont('times', 'italic');
         const caption = `Foto ${photoIndex + 1}: ${photo.caption}`;
-        const captionLines = pdf.splitTextToSize(caption, PHOTO_WIDTH);
-        const captionY = rowStartY + PHOTO_HEIGHT + 4;
+        const captionLines = pdf.splitTextToSize(caption, w);
+        const captionY = rowStartY + h + 4;
         
         for (let j = 0; j < Math.min(captionLines.length, 3); j++) {
           pdf.text(captionLines[j], x, captionY + j * 5);
@@ -372,7 +383,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         photoIndex++;
       }
 
-      currentY = rowStartY + PHOTO_HEIGHT + ROW_GAP;
+      currentY = rowStartY + (isSinglePhoto ? PHOTO_HEIGHT : ((CONTENT_WIDTH - COL_GAP) / 2) * 0.75) + ROW_GAP;
     }
   }
 
