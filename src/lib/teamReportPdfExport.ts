@@ -388,14 +388,14 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         }
 
         // Add caption below image
-        pdf.setFontSize(9);
+        pdf.setFontSize(10);
         pdf.setFont('times', 'italic');
         const caption = `Foto ${photoIndex + 1}: ${photo.caption}`;
         const captionLines = pdf.splitTextToSize(caption, PHOTO_WIDTH);
-        const captionY = rowStartY + PHOTO_HEIGHT + 5;
+        const captionY = rowStartY + PHOTO_HEIGHT + 4;
         
-        for (let j = 0; j < Math.min(captionLines.length, 2); j++) {
-          pdf.text(captionLines[j], x, captionY + j * 4);
+        for (let j = 0; j < Math.min(captionLines.length, 3); j++) {
+          pdf.text(captionLines[j], x, captionY + j * 5);
         }
 
         photoIndex++;
