@@ -319,9 +319,12 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     : report.photos?.map((url, i) => ({ url, caption: 'Registro fotográfico das atividades realizadas', id: `photo-${i}` })) || [];
 
   if (photosToExport.length > 0) {
-    // Add subtitle inline (no new page)
+    // Calculate first photo height to ensure title + photo stay together
+    const isSinglePhoto = photosToExport.length === 1;
+    const firstPhotoH = (isSinglePhoto ? CONTENT_WIDTH : (CONTENT_WIDTH - 10) / 2) * 0.75;
+    // Ensure space for title + at least the first photo row
     currentY += 6;
-    ensureSpace(20);
+    ensureSpace(10 + firstPhotoH + 20);
     const attachmentsTitle = report.attachmentsTitle || 'Registros Fotográficos';
     pdf.setFontSize(12);
     pdf.setFont('times', 'bold');
@@ -331,7 +334,6 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     // Photo grid settings
     const COL_GAP = 10;
     const ROW_GAP = 30;
-    const isSinglePhoto = photosToExport.length === 1;
     
     // Single photo: use full width; multiple: 2 columns
     const PHOTO_WIDTH = isSinglePhoto ? CONTENT_WIDTH : (CONTENT_WIDTH - COL_GAP) / 2;
