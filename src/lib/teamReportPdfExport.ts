@@ -313,27 +313,26 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     }
   }
 
-  // ========== PHOTOS SECTION ==========
+  // ========== PHOTOS (inline, after content sections) ==========
   const photosToExport = report.photoCaptions && report.photoCaptions.length > 0 
     ? report.photoCaptions 
     : report.photos?.map((url, i) => ({ url, caption: 'Registro fotográfico das atividades realizadas', id: `photo-${i}` })) || [];
 
   if (photosToExport.length > 0) {
-    // Always start photos on a new page
-    addNewPage();
-    
-    // Section title
-    const attachmentsTitle = report.attachmentsTitle || '3. Anexos de Comprovação - Registros Fotográficos';
+    // Add subtitle inline (no new page)
+    currentY += 6;
+    ensureSpace(20);
+    const attachmentsTitle = report.attachmentsTitle || 'Registros Fotográficos';
     pdf.setFontSize(12);
     pdf.setFont('times', 'bold');
     pdf.text(attachmentsTitle, MARGIN_LEFT, currentY);
-    currentY += 15;
+    currentY += 10;
 
-    // Photo grid: 2 columns - larger photos like reference
-    const PHOTO_WIDTH = (CONTENT_WIDTH - 10) / 2; // ~75mm each
-    const PHOTO_HEIGHT = PHOTO_WIDTH * 0.75; // 4:3 aspect ratio (~56mm)
+    // Photo grid: 2 columns
+    const PHOTO_WIDTH = (CONTENT_WIDTH - 10) / 2;
+    const PHOTO_HEIGHT = PHOTO_WIDTH * 0.75;
     const COL_GAP = 10;
-    const ROW_GAP = 30; // Space for caption
+    const ROW_GAP = 30;
 
     const col1X = MARGIN_LEFT;
     const col2X = MARGIN_LEFT + PHOTO_WIDTH + COL_GAP;
@@ -341,53 +340,25 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     let photoIndex = 0;
 
     while (photoIndex < photosToExport.length) {
-      // Check if we need a new page (need space for at least one row)
       if (currentY + PHOTO_HEIGHT + 20 > MAX_Y) {
         addNewPage();
       }
 
       const rowStartY = currentY;
 
-      // Process up to 2 photos per row
       for (let col = 0; col < 2 && photoIndex < photosToExport.length; col++) {
         const photo = photosToExport[photoIndex];
         const x = col === 0 ? col1X : col2X;
 
-        // Load image
         const imgData = await loadImage(photo.url);
         if (imgData) {
-          // FIXED SIZE: Crop/fit to exact dimensions - always same size
-          // Scale to fill the box while maintaining aspect ratio, then crop to fit
-          const aspectRatio = imgData.width / imgData.height;
-          const boxRatio = PHOTO_WIDTH / PHOTO_HEIGHT;
-          
-          let drawWidth: number;
-          let drawHeight: number;
-          let offsetX = 0;
-          let offsetY = 0;
-          
-          if (aspectRatio > boxRatio) {
-            // Image is wider - fit height, center horizontally
-            drawHeight = PHOTO_HEIGHT;
-            drawWidth = PHOTO_HEIGHT * aspectRatio;
-            offsetX = (PHOTO_WIDTH - drawWidth) / 2;
-          } else {
-            // Image is taller - fit width, center vertically
-            drawWidth = PHOTO_WIDTH;
-            drawHeight = PHOTO_WIDTH / aspectRatio;
-            offsetY = (PHOTO_HEIGHT - drawHeight) / 2;
-          }
-          
-          // Use fixed size box - draw image centered
           try {
-            // All images get same visual box size
             pdf.addImage(imgData.data, 'JPEG', x, rowStartY, PHOTO_WIDTH, PHOTO_HEIGHT);
           } catch (e) {
             console.warn('Failed to add image:', e);
           }
         }
 
-        // Add caption below image
         pdf.setFontSize(10);
         pdf.setFont('times', 'italic');
         const caption = `Foto ${photoIndex + 1}: ${photo.caption}`;
@@ -401,7 +372,6 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         photoIndex++;
       }
 
-      // Move to next row
       currentY = rowStartY + PHOTO_HEIGHT + ROW_GAP;
     }
   }
