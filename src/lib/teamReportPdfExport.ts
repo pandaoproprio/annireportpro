@@ -16,7 +16,7 @@ const formatPeriod = (start: string, end: string) => {
   return `[${startMonth} à ${endMonth}]`;
 };
 
-// Parse HTML and return structured content
+// ── HTML parser ──
 interface TextBlock {
   type: 'paragraph' | 'bullet';
   content: string;
@@ -24,66 +24,45 @@ interface TextBlock {
 
 const parseHtmlToBlocks = (html: string): TextBlock[] => {
   if (!html) return [];
-  
   const temp = document.createElement('div');
   temp.innerHTML = html;
-  
   const blocks: TextBlock[] = [];
-  
+
   const processNode = (node: Node) => {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent?.trim();
-      if (text) {
-        blocks.push({ type: 'paragraph', content: text });
-      }
+      if (text) blocks.push({ type: 'paragraph', content: text });
     } else if (node.nodeType === Node.ELEMENT_NODE) {
-      const element = node as Element;
-      const tagName = element.tagName.toLowerCase();
-      
-      if (tagName === 'li') {
-        const liText = element.textContent?.trim() || '';
-        if (liText) {
-          blocks.push({ type: 'bullet', content: liText });
-        }
-      } else if (tagName === 'p') {
-        const pText = element.textContent?.trim() || '';
-        if (pText) {
-          blocks.push({ type: 'paragraph', content: pText });
-        }
-      } else if (tagName === 'ul' || tagName === 'ol') {
-        element.childNodes.forEach(child => processNode(child));
+      const el = node as Element;
+      const tag = el.tagName.toLowerCase();
+      if (tag === 'li') {
+        const t = el.textContent?.trim() || '';
+        if (t) blocks.push({ type: 'bullet', content: t });
+      } else if (tag === 'p') {
+        const t = el.textContent?.trim() || '';
+        if (t) blocks.push({ type: 'paragraph', content: t });
       } else {
-        element.childNodes.forEach(child => processNode(child));
+        el.childNodes.forEach(c => processNode(c));
       }
     }
   };
-  
-  temp.childNodes.forEach(child => processNode(child));
-  
+
+  temp.childNodes.forEach(c => processNode(c));
   return blocks;
 };
 
-// Load image and return as base64 with dimensions
+// ── Image loader ──
 const loadImage = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
   try {
-    // Fetch image as blob to avoid CORS issues
     const response = await fetch(url);
     if (!response.ok) return null;
     const blob = await response.blob();
-    
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
-        // Create image to get dimensions
         const img = new Image();
-        img.onload = () => {
-          resolve({
-            data: dataUrl,
-            width: img.naturalWidth,
-            height: img.naturalHeight
-          });
-        };
+        img.onload = () => resolve({ data: dataUrl, width: img.naturalWidth, height: img.naturalHeight });
         img.onerror = () => resolve(null);
         img.src = dataUrl;
       };
@@ -95,374 +74,305 @@ const loadImage = async (url: string): Promise<{ data: string; width: number; he
   }
 };
 
+// ══════════════════════════════════════════════════════════════
+// ABNT NBR 14724 constants
+// ══════════════════════════════════════════════════════════════
+const PAGE_W = 210;
+const PAGE_H = 297;
+const ML = 30;       // margin left  3 cm
+const MR = 20;       // margin right 2 cm
+const MT = 30;       // margin top   3 cm
+const MB = 20;       // margin bottom 2 cm
+const CW = PAGE_W - ML - MR;   // content width = 160 mm
+const MAX_Y = PAGE_H - MB;
+const LINE_H = 7.2;  // ~1.5 × 12pt ≈ 7.2 mm
+const INDENT = 12.5;  // 1.25 cm paragraph indent
+const FONT_BODY = 12;
+const FONT_CAPTION = 10;
+
 export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise<void> => {
   const { project, report } = data;
 
-  // A4 dimensions in mm
-  const PAGE_WIDTH = 210;
-  const PAGE_HEIGHT = 297;
-  const MARGIN_LEFT = 30;
-  const MARGIN_RIGHT = 20;
-  const MARGIN_TOP = 25;
-  const MARGIN_BOTTOM = 30; // Increased for footer
-  const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT;
-  const MAX_Y = PAGE_HEIGHT - MARGIN_BOTTOM;
-
-  const pdf = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
-
-  let currentY = MARGIN_TOP;
+  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  let currentY = MT;
   let pageCount = 1;
 
-  // Helper: Add new page
-  const addNewPage = () => {
-    pdf.addPage();
-    pageCount++;
-    currentY = MARGIN_TOP;
-  };
+  // ── helpers ──
+  const addPage = () => { pdf.addPage(); pageCount++; currentY = MT; };
+  const ensureSpace = (h: number) => { if (currentY + h > MAX_Y) addPage(); };
 
-  // Helper: Check if we need a new page
-  const needsNewPage = (neededHeight: number): boolean => {
-    return currentY + neededHeight > MAX_Y;
-  };
-
-  // Helper: Ensure space or add page
-  const ensureSpace = (neededHeight: number) => {
-    if (needsNewPage(neededHeight)) {
-      addNewPage();
-    }
-  };
-
-  // ========== PAGE 1: Title and Header ==========
-  
-  // Title
-  const reportTitle = report.reportTitle || 'RELATÓRIO DA EQUIPE DE TRABALHO';
-  pdf.setFontSize(14);
-  pdf.setFont('times', 'bold');
-  const titleWidth = pdf.getTextWidth(reportTitle);
-  pdf.text(reportTitle, (PAGE_WIDTH - titleWidth) / 2, currentY);
-  currentY += 14;
-
-  // Header info - with proper spacing
-  pdf.setFontSize(12);
-  pdf.setFont('times', 'bold');
-  pdf.text('Termo de Fomento nº', MARGIN_LEFT, currentY);
-  pdf.setFont('times', 'normal');
-  pdf.text(project.fomentoNumber, MARGIN_LEFT + pdf.getTextWidth('Termo de Fomento nº') + 1, currentY);
-  currentY += 8;
-
-  pdf.setFont('times', 'bold');
-  pdf.text('Projeto:', MARGIN_LEFT, currentY);
-  pdf.setFont('times', 'normal');
-  pdf.text(project.name, MARGIN_LEFT + pdf.getTextWidth('Projeto:') + 1, currentY);
-  currentY += 8;
-
-  pdf.setFont('times', 'bold');
-  pdf.text('Período de Referência:', MARGIN_LEFT, currentY);
-  pdf.setFont('times', 'normal');
-  pdf.text(formatPeriod(report.periodStart, report.periodEnd), MARGIN_LEFT + pdf.getTextWidth('Período de Referência:') + 1, currentY);
-  currentY += 14;
-
-  // Section 1: Identification
-  pdf.setFontSize(12);
-  pdf.setFont('times', 'bold');
-  pdf.text('1. Dados de Identificação', MARGIN_LEFT, currentY);
-  currentY += 8;
-
-  // Helper: Add bullet point with proper spacing
-  const addBulletItem = (label: string, value: string) => {
-    ensureSpace(8);
-    pdf.setFontSize(12);
+  // Justified paragraph with 1.25 cm first-line indent and 1.5 line spacing
+  const addParagraph = (text: string) => {
+    pdf.setFontSize(FONT_BODY);
     pdf.setFont('times', 'normal');
-    pdf.text('•', MARGIN_LEFT + 5, currentY);
-    pdf.setFont('times', 'bold');
-    pdf.text(label, MARGIN_LEFT + 12, currentY);
-    pdf.setFont('times', 'normal');
-    pdf.text(value, MARGIN_LEFT + 12 + pdf.getTextWidth(label) + 1, currentY);
-    currentY += 8;
-  };
-
-  addBulletItem('Prestador:', report.providerName || '[Não informado]');
-  addBulletItem('Responsável Técnico:', report.responsibleName);
-  addBulletItem('Função:', report.functionRole);
-  currentY += 8;
-
-  // Section 2: Execution Report
-  const executionTitle = report.executionReportTitle || '2. Relato de Execução da Coordenação do Projeto';
-  ensureSpace(15);
-  pdf.setFontSize(12);
-  pdf.setFont('times', 'bold');
-  pdf.text(executionTitle, MARGIN_LEFT, currentY);
-  currentY += 8;
-
-  // Helper: Add wrapped text paragraph
-  const addParagraph = (text: string, indent: number = 10) => {
-    pdf.setFontSize(12);
-    pdf.setFont('times', 'normal');
-    const lines = pdf.splitTextToSize(text, CONTENT_WIDTH - indent);
-    
+    const lines: string[] = pdf.splitTextToSize(text, CW - INDENT);
     for (let i = 0; i < lines.length; i++) {
-      ensureSpace(6);
-      const x = MARGIN_LEFT + (i === 0 ? indent : 0);
-      const width = CONTENT_WIDTH - (i === 0 ? indent : 0);
-      pdf.text(lines[i], x, currentY, { maxWidth: width });
-      currentY += 6;
+      ensureSpace(LINE_H);
+      const x = i === 0 ? ML + INDENT : ML;
+      const w = i === 0 ? CW - INDENT : CW;
+      pdf.text(lines[i], x, currentY, { maxWidth: w, align: 'justify' });
+      currentY += LINE_H;
     }
-    currentY += 2;
+    currentY += 2; // small gap after paragraph
   };
 
-  // Helper: Add bullet with wrapped text
+  // Bullet item with bold label detection
   const addBulletText = (text: string) => {
-    pdf.setFontSize(12);
-    
-    // Check for "Label:" pattern
-    const colonIndex = text.indexOf(':');
-    const hasLabel = colonIndex > 0 && colonIndex < 50;
-    
-    ensureSpace(6);
+    pdf.setFontSize(FONT_BODY);
+    const bulletIndent = 8;
+    const textX = ML + bulletIndent + 4;
+    const textW = CW - bulletIndent - 4;
+
+    ensureSpace(LINE_H);
     pdf.setFont('times', 'normal');
-    pdf.text('•', MARGIN_LEFT + 5, currentY);
-    
-    const textX = MARGIN_LEFT + 12;
-    const textWidth = CONTENT_WIDTH - 12;
-    
+    pdf.text('•', ML + bulletIndent, currentY);
+
+    const colonIdx = text.indexOf(':');
+    const hasLabel = colonIdx > 0 && colonIdx < 50;
+
     if (hasLabel) {
-      const label = text.substring(0, colonIndex + 1);
-      const content = text.substring(colonIndex + 1).trim();
-      
+      const label = text.substring(0, colonIdx + 1);
+      const content = text.substring(colonIdx + 1).trim();
       pdf.setFont('times', 'bold');
       pdf.text(label, textX, currentY);
-      const labelW = pdf.getTextWidth(label + ' ');
-      
+      const lw = pdf.getTextWidth(label + ' ');
       pdf.setFont('times', 'normal');
-      
-      // Check if content fits on same line
-      const remainingOnLine = textWidth - labelW;
-      if (pdf.getTextWidth(content) <= remainingOnLine) {
-        pdf.text(content, textX + labelW, currentY);
-        currentY += 6;
+
+      const remaining = textW - lw;
+      if (pdf.getTextWidth(content) <= remaining) {
+        pdf.text(content, textX + lw, currentY);
+        currentY += LINE_H;
       } else {
-        // Wrap content
-        const allText = label + ' ' + content;
-        const allLines = pdf.splitTextToSize(allText, textWidth);
-        
-        // First line with bold label
-        pdf.setFont('times', 'bold');
-        pdf.text(label, textX, currentY);
-        
-        // Get what fits after label
-        const firstLineRemainder = allLines[0].substring(label.length).trim();
-        pdf.setFont('times', 'normal');
-        if (firstLineRemainder) {
-          pdf.text(firstLineRemainder, textX + labelW, currentY);
-        }
-        currentY += 6;
-        
-        // Remaining lines
+        const allLines: string[] = pdf.splitTextToSize(label + ' ' + content, textW);
+        // first line already printed label
+        const firstRest = allLines[0].substring(label.length).trim();
+        if (firstRest) pdf.text(firstRest, textX + lw, currentY);
+        currentY += LINE_H;
         for (let i = 1; i < allLines.length; i++) {
-          ensureSpace(6);
-          pdf.text(allLines[i], textX, currentY);
-          currentY += 6;
+          ensureSpace(LINE_H);
+          pdf.text(allLines[i], textX, currentY, { maxWidth: textW, align: 'justify' });
+          currentY += LINE_H;
         }
       }
     } else {
-      // No label, simple bullet
-      const lines = pdf.splitTextToSize(text, textWidth);
+      const lines: string[] = pdf.splitTextToSize(text, textW);
       for (let i = 0; i < lines.length; i++) {
-        if (i > 0) ensureSpace(6);
-        pdf.text(lines[i], textX, currentY);
-        currentY += 6;
+        if (i > 0) ensureSpace(LINE_H);
+        pdf.text(lines[i], textX, currentY, { maxWidth: textW, align: 'justify' });
+        currentY += LINE_H;
       }
     }
     currentY += 1;
   };
 
-  // Parse and render execution report content
-  const blocks = parseHtmlToBlocks(report.executionReport || '<p>[Nenhum relato informado]</p>');
-  
-  for (const block of blocks) {
-    if (block.type === 'bullet') {
-      addBulletText(block.content);
-    } else {
-      addParagraph(block.content);
-    }
-  }
-
-  // ========== ADDITIONAL SECTIONS ==========
-  const additionalSections = report.additionalSections || [];
-  for (const section of additionalSections) {
-    ensureSpace(20);
+  // Section title (bold, size 12)
+  const addSectionTitle = (title: string) => {
+    ensureSpace(LINE_H * 2);
     currentY += 4;
-    
-    pdf.setFontSize(12);
+    pdf.setFontSize(FONT_BODY);
     pdf.setFont('times', 'bold');
-    pdf.text(section.title, MARGIN_LEFT, currentY);
-    currentY += 8;
+    pdf.text(title, ML, currentY);
+    currentY += LINE_H + 2;
+  };
 
-    const sectionBlocks = parseHtmlToBlocks(section.content || '<p>[Nenhum conteúdo]</p>');
-    
-    for (const block of sectionBlocks) {
-      if (block.type === 'bullet') {
-        addBulletText(block.content);
-      } else {
-        addParagraph(block.content);
-      }
+  // Header label: value pair
+  const addHeaderLine = (label: string, value: string) => {
+    ensureSpace(LINE_H);
+    pdf.setFontSize(FONT_BODY);
+    pdf.setFont('times', 'bold');
+    pdf.text(label, ML, currentY);
+    const lw = pdf.getTextWidth(label + ' ');
+    pdf.setFont('times', 'normal');
+    const valLines: string[] = pdf.splitTextToSize(value, CW - lw);
+    pdf.text(valLines[0], ML + lw, currentY);
+    currentY += LINE_H;
+    for (let i = 1; i < valLines.length; i++) {
+      ensureSpace(LINE_H);
+      pdf.text(valLines[i], ML + lw, currentY, { maxWidth: CW - lw });
+      currentY += LINE_H;
+    }
+  };
+
+  // Identification bullet (simple label: value)
+  const addIdBullet = (label: string, value: string) => {
+    ensureSpace(LINE_H);
+    pdf.setFontSize(FONT_BODY);
+    pdf.setFont('times', 'normal');
+    pdf.text('•', ML + 8, currentY);
+    pdf.setFont('times', 'bold');
+    pdf.text(label, ML + 14, currentY);
+    pdf.setFont('times', 'normal');
+    pdf.text(value, ML + 14 + pdf.getTextWidth(label + ' '), currentY);
+    currentY += LINE_H;
+  };
+
+  // ══════════════════════════════════════════════════════════════
+  // PAGE 1: Title + Header
+  // ══════════════════════════════════════════════════════════════
+  const reportTitle = report.reportTitle || 'RELATÓRIO DA EQUIPE DE TRABALHO';
+  pdf.setFontSize(14);
+  pdf.setFont('times', 'bold');
+  const tw = pdf.getTextWidth(reportTitle);
+  pdf.text(reportTitle, (PAGE_W - tw) / 2, currentY);
+  currentY += LINE_H * 2;
+
+  addHeaderLine('Termo de Fomento nº', project.fomentoNumber);
+  addHeaderLine('Projeto:', project.name);
+  addHeaderLine('Período de Referência:', formatPeriod(report.periodStart, report.periodEnd));
+  currentY += LINE_H;
+
+  // ── 1. Dados de Identificação ──
+  addSectionTitle('1. Dados de Identificação');
+  addIdBullet('Prestador:', report.providerName || '[Não informado]');
+  addIdBullet('Responsável Técnico:', report.responsibleName);
+  addIdBullet('Função:', report.functionRole);
+  currentY += LINE_H;
+
+  // ── 2. Relato de Execução ──
+  const execTitle = report.executionReportTitle || '2. Relato de Execução da Coordenação do Projeto';
+  addSectionTitle(execTitle);
+
+  const blocks = parseHtmlToBlocks(report.executionReport || '<p>[Nenhum relato informado]</p>');
+  for (const block of blocks) {
+    if (block.type === 'bullet') addBulletText(block.content);
+    else addParagraph(block.content);
+  }
+
+  // ── Additional Sections ──
+  for (const section of (report.additionalSections || [])) {
+    addSectionTitle(section.title);
+    const sBlocks = parseHtmlToBlocks(section.content || '<p>[Nenhum conteúdo]</p>');
+    for (const b of sBlocks) {
+      if (b.type === 'bullet') addBulletText(b.content);
+      else addParagraph(b.content);
     }
   }
 
-  // ========== PHOTOS (inline, after content sections) ==========
-  const photosToExport = report.photoCaptions && report.photoCaptions.length > 0 
-    ? report.photoCaptions 
+  // ══════════════════════════════════════════════════════════════
+  // PHOTOS (inline, after content)
+  // ══════════════════════════════════════════════════════════════
+  const photosToExport = report.photoCaptions && report.photoCaptions.length > 0
+    ? report.photoCaptions
     : report.photos?.map((url, i) => ({ url, caption: 'Registro fotográfico das atividades realizadas', id: `photo-${i}` })) || [];
 
   if (photosToExport.length > 0) {
-    // Calculate first photo height to ensure title + photo stay together
-    const isSinglePhoto = photosToExport.length === 1;
-    const firstPhotoH = (isSinglePhoto ? CONTENT_WIDTH : (CONTENT_WIDTH - 10) / 2) * 0.75;
-    // Ensure space for title + at least the first photo row
-    currentY += 6;
-    ensureSpace(10 + firstPhotoH + 20);
-    const attachmentsTitle = report.attachmentsTitle || 'Registros Fotográficos';
-    pdf.setFontSize(12);
+    const isSingle = photosToExport.length === 1;
+    const photoW = isSingle ? CW : (CW - 10) / 2;
+    const photoH = photoW * 0.75;
+
+    // Ensure title + first photo row stay together
+    currentY += LINE_H;
+    ensureSpace(LINE_H + 6 + photoH + 20);
+    const attTitle = report.attachmentsTitle || 'Registros Fotográficos';
+    pdf.setFontSize(FONT_BODY);
     pdf.setFont('times', 'bold');
-    pdf.text(attachmentsTitle, MARGIN_LEFT, currentY);
-    currentY += 10;
+    pdf.text(attTitle, ML, currentY);
+    currentY += LINE_H + 4;
 
-    // Photo grid settings
     const COL_GAP = 10;
-    const ROW_GAP = 30;
-    
-    // Single photo: use full width; multiple: 2 columns
-    const PHOTO_WIDTH = isSinglePhoto ? CONTENT_WIDTH : (CONTENT_WIDTH - COL_GAP) / 2;
-    const PHOTO_HEIGHT = PHOTO_WIDTH * 0.75;
+    const col1X = ML;
+    const col2X = ML + photoW + COL_GAP;
 
-    const col1X = MARGIN_LEFT;
-    const col2X = MARGIN_LEFT + (CONTENT_WIDTH - COL_GAP) / 2 + COL_GAP;
+    let idx = 0;
+    while (idx < photosToExport.length) {
+      const rowW = isSingle ? CW : photoW;
+      const rowH = rowW * 0.75;
 
-    let photoIndex = 0;
+      if (currentY + rowH + 20 > MAX_Y) addPage();
+      const rowY = currentY;
+      const photosInRow = isSingle ? 1 : 2;
 
-    while (photoIndex < photosToExport.length) {
-      const currentPhotoW = (photosToExport.length - photoIndex === 1 && photoIndex > 0)
-        ? (CONTENT_WIDTH - COL_GAP) / 2  // last odd photo in multi stays small
-        : (isSinglePhoto ? CONTENT_WIDTH : (CONTENT_WIDTH - COL_GAP) / 2);
-      const currentPhotoH = currentPhotoW * 0.75;
-
-      if (currentY + currentPhotoH + 20 > MAX_Y) {
-        addNewPage();
-      }
-
-      const rowStartY = currentY;
-      const photosInRow = isSinglePhoto ? 1 : 2;
-
-      for (let col = 0; col < photosInRow && photoIndex < photosToExport.length; col++) {
-        const photo = photosToExport[photoIndex];
+      for (let col = 0; col < photosInRow && idx < photosToExport.length; col++) {
+        const photo = photosToExport[idx];
         const x = col === 0 ? col1X : col2X;
-        const w = (isSinglePhoto && col === 0) ? CONTENT_WIDTH : (CONTENT_WIDTH - COL_GAP) / 2;
+        const w = isSingle ? CW : photoW;
         const h = w * 0.75;
 
         const imgData = await loadImage(photo.url);
         if (imgData) {
-          try {
-            pdf.addImage(imgData.data, 'JPEG', x, rowStartY, w, h);
-          } catch (e) {
-            console.warn('Failed to add image:', e);
-          }
+          try { pdf.addImage(imgData.data, 'JPEG', x, rowY, w, h); }
+          catch (e) { console.warn('Image error:', e); }
         }
 
-        pdf.setFontSize(10);
+        // Caption (font 10, italic)
+        pdf.setFontSize(FONT_CAPTION);
         pdf.setFont('times', 'italic');
-        const caption = `Foto ${photoIndex + 1}: ${photo.caption}`;
-        const captionLines = pdf.splitTextToSize(caption, w);
-        const captionY = rowStartY + h + 4;
-        
-        for (let j = 0; j < Math.min(captionLines.length, 3); j++) {
-          pdf.text(captionLines[j], x, captionY + j * 5);
+        const caption = `Foto ${idx + 1}: ${photo.caption}`;
+        const capLines: string[] = pdf.splitTextToSize(caption, w);
+        const capY = rowY + h + 4;
+        for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+          pdf.text(capLines[j], x, capY + j * 4.5);
         }
 
-        photoIndex++;
+        idx++;
       }
 
-      currentY = rowStartY + (isSinglePhoto ? PHOTO_HEIGHT : ((CONTENT_WIDTH - COL_GAP) / 2) * 0.75) + ROW_GAP;
+      currentY = rowY + rowH + 22;
     }
   }
 
-  // ========== SIGNATURE SECTION (After Photos) ==========
-  // Add some space before signature
-  currentY += 10;
-  ensureSpace(60);
+  // ══════════════════════════════════════════════════════════════
+  // SIGNATURE BLOCK
+  // ══════════════════════════════════════════════════════════════
+  currentY += LINE_H;
+  ensureSpace(55);
 
-  // Date
-  pdf.setFontSize(12);
+  pdf.setFontSize(FONT_BODY);
   pdf.setFont('times', 'normal');
   const dateText = `Rio de Janeiro, ${format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.`;
-  pdf.text(dateText, MARGIN_LEFT, currentY);
-  currentY += 25;
+  pdf.text(dateText, ML, currentY);
+  currentY += LINE_H * 3;
 
-  // Signature line - centered
+  // Signature line centered
   ensureSpace(35);
-  const signatureLineWidth = 80;
-  const centerX = PAGE_WIDTH / 2;
-  pdf.setDrawColor(0, 0, 0);
-  pdf.line(centerX - signatureLineWidth / 2, currentY, centerX + signatureLineWidth / 2, currentY);
+  const cx = PAGE_W / 2;
+  const sigW = 80;
+  pdf.setDrawColor(0);
+  pdf.line(cx - sigW / 2, currentY, cx + sigW / 2, currentY);
   currentY += 5;
 
-  // Signature label
   pdf.setFont('times', 'normal');
-  const signatureLabel = 'Assinatura do responsável legal';
-  const labelWidth = pdf.getTextWidth(signatureLabel);
-  pdf.text(signatureLabel, centerX - labelWidth / 2, currentY);
-  currentY += 10;
+  const sigLabel = 'Assinatura do responsável legal';
+  pdf.text(sigLabel, cx - pdf.getTextWidth(sigLabel) / 2, currentY);
+  currentY += LINE_H + 2;
 
-  // Name and role - centered
   pdf.setFont('times', 'bold');
-  pdf.text('Nome e cargo: ', centerX - 60, currentY);
+  pdf.text('Nome e cargo: ', cx - 60, currentY);
   pdf.setFont('times', 'normal');
-  pdf.text(`${report.responsibleName} - ${report.functionRole}`, centerX - 60 + pdf.getTextWidth('Nome e cargo: '), currentY);
-  currentY += 6;
+  pdf.text(`${report.responsibleName} - ${report.functionRole}`, cx - 60 + pdf.getTextWidth('Nome e cargo: '), currentY);
+  currentY += LINE_H;
 
-  // CNPJ - centered
   pdf.setFont('times', 'bold');
-  pdf.text('CNPJ: ', centerX - 60, currentY);
+  pdf.text('CNPJ: ', cx - 60, currentY);
   pdf.setFont('times', 'normal');
-  pdf.text(report.providerDocument || '[Não informado]', centerX - 60 + pdf.getTextWidth('CNPJ: '), currentY);
+  pdf.text(report.providerDocument || '[Não informado]', cx - 60 + pdf.getTextWidth('CNPJ: '), currentY);
 
-  // ========== ADD FOOTERS TO ALL PAGES ==========
-  const addFooters = () => {
-    // Use custom footer text if provided, otherwise use organization name
-    const footerContent = report.footerText?.trim() || project.organizationName;
-    
-    for (let page = 1; page <= pageCount; page++) {
-      pdf.setPage(page);
-      
-      // Footer line
-      pdf.setDrawColor(180, 180, 180);
-      pdf.line(MARGIN_LEFT, PAGE_HEIGHT - 20, PAGE_WIDTH - MARGIN_RIGHT, PAGE_HEIGHT - 20);
-      
-      // Custom footer text or organization name
-      pdf.setFontSize(10);
-      pdf.setFont('times', 'normal');
-      pdf.setTextColor(80, 80, 80);
-      const footerWidth = pdf.getTextWidth(footerContent);
-      pdf.text(footerContent, (PAGE_WIDTH - footerWidth) / 2, PAGE_HEIGHT - 14);
-      
-      // Page number
-      const pageText = `Página ${page} de ${pageCount}`;
-      const pageWidth = pdf.getTextWidth(pageText);
-      pdf.text(pageText, (PAGE_WIDTH - pageWidth) / 2, PAGE_HEIGHT - 8);
-      
-      // Reset text color
-      pdf.setTextColor(0, 0, 0);
-    }
-  };
+  // ══════════════════════════════════════════════════════════════
+  // FOOTERS + PAGE NUMBERS (top-right per ABNT)
+  // ══════════════════════════════════════════════════════════════
+  const footerContent = report.footerText?.trim() || project.organizationName;
 
-  addFooters();
+  for (let p = 1; p <= pageCount; p++) {
+    pdf.setPage(p);
 
-  // Save PDF
+    // Page number – top right, 2 cm from edge
+    pdf.setFontSize(FONT_BODY);
+    pdf.setFont('times', 'normal');
+    pdf.setTextColor(0);
+    const pNum = String(p);
+    pdf.text(pNum, PAGE_W - MR, 15, { align: 'right' });
+
+    // Footer line + org name
+    pdf.setDrawColor(180, 180, 180);
+    pdf.line(ML, PAGE_H - 15, PAGE_W - MR, PAGE_H - 15);
+    pdf.setFontSize(FONT_CAPTION);
+    pdf.setTextColor(80, 80, 80);
+    const fw = pdf.getTextWidth(footerContent);
+    pdf.text(footerContent, (PAGE_W - fw) / 2, PAGE_H - 10);
+    pdf.setTextColor(0, 0, 0);
+  }
+
+  // Save
   const memberName = report.responsibleName.replace(/\s+/g, '_');
-  const filename = `Relatorio_Equipe_${memberName}_${new Date().toISOString().split('T')[0]}.pdf`;
-  
-  pdf.save(filename);
+  pdf.save(`Relatorio_Equipe_${memberName}_${new Date().toISOString().split('T')[0]}.pdf`);
 };
