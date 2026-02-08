@@ -329,11 +329,11 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     pdf.text(attachmentsTitle, MARGIN_LEFT, currentY);
     currentY += 15;
 
-    // Photo grid: 2 columns - FIXED SIZE for all photos
-    const PHOTO_WIDTH = 70;
-    const PHOTO_HEIGHT = 50; // Fixed height for uniformity
-    const COL_GAP = 15;
-    const ROW_GAP = 25; // Space for caption
+    // Photo grid: 2 columns - larger photos like reference
+    const PHOTO_WIDTH = (CONTENT_WIDTH - 10) / 2; // ~75mm each
+    const PHOTO_HEIGHT = PHOTO_WIDTH * 0.75; // 4:3 aspect ratio (~56mm)
+    const COL_GAP = 10;
+    const ROW_GAP = 30; // Space for caption
 
     const col1X = MARGIN_LEFT;
     const col2X = MARGIN_LEFT + PHOTO_WIDTH + COL_GAP;
