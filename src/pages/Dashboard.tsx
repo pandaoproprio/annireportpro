@@ -21,31 +21,27 @@ export const Dashboard: React.FC = () => {
   
   // Empty Project State (Admins Only)
   if (!project) {
-    if (role === 'ADMIN' || role === 'SUPER_ADMIN') {
-      return (
-        <div className="flex flex-col items-center justify-center h-[80vh] animate-fadeIn text-center">
-          <Card className="max-w-lg shadow-lg">
-            <CardContent className="pt-8 pb-8">
-              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
-                <FolderPlus className="w-8 h-8 text-muted-foreground" />
-              </div>
-              <h2 className="text-2xl font-bold text-foreground mb-2">Painel Administrativo</h2>
-              <p className="text-muted-foreground mb-6">
-                Olá, <strong>{profile?.name}</strong> ({role}). 
-                Nenhum projeto foi configurado ainda. Você pode iniciar a configuração quando desejar.
-              </p>
-              <Link to="/setup">
-                <Button className="w-full sm:w-auto">
-                  <PlusCircle className="w-4 h-4 mr-2" />
-                  Configurar Novo Projeto
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
-    return <Navigate to="/setup" />;
+    return (
+      <div className="flex flex-col items-center justify-center h-[80vh] animate-fadeIn text-center">
+        <Card className="max-w-lg shadow-lg">
+          <CardContent className="pt-8 pb-8">
+            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+              <FolderPlus className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">Bem-vindo ao AnnIReport</h2>
+            <p className="text-muted-foreground mb-6">
+              Nenhum projeto foi configurado ainda. Crie seu primeiro projeto para começar.
+            </p>
+            <Link to="/setup">
+              <Button className="w-full sm:w-auto">
+                <PlusCircle className="w-4 h-4 mr-2" />
+                Configurar Novo Projeto
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   const stats = [
