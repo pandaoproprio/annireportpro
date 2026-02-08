@@ -635,61 +635,57 @@ export const ReportGenerator: React.FC = () => {
 
       case 'goals':
         return (
-          <React.Fragment key={section.id}>
-            {/* Narrativas das Metas */}
-            <section className="mb-8 page-break">
-              <h3 className="text-lg font-bold uppercase mb-6">{section.title}</h3>
-              {project.goals.map((goal, idx) => {
-                const goalActs = getActivitiesByGoal(goal.id);
-                return (
-                  <div key={goal.id} className="mb-10">
-                    <h4 className="font-bold text-primary mb-3">META {idx + 1} – {goal.title}</h4>
-                    
-                    <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
-                      {goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'}
-                    </div>
+          <section key={section.id} className="mb-8 page-break">
+            <h3 className="text-lg font-bold uppercase mb-6">{section.title}</h3>
+            {project.goals.map((goal, idx) => {
+              const goalActs = getActivitiesByGoal(goal.id);
+              // Collect all photos for this goal: manual + from activities
+              const manualPhotos = goalPhotos[goal.id] || [];
+              const activityPhotos = goalActs.flatMap(a => a.photos || []);
+              const allGoalPhotos = [...manualPhotos, ...activityPhotos];
 
-                    {goalActs.length > 0 && (
-                      <div className="mt-4 text-sm">
-                        <p className="font-medium mb-2">Atividades realizadas:</p>
-                        {goalActs.map(act => (
-                          <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
-                            <p><strong>{formatActivityDate(act.date, act.endDate)}</strong>{act.location && ` – ${act.location}`}{act.attendeesCount > 0 && ` – ${act.attendeesCount} participantes`}</p>
-                            <p>{act.description}</p>
-                            {act.results && <p className="text-muted-foreground">Resultados: {act.results}</p>}
+              return (
+                <div key={goal.id} className="mb-10">
+                  <h4 className="font-bold text-primary mb-3">META {idx + 1} – {goal.title}</h4>
+                  
+                  <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
+                    {goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'}
+                  </div>
+
+                  {goalActs.length > 0 && (
+                    <div className="mt-4 text-sm">
+                      <p className="font-medium mb-2">Atividades realizadas:</p>
+                      {goalActs.map(act => (
+                        <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
+                          <p><strong>{formatActivityDate(act.date, act.endDate)}</strong>{act.location && ` – ${act.location}`}{act.attendeesCount > 0 && ` – ${act.attendeesCount} participantes`}</p>
+                          <p>{act.description}</p>
+                          {act.results && <p className="text-muted-foreground">Resultados: {act.results}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Photos inline within the goal */}
+                  {allGoalPhotos.length > 0 && (
+                    <div className="mt-6 mb-4">
+                      <p className="font-semibold text-sm mb-3 uppercase">Registros Fotográficos – Meta {idx + 1}</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        {allGoalPhotos.map((photo, photoIdx) => (
+                          <div key={photoIdx} className="aspect-[4/3] overflow-hidden rounded-lg border shadow-sm">
+                            <img 
+                              src={photo} 
+                              alt={`Meta ${idx + 1} - Registro ${photoIdx + 1}`} 
+                              className="w-full h-full object-cover"
+                            />
                           </div>
                         ))}
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </section>
-
-            {/* Seções de Registros Fotográficos Separadas por Meta */}
-            {project.goals.map((goal, idx) => {
-              const goalActs = getActivitiesByGoal(goal.id);
-              const allPhotos = [...(goalPhotos[goal.id] || [])];
-              
-              if (allPhotos.length === 0 && goalActs.every(a => !a.photos || a.photos.length === 0)) {
-                return null;
-              }
-
-              return (
-                <PhotoGallerySection
-                  key={`photos-${goal.id}`}
-                  title={`META ${idx + 1}: ${goal.title}`}
-                  photos={goalPhotos[goal.id] || []}
-                  activities={goalActs}
-                  organizationName={project.organizationName}
-                  organizationAddress={project.organizationAddress}
-                  organizationWebsite={project.organizationWebsite}
-                  organizationEmail={project.organizationEmail}
-                  organizationPhone={project.organizationPhone}
-                />
+                    </div>
+                  )}
+                </div>
               );
             })}
-          </React.Fragment>
+          </section>
         );
 
       case 'other':
