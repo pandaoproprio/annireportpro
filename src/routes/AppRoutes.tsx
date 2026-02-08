@@ -45,12 +45,7 @@ const Layout: React.FC = () => {
     }
   };
 
-  // Redirect to setup only if user has no projects and is not super_admin
-  useEffect(() => {
-    if (!projectsLoading && projects.length === 0 && role !== 'SUPER_ADMIN' && role !== 'ADMIN') {
-      navigate('/setup');
-    }
-  }, [projectsLoading, projects.length, role, navigate]);
+  // No automatic redirect to setup — users always land on Dashboard after login
 
   if (projectsLoading) {
     return (
