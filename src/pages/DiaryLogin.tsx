@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileEdit, LogIn, Loader2 } from 'lucide-react';
+import { BarChart3, LogIn, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
@@ -64,12 +64,12 @@ export const DiaryLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-background to-teal-50 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 via-background to-brand-100 p-4">
       <div className="w-full max-w-sm animate-fadeIn">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-600 shadow-lg mb-4">
-            <FileEdit className="w-8 h-8 text-white" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary shadow-lg mb-4">
+            <BarChart3 className="w-8 h-8 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-display font-bold text-foreground">Diário de Bordo</h1>
           <p className="text-muted-foreground mt-1 text-sm">Registre as atividades do projeto</p>
@@ -113,7 +113,7 @@ export const DiaryLogin: React.FC = () => {
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base bg-emerald-600 hover:bg-emerald-700"
+                className="w-full h-11 text-base"
                 size="lg"
                 disabled={isLoading}
               >
