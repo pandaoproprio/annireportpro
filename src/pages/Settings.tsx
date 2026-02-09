@@ -14,7 +14,7 @@ import { toast } from 'sonner';
 
 export const Settings: React.FC = () => {
   const { signOut } = useAuth();
-  const { activeProject, updateProject, isLoadingProjects } = useAppData();
+  const { activeProject, updateProject, removeProject, isLoadingProjects } = useAppData();
   
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -141,6 +141,14 @@ export const Settings: React.FC = () => {
     }));
   };
 
+  const handleDeleteProject = async () => {
+    if (!activeProject) return;
+    if (window.confirm(`Tem certeza que deseja excluir o projeto "${activeProject.name}"? Esta ação não pode ser desfeita e todas as atividades e relatórios associados serão perdidos.`)) {
+      await removeProject(activeProject.id);
+      toast.success('Projeto excluído com sucesso!');
+    }
+  };
+
   const handleLogout = async () => {
     if (window.confirm('Tem certeza que deseja sair da sua conta?')) {
       await signOut();
@@ -172,9 +180,14 @@ export const Settings: React.FC = () => {
                     </p>
                   </div>
                   {!isEditingProject && (
-                    <Button onClick={startEditing} variant="outline">
-                      <Edit className="w-4 h-4 mr-2" /> Editar Projeto
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button onClick={startEditing} variant="outline">
+                        <Edit className="w-4 h-4 mr-2" /> Editar Projeto
+                      </Button>
+                      <Button onClick={handleDeleteProject} variant="outline" className="text-destructive hover:bg-destructive/10">
+                        <Trash2 className="w-4 h-4 mr-2" /> Excluir Projeto
+                      </Button>
+                    </div>
                   )}
                 </div>
                 
