@@ -182,6 +182,29 @@ export const useProjects = () => {
     });
   };
 
+  const removeMultipleProjects = async (ids: string[]) => {
+    if (!user || ids.length === 0) return;
+
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .in('id', ids)
+      .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Error removing projects:', error);
+      throw error;
+    }
+
+    setProjects(prev => {
+      const newProjects = prev.filter(p => !ids.includes(p.id));
+      if (activeProjectId && ids.includes(activeProjectId)) {
+        setActiveProjectId(newProjects.length > 0 ? newProjects[0].id : null);
+      }
+      return newProjects;
+    });
+  };
+
   const switchProject = (id: string) => {
     setActiveProjectId(id);
   };
@@ -211,6 +234,7 @@ export const useProjects = () => {
     addProject,
     updateProject,
     removeProject,
+    removeMultipleProjects,
     switchProject,
     updateReportData,
     refetch: fetchProjects

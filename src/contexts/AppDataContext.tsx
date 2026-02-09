@@ -12,6 +12,7 @@ interface AppDataContextType {
   addProject: (project: Omit<Project, 'id'>) => Promise<Project | null>;
   updateProject: (project: Project) => Promise<void>;
   removeProject: (id: string) => Promise<void>;
+  removeMultipleProjects: (ids: string[]) => Promise<void>;
   switchProject: (id: string) => void;
   updateReportData: (data: Partial<ReportData>) => Promise<void>;
   
@@ -40,6 +41,7 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       addProject: projectsData.addProject,
       updateProject: projectsData.updateProject,
       removeProject: projectsData.removeProject,
+      removeMultipleProjects: projectsData.removeMultipleProjects,
       switchProject: projectsData.switchProject,
       updateReportData: projectsData.updateReportData,
       
