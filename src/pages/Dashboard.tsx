@@ -5,18 +5,41 @@ import { useAppData } from '@/contexts/AppDataContext';
 import { StatCard } from '@/components/StatCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FolderPlus, PlusCircle, ArrowRight, Loader2 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target } from 'lucide-react';
+
+const DashboardSkeleton = () => (
+  <div className="space-y-6 animate-fadeIn">
+    <Skeleton className="h-8 w-64" />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="bg-card p-6 rounded-lg border border-border">
+          <Skeleton className="h-4 w-24 mb-3" />
+          <Skeleton className="h-9 w-16" />
+        </div>
+      ))}
+    </div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {[...Array(2)].map((_, i) => (
+        <Card key={i}>
+          <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
+          <CardContent className="space-y-3">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-4 w-1/2" />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  </div>
+);
 
 export const Dashboard: React.FC = () => {
   const { profile, role } = useAuth();
   const { activeProject: project, projects, isLoadingProjects: projectsLoading, activities, isLoadingActivities: activitiesLoading } = useAppData();
 
   if (projectsLoading) {
-    return (
-      <div className="flex items-center justify-center h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
   
   // Empty Project State (Admins Only)
@@ -71,8 +94,17 @@ export const Dashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {project.goals.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhuma meta cadastrada.</p>
+            {project.goals.length === 0 ? (
+                <div className="text-center py-6">
+                  <Target className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                  <p className="text-muted-foreground text-sm mb-3">Nenhuma meta cadastrada.</p>
+                  <Link to="/settings">
+                    <Button variant="outline" size="sm">
+                      <PlusCircle className="w-4 h-4 mr-1" />
+                      Cadastrar Meta
+                    </Button>
+                  </Link>
+                </div>
               ) : (
                 project.goals.map(goal => {
                   const count = activities.filter(a => a.goalId === goal.id).length;
@@ -107,7 +139,16 @@ export const Dashboard: React.FC = () => {
                 <Loader2 className="w-6 h-6 animate-spin text-primary" />
               </div>
             ) : activities.length === 0 ? (
-              <p className="text-muted-foreground text-sm">Nenhuma atividade registrada neste projeto.</p>
+              <div className="text-center py-6">
+                <FileEdit className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm mb-3">Nenhuma atividade registrada neste projeto.</p>
+                <Link to="/activities">
+                  <Button variant="outline" size="sm">
+                    <PlusCircle className="w-4 h-4 mr-1" />
+                    Registrar Atividade
+                  </Button>
+                </Link>
+              </div>
             ) : (
               <ul className="space-y-3">
                 {activities.slice(0, 5).map(act => (
