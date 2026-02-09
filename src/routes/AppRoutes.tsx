@@ -6,6 +6,8 @@ import { SidebarLink } from '@/components/SidebarLink';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Dashboard } from '@/pages/Dashboard';
 import { Login } from '@/pages/Login';
+import { DiaryLogin } from '@/pages/DiaryLogin';
+import { DiaryLayout } from '@/pages/DiaryLayout';
 import { Onboarding } from '@/pages/Onboarding';
 import { ActivityManager } from '@/pages/ActivityManager';
 import { ReportGenerator } from '@/pages/ReportGenerator';
@@ -191,6 +193,12 @@ export const AppRoutes: React.FC = () => {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/diario/login" element={<DiaryLogin />} />
+      <Route path="/diario/*" element={
+        <ProtectedRoute>
+          <DiaryLayout />
+        </ProtectedRoute>
+      } />
       <Route path="/setup" element={
         <ProtectedRoute>
           <Onboarding />
