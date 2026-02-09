@@ -61,11 +61,34 @@ export const useProjects = () => {
       return;
     }
 
-    const { data, error } = await supabase
+    // Fetch own projects
+    const { data: ownData, error: ownError } = await supabase
       .from('projects')
       .select('*')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
+
+    // Fetch collaborator project IDs
+    const { data: collabLinks } = await supabase
+      .from('project_collaborators')
+      .select('project_id')
+      .eq('user_id', user.id);
+
+    let collabData: DbProject[] = [];
+    if (collabLinks && collabLinks.length > 0) {
+      const collabIds = collabLinks.map(c => c.project_id);
+      const { data: cp } = await supabase
+        .from('projects')
+        .select('*')
+        .in('id', collabIds);
+      if (cp) collabData = cp as DbProject[];
+    }
+
+    const error = ownError;
+    const data = [
+      ...((ownData as DbProject[]) || []),
+      ...collabData.filter(c => !(ownData || []).some(o => o.id === c.id)),
+    ];
 
     if (error) {
       console.error('Error fetching projects:', error);
