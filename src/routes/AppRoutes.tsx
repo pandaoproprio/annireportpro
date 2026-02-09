@@ -60,7 +60,7 @@ const Layout: React.FC = () => {
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden animate-fadeIn"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -178,15 +178,8 @@ const Layout: React.FC = () => {
 
         {/* Footer */}
         <footer className="bg-card border-t border-border py-4 px-6 text-center text-sm text-muted-foreground">
-          <p className="mb-1">
+          <p>
             <span className="font-semibold text-foreground">AnnIReport</span> © 2026 — Desenvolvido por <span className="font-medium">AnnITech</span> | IT Solutions
-          </p>
-          <p className="text-xs space-x-2">
-            <a href="#" className="hover:text-primary transition-colors">Política de Privacidade</a>
-            <span>•</span>
-            <a href="#" className="hover:text-primary transition-colors">Termos de Uso</a>
-            <span>•</span>
-            <a href="#" className="hover:text-primary transition-colors">Suporte</a>
           </p>
         </footer>
       </main>
