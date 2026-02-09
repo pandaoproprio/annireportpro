@@ -8,9 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
-  Database, LogOut, Edit, Save, Plus, Trash2, X, Loader2, FolderCog 
+  Database, LogOut, Edit, Save, Plus, Trash2, X, Loader2, FolderCog, List 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { BatchDeleteProjects } from '@/components/BatchDeleteProjects';
 
 export const Settings: React.FC = () => {
   const { signOut } = useAuth();
@@ -18,6 +19,7 @@ export const Settings: React.FC = () => {
   
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showBatchDelete, setShowBatchDelete] = useState(false);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -186,6 +188,9 @@ export const Settings: React.FC = () => {
                       </Button>
                       <Button onClick={handleDeleteProject} variant="outline" className="text-destructive hover:bg-destructive/10">
                         <Trash2 className="w-4 h-4 mr-2" /> Excluir Projeto
+                      </Button>
+                      <Button onClick={() => setShowBatchDelete(true)} variant="outline" className="text-destructive hover:bg-destructive/10">
+                        <List className="w-4 h-4 mr-2" /> Excluir em Lote
                       </Button>
                     </div>
                   )}
@@ -395,6 +400,10 @@ export const Settings: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {showBatchDelete && (
+        <BatchDeleteProjects onClose={() => setShowBatchDelete(false)} />
       )}
 
       <Card className="border-l-4 border-l-info">
