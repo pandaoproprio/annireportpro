@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus, Pencil, Trash2, Loader2, Users, Link2, Unlink, FolderPlus, FolderMinus } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, Loader2, Users, Link2, Unlink, FolderPlus, FolderMinus, KeyRound } from 'lucide-react';
 
 export const TeamManagement: React.FC = () => {
   const { role } = useAuth();
@@ -21,7 +21,7 @@ export const TeamManagement: React.FC = () => {
     members, projectMembers, isLoading,
     fetchMembers, fetchProjectMembers,
     createMember, updateMember, deleteMember,
-    assignToProject, removeFromProject
+    assignToProject, removeFromProject, createAccessForMember
   } = useTeamMembers();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -37,6 +37,9 @@ export const TeamManagement: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [selectedProjectForAssign, setSelectedProjectForAssign] = useState('');
   const [createProjectId, setCreateProjectId] = useState(activeProjectId || '');
+  const [isAccessOpen, setIsAccessOpen] = useState(false);
+  const [accessMember, setAccessMember] = useState<TeamMember | null>(null);
+  const [accessPassword, setAccessPassword] = useState('');
 
   useEffect(() => {
     fetchMembers();
@@ -236,6 +239,12 @@ export const TeamManagement: React.FC = () => {
                                 <FolderMinus className="w-4 h-4 text-amber-600" />
                               </Button>
                             )}
+                            {!m.user_id && m.email && (
+                              <Button variant="ghost" size="icon" title="Criar acesso ao Diário de Bordo"
+                                onClick={() => { setAccessMember(m); setAccessPassword(''); setIsAccessOpen(true); }}>
+                                <KeyRound className="w-4 h-4 text-primary" />
+                              </Button>
+                            )}
                             <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
                               <Pencil className="w-4 h-4" />
                             </Button>
@@ -367,6 +376,48 @@ export const TeamManagement: React.FC = () => {
             <DialogDescription>Atualize as informações de {editingMember?.name}</DialogDescription>
           </DialogHeader>
           {renderMemberForm(handleEdit, "Salvar")}
+        </DialogContent>
+      </Dialog>
+
+      {/* Access Creation Dialog */}
+      <Dialog open={isAccessOpen} onOpenChange={setIsAccessOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Criar Acesso ao Diário de Bordo</DialogTitle>
+            <DialogDescription>
+              Defina uma senha para <strong>{accessMember?.name}</strong> acessar o Diário de Bordo com o e-mail <strong>{accessMember?.email}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>E-mail (login)</Label>
+              <Input value={accessMember?.email || ''} disabled className="bg-muted" />
+            </div>
+            <div className="space-y-2">
+              <Label>Senha temporária *</Label>
+              <Input
+                type="password"
+                value={accessPassword}
+                onChange={e => setAccessPassword(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+              />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAccessOpen(false)}>Cancelar</Button>
+              <Button
+                disabled={isLoading || accessPassword.length < 6}
+                onClick={async () => {
+                  if (!accessMember) return;
+                  const result = await createAccessForMember(accessMember, accessPassword);
+                  if (result.success) { setIsAccessOpen(false); setAccessMember(null); setAccessPassword(''); }
+                }}
+              >
+                {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <KeyRound className="w-4 h-4 mr-2" />
+                Criar Acesso
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
