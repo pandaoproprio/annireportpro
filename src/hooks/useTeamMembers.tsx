@@ -22,9 +22,16 @@ export interface ProjectTeamMember {
   created_at: string;
 }
 
+export interface MemberProjectAssignment {
+  team_member_id: string;
+  project_id: string;
+  project_name: string;
+}
+
 export const useTeamMembers = () => {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [projectMembers, setProjectMembers] = useState<ProjectTeamMember[]>([]);
+  const [allAssignments, setAllAssignments] = useState<MemberProjectAssignment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -55,6 +62,23 @@ export const useTeamMembers = () => {
       setProjectMembers(data || []);
     } catch (error: any) {
       console.error('Error fetching project team members:', error);
+    }
+  }, []);
+
+  const fetchAllAssignments = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('project_team_members')
+        .select('team_member_id, project_id, projects(name)');
+      if (error) throw error;
+      const mapped: MemberProjectAssignment[] = (data || []).map((d: any) => ({
+        team_member_id: d.team_member_id,
+        project_id: d.project_id,
+        project_name: d.projects?.name || 'Projeto',
+      }));
+      setAllAssignments(mapped);
+    } catch (error: any) {
+      console.error('Error fetching all assignments:', error);
     }
   }, []);
 
@@ -239,8 +263,8 @@ export const useTeamMembers = () => {
   };
 
   return {
-    members, projectMembers, isLoading,
-    fetchMembers, fetchProjectMembers,
+    members, projectMembers, allAssignments, isLoading,
+    fetchMembers, fetchProjectMembers, fetchAllAssignments,
     createMember, updateMember, deleteMember,
     assignToProject, removeFromProject, linkUserAccount, createAccessForMember
   };

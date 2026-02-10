@@ -18,8 +18,8 @@ export const TeamManagement: React.FC = () => {
   const { role } = useAuth();
   const { projects, activeProjectId } = useAppData();
   const {
-    members, projectMembers, isLoading,
-    fetchMembers, fetchProjectMembers,
+    members, projectMembers, allAssignments, isLoading,
+    fetchMembers, fetchProjectMembers, fetchAllAssignments,
     createMember, updateMember, deleteMember,
     assignToProject, removeFromProject, createAccessForMember
   } = useTeamMembers();
@@ -43,7 +43,8 @@ export const TeamManagement: React.FC = () => {
 
   useEffect(() => {
     fetchMembers();
-  }, [fetchMembers]);
+    fetchAllAssignments();
+  }, [fetchMembers, fetchAllAssignments]);
 
   useEffect(() => {
     if (activeProjectId) {
@@ -90,6 +91,9 @@ export const TeamManagement: React.FC = () => {
 
   const isMemberInProject = (memberId: string) =>
     projectMembers.some(pm => pm.team_member_id === memberId);
+
+  const getMemberProjects = (memberId: string) =>
+    allAssignments.filter(a => a.team_member_id === memberId);
 
   const projectMembersList = members.filter(m => isMemberInProject(m.id));
   const availableForProject = members.filter(m => !isMemberInProject(m.id));
@@ -217,13 +221,19 @@ export const TeamManagement: React.FC = () => {
                           {!m.email && !m.phone && '—'}
                         </TableCell>
                         <TableCell>
-                          {isMemberInProject(m.id) ? (
-                            <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 gap-1">
-                              <Link2 className="w-3 h-3" /> Projeto ativo
-                            </Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
+                          {(() => {
+                            const memberProjects = getMemberProjects(m.id);
+                            if (memberProjects.length === 0) return <span className="text-xs text-muted-foreground">—</span>;
+                            return (
+                              <div className="flex flex-wrap gap-1">
+                                {memberProjects.map(mp => (
+                                  <Badge key={mp.project_id} variant="outline" className="text-xs">
+                                    {mp.project_name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-1">
