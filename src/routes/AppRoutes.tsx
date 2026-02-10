@@ -72,13 +72,13 @@ const Layout: React.FC = () => {
       <aside className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-4 bg-white border-b border-sidebar-border">
-            <div className="flex items-center justify-between">
-              <Link to="/">
-                <img src={logoGira} alt="GIRA Relatórios" className="w-[180px]" />
+          <div className="h-[80px] overflow-hidden border-b border-sidebar-border bg-white">
+            <div className="flex items-center justify-between h-full px-4">
+              <Link to="/" className="flex items-center justify-center flex-1 overflow-hidden">
+                <img src={logoGira} alt="GIRA Relatórios" className="h-48 max-w-none" />
               </Link>
               <button 
-                className="lg:hidden text-sidebar-foreground p-1"
+                className="lg:hidden text-sidebar-foreground p-1 flex-shrink-0"
                 onClick={() => setSidebarOpen(false)}
               >
                 <X className="w-5 h-5" />
