@@ -14,6 +14,7 @@ import { ReportGenerator } from '@/pages/ReportGenerator';
 import { TeamReportGenerator } from '@/pages/TeamReportGenerator';
 import { Settings } from '@/pages/Settings';
 import { UserManagement } from '@/pages/UserManagement';
+import { TeamManagement } from '@/pages/TeamManagement';
 import { Button } from '@/components/ui/button';
 import { 
   Select, 
@@ -24,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown 
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound 
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 
@@ -128,6 +129,7 @@ const Layout: React.FC = () => {
                 <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" />
                 <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" />
                 <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" />
+                <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" />
               </div>
             </div>
 
@@ -191,6 +193,7 @@ const Layout: React.FC = () => {
             <Route path="/team-report" element={<TeamReportGenerator />} />
             <Route path="/settings" element={<Settings />} />
             <Route path="/users" element={<UserManagement />} />
+            <Route path="/team" element={<TeamManagement />} />
           </Routes>
         </div>
 
