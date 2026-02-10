@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown } from 'lucide-react';
+import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen } from 'lucide-react';
+import { CollaboratorProjectsDialog } from '@/components/CollaboratorProjectsDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Navigate } from 'react-router-dom';
@@ -29,6 +30,8 @@ export const UserManagement: React.FC = () => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [isProjectsOpen, setIsProjectsOpen] = useState(false);
+  const [projectsUser, setProjectsUser] = useState<AdminUser | null>(null);
   const [createMethod, setCreateMethod] = useState<'invite' | 'direct'>('invite');
   
   // Form state
@@ -248,6 +251,9 @@ export const UserManagement: React.FC = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Button variant="ghost" size="icon" title="Projetos vinculados" onClick={() => { setProjectsUser(user); setIsProjectsOpen(true); }}>
+                          <FolderOpen className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -332,6 +338,13 @@ export const UserManagement: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Collaborator Projects Dialog */}
+      <CollaboratorProjectsDialog
+        user={projectsUser}
+        open={isProjectsOpen}
+        onOpenChange={setIsProjectsOpen}
+      />
     </div>
   );
 };

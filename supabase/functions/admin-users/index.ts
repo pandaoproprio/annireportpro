@@ -33,12 +33,10 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     
-    // Create admin client with service role
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Create client with user's token to verify permissions
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(JSON.stringify({ error: 'Missing authorization header' }), {
@@ -52,7 +50,6 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: `Bearer ${token}` } }
     });
 
-    // Get calling user
     const { data: { user: callingUser }, error: userError } = await supabaseClient.auth.getUser();
     if (userError || !callingUser) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
@@ -61,7 +58,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check if calling user is super_admin
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role')
@@ -78,12 +74,90 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
 
+    // ===== COLLABORATORS MANAGEMENT =====
+    if (action === 'collaborators') {
+      // GET: List collaborators for a user
+      if (req.method === 'GET') {
+        const userId = url.searchParams.get('userId');
+        
+        if (userId) {
+          // Get collaborator assignments for a specific user
+          const { data, error } = await supabaseAdmin
+            .from('project_collaborators')
+            .select('id, project_id, created_at')
+            .eq('user_id', userId);
+          if (error) throw error;
+          return new Response(JSON.stringify({ collaborators: data || [] }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Get all projects for selection
+        const { data: projects, error } = await supabaseAdmin
+          .from('projects')
+          .select('id, name, organization_name');
+        if (error) throw error;
+        return new Response(JSON.stringify({ projects: projects || [] }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // POST: Assign user to project
+      if (req.method === 'POST') {
+        const { userId, projectId } = await req.json();
+        if (!userId || !projectId) {
+          return new Response(JSON.stringify({ error: 'userId and projectId are required' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { error } = await supabaseAdmin
+          .from('project_collaborators')
+          .insert({ user_id: userId, project_id: projectId, added_by: callingUser.id });
+        
+        if (error) {
+          if (error.code === '23505') {
+            return new Response(JSON.stringify({ error: 'Usuário já é colaborador deste projeto' }), {
+              status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          throw error;
+        }
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // DELETE: Remove user from project
+      if (req.method === 'DELETE') {
+        const { userId, projectId } = await req.json();
+        if (!userId || !projectId) {
+          return new Response(JSON.stringify({ error: 'userId and projectId are required' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        const { error } = await supabaseAdmin
+          .from('project_collaborators')
+          .delete()
+          .eq('user_id', userId)
+          .eq('project_id', projectId);
+        if (error) throw error;
+
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
+    // ===== USER MANAGEMENT (existing) =====
+
     // GET: List all users
     if (req.method === 'GET') {
       const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers();
       if (listError) throw listError;
 
-      // Get profiles and roles
       const { data: profiles } = await supabaseAdmin.from('profiles').select('*');
       const { data: roles } = await supabaseAdmin.from('user_roles').select('*');
 
@@ -113,15 +187,13 @@ Deno.serve(async (req) => {
 
       if (!email || !name || !role) {
         return new Response(JSON.stringify({ error: 'Email, name and role are required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
       let userData;
 
       if (sendInvite) {
-        // Send invite email
         const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
           data: { name },
           redirectTo: `${url.origin.replace('functions/v1', '')}`
@@ -129,18 +201,14 @@ Deno.serve(async (req) => {
         if (error) throw error;
         userData = data.user;
       } else {
-        // Create user with password
         if (!password || password.length < 6) {
           return new Response(JSON.stringify({ error: 'Password must be at least 6 characters' }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
         }
 
         const { data, error } = await supabaseAdmin.auth.admin.createUser({
-          email,
-          password,
-          email_confirm: true,
+          email, password, email_confirm: true,
           user_metadata: { name }
         });
         if (error) throw error;
@@ -148,11 +216,7 @@ Deno.serve(async (req) => {
       }
 
       if (userData) {
-        // Update role (the trigger creates default 'user' role)
-        await supabaseAdmin
-          .from('user_roles')
-          .update({ role })
-          .eq('user_id', userData.id);
+        await supabaseAdmin.from('user_roles').update({ role }).eq('user_id', userData.id);
       }
 
       return new Response(JSON.stringify({ success: true, user: userData }), {
@@ -167,16 +231,13 @@ Deno.serve(async (req) => {
 
       if (!userId) {
         return new Response(JSON.stringify({ error: 'userId is required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      // Prevent self-demotion
       if (userId === callingUser.id && role && role !== 'super_admin') {
         return new Response(JSON.stringify({ error: 'Cannot change your own role' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -200,16 +261,13 @@ Deno.serve(async (req) => {
 
       if (!userId) {
         return new Response(JSON.stringify({ error: 'userId is required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      // Prevent self-deletion
       if (userId === callingUser.id) {
         return new Response(JSON.stringify({ error: 'Cannot delete your own account' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -222,16 +280,14 @@ Deno.serve(async (req) => {
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Admin users error:', errorMessage);
     return new Response(JSON.stringify({ error: errorMessage }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
   }
 });
