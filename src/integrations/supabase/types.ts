@@ -144,6 +144,45 @@ export type Database = {
           },
         ]
       }
+      project_team_members: {
+        Row: {
+          added_by: string
+          created_at: string
+          id: string
+          project_id: string
+          team_member_id: string
+        }
+        Insert: {
+          added_by: string
+          created_at?: string
+          id?: string
+          project_id: string
+          team_member_id: string
+        }
+        Update: {
+          added_by?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+          team_member_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_team_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_team_members_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
@@ -210,6 +249,45 @@ export type Database = {
           team?: Json
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          created_by: string
+          document: string | null
+          email: string | null
+          function_role: string
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          document?: string | null
+          email?: string | null
+          function_role: string
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          document?: string | null
+          email?: string | null
+          function_role?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
