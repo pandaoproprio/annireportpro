@@ -91,7 +91,7 @@ export const TeamManagement: React.FC = () => {
   const projectMembersList = members.filter(m => isMemberInProject(m.id));
   const availableForProject = members.filter(m => !isMemberInProject(m.id));
 
-  const MemberForm = ({ onSubmit, submitLabel, showProjectSelect }: { onSubmit: () => void; submitLabel: string; showProjectSelect?: boolean }) => (
+  const renderMemberForm = (onSubmit: () => void, submitLabel: string, showProjectSelect?: boolean) => (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -163,7 +163,7 @@ export const TeamManagement: React.FC = () => {
               <DialogTitle>Adicionar Membro</DialogTitle>
               <DialogDescription>Cadastre um novo membro de equipe</DialogDescription>
             </DialogHeader>
-            <MemberForm onSubmit={handleCreate} submitLabel="Adicionar" showProjectSelect />
+            {renderMemberForm(handleCreate, "Adicionar", true)}
           </DialogContent>
         </Dialog>
       </div>
@@ -366,7 +366,7 @@ export const TeamManagement: React.FC = () => {
             <DialogTitle>Editar Membro</DialogTitle>
             <DialogDescription>Atualize as informações de {editingMember?.name}</DialogDescription>
           </DialogHeader>
-          <MemberForm onSubmit={handleEdit} submitLabel="Salvar" />
+          {renderMemberForm(handleEdit, "Salvar")}
         </DialogContent>
       </Dialog>
     </div>
