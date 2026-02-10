@@ -51,7 +51,7 @@ export const Dashboard: React.FC = () => {
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
               <FolderPlus className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h2 className="text-2xl font-display font-bold text-foreground mb-2">Bem-vindo ao AnnIReport</h2>
+            <h2 className="text-2xl font-display font-bold text-foreground mb-2">Bem-vindo ao GIRA Relatórios</h2>
             <p className="text-muted-foreground mb-6">
               Nenhum projeto foi configurado ainda. Crie seu primeiro projeto para começar.
             </p>

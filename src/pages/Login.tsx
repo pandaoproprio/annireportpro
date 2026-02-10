@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
+import logoGira from '@/assets/logo-gira-relatorios.png';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
@@ -73,14 +74,11 @@ export const Login: React.FC = () => {
           <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-white/15" />
         </div>
         <div className="relative text-white max-w-md space-y-6">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
-              <BarChart3 className="w-7 h-7" />
-            </div>
-            <h1 className="text-4xl font-bold">AnnIReport</h1>
+          <div>
+            <img src={logoGira} alt="GIRA Relatórios" className="w-[220px] brightness-0 invert mb-2" />
           </div>
           <p className="text-xl text-white/90 leading-relaxed">
-            Dados confiáveis para decisões que transformam realidades
+            Dados confiáveis para decisões que transformam resultados
           </p>
           <div className="space-y-4 pt-4">
             <div className="flex items-start gap-3">
@@ -110,11 +108,8 @@ export const Login: React.FC = () => {
         <div className="w-full max-w-md animate-fadeIn">
           {/* Mobile Logo */}
           <div className="text-center mb-8 lg:hidden">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary shadow-lg mb-4">
-              <BarChart3 className="w-8 h-8 text-primary-foreground" />
-            </div>
-            <h1 className="text-3xl font-bold text-foreground">AnnIReport</h1>
-            <p className="text-muted-foreground mt-2 text-sm">Dados confiáveis para decisões que transformam realidades</p>
+            <img src={logoGira} alt="GIRA Relatórios" className="w-[180px] mx-auto mb-4" />
+            <p className="text-muted-foreground mt-2 text-sm">Dados confiáveis para decisões que transformam resultados</p>
           </div>
 
           <Card className="shadow-xl border-0">
@@ -167,7 +162,7 @@ export const Login: React.FC = () => {
 
           <div className="text-center text-xs text-muted-foreground mt-8 space-y-1">
             <p>
-              <span className="font-semibold text-foreground">AnnIReport</span> © 2026 — Desenvolvido por <span className="font-medium">AnnITech</span> | IT Solutions
+              <span className="font-semibold text-foreground">GIRA Relatórios</span> © 2026 — powered by <span className="font-medium">AnnIReport</span> | AnnITech
             </p>
           </div>
         </div>
