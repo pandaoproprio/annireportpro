@@ -76,15 +76,19 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-        <div>
-          <p className="text-sm text-muted-foreground font-medium">Visão Geral</p>
-          <h1 className="text-2xl font-display font-bold text-primary flex items-center gap-2">
-            {project.name}
-            <span className="inline-block px-2.5 py-0.5 text-xs font-semibold bg-primary/10 text-primary rounded-full border border-primary/20">
-              Ativo
-            </span>
-          </h1>
+      {/* Greeting */}
+      <div>
+        <p className="text-sm text-muted-foreground font-medium">
+          <span className="font-bold text-foreground">GIRA</span> <span className="text-muted-foreground">| {project.organizationName}</span>
+        </p>
+        <h1 className="text-2xl font-display font-bold text-primary">
+          Olá, {profile?.name?.split(' ')[0] || 'Usuário'}!
+        </h1>
+        <div className="flex items-center gap-2 mt-0.5">
+          <span className="text-sm text-muted-foreground">Painel de Controle Total</span>
+          <span className="inline-block px-2.5 py-0.5 text-xs font-semibold bg-muted text-foreground rounded-full border border-border">
+            {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'ADMIN' ? 'Admin' : 'Usuário'}
+          </span>
         </div>
       </div>
       
