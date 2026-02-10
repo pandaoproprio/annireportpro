@@ -18,7 +18,7 @@ export const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, label }) => 
       className={cn(
         "flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200",
         isActive 
-          ? "bg-primary text-primary-foreground translate-x-1 shadow-md" 
+          ? "bg-sidebar-accent text-sidebar-accent-foreground translate-x-1 shadow-sm font-semibold" 
           : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:translate-x-1"
       )}
     >

@@ -62,15 +62,15 @@
     --brand-800: 199 85% 28%;
     --brand-900: 199 80% 22%;
 
-    /* Sidebar - GIRA Green */
-    --sidebar-background: 122 46% 34%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 122 46% 34%;
-    --sidebar-accent: 123 38% 57%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 122 40% 40%;
-    --sidebar-ring: 123 38% 57%;
+    /* Sidebar - White with GIRA green accents */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 25% 25%;
+    --sidebar-primary: 122 46% 34%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 122 40% 95%;
+    --sidebar-accent-foreground: 122 46% 34%;
+    --sidebar-border: 214 25% 90%;
+    --sidebar-ring: 122 46% 34%;
   }
 
   .dark {
