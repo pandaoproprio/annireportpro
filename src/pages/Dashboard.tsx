@@ -79,7 +79,7 @@ export const Dashboard: React.FC = () => {
       {/* Greeting */}
       <div>
         <p className="text-sm text-muted-foreground font-medium">
-          <span className="font-bold text-foreground">GIRA</span> <span className="text-muted-foreground">| {project.organizationName}</span>
+          <span className="font-bold text-foreground">GIRA</span> <span className="text-muted-foreground">| Relatórios</span>
         </p>
         <h1 className="text-2xl font-display font-bold text-primary">
           Olá, {profile?.name?.split(' ')[0] || 'Usuário'}!
