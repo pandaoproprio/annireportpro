@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BarChart3, LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2 } from 'lucide-react';
+import logoGira from '@/assets/logo-gira-relatorios.png';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
@@ -68,9 +69,7 @@ export const DiaryLogin: React.FC = () => {
       <div className="w-full max-w-sm animate-fadeIn">
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-primary shadow-lg mb-4">
-            <BarChart3 className="w-8 h-8 text-primary-foreground" />
-          </div>
+          <img src={logoGira} alt="GIRA Relatórios" className="w-[160px] mx-auto mb-4" />
           <h1 className="text-2xl font-display font-bold text-foreground">Diário de Bordo</h1>
           <p className="text-muted-foreground mt-1 text-sm">Registre as atividades do projeto</p>
         </div>
@@ -130,7 +129,7 @@ export const DiaryLogin: React.FC = () => {
 
         <div className="text-center text-xs text-muted-foreground mt-6">
           <p>
-            <span className="font-semibold text-foreground">AnnIReport</span> © 2026
+            <span className="font-semibold text-foreground">GIRA Relatórios</span> © 2026 — powered by AnnIReport
           </p>
         </div>
       </div>

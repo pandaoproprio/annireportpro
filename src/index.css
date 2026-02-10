@@ -62,15 +62,15 @@
     --brand-800: 199 85% 28%;
     --brand-900: 199 80% 22%;
 
-    /* Sidebar */
-    --sidebar-background: 199 80% 22%;
-    --sidebar-foreground: 199 15% 90%;
+    /* Sidebar - GIRA Green */
+    --sidebar-background: 122 46% 34%;
+    --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 199 80% 22%;
-    --sidebar-accent: 199 70% 28%;
+    --sidebar-primary-foreground: 122 46% 34%;
+    --sidebar-accent: 123 38% 57%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 199 60% 30%;
-    --sidebar-ring: 199 89% 48%;
+    --sidebar-border: 122 40% 40%;
+    --sidebar-ring: 123 38% 57%;
   }
 
   .dark {

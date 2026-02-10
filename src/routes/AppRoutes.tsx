@@ -26,6 +26,7 @@ import {
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
   Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown 
 } from 'lucide-react';
+import logoGira from '@/assets/logo-gira-relatorios.png';
 
 
 const Layout: React.FC = () => {
@@ -73,14 +74,9 @@ const Layout: React.FC = () => {
           {/* Logo */}
           <div className="p-4 border-b border-sidebar-border">
             <div className="flex items-center justify-between">
-              <Link to="/" className="flex items-center gap-2">
-                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                  <BarChart3 className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-sidebar-primary text-lg">AnnIReport</h1>
-                  <p className="text-[9px] text-sidebar-foreground/70 leading-tight">Dados confiáveis para decisões<br/>que transformam realidades</p>
-                </div>
+              <Link to="/" className="flex flex-col items-start gap-1">
+                <img src={logoGira} alt="GIRA Relatórios" className="w-[180px] brightness-0 invert" />
+                <p className="text-[9px] text-sidebar-foreground/80 leading-tight pl-1">Dados confiáveis para decisões que transformam resultados</p>
               </Link>
               <button 
                 className="lg:hidden text-sidebar-foreground p-1"
@@ -145,6 +141,7 @@ const Layout: React.FC = () => {
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
+            <p className="text-[10px] text-sidebar-foreground/70 text-center mt-3">powered by AnnIReport</p>
           </div>
         </div>
       </aside>
@@ -159,11 +156,8 @@ const Layout: React.FC = () => {
           >
             <Menu className="w-6 h-6" />
           </button>
-          <div className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 text-primary" />
-            <span className="font-bold">AnnIReport</span>
-          </div>
-          <div className="w-10" /> {/* Spacer for balance */}
+          <img src={logoGira} alt="GIRA Relatórios" className="h-8" />
+          <div className="w-10" />
         </header>
 
         {/* Page Content */}
@@ -181,7 +175,7 @@ const Layout: React.FC = () => {
         {/* Footer */}
         <footer className="bg-card border-t border-border py-4 px-6 text-center text-sm text-muted-foreground">
           <p>
-            <span className="font-semibold text-foreground">AnnIReport</span> © 2026 — Desenvolvido por <span className="font-medium">AnnITech</span> | IT Solutions
+            <span className="font-semibold text-foreground">GIRA Relatórios</span> © 2026 — powered by <span className="font-medium">AnnIReport</span> | AnnITech
           </p>
         </footer>
       </main>
