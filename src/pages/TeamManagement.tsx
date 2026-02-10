@@ -36,6 +36,7 @@ export const TeamManagement: React.FC = () => {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [selectedProjectForAssign, setSelectedProjectForAssign] = useState('');
+  const [createProjectId, setCreateProjectId] = useState(activeProjectId || '');
 
   useEffect(() => {
     fetchMembers();
@@ -48,7 +49,7 @@ export const TeamManagement: React.FC = () => {
   }, [activeProjectId, fetchProjectMembers]);
 
   const resetForm = () => {
-    setName(''); setDocument(''); setFunctionRole(''); setEmail(''); setPhone('');
+    setName(''); setDocument(''); setFunctionRole(''); setEmail(''); setPhone(''); setCreateProjectId(activeProjectId || '');
   };
 
   const handleCreate = async () => {
@@ -59,6 +60,9 @@ export const TeamManagement: React.FC = () => {
       email: email || undefined,
       phone: phone || undefined
     });
+    if (result.success && result.data && createProjectId) {
+      await assignToProject(result.data.id, createProjectId);
+    }
     if (result.success) { setIsCreateOpen(false); resetForm(); }
   };
 
@@ -87,7 +91,7 @@ export const TeamManagement: React.FC = () => {
   const projectMembersList = members.filter(m => isMemberInProject(m.id));
   const availableForProject = members.filter(m => !isMemberInProject(m.id));
 
-  const MemberForm = ({ onSubmit, submitLabel }: { onSubmit: () => void; submitLabel: string }) => (
+  const MemberForm = ({ onSubmit, submitLabel, showProjectSelect }: { onSubmit: () => void; submitLabel: string; showProjectSelect?: boolean }) => (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -113,6 +117,21 @@ export const TeamManagement: React.FC = () => {
           <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" />
         </div>
       </div>
+      {showProjectSelect && projects.length > 0 && (
+        <div className="space-y-2">
+          <Label>Vincular ao Projeto</Label>
+          <Select value={createProjectId} onValueChange={setCreateProjectId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um projeto (opcional)" />
+            </SelectTrigger>
+            <SelectContent>
+              {projects.map(p => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
       <DialogFooter>
         <Button variant="outline" onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); }}>
           Cancelar
@@ -144,7 +163,7 @@ export const TeamManagement: React.FC = () => {
               <DialogTitle>Adicionar Membro</DialogTitle>
               <DialogDescription>Cadastre um novo membro de equipe</DialogDescription>
             </DialogHeader>
-            <MemberForm onSubmit={handleCreate} submitLabel="Adicionar" />
+            <MemberForm onSubmit={handleCreate} submitLabel="Adicionar" showProjectSelect />
           </DialogContent>
         </Dialog>
       </div>
