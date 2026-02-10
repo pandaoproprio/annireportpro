@@ -67,7 +67,7 @@ export const Login: React.FC = () => {
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-brand-50 via-background to-brand-100">
       {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-brand-800 items-center justify-center p-12 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 bg-primary items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-20 left-10 w-40 h-40 rounded-full bg-white/20" />
           <div className="absolute bottom-20 right-10 w-60 h-60 rounded-full bg-white/10" />
