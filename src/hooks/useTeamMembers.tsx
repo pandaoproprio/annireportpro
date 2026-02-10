@@ -188,10 +188,60 @@ export const useTeamMembers = () => {
     }
   };
 
+  const createAccessForMember = async (member: TeamMember, password: string) => {
+    setIsLoading(true);
+    try {
+      if (!member.email) throw new Error('Membro precisa ter um e-mail cadastrado');
+      if (password.length < 6) throw new Error('Senha deve ter pelo menos 6 caracteres');
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Não autenticado');
+
+      // Create user account via admin edge function
+      const { data, error } = await supabase.functions.invoke('admin-users', {
+        method: 'POST',
+        body: { email: member.email, password, name: member.name, role: 'user' },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const newUserId = data?.user?.id;
+      if (!newUserId) throw new Error('Erro ao criar conta');
+
+      // Link user_id to team member
+      await supabase.from('team_members').update({ user_id: newUserId }).eq('id', member.id);
+
+      // Add as collaborator to all projects the member is assigned to
+      const { data: assignments } = await supabase
+        .from('project_team_members')
+        .select('project_id')
+        .eq('team_member_id', member.id);
+
+      if (assignments && assignments.length > 0) {
+        for (const a of assignments) {
+          await supabase.functions.invoke('admin-users?action=collaborators', {
+            method: 'POST',
+            body: { userId: newUserId, projectId: a.project_id },
+          });
+        }
+      }
+
+      toast({ title: 'Acesso criado!', description: `Login: ${member.email} — Senha temporária definida. O membro agora pode acessar o Diário de Bordo.` });
+      await fetchMembers();
+      return { success: true };
+    } catch (error: any) {
+      toast({ variant: 'destructive', title: 'Erro ao criar acesso', description: error.message });
+      return { success: false };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     members, projectMembers, isLoading,
     fetchMembers, fetchProjectMembers,
     createMember, updateMember, deleteMember,
-    assignToProject, removeFromProject, linkUserAccount
+    assignToProject, removeFromProject, linkUserAccount, createAccessForMember
   };
 };
