@@ -141,7 +141,7 @@ const Layout: React.FC = () => {
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
-            <p className="text-[10px] text-sidebar-foreground/70 text-center mt-3">powered by AnnIReport</p>
+            
           </div>
         </div>
       </aside>
