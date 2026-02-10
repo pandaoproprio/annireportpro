@@ -109,15 +109,35 @@ const Layout: React.FC = () => {
           )}
 
           {/* Navigation */}
-          <nav className="flex-1 p-4 space-y-2">
-            <SidebarLink to="/" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
-            <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" />
-            <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" />
-            <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" />
-            <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" />
-            {role === 'SUPER_ADMIN' && (
-              <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" />
-            )}
+          <nav className="flex-1 px-3 py-4 space-y-4 overflow-auto">
+            {/* Visão Geral */}
+            <div>
+              <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Visão Geral</p>
+              <div className="space-y-0.5">
+                <SidebarLink to="/" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" />
+              </div>
+            </div>
+
+            {/* Gestão */}
+            <div>
+              <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Gestão</p>
+              <div className="space-y-0.5">
+                <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" />
+                <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" />
+                <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" />
+              </div>
+            </div>
+
+            {/* Administração */}
+            <div>
+              <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Administração</p>
+              <div className="space-y-0.5">
+                <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" />
+                {role === 'SUPER_ADMIN' && (
+                  <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" />
+                )}
+              </div>
+            </div>
           </nav>
 
           {/* User Info */}

@@ -16,14 +16,14 @@ export const SidebarLink: React.FC<SidebarLinkProps> = ({ to, icon, label }) => 
     <Link 
       to={to} 
       className={cn(
-        "flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200",
+        "flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-200 text-sm",
         isActive 
-          ? "bg-sidebar-accent text-sidebar-accent-foreground translate-x-1 shadow-sm font-semibold" 
-          : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:translate-x-1"
+          ? "bg-sidebar-accent text-sidebar-accent-foreground font-semibold" 
+          : "text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
       )}
     >
       {icon}
-      <span className="font-medium">{label}</span>
+      <span>{label}</span>
     </Link>
   );
 };
