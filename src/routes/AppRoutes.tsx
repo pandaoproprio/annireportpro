@@ -96,31 +96,35 @@ const Layout: React.FC = () => {
               </div>
             </div>
 
+            {/* Projetos */}
+            {projects.length > 0 && (
+              <div>
+                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Projetos</p>
+                <div className="px-1">
+                  <Select value={activeProjectId || ''} onValueChange={handleProjectChange}>
+                    <SelectTrigger className="w-full bg-white border-2 border-sidebar-primary/30 text-sidebar-foreground font-medium shadow-sm hover:border-sidebar-primary/50 transition-colors">
+                      <Folder className="w-4 h-4 mr-2 text-sidebar-primary" />
+                      <SelectValue placeholder="Selecionar projeto" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white z-50">
+                      {projects.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                      ))}
+                      <SelectItem value="new" className="text-sidebar-primary font-medium">
+                        <span className="flex items-center gap-2">
+                          <PlusCircle className="w-4 h-4" /> Novo Projeto
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
             {/* Gestão */}
             <div>
               <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Gestão</p>
-              <div className="space-y-1.5">
-                {/* Project Selector */}
-                {projects.length > 0 && (
-                  <div className="px-1 mb-1">
-                    <Select value={activeProjectId || ''} onValueChange={handleProjectChange}>
-                      <SelectTrigger className="w-full bg-white border-2 border-sidebar-primary/30 text-sidebar-foreground font-medium shadow-sm hover:border-sidebar-primary/50 transition-colors">
-                        <Folder className="w-4 h-4 mr-2 text-sidebar-primary" />
-                        <SelectValue placeholder="Selecionar projeto" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white z-50">
-                        {projects.map(p => (
-                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                        ))}
-                        <SelectItem value="new" className="text-sidebar-primary font-medium">
-                          <span className="flex items-center gap-2">
-                            <PlusCircle className="w-4 h-4" /> Novo Projeto
-                          </span>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
+              <div className="space-y-0.5">
                 <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" />
                 <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" />
                 <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" />
