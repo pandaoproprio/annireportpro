@@ -88,17 +88,18 @@ const Layout: React.FC = () => {
 
           {/* Project Selector */}
           {projects.length > 0 && (
-            <div className="p-4 border-b border-sidebar-border">
+            <div className="px-3 py-3 border-b border-sidebar-border">
+              <p className="px-1 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Projeto</p>
               <Select value={activeProjectId || ''} onValueChange={handleProjectChange}>
-                <SelectTrigger className="w-full bg-sidebar-accent border-sidebar-border text-sidebar-accent-foreground">
-                  <Folder className="w-4 h-4 mr-2" />
+                <SelectTrigger className="w-full bg-white border-2 border-sidebar-primary/30 text-sidebar-foreground font-medium shadow-sm hover:border-sidebar-primary/50 transition-colors">
+                  <Folder className="w-4 h-4 mr-2 text-sidebar-primary" />
                   <SelectValue placeholder="Selecionar projeto" />
                 </SelectTrigger>
                 <SelectContent>
                   {projects.map(p => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
-                  <SelectItem value="new" className="text-primary">
+                  <SelectItem value="new" className="text-sidebar-primary font-medium">
                     <span className="flex items-center gap-2">
                       <PlusCircle className="w-4 h-4" /> Novo Projeto
                     </span>
