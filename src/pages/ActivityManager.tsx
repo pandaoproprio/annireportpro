@@ -367,7 +367,7 @@ export const ActivityManager: React.FC = () => {
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-2">Ainda não há atividades registradas.</p>
               <Button className="mt-4" onClick={() => setIsFormOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" /> Comece criando sua primeira atividade
+                <Plus className="w-4 h-4 mr-2" /> Criar primeira atividade
               </Button>
             </CardContent>
           </Card>
