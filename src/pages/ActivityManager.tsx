@@ -195,15 +195,9 @@ export const ActivityManager: React.FC = () => {
   return (
     <div className="space-y-6 animate-fadeIn pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Diário de Bordo</h2>
-          <p className="text-muted-foreground">Registre e acompanhe as atividades realizadas.</p>
-        </div>
-        <Button onClick={() => setIsFormOpen(!isFormOpen)} variant={isFormOpen ? "destructive" : "default"}>
-          {isFormOpen ? <X className="w-4 h-4 mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-          {isFormOpen ? 'Cancelar' : 'Nova Atividade'}
-        </Button>
+      <div>
+        <h2 className="text-2xl font-bold text-foreground">Diário de Bordo</h2>
+        <p className="text-muted-foreground">Registre e acompanhe as atividades realizadas.</p>
       </div>
 
       {/* Form */}
