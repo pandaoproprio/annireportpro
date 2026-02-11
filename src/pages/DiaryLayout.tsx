@@ -116,7 +116,10 @@ export const DiaryLayout: React.FC = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-card border-t border-border py-4 px-6 text-center text-sm text-muted-foreground">
+      <footer className="bg-card border-t border-border py-4 px-6 text-center text-sm text-muted-foreground space-y-2">
+        <p className="text-xs">
+          💡 Cada atividade registrada contribui para demonstrar o impacto do projeto.
+        </p>
         <p>
           © 2026 AnnITech — Sistema GIRA Diário de Bordo
         </p>
