@@ -40,6 +40,7 @@ export const ActivityManager: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const prevActivityCount = useRef(activities.length);
   
   // Search and Filter State
@@ -115,8 +116,13 @@ export const ActivityManager: React.FC = () => {
 
   const confirmDelete = async () => {
     if (deletingId) {
-      await deleteActivity(deletingId);
-      setDeletingId(null);
+      setRemovingId(deletingId);
+      // Wait for animation to complete before deleting
+      setTimeout(async () => {
+        await deleteActivity(deletingId);
+        setDeletingId(null);
+        setRemovingId(null);
+      }, 300);
     }
   };
 
@@ -391,7 +397,7 @@ export const ActivityManager: React.FC = () => {
           </Card>
         ) : (
           filteredActivities.map(act => (
-            <Card key={act.id} className="hover:shadow-md transition-shadow">
+            <Card key={act.id} className={`hover:shadow-md transition-shadow ${removingId === act.id ? 'animate-fade-out' : ''}`}>
               <CardContent className="pt-6">
                 <div className="flex flex-col md:flex-row justify-between gap-4">
                   <div className="flex-1 space-y-2">
