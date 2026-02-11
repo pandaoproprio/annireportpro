@@ -73,9 +73,7 @@ export const DiaryLogin: React.FC = () => {
       <div className="w-full max-w-md animate-fadeIn relative z-10">
         {/* Logo & Header */}
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-card shadow-lg border border-border/50 mb-5">
-            <img src={logoGira} alt="GIRA Relatórios" className="w-14 h-14 object-contain" />
-          </div>
+          <img src={logoGira} alt="GIRA Relatórios" className="w-44 h-auto mx-auto mb-4" />
           <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">
             Diário de Bordo
           </h1>
