@@ -116,7 +116,7 @@ export const DiaryLogin: React.FC = () => {
 
               <Button
                 type="submit"
-                className="w-full h-14 text-base font-bold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
+                className="w-full h-14 text-base font-bold rounded-lg shadow-md hover:shadow-lg hover:brightness-90 transition-all duration-300 ease-in-out"
                 size="lg"
                 disabled={isLoading}
               >
