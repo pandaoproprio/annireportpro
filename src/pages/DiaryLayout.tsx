@@ -103,6 +103,15 @@ export const DiaryLayout: React.FC = () => {
 
       {/* Content */}
       <div className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-6">
+        {/* Welcome */}
+        <div className="mb-6">
+          <h1 className="text-xl md:text-2xl font-bold text-foreground">
+            Bem-vindo ao Diário de Bordo, {profile?.name || 'Usuário'}! 👋
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Aqui você registra as atividades realizadas e acompanha o progresso do seu trabalho.
+          </p>
+        </div>
         <ActivityManager />
       </div>
 
