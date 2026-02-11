@@ -12,6 +12,7 @@ import {
   SelectValue
 } from '@/components/ui/select';
 import { FileEdit, LogOut, Folder, Loader2 } from 'lucide-react';
+import logoGira from '@/assets/logo-gira.png';
 
 export const DiaryLayout: React.FC = () => {
   const { signOut, profile } = useAuth();
@@ -52,10 +53,10 @@ export const DiaryLayout: React.FC = () => {
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+       <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-              <FileEdit className="w-4 h-4 text-primary-foreground" />
+            <div className="h-10 w-10 overflow-hidden rounded">
+              <img src={logoGira} alt="GIRA" className="h-full w-full object-cover" />
             </div>
             <span className="font-bold text-foreground hidden sm:block">Diário de Bordo</span>
           </div>
