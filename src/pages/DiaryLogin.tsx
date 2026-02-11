@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogIn, Loader2 } from 'lucide-react';
-import logoGira from '@/assets/logo-gira-relatorios.png';
+import logoGira from '@/assets/logotipo-gira-diario-de-bordo.png';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
@@ -73,10 +73,7 @@ export const DiaryLogin: React.FC = () => {
       <div className="w-full max-w-md animate-fadeIn relative z-10">
         {/* Logo & Header */}
         <div className="text-center mb-10">
-          <img src={logoGira} alt="GIRA Relatórios" className="w-80 h-auto mx-auto mb-2" />
-          <h1 className="text-4xl font-display font-bold text-foreground tracking-tight">
-            Diário de Bordo
-          </h1>
+          <img src={logoGira} alt="GIRA Diário de Bordo" className="w-80 h-auto mx-auto mb-2" />
           <p className="text-muted-foreground mt-3 text-base">
             Registre as atividades do seu projeto
           </p>
