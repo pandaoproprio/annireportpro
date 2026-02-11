@@ -26,6 +26,7 @@ export type Database = {
           end_date: string | null
           goal_id: string | null
           id: string
+          is_draft: boolean
           location: string
           photos: string[]
           project_id: string
@@ -46,6 +47,7 @@ export type Database = {
           end_date?: string | null
           goal_id?: string | null
           id?: string
+          is_draft?: boolean
           location: string
           photos?: string[]
           project_id: string
@@ -66,6 +68,7 @@ export type Database = {
           end_date?: string | null
           goal_id?: string | null
           id?: string
+          is_draft?: boolean
           location?: string
           photos?: string[]
           project_id?: string
