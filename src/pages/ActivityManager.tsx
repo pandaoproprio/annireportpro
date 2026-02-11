@@ -1,4 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { FirstActivityCelebration } from '@/components/FirstActivityCelebration';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Activity, ActivityType } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -21,15 +23,26 @@ import {
 
 export const ActivityManager: React.FC = () => {
   const { activeProject: project, activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useAppData();
+  const { profile } = useAuth();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const prevActivityCount = useRef(activities.length);
   
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterGoal, setFilterGoal] = useState<string>('all');
+
+  // Detect first activity creation
+  useEffect(() => {
+    if (prevActivityCount.current === 0 && activities.length === 1) {
+      setShowCelebration(true);
+    }
+    prevActivityCount.current = activities.length;
+  }, [activities.length]);
 
   // Form State
   const [newActivity, setNewActivity] = useState<Partial<Activity>>({
@@ -419,6 +432,13 @@ export const ActivityManager: React.FC = () => {
           ))
         )}
       </div>
+
+      <FirstActivityCelebration
+        open={showCelebration}
+        onClose={() => setShowCelebration(false)}
+        userName={profile?.name || 'Usuário'}
+        activityCount={activities.length}
+      />
     </div>
   );
 };
