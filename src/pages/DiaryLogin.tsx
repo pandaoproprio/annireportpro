@@ -116,7 +116,10 @@ export const DiaryLogin: React.FC = () => {
 
               <Button
                 type="submit"
-                className="w-full h-14 text-base font-bold rounded-lg shadow-md hover:shadow-lg hover:brightness-90 transition-all duration-300 ease-in-out"
+                className="w-full h-14 text-base font-bold rounded-lg hover:brightness-90 transition-all duration-300 ease-in-out"
+                style={{ boxShadow: '0 4px 14px -3px rgba(0, 0, 0, 0.15)', }}
+                onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 6px 20px -4px rgba(0, 0, 0, 0.2)'}
+                onMouseLeave={(e) => e.currentTarget.style.boxShadow = '0 4px 14px -3px rgba(0, 0, 0, 0.15)'}
                 size="lg"
                 disabled={isLoading}
               >
