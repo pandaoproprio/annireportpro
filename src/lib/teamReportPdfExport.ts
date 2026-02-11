@@ -201,8 +201,9 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     pdf.text('•', ML + 8, currentY);
     pdf.setFont('times', 'bold');
     pdf.text(label, ML + 14, currentY);
+    const lw = pdf.getTextWidth(label + '  ');
     pdf.setFont('times', 'normal');
-    pdf.text(value, ML + 14 + pdf.getTextWidth(label + ' '), currentY);
+    pdf.text(value, ML + 14 + lw, currentY);
     currentY += LINE_H;
   };
 
