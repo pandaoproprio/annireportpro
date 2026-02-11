@@ -10,14 +10,14 @@ interface CreateUserRequest {
   email: string;
   password?: string;
   name: string;
-  role: 'user' | 'admin' | 'super_admin';
+  role: 'user' | 'admin' | 'super_admin' | 'oficineiro';
   sendInvite?: boolean;
 }
 
 interface UpdateUserRequest {
   userId: string;
   name?: string;
-  role?: 'user' | 'admin' | 'super_admin';
+  role?: 'user' | 'admin' | 'super_admin' | 'oficineiro';
   password?: string;
 }
 

@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen } from 'lucide-react';
+import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit } from 'lucide-react';
 import { CollaboratorProjectsDialog } from '@/components/CollaboratorProjectsDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -21,6 +21,7 @@ const roleLabels: Record<string, { label: string; icon: React.ReactNode; color: 
   user: { label: 'Usuário', icon: <Users className="w-3 h-3" />, color: 'bg-secondary text-secondary-foreground' },
   admin: { label: 'Admin', icon: <Shield className="w-3 h-3" />, color: 'bg-blue-500/20 text-blue-700 dark:text-blue-300' },
   super_admin: { label: 'Super Admin', icon: <Crown className="w-3 h-3" />, color: 'bg-amber-500/20 text-amber-700 dark:text-amber-300' },
+  oficineiro: { label: 'Oficineiro', icon: <FileEdit className="w-3 h-3" />, color: 'bg-green-500/20 text-green-700 dark:text-green-300' },
 };
 
 export const UserManagement: React.FC = () => {
@@ -38,7 +39,7 @@ export const UserManagement: React.FC = () => {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'user' | 'admin' | 'super_admin'>('user');
+  const [selectedRole, setSelectedRole] = useState<'user' | 'admin' | 'super_admin' | 'oficineiro'>('user');
 
   useEffect(() => {
     if (role === 'SUPER_ADMIN') {
@@ -183,6 +184,7 @@ export const UserManagement: React.FC = () => {
                       <SelectItem value="user">Usuário</SelectItem>
                       <SelectItem value="admin">Admin</SelectItem>
                       <SelectItem value="super_admin">Super Admin</SelectItem>
+                      <SelectItem value="oficineiro">Oficineiro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -322,6 +324,7 @@ export const UserManagement: React.FC = () => {
                   <SelectItem value="user">Usuário</SelectItem>
                   <SelectItem value="admin">Admin</SelectItem>
                   <SelectItem value="super_admin">Super Admin</SelectItem>
+                  <SelectItem value="oficineiro">Oficineiro</SelectItem>
                 </SelectContent>
               </Select>
             </div>
