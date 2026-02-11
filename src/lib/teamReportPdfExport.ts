@@ -217,7 +217,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   pdf.text(reportTitle, (PAGE_W - tw) / 2, currentY);
   currentY += LINE_H * 2;
 
-  addHeaderLine('Termo de Fomento nº', project.fomentoNumber);
+  addHeaderLine('Termo de Fomento nº:', project.fomentoNumber);
   addHeaderLine('Projeto:', project.name);
   addHeaderLine('Período de Referência:', formatPeriod(report.periodStart, report.periodEnd));
   currentY += LINE_H;
