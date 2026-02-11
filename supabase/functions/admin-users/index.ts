@@ -18,6 +18,7 @@ interface UpdateUserRequest {
   userId: string;
   name?: string;
   role?: 'user' | 'admin' | 'super_admin';
+  password?: string;
 }
 
 interface DeleteUserRequest {
@@ -227,7 +228,7 @@ Deno.serve(async (req) => {
     // PATCH: Update user
     if (req.method === 'PATCH') {
       const body: UpdateUserRequest = await req.json();
-      const { userId, name, role } = body;
+      const { userId, name, role, password } = body;
 
       if (!userId) {
         return new Response(JSON.stringify({ error: 'userId is required' }), {
@@ -247,6 +248,16 @@ Deno.serve(async (req) => {
 
       if (role) {
         await supabaseAdmin.from('user_roles').update({ role }).eq('user_id', userId);
+      }
+
+      if (password) {
+        if (password.length < 6) {
+          return new Response(JSON.stringify({ error: 'Password must be at least 6 characters' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
+        if (pwError) throw pwError;
       }
 
       return new Response(JSON.stringify({ success: true }), {
