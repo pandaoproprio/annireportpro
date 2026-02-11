@@ -76,7 +76,7 @@ export const useAdminUsers = () => {
     }
   };
 
-  const updateUser = async (userId: string, updates: { name?: string; role?: 'user' | 'admin' | 'super_admin' }) => {
+  const updateUser = async (userId: string, updates: { name?: string; role?: 'user' | 'admin' | 'super_admin'; password?: string }) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {
@@ -88,7 +88,7 @@ export const useAdminUsers = () => {
       
       toast({
         title: 'Sucesso',
-        description: 'Usuário atualizado com sucesso!'
+        description: updates.password ? 'Senha redefinida com sucesso!' : 'Usuário atualizado com sucesso!'
       });
       
       await fetchUsers();
