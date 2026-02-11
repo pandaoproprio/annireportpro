@@ -199,7 +199,14 @@ Deno.serve(async (req) => {
           data: { name },
           redirectTo: `${url.origin.replace('functions/v1', '')}`
         });
-        if (error) throw error;
+        if (error) {
+          if (error.message?.includes('already been registered')) {
+            return new Response(JSON.stringify({ error: 'Este e-mail já está cadastrado no sistema' }), {
+              status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          throw error;
+        }
         userData = data.user;
       } else {
         if (!password || password.length < 6) {
@@ -212,7 +219,14 @@ Deno.serve(async (req) => {
           email, password, email_confirm: true,
           user_metadata: { name }
         });
-        if (error) throw error;
+        if (error) {
+          if (error.message?.includes('already been registered')) {
+            return new Response(JSON.stringify({ error: 'Este e-mail já está cadastrado no sistema' }), {
+              status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          throw error;
+        }
         userData = data.user;
       }
 
