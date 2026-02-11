@@ -86,12 +86,17 @@ export const DiaryLayout: React.FC = () => {
         </div>
       </header>
 
-      {/* Project info bar */}
+      {/* Breadcrumb */}
       <div className="bg-accent/50 border-b border-border">
         <div className="max-w-5xl mx-auto px-4 py-2">
-          <p className="text-sm text-foreground">
-            <span className="font-semibold">{activeProject?.name}</span>
-            <span className="text-muted-foreground ml-2">— {activeProject?.organizationName}</span>
+          <p className="text-sm text-muted-foreground">
+            <span className="font-semibold text-foreground">GIRA</span>
+            <span className="mx-1.5">›</span>
+            <span>Diário de Bordo</span>
+            <span className="mx-1.5">›</span>
+            <span>Projeto</span>
+            <span className="mx-1.5">›</span>
+            <span className="font-semibold text-foreground">{activeProject?.name}</span>
           </p>
         </div>
       </div>
