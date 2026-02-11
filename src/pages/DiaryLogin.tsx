@@ -74,7 +74,7 @@ export const DiaryLogin: React.FC = () => {
         {/* Logo & Header */}
         <div className="text-center mb-22">
           <img src={logoGira} alt="GIRA Diário de Bordo" className="w-80 h-auto mx-auto" />
-          <p className="text-foreground/60 text-sm font-semibold uppercase tracking-wider -mt-20">CADA AÇÃO CONTA</p>
+          <p className="text-foreground/60 text-sm font-semibold uppercase tracking-wider mt-6">CADA AÇÃO CONTA</p>
         </div>
 
         <Card className="shadow-2xl border border-border/40 backdrop-blur-sm bg-card/95">
