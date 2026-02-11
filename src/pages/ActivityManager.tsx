@@ -5,6 +5,16 @@ import { useAppData } from '@/contexts/AppDataContext';
 import { Activity, ActivityType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
@@ -29,6 +39,7 @@ export const ActivityManager: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const prevActivityCount = useRef(activities.length);
   
   // Search and Filter State
@@ -99,8 +110,13 @@ export const ActivityManager: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Tem certeza que deseja excluir esta atividade permanentemente?')) {
-      await deleteActivity(id);
+    setDeletingId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (deletingId) {
+      await deleteActivity(deletingId);
+      setDeletingId(null);
     }
   };
 
@@ -439,6 +455,23 @@ export const ActivityManager: React.FC = () => {
         userName={profile?.name || 'Usuário'}
         activityCount={activities.length}
       />
+
+      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir atividade</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta atividade? Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
