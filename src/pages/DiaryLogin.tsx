@@ -76,15 +76,15 @@ export const DiaryLogin: React.FC = () => {
           <img src={logoGira} alt="GIRA Diário de Bordo" className="w-80 h-auto mx-auto" />
           <p className="text-foreground/60 text-sm font-bold uppercase italic tracking-widest -mt-20">Cada ação conta</p>
           <p className="text-muted-foreground mt-4 text-base">
-            Registre as atividades desenvolvidas no projeto
+            Registre as atividades realizadas na sua oficina.
           </p>
         </div>
 
         <Card className="shadow-2xl border border-border/40 backdrop-blur-sm bg-card/95">
           <CardHeader className="text-center pt-8 pb-3 px-8">
-            <CardTitle className="text-lg font-semibold">Acesso Colaborador</CardTitle>
+            <CardTitle className="text-lg font-semibold">Área do Colaborador</CardTitle>
             <CardDescription className="text-sm">
-              Entre com as credenciais fornecidas pelo gestor
+              Acesse com as credenciais fornecidas pelo gestor.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-8 pb-8">
@@ -129,6 +129,16 @@ export const DiaryLogin: React.FC = () => {
                 )}
                 Entrar
               </Button>
+
+              <div className="text-center">
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground/70 underline-offset-4 hover:underline transition-colors"
+                  onClick={() => toast({ title: 'Recuperação de senha', description: 'Entre em contato com o gestor do projeto para redefinir sua senha.' })}
+                >
+                  Esqueceu sua senha?
+                </button>
+              </div>
             </form>
           </CardContent>
         </Card>
