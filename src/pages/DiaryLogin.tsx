@@ -80,7 +80,7 @@ export const DiaryLogin: React.FC = () => {
         <Card className="shadow-2xl border border-border/40 backdrop-blur-sm bg-card/95">
           <CardHeader className="text-center pt-8 pb-3 px-8">
             <CardTitle className="text-lg font-semibold">Área do Colaborador</CardTitle>
-            <CardDescription className="text-sm space-y-2">
+            <CardDescription className="text-sm space-y-1">
               <p className="text-foreground/70">Registre as atividades realizadas na sua oficina.</p>
               <p className="text-muted-foreground">Acesse com as credenciais fornecidas pelo gestor.</p>
             </CardDescription>
