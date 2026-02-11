@@ -103,7 +103,7 @@ export const DiaryLayout: React.FC = () => {
       {/* Footer */}
       <footer className="bg-card border-t border-border py-4 px-6 text-center text-sm text-muted-foreground">
         <p>
-          <span className="font-semibold text-foreground">AnnIReport</span> © 2026
+          © 2026 AnnITech — Sistema GIRA Diário de Bordo
         </p>
       </footer>
     </div>
