@@ -141,9 +141,8 @@ export const DiaryLogin: React.FC = () => {
           </CardContent>
         </Card>
 
-        <div className="text-center text-xs text-muted-foreground mt-8 space-y-1">
-          <p className="font-medium text-foreground/70">GIRA Relatórios</p>
-          <p>© 2026 — powered by AnnIReport</p>
+        <div className="text-center text-xs mt-8" style={{ color: '#9CA3AF' }}>
+          <p>© 2026 AnnITech — Sistema GIRA Diário de Bordo</p>
         </div>
       </div>
     </div>
