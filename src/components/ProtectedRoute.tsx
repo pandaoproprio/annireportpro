@@ -27,8 +27,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/login" />;
   }
 
-  // For now, allow all authenticated users to proceed
-  // Project checking will be done at the component level
-  
+  // Oficineiro users can only access the Diário de Bordo
+  const isDiaryRoute = location.pathname.startsWith('/diario');
+  if (role === 'OFICINEIRO' && !isDiaryRoute) {
+    return <Navigate to="/diario" replace />;
+  }
+
   return <>{children}</>;
 };

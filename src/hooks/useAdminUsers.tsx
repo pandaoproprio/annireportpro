@@ -6,7 +6,7 @@ export interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: 'user' | 'admin' | 'super_admin';
+  role: 'user' | 'admin' | 'super_admin' | 'oficineiro';
   createdAt: string;
   lastSignIn: string | null;
   emailConfirmed: boolean;
@@ -42,7 +42,7 @@ export const useAdminUsers = () => {
     email: string;
     password?: string;
     name: string;
-    role: 'user' | 'admin' | 'super_admin';
+    role: 'user' | 'admin' | 'super_admin' | 'oficineiro';
     sendInvite?: boolean;
   }) => {
     setIsLoading(true);
@@ -76,7 +76,7 @@ export const useAdminUsers = () => {
     }
   };
 
-  const updateUser = async (userId: string, updates: { name?: string; role?: 'user' | 'admin' | 'super_admin'; password?: string }) => {
+  const updateUser = async (userId: string, updates: { name?: string; role?: 'user' | 'admin' | 'super_admin' | 'oficineiro'; password?: string }) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('admin-users', {

@@ -154,7 +154,7 @@ const Layout: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-sidebar-primary">{profile?.name || 'Usuário'}</p>
-                  <p className="text-xs text-sidebar-foreground/70 uppercase tracking-wide">{role === 'SUPER_ADMIN' ? 'Super Admin' : role}</p>
+                  <p className="text-xs text-sidebar-foreground/70 uppercase tracking-wide">{role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'OFICINEIRO' ? 'Oficineiro' : role}</p>
                 </div>
               </div>
               <button 
