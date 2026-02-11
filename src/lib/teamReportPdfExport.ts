@@ -338,15 +338,19 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   currentY += LINE_H + 2;
 
   pdf.setFont('times', 'bold');
-  pdf.text('Nome e cargo: ', cx - 60, currentY);
+  const nomeLabel = 'Nome e cargo: ';
+  pdf.text(nomeLabel, cx - 60, currentY);
+  const nomeLw = pdf.getTextWidth(nomeLabel);
   pdf.setFont('times', 'normal');
-  pdf.text(`${report.responsibleName} - ${report.functionRole}`, cx - 60 + pdf.getTextWidth('Nome e cargo: '), currentY);
+  pdf.text(`${report.responsibleName} - ${report.functionRole}`, cx - 60 + nomeLw, currentY);
   currentY += LINE_H;
 
   pdf.setFont('times', 'bold');
-  pdf.text('CNPJ: ', cx - 60, currentY);
+  const cnpjLabel = 'CNPJ: ';
+  pdf.text(cnpjLabel, cx - 60, currentY);
+  const cnpjLw = pdf.getTextWidth(cnpjLabel);
   pdf.setFont('times', 'normal');
-  pdf.text(report.providerDocument || '[Não informado]', cx - 60 + pdf.getTextWidth('CNPJ: '), currentY);
+  pdf.text(report.providerDocument || '[Não informado]', cx - 60 + cnpjLw, currentY);
 
   // ══════════════════════════════════════════════════════════════
   // FOOTERS + PAGE NUMBERS (top-right per ABNT)
