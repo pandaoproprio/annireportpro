@@ -73,7 +73,8 @@ export const DiaryLogin: React.FC = () => {
       <div className="w-full max-w-md animate-fadeIn relative z-10">
         {/* Logo & Header */}
         <div className="text-center mb-10">
-          <img src={logoGira} alt="GIRA Diário de Bordo" className="w-80 h-auto mx-auto mb-2" />
+          <img src={logoGira} alt="GIRA Diário de Bordo" className="w-80 h-auto mx-auto mb-1" />
+          <p className="text-foreground/60 text-sm italic tracking-wide">Cada ação conta</p>
           <p className="text-muted-foreground mt-3 text-base">
             Registre as atividades desenvolvidas no projeto
           </p>
