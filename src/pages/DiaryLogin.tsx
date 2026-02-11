@@ -65,26 +65,36 @@ export const DiaryLogin: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 via-background to-brand-100 p-4">
-      <div className="w-full max-w-sm animate-fadeIn">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <img src={logoGira} alt="GIRA Relatórios" className="w-[160px] mx-auto mb-4" />
-          <h1 className="text-2xl font-display font-bold text-foreground">Diário de Bordo</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Registre as atividades do projeto</p>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/30 p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 left-0 w-72 h-72 bg-primary/5 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/20 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl" />
+
+      <div className="w-full max-w-md animate-fadeIn relative z-10">
+        {/* Logo & Header */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-card shadow-lg border border-border/50 mb-5">
+            <img src={logoGira} alt="GIRA Relatórios" className="w-14 h-14 object-contain" />
+          </div>
+          <h1 className="text-3xl font-display font-bold text-foreground tracking-tight">
+            Diário de Bordo
+          </h1>
+          <p className="text-muted-foreground mt-2 text-sm">
+            Registre as atividades do seu projeto
+          </p>
         </div>
 
-        <Card className="shadow-xl border-0">
-          <CardHeader className="text-center pt-6 pb-2">
-            <CardTitle className="text-lg">Acesso Colaborador</CardTitle>
-            <CardDescription>
-              Entre com as credenciais fornecidas
+        <Card className="shadow-2xl border border-border/40 backdrop-blur-sm bg-card/95">
+          <CardHeader className="text-center pt-8 pb-3 px-8">
+            <CardTitle className="text-lg font-semibold">Acesso Colaborador</CardTitle>
+            <CardDescription className="text-sm">
+              Entre com as credenciais fornecidas pelo gestor
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSignIn} className="space-y-4">
+          <CardContent className="px-8 pb-8">
+            <form onSubmit={handleSignIn} className="space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="diary-email">E-mail</Label>
+                <Label htmlFor="diary-email" className="text-sm font-medium">E-mail</Label>
                 <Input
                   id="diary-email"
                   type="email"
@@ -92,12 +102,12 @@ export const DiaryLogin: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-11"
+                  className="h-12 text-base rounded-lg bg-background/60 border-border/60 focus:bg-background transition-colors"
                   disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="diary-password">Senha</Label>
+                <Label htmlFor="diary-password" className="text-sm font-medium">Senha</Label>
                 <Input
                   id="diary-password"
                   type="password"
@@ -105,14 +115,14 @@ export const DiaryLogin: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-11"
+                  className="h-12 text-base rounded-lg bg-background/60 border-border/60 focus:bg-background transition-colors"
                   disabled={isLoading}
                 />
               </div>
 
               <Button
                 type="submit"
-                className="w-full h-11 text-base"
+                className="w-full h-12 text-base font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200"
                 size="lg"
                 disabled={isLoading}
               >
@@ -127,10 +137,9 @@ export const DiaryLogin: React.FC = () => {
           </CardContent>
         </Card>
 
-        <div className="text-center text-xs text-muted-foreground mt-6">
-          <p>
-            <span className="font-semibold text-foreground">GIRA Relatórios</span> © 2026 — powered by AnnIReport
-          </p>
+        <div className="text-center text-xs text-muted-foreground mt-8 space-y-1">
+          <p className="font-medium text-foreground/70">GIRA Relatórios</p>
+          <p>© 2026 — powered by AnnIReport</p>
         </div>
       </div>
     </div>
