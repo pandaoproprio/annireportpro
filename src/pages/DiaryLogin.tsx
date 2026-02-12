@@ -134,17 +134,21 @@ export const DiaryLogin: React.FC = () => {
             <img src={logoGira} alt="GIRA Diário de Bordo" className="w-12 h-12 object-contain" />
           </div>
 
-          {/* Badge do módulo */}
-          <div className="flex justify-center">
-            <span className="px-3 py-1 rounded-full text-xs font-semibold text-white" style={{ backgroundColor: '#0DA3E7' }}>
-              Diário de Bordo
-            </span>
+          {/* Título e subtítulo */}
+          <div className="text-center space-y-2">
+            <h1 className="text-2xl font-bold text-foreground">Diário de Bordo</h1>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Registre e acompanhe as atividades realizadas no seu projeto.
+            </p>
           </div>
 
-          {/* Título e subtítulo */}
-          <div className="text-center space-y-1">
-            <h1 className="text-xl font-bold text-foreground">Acesse sua conta</h1>
-            <p className="text-sm text-muted-foreground">Entre com seu e-mail e senha para continuar.</p>
+          {/* Badge informativo */}
+          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+            <svg className="h-4 w-4 flex-shrink-0" style={{ color: '#0DA3E7' }} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 12l2 2 4-4" />
+              <circle cx="12" cy="12" r="10" />
+            </svg>
+            <span>Acesso exclusivo para colaboradores cadastrados</span>
           </div>
 
           {/* Formulário */}
@@ -220,6 +224,11 @@ export const DiaryLogin: React.FC = () => {
               Esqueceu sua senha?
             </button>
           </div>
+
+          {/* Nota informativa */}
+          <p className="text-xs text-muted-foreground text-center leading-relaxed">
+            Suas credenciais são fornecidas pelo gestor do projeto.
+          </p>
         </div>
 
         {/* Footer institucional */}
