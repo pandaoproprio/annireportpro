@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { LogIn, Loader2 } from 'lucide-react';
 import logoGira from '@/assets/logotipo-gira-diario-de-bordo.png';
 import { useToast } from '@/hooks/use-toast';
@@ -78,11 +78,8 @@ export const DiaryLogin: React.FC = () => {
         </div>
 
         <Card className="shadow-2xl border border-border/40 backdrop-blur-sm bg-card/95">
-          <CardHeader className="text-center pt-8 pb-6 px-8">
-            <CardTitle className="text-3xl lg:text-4xl font-bold text-primary mb-3">Diário de Bordo</CardTitle>
-            <CardDescription className="text-primary-foreground/80 text-lg max-w-md leading-relaxed mx-auto">
-              Registre e acompanhe as atividades realizadas no projeto.
-            </CardDescription>
+          <CardHeader className="text-center pt-10 pb-2 px-8">
+            <h1 className="text-2xl font-bold text-primary">Diário de Bordo</h1>
           </CardHeader>
           <CardContent className="px-8 pb-8">
             <form onSubmit={handleSignIn} className="space-y-5">
