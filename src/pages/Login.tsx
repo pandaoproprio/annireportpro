@@ -4,8 +4,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogIn, Loader2 } from 'lucide-react';
+import { LogIn, Loader2, Eye, EyeOff } from 'lucide-react';
+import logoGiraBranco from '@/assets/gira-logo-relatorios-branco.png';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
@@ -16,32 +16,44 @@ const passwordSchema = z.string().min(6, 'A senha deve ter pelo menos 6 caracter
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const validateInputs = () => {
+    let valid = true;
+    setEmailError('');
+    setPasswordError('');
+
     try {
       emailSchema.parse(email);
-      passwordSchema.parse(password);
-      return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        toast({
-          variant: 'destructive',
-          title: 'Erro de validação',
-          description: error.errors[0].message
-        });
+        setEmailError(error.errors[0].message);
+        valid = false;
       }
-      return false;
     }
+
+    try {
+      passwordSchema.parse(password);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setPasswordError(error.errors[0].message);
+        valid = false;
+      }
+    }
+
+    return valid;
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateInputs()) return;
-    
+
     setIsLoading(true);
     const { error } = await signIn(email, password);
     setIsLoading(false);
@@ -64,106 +76,155 @@ export const Login: React.FC = () => {
     navigate('/');
   };
 
+  const currentYear = new Date().getFullYear();
+
   return (
-    <div className="min-h-screen flex bg-gradient-to-br from-brand-50 via-background to-brand-100">
-      {/* Left side - Branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-primary items-center justify-center p-12 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-10 w-40 h-40 rounded-full bg-white/20" />
-          <div className="absolute bottom-20 right-10 w-60 h-60 rounded-full bg-white/10" />
-          <div className="absolute top-1/2 left-1/3 w-32 h-32 rounded-full bg-white/15" />
-        </div>
-        <div className="relative text-white max-w-md space-y-6">
-          <div>
-            <img src={logoGira} alt="GIRA Relatórios" className="w-[220px] brightness-0 invert mb-2" />
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* Painel esquerdo */}
+      <div
+        className="relative flex-shrink-0 lg:w-[52%] flex flex-col items-center justify-center px-10 py-14 lg:px-16 lg:py-20 overflow-hidden min-h-[50vh] lg:min-h-screen"
+        style={{ backgroundColor: '#0DA3E7' }}
+      >
+        {/* Círculos decorativos */}
+        <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute top-10 -left-10 w-48 h-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -bottom-20 -right-20 w-64 h-64 rounded-full border border-white/10" />
+
+        {/* Logo */}
+        <img
+          src={logoGiraBranco}
+          alt="GIRA Relatórios"
+          className="h-40 lg:h-48 object-contain animate-fade-in"
+        />
+
+        {/* Lista de benefícios */}
+        <div className="space-y-5 mt-10">
+          <div className="flex items-start gap-4">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-white">1</span>
+            </div>
+            <p className="text-[15px] leading-relaxed text-white/90 pt-1">
+              Registre atividades e acompanhe o progresso das metas do seu projeto social.
+            </p>
           </div>
-          <p className="text-xl text-white/90 leading-relaxed">
-            Dados confiáveis para decisões que transformam resultados
-          </p>
-          <div className="space-y-4 pt-4">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-sm font-bold">1</span>
-              </div>
-              <p className="text-white/80 text-sm">Registre atividades e acompanhe o progresso das metas do seu projeto social.</p>
+          <div className="flex items-start gap-4">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-white">2</span>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-sm font-bold">2</span>
-              </div>
-              <p className="text-white/80 text-sm">Gere relatórios profissionais em PDF e DOCX conforme normas ABNT.</p>
+            <p className="text-[15px] leading-relaxed text-white/90 pt-1">
+              Gere relatórios profissionais em PDF e DOCX conforme normas ABNT.
+            </p>
+          </div>
+          <div className="flex items-start gap-4">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-white">3</span>
             </div>
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-white/15 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <span className="text-sm font-bold">3</span>
-              </div>
-              <p className="text-white/80 text-sm">Gerencie equipes e prestações de contas com transparência.</p>
-            </div>
+            <p className="text-[15px] leading-relaxed text-white/90 pt-1">
+              Gerencie equipes e prestações de contas com transparência.
+            </p>
           </div>
         </div>
       </div>
 
-      {/* Right side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-md animate-fadeIn">
-          {/* Mobile Logo */}
-          <div className="text-center mb-8 lg:hidden">
-            <img src={logoGira} alt="GIRA Relatórios" className="w-[180px] mx-auto mb-4" />
-            <p className="text-muted-foreground mt-2 text-sm">Dados confiáveis para decisões que transformam resultados</p>
+      {/* Painel direito */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-muted/30">
+        <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7 animate-fade-in">
+          {/* Logo mobile */}
+          <div className="lg:hidden flex justify-center mb-2">
+            <img src={logoGira} alt="GIRA Relatórios" className="w-12 h-12 object-contain" />
           </div>
 
-          <Card className="shadow-xl border-0">
-            <CardHeader className="text-center pt-6 pb-2">
-              <CardTitle className="text-xl">Acesse sua conta</CardTitle>
-              <CardDescription>
-                Entre com seu e-mail e senha
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSignIn} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">E-mail</Label>
-                  <Input
-                    id="login-email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    className="h-12"
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Senha</Label>
-                  <Input
-                    id="login-password"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="h-12"
-                    disabled={isLoading}
-                  />
-                </div>
+          {/* Título e subtítulo */}
+          <div className="text-center space-y-1">
+            <h1 className="text-xl font-bold text-foreground">Acesse sua conta</h1>
+            <p className="text-sm text-muted-foreground">Entre com seu e-mail e senha para continuar.</p>
+          </div>
 
-                <Button type="submit" className="w-full h-12 text-base" size="lg" disabled={isLoading}>
-                  {isLoading ? (
-                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  ) : (
-                    <LogIn className="w-5 h-5 mr-2" />
-                  )}
-                  Entrar
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
+          {/* Formulário */}
+          <form onSubmit={handleSignIn} className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="login-email" className="text-sm font-medium text-foreground">E-mail</Label>
+              <Input
+                id="login-email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+                required
+                className={`h-11 ${emailError ? 'border-destructive' : ''}`}
+                disabled={isLoading}
+              />
+              {emailError && <p className="text-xs text-destructive">{emailError}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="login-password" className="text-sm font-medium text-foreground">Senha</Label>
+              <div className="relative">
+                <Input
+                  id="login-password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
+                  required
+                  className={`h-11 pr-10 ${passwordError ? 'border-destructive' : ''}`}
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+              {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+            </div>
 
-          <div className="text-center text-xs text-muted-foreground mt-8 space-y-1">
-            <p>
-              <span className="font-semibold text-foreground">GIRA Relatórios</span> © 2026 — powered by <span className="font-medium">AnnIReport</span> | AnnITech
-            </p>
+            <Button
+              type="submit"
+              className="w-full h-11 text-sm font-semibold gap-2"
+              style={{ backgroundColor: '#0DA3E7' }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0B8FCC')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0DA3E7')}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Acessando...
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4" />
+                  Acessar
+                </>
+              )}
+            </Button>
+          </form>
+
+          {/* Link recuperação */}
+          <div className="text-center">
+            <button
+              type="button"
+              className="text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
+              onClick={() => toast({ title: 'Recuperação de senha', description: 'Entre em contato com o administrador do sistema para redefinir sua senha.' })}
+            >
+              Esqueceu sua senha?
+            </button>
+          </div>
+        </div>
+
+        {/* Footer institucional */}
+        <div className="mt-8 text-[13px] text-muted-foreground text-center" style={{ lineHeight: 1.8 }}>
+          <p>GIRA Relatórios — Módulo do GIRA ERP</p>
+          <p>© {currentYear} AnnITech IT Solutions</p>
+          <div className="flex items-center justify-center gap-1.5">
+            <a href="/lgpd" className="hover:text-foreground hover:underline underline-offset-4">Política de Privacidade</a>
+            <span>·</span>
+            <a href="/licenca" className="hover:text-foreground hover:underline underline-offset-4">Termos de Uso</a>
+            <span>·</span>
+            <a href="/lgpd" className="hover:text-foreground hover:underline underline-offset-4">LGPD</a>
           </div>
         </div>
       </div>
