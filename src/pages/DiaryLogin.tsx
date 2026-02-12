@@ -134,6 +134,13 @@ export const DiaryLogin: React.FC = () => {
             <img src={logoGira} alt="GIRA Diário de Bordo" className="w-12 h-12 object-contain" />
           </div>
 
+          {/* Badge do módulo */}
+          <div className="flex justify-center">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold text-white" style={{ backgroundColor: '#0DA3E7' }}>
+              Diário de Bordo
+            </span>
+          </div>
+
           {/* Título e subtítulo */}
           <div className="text-center space-y-1">
             <h1 className="text-xl font-bold text-foreground">Acesse sua conta</h1>
