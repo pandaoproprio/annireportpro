@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, Loader2, Eye, EyeOff } from 'lucide-react';
+import { LogIn, Loader2, Eye, EyeOff, ArrowRight } from 'lucide-react';
 import logoGiraBranco from '@/assets/gira-logo-relatorios-branco.png';
 import logoGira from '@/assets/logo-gira.png';
 import { useToast } from '@/hooks/use-toast';
@@ -18,6 +18,7 @@ export const DiaryLogin: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const { signIn } = useAuth();
@@ -153,84 +154,109 @@ export const DiaryLogin: React.FC = () => {
             </div>
           </div>
 
-          {/* Formulário */}
-          <form onSubmit={handleSignIn} className="space-y-5">
-            <div className="space-y-1.5">
-              <Label htmlFor="diary-email" className="text-sm font-medium text-foreground">E-mail</Label>
-              <Input
-                id="diary-email"
-                type="email"
-                placeholder="seu@email.com"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
-                required
-                className={`h-11 ${emailError ? 'border-destructive' : ''}`}
-                disabled={isLoading}
-              />
-              {emailError && <p className="text-xs text-destructive">{emailError}</p>}
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="diary-password" className="text-sm font-medium text-foreground">Senha</Label>
-              <div className="relative">
-                <Input
-                  id="diary-password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
-                  required
-                  className={`h-11 pr-10 ${passwordError ? 'border-destructive' : ''}`}
+          {!showForm ? (
+            <>
+              {/* Botão para revelar formulário */}
+              <Button
+                type="button"
+                className="w-full h-12 text-sm font-semibold gap-2"
+                style={{ backgroundColor: '#0DA3E7' }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0B8FCC')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0DA3E7')}
+                onClick={() => setShowForm(true)}
+              >
+                Acessar Diário
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+
+              {/* Nota informativa */}
+              <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                Suas credenciais são fornecidas pelo gestor do projeto.
+              </p>
+            </>
+          ) : (
+            <>
+              {/* Formulário */}
+              <form onSubmit={handleSignIn} className="space-y-5 animate-fadeIn">
+                <div className="space-y-1.5">
+                  <Label htmlFor="diary-email" className="text-sm font-medium text-foreground">E-mail</Label>
+                  <Input
+                    id="diary-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+                    required
+                    className={`h-11 ${emailError ? 'border-destructive' : ''}`}
+                    disabled={isLoading}
+                    autoFocus
+                  />
+                  {emailError && <p className="text-xs text-destructive">{emailError}</p>}
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="diary-password" className="text-sm font-medium text-foreground">Senha</Label>
+                  <div className="relative">
+                    <Input
+                      id="diary-password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
+                      required
+                      className={`h-11 pr-10 ${passwordError ? 'border-destructive' : ''}`}
+                      disabled={isLoading}
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={() => setShowPassword(!showPassword)}
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-sm font-semibold gap-2"
+                  style={{ backgroundColor: '#0DA3E7' }}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0B8FCC')}
+                  onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0DA3E7')}
                   disabled={isLoading}
-                />
+                >
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Acessando...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="h-4 w-4" />
+                      Acessar
+                    </>
+                  )}
+                </Button>
+              </form>
+
+              {/* Link recuperação */}
+              <div className="text-center">
                 <button
                   type="button"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={() => setShowPassword(!showPassword)}
-                  tabIndex={-1}
+                  className="text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
+                  onClick={() => toast({ title: 'Recuperação de senha', description: 'Entre em contato com o gestor do projeto para redefinir sua senha.' })}
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  Esqueceu sua senha?
                 </button>
               </div>
-              {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
-            </div>
 
-            <Button
-              type="submit"
-              className="w-full h-11 text-sm font-semibold gap-2"
-              style={{ backgroundColor: '#0DA3E7' }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0B8FCC')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0DA3E7')}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Acessando...
-                </>
-              ) : (
-                <>
-                  <LogIn className="h-4 w-4" />
-                  Acessar
-                </>
-              )}
-            </Button>
-          </form>
-
-          {/* Link recuperação */}
-          <div className="text-center">
-            <button
-              type="button"
-              className="text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
-              onClick={() => toast({ title: 'Recuperação de senha', description: 'Entre em contato com o gestor do projeto para redefinir sua senha.' })}
-            >
-              Esqueceu sua senha?
-            </button>
-          </div>
-
-          {/* Nota informativa */}
-          <p className="text-xs text-muted-foreground text-center leading-relaxed">
-            Suas credenciais são fornecidas pelo gestor do projeto.
-          </p>
+              {/* Nota informativa */}
+              <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                Suas credenciais são fornecidas pelo gestor do projeto.
+              </p>
+            </>
+          )}
         </div>
 
         {/* Footer institucional */}
