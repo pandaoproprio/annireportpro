@@ -217,7 +217,7 @@ export const Login: React.FC = () => {
 
         {/* Footer institucional */}
         <div className="mt-8 text-[13px] text-muted-foreground text-center" style={{ lineHeight: 1.8 }}>
-          <p>GIRA Relatórios — Módulo do GIRA ERP</p>
+          <p className="font-semibold">GIRA Relatórios — Módulo do GIRA ERP</p>
           <p>© {currentYear} AnnITech IT Solutions</p>
           <div className="flex items-center justify-center gap-1.5">
             <a href="/lgpd" className="hover:text-foreground hover:underline underline-offset-4">Política de Privacidade</a>
