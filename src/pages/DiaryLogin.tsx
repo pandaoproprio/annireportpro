@@ -4,9 +4,9 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { LogIn, Loader2 } from 'lucide-react';
-import logoGira from '@/assets/logotipo-gira-diario-de-bordo.png';
+import { LogIn, Loader2, Eye, EyeOff } from 'lucide-react';
+import logoGiraBranco from '@/assets/gira-logo-relatorios-branco.png';
+import logoGira from '@/assets/logo-gira.png';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 
@@ -16,26 +16,38 @@ const passwordSchema = z.string().min(6, 'A senha deve ter pelo menos 6 caracter
 export const DiaryLogin: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const validateInputs = () => {
+    let valid = true;
+    setEmailError('');
+    setPasswordError('');
+
     try {
       emailSchema.parse(email);
-      passwordSchema.parse(password);
-      return true;
     } catch (error) {
       if (error instanceof z.ZodError) {
-        toast({
-          variant: 'destructive',
-          title: 'Erro de validação',
-          description: error.errors[0].message
-        });
+        setEmailError(error.errors[0].message);
+        valid = false;
       }
-      return false;
     }
+
+    try {
+      passwordSchema.parse(password);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setPasswordError(error.errors[0].message);
+        valid = false;
+      }
+    }
+
+    return valid;
   };
 
   const handleSignIn = async (e: React.FormEvent) => {
@@ -64,81 +76,156 @@ export const DiaryLogin: React.FC = () => {
     navigate('/diario');
   };
 
+  const currentYear = new Date().getFullYear();
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden" style={{ backgroundColor: '#F5F7FA' }}>
-      {/* Decorative background elements */}
-      <div className="absolute top-0 left-0 w-72 h-72 bg-primary/3 rounded-full -translate-x-1/2 -translate-y-1/2 blur-3xl" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-accent/10 rounded-full translate-x-1/3 translate-y-1/3 blur-3xl" />
+    <div className="min-h-screen flex flex-col lg:flex-row">
+      {/* Painel esquerdo */}
+      <div
+        className="relative flex-shrink-0 lg:w-[52%] flex flex-col items-center justify-center px-10 py-14 lg:px-16 lg:py-20 overflow-hidden min-h-[50vh] lg:min-h-screen"
+        style={{ backgroundColor: '#0DA3E7' }}
+      >
+        {/* Círculos decorativos */}
+        <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute top-10 -left-10 w-48 h-48 rounded-full border border-white/10" />
+        <div className="pointer-events-none absolute -bottom-20 -right-20 w-64 h-64 rounded-full border border-white/10" />
 
-      <div className="w-full max-w-md animate-fadeIn relative z-10">
-        {/* Logo & Header */}
-        <div className="text-center mb-10">
-          <img src={logoGira} alt="GIRA Diário de Bordo" className="w-80 h-auto mx-auto" />
-          <p className="text-foreground/60 text-sm font-semibold uppercase tracking-wider -mt-20">CADA AÇÃO CONTA</p>
+        {/* Logo */}
+        <img
+          src={logoGiraBranco}
+          alt="GIRA Diário de Bordo"
+          className="h-40 lg:h-48 object-contain animate-fade-in"
+        />
+
+        {/* Lista de benefícios */}
+        <div className="space-y-5 mt-10">
+          <div className="flex items-start gap-4">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-white">1</span>
+            </div>
+            <p className="text-[15px] leading-relaxed text-white/90 pt-1">
+              Registre oficinas e atividades realizadas no projeto.
+            </p>
+          </div>
+          <div className="flex items-start gap-4">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-white">2</span>
+            </div>
+            <p className="text-[15px] leading-relaxed text-white/90 pt-1">
+              Acompanhe metas e resultados do projeto.
+            </p>
+          </div>
+          <div className="flex items-start gap-4">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+              <span className="text-sm font-bold text-white">3</span>
+            </div>
+            <p className="text-[15px] leading-relaxed text-white/90 pt-1">
+              Gere histórico organizado para prestação de contas.
+            </p>
+          </div>
         </div>
+      </div>
 
-        <Card className="shadow-2xl border border-border/40 backdrop-blur-sm bg-card/95">
-          <CardHeader className="text-center pt-10 pb-2 px-8">
-            <h1 className="text-2xl font-bold text-primary">Diário de Bordo</h1>
-          </CardHeader>
-          <CardContent className="px-8 pb-8">
-            <form onSubmit={handleSignIn} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="diary-email" className="text-sm font-medium">E-mail</Label>
-                <Input
-                  id="diary-email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="h-12 text-base rounded-lg bg-background/60 border-border/60 focus:bg-background transition-colors"
-                  disabled={isLoading}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="diary-password" className="text-sm font-medium">Senha</Label>
+      {/* Painel direito */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-muted/30">
+        <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7 animate-fade-in">
+          {/* Logo mobile */}
+          <div className="lg:hidden flex justify-center mb-2">
+            <img src={logoGira} alt="GIRA Diário de Bordo" className="w-12 h-12 object-contain" />
+          </div>
+
+          {/* Título e subtítulo */}
+          <div className="text-center space-y-1">
+            <h1 className="text-xl font-bold text-foreground">Acesse sua conta</h1>
+            <p className="text-sm text-muted-foreground">Entre com seu e-mail e senha para continuar.</p>
+          </div>
+
+          {/* Formulário */}
+          <form onSubmit={handleSignIn} className="space-y-5">
+            <div className="space-y-1.5">
+              <Label htmlFor="diary-email" className="text-sm font-medium text-foreground">E-mail</Label>
+              <Input
+                id="diary-email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setEmailError(''); }}
+                required
+                className={`h-11 ${emailError ? 'border-destructive' : ''}`}
+                disabled={isLoading}
+              />
+              {emailError && <p className="text-xs text-destructive">{emailError}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="diary-password" className="text-sm font-medium text-foreground">Senha</Label>
+              <div className="relative">
                 <Input
                   id="diary-password"
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
                   required
-                  className="h-12 text-base rounded-lg bg-background/60 border-border/60 focus:bg-background transition-colors"
+                  className={`h-11 pr-10 ${passwordError ? 'border-destructive' : ''}`}
                   disabled={isLoading}
                 />
-              </div>
-
-              <Button
-                type="submit"
-                className="w-full h-14 text-base font-bold rounded-lg hover:brightness-90 transition-all duration-300 ease-in-out [box-shadow:0_4px_14px_-3px_rgba(0,0,0,0.15)] hover:[box-shadow:0_6px_20px_-4px_rgba(0,0,0,0.2)]"
-                size="lg"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                ) : (
-                  <LogIn className="w-5 h-5 mr-2" />
-                )}
-                Acessar
-              </Button>
-
-              <div className="text-center">
                 <button
                   type="button"
-                  className="text-xs text-muted-foreground hover:text-foreground/70 underline-offset-4 hover:underline transition-colors"
-                  onClick={() => toast({ title: 'Recuperação de senha', description: 'Entre em contato com o gestor do projeto para redefinir sua senha.' })}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setShowPassword(!showPassword)}
+                  tabIndex={-1}
                 >
-                  Esqueceu sua senha?
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-            </form>
-          </CardContent>
-        </Card>
+              {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+            </div>
 
-        <div className="text-center text-xs mt-8" style={{ color: '#9CA3AF' }}>
-          <p>© 2026 AnnITech — Sistema GIRA Diário de Bordo</p>
+            <Button
+              type="submit"
+              className="w-full h-11 text-sm font-semibold gap-2"
+              style={{ backgroundColor: '#0DA3E7' }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0B8FCC')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0DA3E7')}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Acessando...
+                </>
+              ) : (
+                <>
+                  <LogIn className="h-4 w-4" />
+                  Acessar
+                </>
+              )}
+            </Button>
+          </form>
+
+          {/* Link recuperação */}
+          <div className="text-center">
+            <button
+              type="button"
+              className="text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
+              onClick={() => toast({ title: 'Recuperação de senha', description: 'Entre em contato com o gestor do projeto para redefinir sua senha.' })}
+            >
+              Esqueceu sua senha?
+            </button>
+          </div>
+        </div>
+
+        {/* Footer institucional */}
+        <div className="mt-8 text-[13px] text-muted-foreground text-center" style={{ lineHeight: 1.8 }}>
+          <p className="font-semibold">GIRA Diário de Bordo — Módulo do GIRA ERP</p>
+          <p>© {currentYear} AnnITech IT Solutions</p>
+          <div className="flex items-center justify-center gap-1.5">
+            <a href="/lgpd" className="hover:text-foreground hover:underline underline-offset-4">Política de Privacidade</a>
+            <span>·</span>
+            <a href="/licenca" className="hover:text-foreground hover:underline underline-offset-4">Termos de Uso</a>
+            <span>·</span>
+            <a href="/lgpd" className="hover:text-foreground hover:underline underline-offset-4">LGPD</a>
+          </div>
         </div>
       </div>
     </div>
