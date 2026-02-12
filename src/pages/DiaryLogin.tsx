@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { LogIn, Loader2, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { LogIn, Loader2, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
 import logoGiraBranco from '@/assets/gira-logo-relatorios-branco.png';
 import logoGira from '@/assets/logo-gira.png';
 import { useToast } from '@/hooks/use-toast';
@@ -145,12 +145,9 @@ export const DiaryLogin: React.FC = () => {
 
           {/* Badge informativo */}
           <div className="flex justify-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full border border-border bg-card text-sm text-muted-foreground">
-              <svg className="h-4 w-4 flex-shrink-0 text-green-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 12l2 2 4-4" />
-                <circle cx="12" cy="12" r="10" />
-              </svg>
-              <span>Acesso exclusivo para colaboradores cadastrados</span>
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Acesso exclusivo para colaboradores cadastrados
             </div>
           </div>
 
