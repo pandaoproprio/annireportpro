@@ -12,6 +12,7 @@ import { TermsOfUse } from '@/pages/TermsOfUse';
 import { DiaryLogin } from '@/pages/DiaryLogin';
 import { DiaryLayout } from '@/pages/DiaryLayout';
 import { Onboarding } from '@/pages/Onboarding';
+import { LgpdConsent } from '@/pages/LgpdConsent';
 import { ActivityManager } from '@/pages/ActivityManager';
 import { ReportGenerator } from '@/pages/ReportGenerator';
 import { TeamReportGenerator } from '@/pages/TeamReportGenerator';
@@ -219,6 +220,11 @@ export const AppRoutes: React.FC = () => {
       <Route path="/lgpd" element={<PrivacyPolicy />} />
       <Route path="/licenca" element={<TermsOfUse />} />
       <Route path="/diario/login" element={<DiaryLogin />} />
+      <Route path="/consentimento" element={
+        <ProtectedRoute>
+          <LgpdConsent />
+        </ProtectedRoute>
+      } />
       <Route path="/diario/*" element={
         <ProtectedRoute>
           <DiaryLayout />
