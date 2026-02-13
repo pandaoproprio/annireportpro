@@ -208,6 +208,18 @@ export const useProjects = () => {
     onError: (_err, _vars, context) => {
       context?.previousData?.forEach(([key, data]) => queryClient.setQueryData(key, data));
     },
+    onSuccess: (_, project) => {
+      if (user) {
+        logAuditEvent({
+          userId: user.id,
+          action: 'UPDATE',
+          entityType: 'project',
+          entityId: project.id,
+          entityName: project.name,
+          metadata: { updatedFields: Object.keys(project) },
+        });
+      }
+    },
     onSettled: () => invalidate(),
   });
 

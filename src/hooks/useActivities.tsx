@@ -182,6 +182,18 @@ export const useActivities = (projectId: string | null) => {
     onError: (_err, _vars, context) => {
       context?.previousData?.forEach(([key, data]: [any, any]) => queryClient.setQueryData(key, data));
     },
+    onSuccess: (_, activity) => {
+      if (user) {
+        logAuditEvent({
+          userId: user.id,
+          action: 'UPDATE',
+          entityType: 'activity',
+          entityId: activity.id,
+          entityName: activity.description?.substring(0, 60),
+          metadata: { type: activity.type, date: activity.date },
+        });
+      }
+    },
     onSettled: () => invalidate(),
   });
 
