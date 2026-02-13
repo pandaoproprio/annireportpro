@@ -12,42 +12,44 @@ if (import.meta.main) {
     }
 
     try {
-      const { email } = await req.json();
+      const { email, redirectUrl } = await req.json();
 
       if (!email) {
         return new Response(
           JSON.stringify({ error: 'Email é obrigatório' }),
-          { status: 400, headers: corsHeaders }
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       const supabase = createClient(
-        Deno.env.get('VITE_SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
 
-      // Usar resetPasswordForEmail do Supabase
+      // Use the frontend-provided redirect URL so the user lands on the app's reset page
+      const finalRedirect = redirectUrl || 'https://annireportpro.lovable.app/reset-password';
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${new URL(req.url).origin}/reset-password`,
+        redirectTo: finalRedirect,
       });
 
       if (error) {
         console.error('Password reset error:', error);
         return new Response(
           JSON.stringify({ error: error.message }),
-          { status: 400, headers: corsHeaders }
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       return new Response(
         JSON.stringify({ success: true, message: 'Email de recuperação enviado' }),
-        { status: 200, headers: corsHeaders }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } catch (error) {
       console.error('Function error:', error);
       return new Response(
         JSON.stringify({ error: 'Erro ao processar requisição' }),
-        { status: 500, headers: corsHeaders }
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
   };

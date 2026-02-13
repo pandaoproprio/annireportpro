@@ -2,3 +2,12 @@ project_id = "pmexspghvnabwxcnrstr"
 
 [functions.admin-users]
 verify_jwt = false
+
+[functions.send-password-reset]
+verify_jwt = false
+
+[functions.migrate-base64-photos]
+verify_jwt = false
+
+[functions.generate-narrative]
+verify_jwt = false

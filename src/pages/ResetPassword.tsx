@@ -1,53 +1,57 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Eye, EyeOff, CheckCircle } from 'lucide-react';
+import { Loader2, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 import { z } from 'zod';
 
 const passwordSchema = z.string().min(8, 'A senha deve ter pelo menos 8 caracteres');
 
 export const ResetPassword = () => {
-  const [searchParams] = useSearchParams();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [resetSuccess, setResetSuccess] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [invalidToken, setInvalidToken] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Verificar se há um token válido na URL
-    const checkToken = async () => {
-      setIsLoading(true);
-      const token = searchParams.get('token');
-
-      if (!token) {
-        toast({
-          variant: 'destructive',
-          title: 'Erro',
-          description: 'Token de recuperação inválido'
-        });
-        setTimeout(() => navigate('/login'), 2000);
+    // Listen for the PASSWORD_RECOVERY event from Supabase
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setSessionReady(true);
         setIsLoading(false);
-        return;
       }
+    });
 
-      // O Supabase já processa o token automaticamente via URL
-      setIsLoading(false);
-    };
+    // Also check if user already has a session (e.g. page was reloaded after recovery link)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setSessionReady(true);
+      }
+      // Give the auth listener a moment to fire PASSWORD_RECOVERY
+      setTimeout(() => {
+        setIsLoading(false);
+        if (!session) {
+          // No session and no recovery event — invalid/expired token
+          setInvalidToken(true);
+        }
+      }, 2000);
+    });
 
-    checkToken();
-  }, [searchParams, toast, navigate]);
+    return () => subscription.unsubscribe();
+  }, []);
 
   const validateInputs = () => {
     let valid = true;
@@ -73,7 +77,6 @@ export const ResetPassword = () => {
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateInputs()) return;
 
     setIsResettingPassword(true);
@@ -96,10 +99,8 @@ export const ResetPassword = () => {
         description: 'Sua senha foi alterada com sucesso'
       });
 
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000);
-    } catch (error) {
+      setTimeout(() => navigate('/login'), 2500);
+    } catch {
       toast({
         variant: 'destructive',
         title: 'Erro',
@@ -114,7 +115,37 @@ export const ResetPassword = () => {
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Verificando token...</p>
+          <p className="text-sm text-muted-foreground">Verificando link de recuperação...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (invalidToken && !sessionReady) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-muted/30">
+        <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7">
+          <div className="flex justify-center mb-2">
+            <img src={logoGira} alt="GIRA Relatórios" className="w-12 h-12 object-contain" />
+          </div>
+          <div className="flex flex-col items-center justify-center py-6 space-y-4">
+            <div className="w-12 h-12 rounded-full bg-destructive/10 flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 text-destructive" />
+            </div>
+            <p className="text-center text-sm font-medium text-foreground">
+              Link de recuperação inválido ou expirado
+            </p>
+            <p className="text-center text-xs text-muted-foreground">
+              Solicite um novo link de recuperação na página de login.
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/login')}
+            >
+              Voltar ao Login
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -123,12 +154,10 @@ export const ResetPassword = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-muted/30">
       <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7">
-        {/* Logo */}
         <div className="flex justify-center mb-2">
           <img src={logoGira} alt="GIRA Relatórios" className="w-12 h-12 object-contain" />
         </div>
 
-        {/* Título */}
         <div className="text-center space-y-1">
           <h1 className="text-xl font-bold text-foreground">Redefinir Senha</h1>
           <p className="text-sm text-muted-foreground">Digite sua nova senha abaixo</p>
@@ -158,10 +187,7 @@ export const ResetPassword = () => {
                   type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setPasswordError('');
-                  }}
+                  onChange={(e) => { setPassword(e.target.value); setPasswordError(''); }}
                   required
                   className={`h-11 pr-10 ${passwordError ? 'border-destructive' : ''}`}
                   disabled={isResettingPassword}
@@ -188,10 +214,7 @@ export const ResetPassword = () => {
                   type={showConfirmPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={confirmPassword}
-                  onChange={(e) => {
-                    setConfirmPassword(e.target.value);
-                    setConfirmPasswordError('');
-                  }}
+                  onChange={(e) => { setConfirmPassword(e.target.value); setConfirmPasswordError(''); }}
                   required
                   className={`h-11 pr-10 ${confirmPasswordError ? 'border-destructive' : ''}`}
                   disabled={isResettingPassword}
