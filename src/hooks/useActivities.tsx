@@ -64,7 +64,7 @@ const mapDbToActivity = (db: DbActivity): Activity => ({
 });
 
 export const useActivities = (projectId: string | null) => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,11 +77,16 @@ export const useActivities = (projectId: string | null) => {
       return;
     }
 
-    const { data, error } = await supabase
+    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    let query = supabase
       .from('activities')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('date', { ascending: false });
+      .select('*');
+
+    if (!isAdmin) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { data, error } = await query.order('date', { ascending: false });
 
     if (error) {
       console.error('Error fetching activities:', error);
@@ -151,7 +156,9 @@ export const useActivities = (projectId: string | null) => {
   const updateActivity = async (activity: Activity) => {
     if (!user) return;
 
-    const { error } = await supabase
+    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+
+    let query = supabase
       .from('activities')
       .update({
         project_id: activity.projectId,
@@ -169,8 +176,13 @@ export const useActivities = (projectId: string | null) => {
         attachments: activity.attachments,
         cost_evidence: activity.costEvidence || null
       })
-      .eq('id', activity.id)
-      .eq('user_id', user.id);
+      .eq('id', activity.id);
+
+    if (!isAdmin) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('Error updating activity:', error);
@@ -183,11 +195,18 @@ export const useActivities = (projectId: string | null) => {
   const deleteActivity = async (id: string) => {
     if (!user) return;
 
-    const { error } = await supabase
+    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+
+    let query = supabase
       .from('activities')
       .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
+      .eq('id', id);
+
+    if (!isAdmin) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('Error deleting activity:', error);
