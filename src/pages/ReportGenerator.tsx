@@ -200,17 +200,38 @@ export const ReportGenerator: React.FC = () => {
     }
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>, isSecondary = false) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isSecondary = false) => {
     if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (isSecondary) {
-          setLogoSecondary(reader.result as string);
-        } else {
-          setLogo(reader.result as string);
+      const file = e.target.files[0];
+      try {
+        const photoId = crypto.randomUUID();
+        const fileExt = file.name.split('.').pop() || 'png';
+        const filePath = `reports/${project?.id}/logos/${isSecondary ? 'secondary' : 'primary'}_${photoId}.${fileExt}`;
+        
+        const { error } = await supabase.storage
+          .from('team-report-photos')
+          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        
+        if (error) {
+          console.error('Logo upload error:', error);
+          toast.error('Erro ao enviar logo');
+          return;
         }
-      };
-      reader.readAsDataURL(e.target.files[0]);
+        
+        const { data: urlData } = supabase.storage
+          .from('team-report-photos')
+          .getPublicUrl(filePath);
+        
+        if (isSecondary) {
+          setLogoSecondary(urlData.publicUrl);
+        } else {
+          setLogo(urlData.publicUrl);
+        }
+        toast.success('Logo enviado com sucesso');
+      } catch (error) {
+        console.error('Logo upload error:', error);
+        toast.error('Erro ao processar logo');
+      }
     }
   };
 
