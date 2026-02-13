@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -29,73 +29,64 @@ export interface TeamReportDraft {
   updatedAt: string;
 }
 
+const mapRowToDraft = (row: any): TeamReportDraft => ({
+  id: row.id,
+  projectId: row.project_id,
+  teamMemberId: row.team_member_id,
+  providerName: row.provider_name,
+  providerDocument: row.provider_document,
+  responsibleName: row.responsible_name,
+  functionRole: row.function_role,
+  periodStart: row.period_start,
+  periodEnd: row.period_end,
+  executionReport: row.execution_report,
+  photos: row.photos || [],
+  photoCaptions: (row.photo_captions as unknown as PhotoWithCaption[]) || [],
+  reportTitle: row.report_title || 'RELATÓRIO DA EQUIPE DE TRABALHO',
+  executionReportTitle: row.execution_report_title || '2. Relato de Execução da Coordenação do Projeto',
+  attachmentsTitle: row.attachments_title || '3. Anexos de Comprovação',
+  additionalSections: (row.additional_sections as unknown as AdditionalSection[]) || [],
+  footerText: row.footer_text || '',
+  isDraft: row.is_draft ?? true,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at,
+});
+
+const fetchDraftsFromDb = async (
+  userId: string,
+  isAdmin: boolean,
+  projectId: string
+): Promise<TeamReportDraft[]> => {
+  let query = supabase
+    .from('team_reports')
+    .select('*')
+    .eq('project_id', projectId);
+
+  if (!isAdmin) query = query.eq('user_id', userId);
+
+  const { data, error } = await query.order('updated_at', { ascending: false });
+  if (error) throw error;
+  return (data || []).map(mapRowToDraft);
+};
+
 export const useTeamReports = (projectId?: string) => {
   const { user, role } = useAuth();
-  const [drafts, setDrafts] = useState<TeamReportDraft[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
-  // Fetch drafts for the current project
-  const fetchDrafts = async () => {
-    if (!user || !projectId) return;
+  const { data: drafts = [], isLoading } = useQuery({
+    queryKey: ['team-reports', user?.id, isAdmin, projectId],
+    queryFn: () => fetchDraftsFromDb(user!.id, isAdmin, projectId!),
+    enabled: !!user && !!projectId,
+    staleTime: 30_000,
+  });
 
-    setIsLoading(true);
-    try {
-      const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-      let query = supabase
-        .from('team_reports')
-        .select('*')
-        .eq('project_id', projectId);
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['team-reports'] });
 
-      if (!isAdmin) {
-        query = query.eq('user_id', user.id);
-      }
+  const saveDraftMutation = useMutation({
+    mutationFn: async (draft: Omit<TeamReportDraft, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => {
+      if (!user || !projectId) throw new Error('Invalid');
 
-      const { data, error } = await query.order('updated_at', { ascending: false });
-
-      if (error) throw error;
-
-      const mappedDrafts: TeamReportDraft[] = (data || []).map((row: any) => ({
-        id: row.id,
-        projectId: row.project_id,
-        teamMemberId: row.team_member_id,
-        providerName: row.provider_name,
-        providerDocument: row.provider_document,
-        responsibleName: row.responsible_name,
-        functionRole: row.function_role,
-        periodStart: row.period_start,
-        periodEnd: row.period_end,
-        executionReport: row.execution_report,
-        photos: row.photos || [],
-        photoCaptions: (row.photo_captions as unknown as PhotoWithCaption[]) || [],
-        reportTitle: row.report_title || 'RELATÓRIO DA EQUIPE DE TRABALHO',
-        executionReportTitle: row.execution_report_title || '2. Relato de Execução da Coordenação do Projeto',
-        attachmentsTitle: row.attachments_title || '3. Anexos de Comprovação',
-        additionalSections: (row.additional_sections as unknown as AdditionalSection[]) || [],
-        footerText: row.footer_text || '',
-        isDraft: row.is_draft ?? true,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-      }));
-
-      setDrafts(mappedDrafts);
-    } catch (error) {
-      console.error('Error fetching drafts:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchDrafts();
-  }, [user, projectId]);
-
-  // Save or update a draft
-  const saveDraft = async (draft: Omit<TeamReportDraft, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => {
-    if (!user || !projectId) return null;
-
-    setIsSaving(true);
-    try {
       const reportData = {
         project_id: projectId,
         user_id: user.id,
@@ -118,91 +109,58 @@ export const useTeamReports = (projectId?: string) => {
       };
 
       if (draft.id) {
-        // Update existing draft
-        const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-
         let query = supabase
           .from('team_reports')
           .update(reportData)
           .eq('id', draft.id);
-
-        if (!isAdmin) {
-          query = query.eq('user_id', user.id);
-        }
-
-        const { data, error } = await query
-          .select()
-          .single();
-
+        if (!isAdmin) query = query.eq('user_id', user.id);
+        const { data, error } = await query.select().single();
         if (error) throw error;
-        await fetchDrafts();
         return data?.id;
       } else {
-        // Create new draft
         const { data, error } = await supabase
           .from('team_reports')
           .insert(reportData)
           .select()
           .single();
-
         if (error) throw error;
-        await fetchDrafts();
         return data?.id;
       }
-    } catch (error) {
-      console.error('Error saving draft:', error);
-      toast.error('Erro ao salvar rascunho');
-      return null;
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    },
+    onSuccess: () => invalidate(),
+    onError: () => toast.error('Erro ao salvar rascunho'),
+  });
 
-  // Delete a draft
-  const deleteDraft = async (draftId: string) => {
-    if (!user) return false;
-
-    try {
-      const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const deleteDraftMutation = useMutation({
+    mutationFn: async (draftId: string) => {
+      if (!user) throw new Error('Not authenticated');
       const draftToDelete = drafts.find(d => d.id === draftId);
-
       let query = supabase
         .from('team_reports')
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', draftId);
-
-      if (!isAdmin) {
-        query = query.eq('user_id', user.id);
-      }
-
+      if (!isAdmin) query = query.eq('user_id', user.id);
       const { error } = await query;
-
       if (error) throw error;
-
-      await logAuditEvent({
-        userId: user.id,
-        action: 'DELETE',
-        entityType: 'team_reports',
-        entityId: draftId,
-        entityName: draftToDelete?.providerName,
-      });
-
-      await fetchDrafts();
+      await logAuditEvent({ userId: user.id, action: 'DELETE', entityType: 'team_reports', entityId: draftId, entityName: draftToDelete?.providerName });
+    },
+    onSuccess: () => {
+      invalidate();
       toast.success('Rascunho excluído');
-      return true;
-    } catch (error) {
-      console.error('Error deleting draft:', error);
-      toast.error('Erro ao excluir rascunho');
-      return false;
-    }
-  };
+    },
+    onError: () => toast.error('Erro ao excluir rascunho'),
+  });
 
   return {
     drafts,
     isLoading,
-    isSaving,
-    saveDraft,
-    deleteDraft,
-    refetch: fetchDrafts,
+    isSaving: saveDraftMutation.isPending,
+    saveDraft: async (draft: Omit<TeamReportDraft, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }) => {
+      try { return await saveDraftMutation.mutateAsync(draft); } catch { return null; }
+    },
+    deleteDraft: async (draftId: string) => {
+      try { await deleteDraftMutation.mutateAsync(draftId); return true; } catch { return false; }
+    },
+    refetch: () => invalidate(),
   };
 };

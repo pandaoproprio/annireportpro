@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Project, Goal, TeamMember, ReportData } from '@/types';
@@ -48,286 +49,222 @@ const mapDbToProject = (db: DbProject): Project => ({
   reportData: (db.report_data as ReportData) || {}
 });
 
+const fetchProjectsFromDb = async (
+  userId: string,
+  isAdmin: boolean,
+  page: number,
+  pageSize: number
+): Promise<{ projects: Project[]; total: number }> => {
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+
+  if (isAdmin) {
+    const { data, error, count } = await supabase
+      .from('projects')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to);
+
+    if (error) throw error;
+    return {
+      projects: ((data as DbProject[]) || []).map(mapDbToProject),
+      total: count || 0,
+    };
+  }
+
+  // Regular users: own + collaborator projects
+  const { data: ownData, error: ownError } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (ownError) throw ownError;
+
+  const { data: collabLinks } = await supabase
+    .from('project_collaborators')
+    .select('project_id')
+    .eq('user_id', userId);
+
+  let collabData: DbProject[] = [];
+  if (collabLinks && collabLinks.length > 0) {
+    const collabIds = collabLinks.map(c => c.project_id);
+    const { data: cp } = await supabase
+      .from('projects')
+      .select('*')
+      .in('id', collabIds);
+    if (cp) collabData = cp as DbProject[];
+  }
+
+  const allUserProjects = [
+    ...((ownData as DbProject[]) || []),
+    ...collabData.filter(c => !(ownData || []).some(o => o.id === c.id)),
+  ];
+
+  return {
+    projects: allUserProjects.slice(from, to + 1).map(mapDbToProject),
+    total: allUserProjects.length,
+  };
+};
+
 export const useProjects = () => {
   const { user, role } = useAuth();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const queryClient = useQueryClient();
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [pagination, setPagination] = useState({ page: 0, pageSize: 50, total: 0 });
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
 
-  const fetchProjects = useCallback(async (page: number = 0) => {
-    if (!user) {
-      setProjects([]);
-      setActiveProjectId(null);
-      setIsLoading(false);
-      return;
-    }
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    const from = page * pagination.pageSize;
-    const to = from + pagination.pageSize - 1;
+  const { data, isLoading } = useQuery({
+    queryKey: ['projects', user?.id, isAdmin, page, pageSize],
+    queryFn: () => fetchProjectsFromDb(user!.id, isAdmin, page, pageSize),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
 
-    let data: DbProject[] = [];
+  const projects = data?.projects || [];
+  const total = data?.total || 0;
 
-    if (isAdmin) {
-      // Admins and Super Admins see ALL projects
-      const { data: allData, error, count } = await supabase
+  // Auto-select first project
+  if (projects.length > 0 && !activeProjectId) {
+    setActiveProjectId(projects[0].id);
+  }
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['projects'] });
+
+  const addProjectMutation = useMutation({
+    mutationFn: async (project: Omit<Project, 'id'>) => {
+      if (!user) throw new Error('Not authenticated');
+      const { data, error } = await supabase
         .from('projects')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false })
-        .range(from, to);
+        .insert({
+          user_id: user.id,
+          organization_name: project.organizationName,
+          organization_address: project.organizationAddress || null,
+          organization_website: project.organizationWebsite || null,
+          organization_email: project.organizationEmail || null,
+          organization_phone: project.organizationPhone || null,
+          name: project.name,
+          fomento_number: project.fomentoNumber,
+          funder: project.funder,
+          start_date: project.startDate,
+          end_date: project.endDate,
+          object: project.object,
+          summary: project.summary,
+          goals: project.goals as unknown as Json,
+          team: project.team as unknown as Json,
+          locations: project.locations,
+          report_data: (project.reportData || {}) as unknown as Json
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return mapDbToProject(data as DbProject);
+    },
+    onSuccess: (newProject) => {
+      invalidate();
+      setActiveProjectId(newProject.id);
+    },
+  });
 
-      if (error) {
-        console.error('Error fetching projects:', error);
-        setIsLoading(false);
-        return;
-      }
-      data = (allData as DbProject[]) || [];
-      setPagination({ page, pageSize: pagination.pageSize, total: count || 0 });
-    } else {
-      // Regular users: own projects + collaborator projects
-      const { data: ownData, error: ownError, count: ownCount } = await supabase
+  const updateProjectMutation = useMutation({
+    mutationFn: async (project: Project) => {
+      if (!user) throw new Error('Not authenticated');
+      let query = supabase
         .from('projects')
-        .select('*', { count: 'exact' })
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
+        .update({
+          organization_name: project.organizationName,
+          organization_address: project.organizationAddress || null,
+          organization_website: project.organizationWebsite || null,
+          organization_email: project.organizationEmail || null,
+          organization_phone: project.organizationPhone || null,
+          name: project.name,
+          fomento_number: project.fomentoNumber,
+          funder: project.funder,
+          start_date: project.startDate,
+          end_date: project.endDate,
+          object: project.object,
+          summary: project.summary,
+          goals: project.goals as unknown as Json,
+          team: project.team as unknown as Json,
+          locations: project.locations,
+          report_data: (project.reportData || {}) as unknown as Json
+        })
+        .eq('id', project.id);
+      if (!isAdmin) query = query.eq('user_id', user.id);
+      const { error } = await query;
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate(),
+  });
 
-      const { data: collabLinks } = await supabase
-        .from('project_collaborators')
-        .select('project_id')
-        .eq('user_id', user.id);
-
-      let collabData: DbProject[] = [];
-      if (collabLinks && collabLinks.length > 0) {
-        const collabIds = collabLinks.map(c => c.project_id);
-        const { data: cp } = await supabase
-          .from('projects')
-          .select('*')
-          .in('id', collabIds);
-        if (cp) collabData = cp as DbProject[];
-      }
-
-      if (ownError) {
-        console.error('Error fetching projects:', ownError);
-        setIsLoading(false);
-        return;
-      }
-
-      const allUserProjects = [
-        ...((ownData as DbProject[]) || []),
-        ...collabData.filter(c => !(ownData || []).some(o => o.id === c.id)),
-      ];
-      
-      data = allUserProjects.slice(from, to + 1);
-      setPagination({ page, pageSize: pagination.pageSize, total: allUserProjects.length });
-    }
-
-    const mappedProjects = data.map(mapDbToProject);
-    setProjects(mappedProjects);
-    
-    if (mappedProjects.length > 0 && !activeProjectId) {
-      setActiveProjectId(mappedProjects[0].id);
-    }
-    
-    setIsLoading(false);
-  }, [user, role, pagination.pageSize]);
-
-  useEffect(() => {
-    fetchProjects(0);
-  }, [fetchProjects]);
-
-  const addProject = async (project: Omit<Project, 'id'>) => {
-    if (!user) return null;
-
-    const { data, error } = await supabase
-      .from('projects')
-      .insert({
-        user_id: user.id,
-        organization_name: project.organizationName,
-        organization_address: project.organizationAddress || null,
-        organization_website: project.organizationWebsite || null,
-        organization_email: project.organizationEmail || null,
-        organization_phone: project.organizationPhone || null,
-        name: project.name,
-        fomento_number: project.fomentoNumber,
-        funder: project.funder,
-        start_date: project.startDate,
-        end_date: project.endDate,
-        object: project.object,
-        summary: project.summary,
-        goals: project.goals as unknown as Json,
-        team: project.team as unknown as Json,
-        locations: project.locations,
-        report_data: (project.reportData || {}) as unknown as Json
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding project:', error);
-      return null;
-    }
-
-    const newProject = mapDbToProject(data as DbProject);
-    setProjects(prev => [newProject, ...prev]);
-    setActiveProjectId(newProject.id);
-    return newProject;
-  };
-
-  const updateProject = async (project: Project) => {
-    if (!user) return;
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-
-    let query = supabase
-      .from('projects')
-      .update({
-        organization_name: project.organizationName,
-        organization_address: project.organizationAddress || null,
-        organization_website: project.organizationWebsite || null,
-        organization_email: project.organizationEmail || null,
-        organization_phone: project.organizationPhone || null,
-        name: project.name,
-        fomento_number: project.fomentoNumber,
-        funder: project.funder,
-        start_date: project.startDate,
-        end_date: project.endDate,
-        object: project.object,
-        summary: project.summary,
-        goals: project.goals as unknown as Json,
-        team: project.team as unknown as Json,
-        locations: project.locations,
-        report_data: (project.reportData || {}) as unknown as Json
-      })
-      .eq('id', project.id);
-
-    if (!isAdmin) {
-      query = query.eq('user_id', user.id);
-    }
-
-    const { error } = await query;
-
-    if (error) {
-      console.error('Error updating project:', error);
-      return;
-    }
-
-    setProjects(prev => prev.map(p => p.id === project.id ? project : p));
-  };
-
-  const removeProject = async (id: string) => {
-    if (!user) return;
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    const projectToDelete = projects.find(p => p.id === id);
-
-    let query = supabase
-      .from('projects')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (!isAdmin) {
-      query = query.eq('user_id', user.id);
-    }
-
-    const { error } = await query;
-
-    if (error) {
-      console.error('Error removing project:', error);
-      return;
-    }
-
-    await logAuditEvent({
-      userId: user.id,
-      action: 'DELETE',
-      entityType: 'projects',
-      entityId: id,
-      entityName: projectToDelete?.name,
-    });
-
-    setProjects(prev => {
-      const newProjects = prev.filter(p => p.id !== id);
+  const removeProjectMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error('Not authenticated');
+      let query = supabase
+        .from('projects')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      if (!isAdmin) query = query.eq('user_id', user.id);
+      const { error } = await query;
+      if (error) throw error;
+      const p = projects.find(p => p.id === id);
+      await logAuditEvent({ userId: user.id, action: 'DELETE', entityType: 'projects', entityId: id, entityName: p?.name });
+      return id;
+    },
+    onSuccess: (id) => {
       if (id === activeProjectId) {
-        setActiveProjectId(newProjects.length > 0 ? newProjects[0].id : null);
+        const remaining = projects.filter(p => p.id !== id);
+        setActiveProjectId(remaining.length > 0 ? remaining[0].id : null);
       }
-      return newProjects;
-    });
-  };
+      invalidate();
+    },
+  });
 
-  const removeMultipleProjects = async (ids: string[]) => {
-    if (!user || ids.length === 0) return;
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    const projectsToDelete = projects.filter(p => ids.includes(p.id));
-
-    let query = supabase
-      .from('projects')
-      .update({ deleted_at: new Date().toISOString() })
-      .in('id', ids);
-
-    if (!isAdmin) {
-      query = query.eq('user_id', user.id);
-    }
-
-    const { error } = await query;
-
-    if (error) {
-      console.error('Error removing projects:', error);
-      throw error;
-    }
-
-    for (const p of projectsToDelete) {
-      await logAuditEvent({
-        userId: user.id,
-        action: 'DELETE',
-        entityType: 'projects',
-        entityId: p.id,
-        entityName: p.name,
-      });
-    }
-
-    setProjects(prev => {
-      const newProjects = prev.filter(p => !ids.includes(p.id));
+  const removeMultipleProjectsMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (!user || ids.length === 0) throw new Error('Invalid');
+      let query = supabase
+        .from('projects')
+        .update({ deleted_at: new Date().toISOString() })
+        .in('id', ids);
+      if (!isAdmin) query = query.eq('user_id', user.id);
+      const { error } = await query;
+      if (error) throw error;
+      const toDelete = projects.filter(p => ids.includes(p.id));
+      for (const p of toDelete) {
+        await logAuditEvent({ userId: user.id, action: 'DELETE', entityType: 'projects', entityId: p.id, entityName: p.name });
+      }
+      return ids;
+    },
+    onSuccess: (ids) => {
       if (activeProjectId && ids.includes(activeProjectId)) {
-        setActiveProjectId(newProjects.length > 0 ? newProjects[0].id : null);
+        const remaining = projects.filter(p => !ids.includes(p.id));
+        setActiveProjectId(remaining.length > 0 ? remaining[0].id : null);
       }
-      return newProjects;
-    });
-  };
+      invalidate();
+    },
+  });
 
-  const switchProject = (id: string) => {
-    setActiveProjectId(id);
-  };
-
-  const updateReportData = async (data: Partial<ReportData>) => {
-    const activeProject = projects.find(p => p.id === activeProjectId);
-    if (!activeProject) return;
-
-    const updatedProject = {
-      ...activeProject,
-      reportData: {
-        ...activeProject.reportData,
-        ...data
-      }
-    };
-
-    await updateProject(updatedProject);
-  };
   const activeProject = projects.find(p => p.id === activeProjectId) || null;
 
-  const goToPage = (page: number) => {
-    fetchProjects(page);
+  const updateReportData = async (reportData: Partial<ReportData>) => {
+    if (!activeProject) return;
+    await updateProjectMutation.mutateAsync({
+      ...activeProject,
+      reportData: { ...activeProject.reportData, ...reportData },
+    });
   };
 
+  const pagination = { page, pageSize, total };
+
+  const goToPage = (p: number) => setPage(p);
   const nextPage = () => {
-    const maxPage = Math.ceil(pagination.total / pagination.pageSize) - 1;
-    if (pagination.page < maxPage) {
-      goToPage(pagination.page + 1);
-    }
+    const maxPage = Math.ceil(total / pageSize) - 1;
+    if (page < maxPage) setPage(page + 1);
   };
-
-  const prevPage = () => {
-    if (pagination.page > 0) {
-      goToPage(pagination.page - 1);
-    }
-  };
+  const prevPage = () => { if (page > 0) setPage(page - 1); };
 
   return {
     projects,
@@ -338,12 +275,20 @@ export const useProjects = () => {
     goToPage,
     nextPage,
     prevPage,
-    addProject,
-    updateProject,
-    removeProject,
-    removeMultipleProjects,
-    switchProject,
+    addProject: async (project: Omit<Project, 'id'>) => {
+      try { return await addProjectMutation.mutateAsync(project); } catch { return null; }
+    },
+    updateProject: async (project: Project) => {
+      try { await updateProjectMutation.mutateAsync(project); } catch { /* handled */ }
+    },
+    removeProject: async (id: string) => {
+      try { await removeProjectMutation.mutateAsync(id); } catch { /* handled */ }
+    },
+    removeMultipleProjects: async (ids: string[]) => {
+      try { await removeMultipleProjectsMutation.mutateAsync(ids); } catch { throw ids; }
+    },
+    switchProject: (id: string) => setActiveProjectId(id),
     updateReportData,
-    refetch: fetchProjects
+    refetch: () => invalidate(),
   };
 };

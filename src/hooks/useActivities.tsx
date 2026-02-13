@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Activity, ActivityType } from '@/types';
@@ -64,183 +65,138 @@ const mapDbToActivity = (db: DbActivity): Activity => ({
   costEvidence: db.cost_evidence || undefined
 });
 
+const fetchActivitiesFromDb = async (
+  userId: string,
+  isAdmin: boolean,
+  projectId: string | null,
+  page: number,
+  pageSize: number
+): Promise<{ activities: Activity[]; total: number }> => {
+  const from = page * pageSize;
+  const to = from + pageSize - 1;
+
+  let query = supabase
+    .from('activities')
+    .select('*', { count: 'exact' });
+
+  if (!isAdmin) query = query.eq('user_id', userId);
+  if (projectId) query = query.eq('project_id', projectId);
+
+  const { data, error, count } = await query
+    .order('date', { ascending: false })
+    .range(from, to);
+
+  if (error) throw error;
+
+  return {
+    activities: (data as DbActivity[]).map(mapDbToActivity),
+    total: count || 0,
+  };
+};
+
 export const useActivities = (projectId: string | null) => {
   const { user, role } = useAuth();
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [pagination, setPagination] = useState({ page: 0, pageSize: 50, total: 0 });
+  const queryClient = useQueryClient();
+  const [page, setPage] = useState(0);
+  const pageSize = 50;
 
-  const fetchActivities = useCallback(async (page: number = 0) => {
-    if (!user) {
-      setActivities([]);
-      setIsLoading(false);
-      return;
-    }
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    const from = page * pagination.pageSize;
-    const to = from + pagination.pageSize - 1;
+  const { data, isLoading } = useQuery({
+    queryKey: ['activities', user?.id, isAdmin, projectId, page, pageSize],
+    queryFn: () => fetchActivitiesFromDb(user!.id, isAdmin, projectId, page, pageSize),
+    enabled: !!user,
+    staleTime: 30_000,
+  });
 
-    let query = supabase
-      .from('activities')
-      .select('*', { count: 'exact' });
+  const activities = data?.activities || [];
+  const total = data?.total || 0;
 
-    if (!isAdmin) {
-      query = query.eq('user_id', user.id);
-    }
-    
-    if (projectId) {
-      query = query.eq('project_id', projectId);
-    }
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['activities'] });
 
-    const { data, error, count } = await query
-      .order('date', { ascending: false })
-      .range(from, to);
+  const addActivityMutation = useMutation({
+    mutationFn: async (activity: Omit<Activity, 'id'>) => {
+      if (!user) throw new Error('Not authenticated');
+      const { data, error } = await supabase
+        .from('activities')
+        .insert({
+          user_id: user.id,
+          project_id: activity.projectId,
+          goal_id: activity.goalId || null,
+          date: activity.date,
+          end_date: activity.endDate || null,
+          location: activity.location,
+          type: enumToDbType[activity.type],
+          description: activity.description,
+          results: activity.results,
+          challenges: activity.challenges,
+          attendees_count: activity.attendeesCount,
+          team_involved: activity.teamInvolved,
+          photos: activity.photos,
+          attachments: activity.attachments,
+          cost_evidence: activity.costEvidence || null
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return mapDbToActivity(data as DbActivity);
+    },
+    onSuccess: () => invalidate(),
+  });
 
-    if (error) {
-      console.error('Error fetching activities:', error);
-      setIsLoading(false);
-      return;
-    }
+  const updateActivityMutation = useMutation({
+    mutationFn: async (activity: Activity) => {
+      if (!user) throw new Error('Not authenticated');
+      let query = supabase
+        .from('activities')
+        .update({
+          project_id: activity.projectId,
+          goal_id: activity.goalId || null,
+          date: activity.date,
+          end_date: activity.endDate || null,
+          location: activity.location,
+          type: enumToDbType[activity.type],
+          description: activity.description,
+          results: activity.results,
+          challenges: activity.challenges,
+          attendees_count: activity.attendeesCount,
+          team_involved: activity.teamInvolved,
+          photos: activity.photos,
+          attachments: activity.attachments,
+          cost_evidence: activity.costEvidence || null
+        })
+        .eq('id', activity.id);
+      if (!isAdmin) query = query.eq('user_id', user.id);
+      const { error } = await query;
+      if (error) throw error;
+    },
+    onSuccess: () => invalidate(),
+  });
 
-    const mappedActivities = (data as DbActivity[]).map(mapDbToActivity);
-    setActivities(mappedActivities);
-    setPagination({
-      page,
-      pageSize: pagination.pageSize,
-      total: count || 0
-    });
-    
-    setIsLoading(false);
-  }, [user, role, projectId, pagination.pageSize]);
+  const deleteActivityMutation = useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error('Not authenticated');
+      let query = supabase
+        .from('activities')
+        .update({ deleted_at: new Date().toISOString() })
+        .eq('id', id);
+      if (!isAdmin) query = query.eq('user_id', user.id);
+      const { error } = await query;
+      if (error) throw error;
+      const a = activities.find(a => a.id === id);
+      await logAuditEvent({ userId: user.id, action: 'DELETE', entityType: 'activities', entityId: id, entityName: a?.description?.substring(0, 100) });
+    },
+    onSuccess: () => invalidate(),
+  });
 
-  useEffect(() => {
-    fetchActivities(0);
-  }, [fetchActivities]);
+  const pagination = { page, pageSize, total };
 
-  const addActivity = async (activity: Omit<Activity, 'id'>) => {
-    if (!user) return null;
-
-    const { data, error } = await supabase
-      .from('activities')
-      .insert({
-        user_id: user.id,
-        project_id: activity.projectId,
-        goal_id: activity.goalId || null,
-        date: activity.date,
-        end_date: activity.endDate || null,
-        location: activity.location,
-        type: enumToDbType[activity.type],
-        description: activity.description,
-        results: activity.results,
-        challenges: activity.challenges,
-        attendees_count: activity.attendeesCount,
-        team_involved: activity.teamInvolved,
-        photos: activity.photos,
-        attachments: activity.attachments,
-        cost_evidence: activity.costEvidence || null
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding activity:', error);
-      return null;
-    }
-
-    const newActivity = mapDbToActivity(data as DbActivity);
-    setActivities(prev => [newActivity, ...prev]);
-    return newActivity;
-  };
-
-  const updateActivity = async (activity: Activity) => {
-    if (!user) return;
-
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-
-    let query = supabase
-      .from('activities')
-      .update({
-        project_id: activity.projectId,
-        goal_id: activity.goalId || null,
-        date: activity.date,
-        end_date: activity.endDate || null,
-        location: activity.location,
-        type: enumToDbType[activity.type],
-        description: activity.description,
-        results: activity.results,
-        challenges: activity.challenges,
-        attendees_count: activity.attendeesCount,
-        team_involved: activity.teamInvolved,
-        photos: activity.photos,
-        attachments: activity.attachments,
-        cost_evidence: activity.costEvidence || null
-      })
-      .eq('id', activity.id);
-
-    if (!isAdmin) {
-      query = query.eq('user_id', user.id);
-    }
-
-    const { error } = await query;
-
-    if (error) {
-      console.error('Error updating activity:', error);
-      return;
-    }
-
-    setActivities(prev => prev.map(a => a.id === activity.id ? activity : a));
-  };
-
-  const deleteActivity = async (id: string) => {
-    if (!user) return;
-
-    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    const activityToDelete = activities.find(a => a.id === id);
-
-    let query = supabase
-      .from('activities')
-      .update({ deleted_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (!isAdmin) {
-      query = query.eq('user_id', user.id);
-    }
-
-    const { error } = await query;
-
-    if (error) {
-      console.error('Error deleting activity:', error);
-      return;
-    }
-
-    await logAuditEvent({
-      userId: user.id,
-      action: 'DELETE',
-      entityType: 'activities',
-      entityId: id,
-      entityName: activityToDelete?.description?.substring(0, 100),
-    });
-
-    setActivities(prev => prev.filter(a => a.id !== id));
-  };
-
-  const goToPage = (page: number) => {
-    fetchActivities(page);
-  };
-
+  const goToPage = (p: number) => setPage(p);
   const nextPage = () => {
-    const maxPage = Math.ceil(pagination.total / pagination.pageSize) - 1;
-    if (pagination.page < maxPage) {
-      goToPage(pagination.page + 1);
-    }
+    const maxPage = Math.ceil(total / pageSize) - 1;
+    if (page < maxPage) setPage(page + 1);
   };
-
-  const prevPage = () => {
-    if (pagination.page > 0) {
-      goToPage(pagination.page - 1);
-    }
-  };
+  const prevPage = () => { if (page > 0) setPage(page - 1); };
 
   return {
     activities,
@@ -249,9 +205,15 @@ export const useActivities = (projectId: string | null) => {
     goToPage,
     nextPage,
     prevPage,
-    addActivity,
-    updateActivity,
-    deleteActivity,
-    refetch: fetchActivities
+    addActivity: async (activity: Omit<Activity, 'id'>) => {
+      try { return await addActivityMutation.mutateAsync(activity); } catch { return null; }
+    },
+    updateActivity: async (activity: Activity) => {
+      try { await updateActivityMutation.mutateAsync(activity); } catch { /* handled */ }
+    },
+    deleteActivity: async (id: string) => {
+      try { await deleteActivityMutation.mutateAsync(id); } catch { /* handled */ }
+    },
+    refetch: () => invalidate(),
   };
 };
