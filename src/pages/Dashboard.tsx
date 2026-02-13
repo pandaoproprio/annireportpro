@@ -7,6 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target } from 'lucide-react';
+import { ActivitiesByMonthChart } from '@/components/dashboard/ActivitiesByMonthChart';
+import { ActivityTypesChart } from '@/components/dashboard/ActivityTypesChart';
+import { AttendeesByGoalChart } from '@/components/dashboard/AttendeesByGoalChart';
 
 const DashboardSkeleton = () => (
   <div className="space-y-6 animate-fadeIn">
@@ -97,6 +100,20 @@ export const Dashboard: React.FC = () => {
           <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} />
         ))}
       </div>
+
+      {/* Analytics Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <ActivitiesByMonthChart
+          activities={activities}
+          startDate={project.startDate}
+          endDate={project.endDate}
+        />
+        <ActivityTypesChart activities={activities} />
+      </div>
+
+      {activities.length > 0 && project.goals.length > 0 && (
+        <AttendeesByGoalChart activities={activities} goals={project.goals} />
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Goals Progress */}
