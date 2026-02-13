@@ -1,24 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppData } from '@/contexts/AppDataContext';
 import { SidebarLink } from '@/components/SidebarLink';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
-import { Dashboard } from '@/pages/Dashboard';
 import { Login } from '@/pages/Login';
 import { ResetPassword } from '@/pages/ResetPassword';
 import { PrivacyPolicy } from '@/pages/PrivacyPolicy';
 import { TermsOfUse } from '@/pages/TermsOfUse';
 import { DiaryLogin } from '@/pages/DiaryLogin';
-import { DiaryLayout } from '@/pages/DiaryLayout';
-import { Onboarding } from '@/pages/Onboarding';
-import { LgpdConsent } from '@/pages/LgpdConsent';
-import { ActivityManager } from '@/pages/ActivityManager';
-import { ReportGenerator } from '@/pages/ReportGenerator';
-import { TeamReportGenerator } from '@/pages/TeamReportGenerator';
-import { Settings } from '@/pages/Settings';
-import { UserManagement } from '@/pages/UserManagement';
-import { TeamManagement } from '@/pages/TeamManagement';
+import { InstallPrompt } from '@/components/InstallPrompt';
+import { OfflineBadge } from '@/components/OfflineBadge';
 import { Button } from '@/components/ui/button';
 import { 
   Select, 
@@ -27,11 +19,32 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
   Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound 
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
+
+// Lazy-loaded pages
+const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const ActivityManager = lazy(() => import('@/pages/ActivityManager').then(m => ({ default: m.ActivityManager })));
+const ReportGenerator = lazy(() => import('@/pages/ReportGenerator').then(m => ({ default: m.ReportGenerator })));
+const TeamReportGenerator = lazy(() => import('@/pages/TeamReportGenerator').then(m => ({ default: m.TeamReportGenerator })));
+const Settings = lazy(() => import('@/pages/Settings').then(m => ({ default: m.Settings })));
+const UserManagement = lazy(() => import('@/pages/UserManagement').then(m => ({ default: m.UserManagement })));
+const TeamManagement = lazy(() => import('@/pages/TeamManagement').then(m => ({ default: m.TeamManagement })));
+const DiaryLayout = lazy(() => import('@/pages/DiaryLayout').then(m => ({ default: m.DiaryLayout })));
+const Onboarding = lazy(() => import('@/pages/Onboarding').then(m => ({ default: m.Onboarding })));
+const LgpdConsent = lazy(() => import('@/pages/LgpdConsent').then(m => ({ default: m.LgpdConsent })));
+
+const PageFallback = () => (
+  <div className="space-y-4 p-4">
+    <Skeleton className="h-8 w-48" />
+    <Skeleton className="h-64 w-full" />
+    <Skeleton className="h-32 w-full" />
+  </div>
+);
 
 
 const Layout: React.FC = () => {
@@ -150,7 +163,7 @@ const Layout: React.FC = () => {
           </nav>
 
           {/* User Info */}
-          <div className="p-4 border-t border-sidebar-border">
+          <div className="p-4 border-t border-sidebar-border space-y-2">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center text-sidebar-accent-foreground font-bold text-sm">
@@ -169,7 +182,7 @@ const Layout: React.FC = () => {
                 <LogOut className="w-5 h-5" />
               </button>
             </div>
-            
+            <InstallPrompt />
           </div>
         </div>
       </aside>
@@ -189,16 +202,18 @@ const Layout: React.FC = () => {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto">
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/activities" element={<ActivityManager />} />
-            <Route path="/report" element={<ReportGenerator />} />
-            <Route path="/team-report" element={<TeamReportGenerator />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/users" element={<UserManagement />} />
-            <Route path="/team" element={<TeamManagement />} />
-          </Routes>
+        <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-auto pb-safe">
+          <Suspense fallback={<PageFallback />}>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/activities" element={<ActivityManager />} />
+              <Route path="/report" element={<ReportGenerator />} />
+              <Route path="/team-report" element={<TeamReportGenerator />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/users" element={<UserManagement />} />
+              <Route path="/team" element={<TeamManagement />} />
+            </Routes>
+          </Suspense>
         </div>
 
         {/* Footer */}
@@ -214,32 +229,34 @@ const Layout: React.FC = () => {
 
 export const AppRoutes: React.FC = () => {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/lgpd" element={<PrivacyPolicy />} />
-      <Route path="/licenca" element={<TermsOfUse />} />
-      <Route path="/diario/login" element={<DiaryLogin />} />
-      <Route path="/consentimento" element={
-        <ProtectedRoute>
-          <LgpdConsent />
-        </ProtectedRoute>
-      } />
-      <Route path="/diario/*" element={
-        <ProtectedRoute>
-          <DiaryLayout />
-        </ProtectedRoute>
-      } />
-      <Route path="/setup" element={
-        <ProtectedRoute>
-          <Onboarding />
-        </ProtectedRoute>
-      } />
-      <Route path="/*" element={
-        <ProtectedRoute>
-          <Layout />
-        </ProtectedRoute>
-      } />
-    </Routes>
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/lgpd" element={<PrivacyPolicy />} />
+        <Route path="/licenca" element={<TermsOfUse />} />
+        <Route path="/diario/login" element={<DiaryLogin />} />
+        <Route path="/consentimento" element={
+          <ProtectedRoute>
+            <LgpdConsent />
+          </ProtectedRoute>
+        } />
+        <Route path="/diario/*" element={
+          <ProtectedRoute>
+            <DiaryLayout />
+          </ProtectedRoute>
+        } />
+        <Route path="/setup" element={
+          <ProtectedRoute>
+            <Onboarding />
+          </ProtectedRoute>
+        } />
+        <Route path="/*" element={
+          <ProtectedRoute>
+            <Layout />
+          </ProtectedRoute>
+        } />
+      </Routes>
+    </Suspense>
   );
 };
