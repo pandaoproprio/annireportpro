@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, isLoading, role, hasLgpdConsent } = useAuth();
+  const { user, isLoading, role, hasLgpdConsent, profile } = useAuth();
   const location = useLocation();
   
   if (isLoading) {
@@ -26,7 +26,19 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     return <Navigate to="/login" />;
   }
 
-  // Redirect to LGPD consent if not yet accepted
+  // Wait for profile to load before checking consent
+  if (!profile) {
+    return (
+      <div className="h-[100dvh] flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+          <p className="text-muted-foreground">Carregando perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to LGPD consent only when profile is loaded and consent is missing
   if (!hasLgpdConsent && location.pathname !== '/consentimento') {
     return <Navigate to="/consentimento" replace />;
   }
