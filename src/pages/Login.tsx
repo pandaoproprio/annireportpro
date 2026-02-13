@@ -133,7 +133,7 @@ export const Login: React.FC = () => {
         <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7 animate-fade-in">
           {/* Logo mobile */}
           <div className="lg:hidden flex justify-center mb-2">
-            <img src={logoGira} alt="GIRA Relatórios" className="w-12 h-12 object-contain" />
+            <img src={logoGira} alt="GIRA Relatórios" className="h-20 object-contain" />
           </div>
 
           {/* Título e subtítulo */}
