@@ -170,7 +170,19 @@ export const useActivities = (projectId: string | null) => {
       const { error } = await query;
       if (error) throw error;
     },
-    onSuccess: () => invalidate(),
+    onMutate: async (activity) => {
+      await queryClient.cancelQueries({ queryKey: ['activities'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['activities'] });
+      queryClient.setQueriesData({ queryKey: ['activities'] }, (old: any) => {
+        if (!old?.activities) return old;
+        return { ...old, activities: old.activities.map((a: Activity) => a.id === activity.id ? activity : a) };
+      });
+      return { previousData };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previousData?.forEach(([key, data]: [any, any]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: () => invalidate(),
   });
 
   const deleteActivityMutation = useMutation({
@@ -186,7 +198,19 @@ export const useActivities = (projectId: string | null) => {
       const a = activities.find(a => a.id === id);
       await logAuditEvent({ userId: user.id, action: 'DELETE', entityType: 'activities', entityId: id, entityName: a?.description?.substring(0, 100) });
     },
-    onSuccess: () => invalidate(),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['activities'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['activities'] });
+      queryClient.setQueriesData({ queryKey: ['activities'] }, (old: any) => {
+        if (!old?.activities) return old;
+        return { ...old, activities: old.activities.filter((a: Activity) => a.id !== id), total: Math.max(0, (old.total || 0) - 1) };
+      });
+      return { previousData };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previousData?.forEach(([key, data]: [any, any]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: () => invalidate(),
   });
 
   const pagination = { page, pageSize, total };

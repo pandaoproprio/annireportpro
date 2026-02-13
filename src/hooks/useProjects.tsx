@@ -196,7 +196,19 @@ export const useProjects = () => {
       const { error } = await query;
       if (error) throw error;
     },
-    onSuccess: () => invalidate(),
+    onMutate: async (project) => {
+      await queryClient.cancelQueries({ queryKey: ['projects'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['projects'] });
+      queryClient.setQueriesData({ queryKey: ['projects'] }, (old: any) => {
+        if (!old?.projects) return old;
+        return { ...old, projects: old.projects.map((p: Project) => p.id === project.id ? project : p) };
+      });
+      return { previousData };
+    },
+    onError: (_err, _vars, context) => {
+      context?.previousData?.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: () => invalidate(),
   });
 
   const removeProjectMutation = useMutation({
@@ -213,13 +225,26 @@ export const useProjects = () => {
       await logAuditEvent({ userId: user.id, action: 'DELETE', entityType: 'projects', entityId: id, entityName: p?.name });
       return id;
     },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['projects'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['projects'] });
+      queryClient.setQueriesData({ queryKey: ['projects'] }, (old: any) => {
+        if (!old?.projects) return old;
+        return { ...old, projects: old.projects.filter((p: Project) => p.id !== id), total: Math.max(0, (old.total || 0) - 1) };
+      });
+      return { previousData };
+    },
+    
     onSuccess: (id) => {
       if (id === activeProjectId) {
         const remaining = projects.filter(p => p.id !== id);
         setActiveProjectId(remaining.length > 0 ? remaining[0].id : null);
       }
-      invalidate();
     },
+    onError: (_err, _vars, context) => {
+      context?.previousData?.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: () => invalidate(),
   });
 
   const removeMultipleProjectsMutation = useMutation({
