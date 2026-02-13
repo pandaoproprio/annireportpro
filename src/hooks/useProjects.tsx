@@ -167,8 +167,9 @@ export const useProjects = () => {
 
   const updateProject = async (project: Project) => {
     if (!user) return;
+    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
-    const { error } = await supabase
+    let query = supabase
       .from('projects')
       .update({
         organization_name: project.organizationName,
@@ -188,8 +189,13 @@ export const useProjects = () => {
         locations: project.locations,
         report_data: (project.reportData || {}) as unknown as Json
       })
-      .eq('id', project.id)
-      .eq('user_id', user.id);
+      .eq('id', project.id);
+
+    if (!isAdmin) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('Error updating project:', error);
@@ -201,12 +207,18 @@ export const useProjects = () => {
 
   const removeProject = async (id: string) => {
     if (!user) return;
+    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
-    const { error } = await supabase
+    let query = supabase
       .from('projects')
       .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
+      .eq('id', id);
+
+    if (!isAdmin) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('Error removing project:', error);
@@ -224,12 +236,18 @@ export const useProjects = () => {
 
   const removeMultipleProjects = async (ids: string[]) => {
     if (!user || ids.length === 0) return;
+    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
-    const { error } = await supabase
+    let query = supabase
       .from('projects')
       .delete()
-      .in('id', ids)
-      .eq('user_id', user.id);
+      .in('id', ids);
+
+    if (!isAdmin) {
+      query = query.eq('user_id', user.id);
+    }
+
+    const { error } = await query;
 
     if (error) {
       console.error('Error removing projects:', error);
