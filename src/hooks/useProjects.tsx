@@ -213,7 +213,7 @@ export const useProjects = () => {
 
     let query = supabase
       .from('projects')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
 
     if (!isAdmin) {
@@ -251,7 +251,7 @@ export const useProjects = () => {
 
     let query = supabase
       .from('projects')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .in('id', ids);
 
     if (!isAdmin) {
