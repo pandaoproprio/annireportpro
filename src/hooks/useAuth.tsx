@@ -8,6 +8,7 @@ interface Profile {
   user_id: string;
   email: string;
   name: string;
+  lgpd_consent_at: string | null;
 }
 
 interface AuthContextType {
@@ -16,9 +17,11 @@ interface AuthContextType {
   profile: Profile | null;
   role: UserRole;
   isLoading: boolean;
+  hasLgpdConsent: boolean;
   signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -124,6 +127,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setRole('USER');
   };
 
+  const refreshProfile = async () => {
+    if (user) await fetchProfile(user.id);
+  };
+
+  const hasLgpdConsent = !!profile?.lgpd_consent_at;
+
   return (
     <AuthContext.Provider value={{
       user,
@@ -131,9 +140,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       profile,
       role,
       isLoading,
+      hasLgpdConsent,
       signUp,
       signIn,
-      signOut
+      signOut,
+      refreshProfile,
     }}>
       {children}
     </AuthContext.Provider>

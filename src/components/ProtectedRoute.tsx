@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, isLoading, role } = useAuth();
+  const { user, isLoading, role, hasLgpdConsent } = useAuth();
   const location = useLocation();
   
   if (isLoading) {
@@ -22,9 +22,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // 1. Check Authentication
   if (!user) {
     return <Navigate to="/login" />;
+  }
+
+  // Redirect to LGPD consent if not yet accepted
+  if (!hasLgpdConsent && location.pathname !== '/consentimento') {
+    return <Navigate to="/consentimento" replace />;
   }
 
   // Oficineiro users can only access the Diário de Bordo
