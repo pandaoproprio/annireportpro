@@ -26,9 +26,9 @@ export const PendingActivitiesBanner: React.FC = () => {
     : `Faz ${daysSinceLastActivity} dias desde a última atividade registrada. Mantenha seu diário atualizado!`;
 
   return (
-    <Alert variant="default" className="border-warning bg-warning/10 mb-4">
-      <AlertCircle className="h-4 w-4 text-warning" />
-      <AlertDescription className="text-warning-foreground font-medium">
+    <Alert variant="default" className="border-primary bg-primary/10 mb-4">
+      <AlertCircle className="h-4 w-4 text-primary" />
+      <AlertDescription className="text-primary font-medium">
         {message}
       </AlertDescription>
     </Alert>
