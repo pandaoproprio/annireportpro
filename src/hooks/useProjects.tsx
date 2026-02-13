@@ -48,7 +48,7 @@ const mapDbToProject = (db: DbProject): Project => ({
 });
 
 export const useProjects = () => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -61,42 +61,59 @@ export const useProjects = () => {
       return;
     }
 
-    // Fetch own projects
-    const { data: ownData, error: ownError } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
-    // Fetch collaborator project IDs
-    const { data: collabLinks } = await supabase
-      .from('project_collaborators')
-      .select('project_id')
-      .eq('user_id', user.id);
+    let data: DbProject[] = [];
 
-    let collabData: DbProject[] = [];
-    if (collabLinks && collabLinks.length > 0) {
-      const collabIds = collabLinks.map(c => c.project_id);
-      const { data: cp } = await supabase
+    if (isAdmin) {
+      // Admins and Super Admins see ALL projects
+      const { data: allData, error } = await supabase
         .from('projects')
         .select('*')
-        .in('id', collabIds);
-      if (cp) collabData = cp as DbProject[];
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching projects:', error);
+        setIsLoading(false);
+        return;
+      }
+      data = (allData as DbProject[]) || [];
+    } else {
+      // Regular users: own projects + collaborator projects
+      const { data: ownData, error: ownError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      const { data: collabLinks } = await supabase
+        .from('project_collaborators')
+        .select('project_id')
+        .eq('user_id', user.id);
+
+      let collabData: DbProject[] = [];
+      if (collabLinks && collabLinks.length > 0) {
+        const collabIds = collabLinks.map(c => c.project_id);
+        const { data: cp } = await supabase
+          .from('projects')
+          .select('*')
+          .in('id', collabIds);
+        if (cp) collabData = cp as DbProject[];
+      }
+
+      if (ownError) {
+        console.error('Error fetching projects:', ownError);
+        setIsLoading(false);
+        return;
+      }
+
+      data = [
+        ...((ownData as DbProject[]) || []),
+        ...collabData.filter(c => !(ownData || []).some(o => o.id === c.id)),
+      ];
     }
 
-    const error = ownError;
-    const data = [
-      ...((ownData as DbProject[]) || []),
-      ...collabData.filter(c => !(ownData || []).some(o => o.id === c.id)),
-    ];
-
-    if (error) {
-      console.error('Error fetching projects:', error);
-      setIsLoading(false);
-      return;
-    }
-
-    const mappedProjects = (data as DbProject[]).map(mapDbToProject);
+    const mappedProjects = data.map(mapDbToProject);
     setProjects(mappedProjects);
     
     if (mappedProjects.length > 0 && !activeProjectId) {
@@ -104,7 +121,7 @@ export const useProjects = () => {
     }
     
     setIsLoading(false);
-  }, [user, activeProjectId]);
+  }, [user, role, activeProjectId]);
 
   useEffect(() => {
     fetchProjects();
