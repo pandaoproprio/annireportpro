@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { exportToDocx } from '@/lib/docxExport';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const DEFAULT_SECTIONS: ReportSection[] = [
   { id: 'object', type: 'fixed', key: 'object', title: 'OBJETO', isVisible: true },
@@ -217,15 +219,40 @@ export const ReportGenerator: React.FC = () => {
   ) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-      const base64Promises = files.map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
-      });
-      const newPhotos = await Promise.all(base64Promises);
-      setter(prev => [...prev, ...newPhotos]);
+      
+      for (const file of files) {
+        try {
+          // Generate unique file path
+          const photoId = crypto.randomUUID();
+          const fileExt = file.name.split('.').pop() || 'jpg';
+          const filePath = `reports/${project?.id}/${photoId}.${fileExt}`;
+          
+          // Upload to Storage
+          const { error } = await supabase.storage
+            .from('team-report-photos')
+            .upload(filePath, file, { cacheControl: '3600', upsert: false });
+          
+          if (error) {
+            console.error('Upload error:', error);
+            toast.error(`Erro ao enviar foto: ${file.name}`);
+            continue;
+          }
+          
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('team-report-photos')
+            .getPublicUrl(filePath);
+          
+          // Add URL to photos array (not base64)
+          setter(prev => [...prev, urlData.publicUrl]);
+          
+          toast.success(`Foto ${file.name} enviada com sucesso`);
+        } catch (error) {
+          console.error('Photo upload error:', error);
+          toast.error(`Erro ao processar foto: ${file.name}`);
+        }
+      }
+      
       e.target.value = '';
     }
   };
@@ -233,23 +260,64 @@ export const ReportGenerator: React.FC = () => {
   const handleGoalPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, goalId: string) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-      const base64Promises = files.map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(file);
-        });
-      });
-      const newPhotos = await Promise.all(base64Promises);
-      setGoalPhotos(prev => ({
-        ...prev,
-        [goalId]: [...(prev[goalId] || []), ...newPhotos]
-      }));
+      
+      for (const file of files) {
+        try {
+          // Generate unique file path
+          const photoId = crypto.randomUUID();
+          const fileExt = file.name.split('.').pop() || 'jpg';
+          const filePath = `reports/${project?.id}/goals/${goalId}/${photoId}.${fileExt}`;
+          
+          // Upload to Storage
+          const { error } = await supabase.storage
+            .from('team-report-photos')
+            .upload(filePath, file, { cacheControl: '3600', upsert: false });
+          
+          if (error) {
+            console.error('Upload error:', error);
+            toast.error(`Erro ao enviar foto: ${file.name}`);
+            continue;
+          }
+          
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('team-report-photos')
+            .getPublicUrl(filePath);
+          
+          // Add URL to goal photos
+          setGoalPhotos(prev => ({
+            ...prev,
+            [goalId]: [...(prev[goalId] || []), urlData.publicUrl]
+          }));
+          
+          toast.success(`Foto ${file.name} enviada com sucesso`);
+        } catch (error) {
+          console.error('Photo upload error:', error);
+          toast.error(`Erro ao processar foto: ${file.name}`);
+        }
+      }
+      
       e.target.value = '';
     }
   };
 
-  const removeGoalPhoto = (goalId: string, index: number) => {
+  const removeGoalPhoto = async (goalId: string, index: number) => {
+    const photoUrl = goalPhotos[goalId]?.[index];
+    
+    // Delete from Storage if it's a URL (not base64)
+    if (photoUrl && !photoUrl.startsWith('data:')) {
+      try {
+        const urlParts = new URL(photoUrl).pathname.split('/');
+        const filePath = urlParts.slice(-5).join('/'); // Gets 'reports/projectId/goals/goalId/photoId.jpg'
+        
+        await supabase.storage
+          .from('team-report-photos')
+          .remove([filePath]);
+      } catch (error) {
+        console.error('Error deleting photo from storage:', error);
+      }
+    }
+    
     setGoalPhotos(prev => ({
       ...prev,
       [goalId]: (prev[goalId] || []).filter((_, i) => i !== index)
@@ -317,11 +385,37 @@ export const ReportGenerator: React.FC = () => {
 
   const handleExpenseImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, expenseId: string) => {
     if (e.target.files && e.target.files[0]) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        updateExpense(expenseId, 'image', reader.result as string);
-      };
-      reader.readAsDataURL(e.target.files[0]);
+      const file = e.target.files[0];
+      
+      try {
+        // Generate unique file path
+        const photoId = crypto.randomUUID();
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const filePath = `reports/${project?.id}/expenses/${photoId}.${fileExt}`;
+        
+        // Upload to Storage
+        const { error } = await supabase.storage
+          .from('team-report-photos')
+          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        
+        if (error) {
+          console.error('Upload error:', error);
+          toast.error(`Erro ao enviar imagem: ${file.name}`);
+          return;
+        }
+        
+        // Get public URL
+        const { data: urlData } = supabase.storage
+          .from('team-report-photos')
+          .getPublicUrl(filePath);
+        
+        // Update expense with URL
+        updateExpense(expenseId, 'image', urlData.publicUrl);
+        toast.success(`Imagem ${file.name} enviada com sucesso`);
+      } catch (error) {
+        console.error('Image upload error:', error);
+        toast.error(`Erro ao processar imagem: ${file.name}`);
+      }
     }
   };
 
