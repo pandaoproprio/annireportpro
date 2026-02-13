@@ -201,7 +201,7 @@ export const useActivities = (projectId: string | null) => {
 
     let query = supabase
       .from('activities')
-      .delete()
+      .update({ deleted_at: new Date().toISOString() })
       .eq('id', id);
 
     if (!isAdmin) {

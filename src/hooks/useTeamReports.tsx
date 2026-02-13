@@ -168,7 +168,7 @@ export const useTeamReports = (projectId?: string) => {
 
       let query = supabase
         .from('team_reports')
-        .delete()
+        .update({ deleted_at: new Date().toISOString() })
         .eq('id', draftId);
 
       if (!isAdmin) {

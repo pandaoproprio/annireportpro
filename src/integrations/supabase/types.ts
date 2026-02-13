@@ -22,6 +22,7 @@ export type Database = {
           cost_evidence: string | null
           created_at: string
           date: string
+          deleted_at: string | null
           description: string
           end_date: string | null
           goal_id: string | null
@@ -43,6 +44,7 @@ export type Database = {
           cost_evidence?: string | null
           created_at?: string
           date: string
+          deleted_at?: string | null
           description: string
           end_date?: string | null
           goal_id?: string | null
@@ -64,6 +66,7 @@ export type Database = {
           cost_evidence?: string | null
           created_at?: string
           date?: string
+          deleted_at?: string | null
           description?: string
           end_date?: string | null
           goal_id?: string | null
@@ -222,6 +225,7 @@ export type Database = {
       projects: {
         Row: {
           created_at: string
+          deleted_at: string | null
           end_date: string
           fomento_number: string
           funder: string
@@ -244,6 +248,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           end_date: string
           fomento_number: string
           funder: string
@@ -266,6 +271,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           end_date?: string
           fomento_number?: string
           funder?: string
@@ -332,6 +338,7 @@ export type Database = {
           additional_sections: Json | null
           attachments_title: string | null
           created_at: string
+          deleted_at: string | null
           execution_report: string
           execution_report_title: string | null
           footer_text: string | null
@@ -355,6 +362,7 @@ export type Database = {
           additional_sections?: Json | null
           attachments_title?: string | null
           created_at?: string
+          deleted_at?: string | null
           execution_report: string
           execution_report_title?: string | null
           footer_text?: string | null
@@ -378,6 +386,7 @@ export type Database = {
           additional_sections?: Json | null
           attachments_title?: string | null
           created_at?: string
+          deleted_at?: string | null
           execution_report?: string
           execution_report_title?: string | null
           footer_text?: string | null
