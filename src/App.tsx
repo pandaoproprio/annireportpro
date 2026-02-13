@@ -6,6 +6,7 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AppDataProvider } from "@/contexts/AppDataContext";
 import { AppRoutes } from "@/routes/AppRoutes";
+import { OfflineBadge } from "@/components/OfflineBadge";
 
 const queryClient = new QueryClient();
 
@@ -16,6 +17,7 @@ const App = () => (
         <AppDataProvider>
           <Toaster />
           <Sonner />
+          <OfflineBadge />
           <BrowserRouter>
             <AppRoutes />
           </BrowserRouter>
