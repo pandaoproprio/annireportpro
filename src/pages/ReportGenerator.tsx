@@ -15,6 +15,7 @@ import html2pdf from 'html2pdf.js';
 import { exportToDocx } from '@/lib/docxExport';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { AiNarrativeButton } from '@/components/report/AiNarrativeButton';
 
 const DEFAULT_SECTIONS: ReportSection[] = [
   { id: 'object', type: 'fixed', key: 'object', title: 'OBJETO', isVisible: true },
@@ -503,7 +504,16 @@ export const ReportGenerator: React.FC = () => {
 
           {section.key === 'summary' && (
             <div className="space-y-2">
-              <Label>Resumo / Visão Geral</Label>
+              <div className="flex items-center justify-between">
+                <Label>Resumo / Visão Geral</Label>
+                <AiNarrativeButton
+                  sectionType="summary"
+                  activities={activities}
+                  projectName={project.name}
+                  projectObject={project.object}
+                  onGenerated={(text) => setSummary(text)}
+                />
+              </div>
               <Textarea rows={8} value={summary} onChange={e => setSummary(e.target.value)} placeholder="Descreva a visão geral das atividades realizadas, contexto, e principais realizações..." />
             </div>
           )}
@@ -531,7 +541,18 @@ export const ReportGenerator: React.FC = () => {
                       </div>
                     )}
                     
-                    <Label>Relato Narrativo da Meta</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>Relato Narrativo da Meta</Label>
+                      <AiNarrativeButton
+                        sectionType="goal"
+                        activities={goalActs}
+                        projectName={project.name}
+                        projectObject={project.object}
+                        goalTitle={goal.title}
+                        goalAudience={goal.targetAudience}
+                        onGenerated={(text) => setGoalNarratives({...goalNarratives, [goal.id]: text})}
+                      />
+                    </div>
                     <Textarea 
                       rows={5} 
                       placeholder="Descreva as realizações, metodologia, resultados alcançados..."
@@ -578,6 +599,16 @@ export const ReportGenerator: React.FC = () => {
                   </div>
                 </div>
               )}
+              <div className="flex items-center justify-between">
+                <Label>Narrativa</Label>
+                <AiNarrativeButton
+                  sectionType="other"
+                  activities={getOtherActivities()}
+                  projectName={project.name}
+                  projectObject={project.object}
+                  onGenerated={(text) => setOtherActionsNarrative(text)}
+                />
+              </div>
               <Textarea rows={5} value={otherActionsNarrative} onChange={e => setOtherActionsNarrative(e.target.value)} placeholder="Descreva outras informações, ações extras, imprevistos, acontecimentos relevantes..." />
               <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos</Label>
               <Input type="file" accept="image/*" multiple onChange={e => handlePhotoUpload(e, setOtherActionsPhotos)} />
@@ -609,6 +640,16 @@ export const ReportGenerator: React.FC = () => {
                   </div>
                 </div>
               )}
+              <div className="flex items-center justify-between">
+                <Label>Narrativa</Label>
+                <AiNarrativeButton
+                  sectionType="communication"
+                  activities={getCommunicationActivities()}
+                  projectName={project.name}
+                  projectObject={project.object}
+                  onGenerated={(text) => setCommunicationNarrative(text)}
+                />
+              </div>
               <Textarea rows={5} value={communicationNarrative} onChange={e => setCommunicationNarrative(e.target.value)} placeholder="Descreva as ações de divulgação, publicações, links de matérias..." />
               <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos e Artes de Divulgação</Label>
               <Input type="file" accept="image/*" multiple onChange={e => handlePhotoUpload(e, setCommunicationPhotos)} />
