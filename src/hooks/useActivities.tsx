@@ -67,27 +67,35 @@ const mapDbToActivity = (db: DbActivity): Activity => ({
 export const useActivities = (projectId: string | null) => {
   const { user, role } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
-  const [allActivities, setAllActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 0, pageSize: 50, total: 0 });
 
-  const fetchActivities = useCallback(async () => {
+  const fetchActivities = useCallback(async (page: number = 0) => {
     if (!user) {
       setActivities([]);
-      setAllActivities([]);
       setIsLoading(false);
       return;
     }
 
     const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    const from = page * pagination.pageSize;
+    const to = from + pagination.pageSize - 1;
+
     let query = supabase
       .from('activities')
-      .select('*');
+      .select('*', { count: 'exact' });
 
     if (!isAdmin) {
       query = query.eq('user_id', user.id);
     }
+    
+    if (projectId) {
+      query = query.eq('project_id', projectId);
+    }
 
-    const { data, error } = await query.order('date', { ascending: false });
+    const { data, error, count } = await query
+      .order('date', { ascending: false })
+      .range(from, to);
 
     if (error) {
       console.error('Error fetching activities:', error);
@@ -96,28 +104,19 @@ export const useActivities = (projectId: string | null) => {
     }
 
     const mappedActivities = (data as DbActivity[]).map(mapDbToActivity);
-    setAllActivities(mappedActivities);
-    
-    if (projectId) {
-      setActivities(mappedActivities.filter(a => a.projectId === projectId));
-    } else {
-      setActivities([]);
-    }
+    setActivities(mappedActivities);
+    setPagination({
+      page,
+      pageSize: pagination.pageSize,
+      total: count || 0
+    });
     
     setIsLoading(false);
-  }, [user, projectId]);
+  }, [user, role, projectId, pagination.pageSize]);
 
   useEffect(() => {
-    fetchActivities();
+    fetchActivities(0);
   }, [fetchActivities]);
-
-  useEffect(() => {
-    if (projectId) {
-      setActivities(allActivities.filter(a => a.projectId === projectId));
-    } else {
-      setActivities([]);
-    }
-  }, [projectId, allActivities]);
 
   const addActivity = async (activity: Omit<Activity, 'id'>) => {
     if (!user) return null;
@@ -150,7 +149,7 @@ export const useActivities = (projectId: string | null) => {
     }
 
     const newActivity = mapDbToActivity(data as DbActivity);
-    setAllActivities(prev => [newActivity, ...prev]);
+    setActivities(prev => [newActivity, ...prev]);
     return newActivity;
   };
 
@@ -190,14 +189,14 @@ export const useActivities = (projectId: string | null) => {
       return;
     }
 
-    setAllActivities(prev => prev.map(a => a.id === activity.id ? activity : a));
+    setActivities(prev => prev.map(a => a.id === activity.id ? activity : a));
   };
 
   const deleteActivity = async (id: string) => {
     if (!user) return;
 
     const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
-    const activityToDelete = allActivities.find(a => a.id === id);
+    const activityToDelete = activities.find(a => a.id === id);
 
     let query = supabase
       .from('activities')
@@ -223,13 +222,33 @@ export const useActivities = (projectId: string | null) => {
       entityName: activityToDelete?.description?.substring(0, 100),
     });
 
-    setAllActivities(prev => prev.filter(a => a.id !== id));
+    setActivities(prev => prev.filter(a => a.id !== id));
+  };
+
+  const goToPage = (page: number) => {
+    fetchActivities(page);
+  };
+
+  const nextPage = () => {
+    const maxPage = Math.ceil(pagination.total / pagination.pageSize) - 1;
+    if (pagination.page < maxPage) {
+      goToPage(pagination.page + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (pagination.page > 0) {
+      goToPage(pagination.page - 1);
+    }
   };
 
   return {
     activities,
-    allActivities,
     isLoading,
+    pagination,
+    goToPage,
+    nextPage,
+    prevPage,
     addActivity,
     updateActivity,
     deleteActivity,
