@@ -7,6 +7,8 @@ import { ProtectedRoute } from '@/components/ProtectedRoute';
 import { Dashboard } from '@/pages/Dashboard';
 import { Login } from '@/pages/Login';
 import { ResetPassword } from '@/pages/ResetPassword';
+import { PrivacyPolicy } from '@/pages/PrivacyPolicy';
+import { TermsOfUse } from '@/pages/TermsOfUse';
 import { DiaryLogin } from '@/pages/DiaryLogin';
 import { DiaryLayout } from '@/pages/DiaryLayout';
 import { Onboarding } from '@/pages/Onboarding';
@@ -214,6 +216,8 @@ export const AppRoutes: React.FC = () => {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/lgpd" element={<PrivacyPolicy />} />
+      <Route path="/licenca" element={<TermsOfUse />} />
       <Route path="/diario/login" element={<DiaryLogin />} />
       <Route path="/diario/*" element={
         <ProtectedRoute>
