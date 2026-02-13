@@ -29,7 +29,7 @@ export interface TeamReportDraft {
 }
 
 export const useTeamReports = (projectId?: string) => {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const [drafts, setDrafts] = useState<TeamReportDraft[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -40,12 +40,17 @@ export const useTeamReports = (projectId?: string) => {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+      let query = supabase
         .from('team_reports')
         .select('*')
-        .eq('project_id', projectId)
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
+        .eq('project_id', projectId);
+
+      if (!isAdmin) {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { data, error } = await query.order('updated_at', { ascending: false });
 
       if (error) throw error;
 
@@ -113,11 +118,18 @@ export const useTeamReports = (projectId?: string) => {
 
       if (draft.id) {
         // Update existing draft
-        const { data, error } = await supabase
+        const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+
+        let query = supabase
           .from('team_reports')
           .update(reportData)
-          .eq('id', draft.id)
-          .eq('user_id', user.id)
+          .eq('id', draft.id);
+
+        if (!isAdmin) {
+          query = query.eq('user_id', user.id);
+        }
+
+        const { data, error } = await query
           .select()
           .single();
 
@@ -150,11 +162,18 @@ export const useTeamReports = (projectId?: string) => {
     if (!user) return false;
 
     try {
-      const { error } = await supabase
+      const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+
+      let query = supabase
         .from('team_reports')
         .delete()
-        .eq('id', draftId)
-        .eq('user_id', user.id);
+        .eq('id', draftId);
+
+      if (!isAdmin) {
+        query = query.eq('user_id', user.id);
+      }
+
+      const { error } = await query;
 
       if (error) throw error;
       await fetchDrafts();
