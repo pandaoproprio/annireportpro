@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logAuditEvent } from "@/lib/auditLog";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +28,7 @@ export const SecureDeleteDialog = ({
 }: Props) => {
   const [confirmation, setConfirmation] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
 
   const deleteMutation = useMutation({
@@ -36,6 +39,16 @@ export const SecureDeleteDialog = ({
         .eq("id", itemId);
 
       if (error) throw error;
+
+      if (user) {
+        await logAuditEvent({
+          userId: user.id,
+          action: "DELETE",
+          entityType: "projects",
+          entityId: itemId,
+          entityName: itemName,
+        });
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });

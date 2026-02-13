@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Activity, ActivityType } from '@/types';
+import { logAuditEvent } from '@/lib/auditLog';
 import { Database } from '@/integrations/supabase/types';
 
 type DbActivityType = Database['public']['Enums']['activity_type'];
@@ -196,6 +197,7 @@ export const useActivities = (projectId: string | null) => {
     if (!user) return;
 
     const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    const activityToDelete = allActivities.find(a => a.id === id);
 
     let query = supabase
       .from('activities')
@@ -212,6 +214,14 @@ export const useActivities = (projectId: string | null) => {
       console.error('Error deleting activity:', error);
       return;
     }
+
+    await logAuditEvent({
+      userId: user.id,
+      action: 'DELETE',
+      entityType: 'activities',
+      entityId: id,
+      entityName: activityToDelete?.description?.substring(0, 100),
+    });
 
     setAllActivities(prev => prev.filter(a => a.id !== id));
   };

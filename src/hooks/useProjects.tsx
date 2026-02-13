@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Project, Goal, TeamMember, ReportData } from '@/types';
+import { logAuditEvent } from '@/lib/auditLog';
 import { Json } from '@/integrations/supabase/types';
 
 interface DbProject {
@@ -208,6 +209,7 @@ export const useProjects = () => {
   const removeProject = async (id: string) => {
     if (!user) return;
     const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    const projectToDelete = projects.find(p => p.id === id);
 
     let query = supabase
       .from('projects')
@@ -225,6 +227,14 @@ export const useProjects = () => {
       return;
     }
 
+    await logAuditEvent({
+      userId: user.id,
+      action: 'DELETE',
+      entityType: 'projects',
+      entityId: id,
+      entityName: projectToDelete?.name,
+    });
+
     setProjects(prev => {
       const newProjects = prev.filter(p => p.id !== id);
       if (id === activeProjectId) {
@@ -237,6 +247,7 @@ export const useProjects = () => {
   const removeMultipleProjects = async (ids: string[]) => {
     if (!user || ids.length === 0) return;
     const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    const projectsToDelete = projects.filter(p => ids.includes(p.id));
 
     let query = supabase
       .from('projects')
@@ -252,6 +263,16 @@ export const useProjects = () => {
     if (error) {
       console.error('Error removing projects:', error);
       throw error;
+    }
+
+    for (const p of projectsToDelete) {
+      await logAuditEvent({
+        userId: user.id,
+        action: 'DELETE',
+        entityType: 'projects',
+        entityId: p.id,
+        entityName: p.name,
+      });
     }
 
     setProjects(prev => {

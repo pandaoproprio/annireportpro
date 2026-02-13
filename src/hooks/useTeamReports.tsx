@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { PhotoWithCaption, AdditionalSection } from '@/types';
 import type { Json } from '@/integrations/supabase/types';
+import { logAuditEvent } from '@/lib/auditLog';
 
 export interface TeamReportDraft {
   id: string;
@@ -163,6 +164,7 @@ export const useTeamReports = (projectId?: string) => {
 
     try {
       const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+      const draftToDelete = drafts.find(d => d.id === draftId);
 
       let query = supabase
         .from('team_reports')
@@ -176,6 +178,15 @@ export const useTeamReports = (projectId?: string) => {
       const { error } = await query;
 
       if (error) throw error;
+
+      await logAuditEvent({
+        userId: user.id,
+        action: 'DELETE',
+        entityType: 'team_reports',
+        entityId: draftId,
+        entityName: draftToDelete?.providerName,
+      });
+
       await fetchDrafts();
       toast.success('Rascunho excluído');
       return true;
