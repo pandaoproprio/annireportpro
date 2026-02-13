@@ -112,7 +112,7 @@ export const ResetPassword = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+      <div className="h-[100dvh] flex items-center justify-center bg-muted/30">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">Verificando link de recuperação...</p>
@@ -123,7 +123,7 @@ export const ResetPassword = () => {
 
   if (invalidToken && !sessionReady) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-muted/30">
+      <div className="h-[100dvh] flex flex-col items-center justify-center px-6 py-12 bg-muted/30">
         <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7">
           <div className="flex justify-center mb-2">
             <img src={logoGira} alt="GIRA Relatórios" className="w-12 h-12 object-contain" />
@@ -152,7 +152,7 @@ export const ResetPassword = () => {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-muted/30">
+    <div className="h-[100dvh] flex flex-col items-center justify-center px-6 py-12 bg-muted/30 overflow-y-auto">
       <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7">
         <div className="flex justify-center mb-2">
           <img src={logoGira} alt="GIRA Relatórios" className="w-12 h-12 object-contain" />

@@ -110,14 +110,14 @@ export const Onboarding: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="h-[100dvh] flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-50 via-background to-brand-100 flex flex-col items-center justify-center p-4">
+    <div className="h-[100dvh] bg-gradient-to-br from-brand-50 via-background to-brand-100 flex flex-col items-center justify-center p-4 overflow-y-auto">
       <div className="max-w-3xl w-full animate-fadeIn">
         {/* Header */}
         <div className="mb-8 flex items-center justify-between">

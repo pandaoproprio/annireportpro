@@ -26,7 +26,7 @@ export const DiaryLayout: React.FC = () => {
 
   if (isLoadingProjects) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="h-[100dvh] flex items-center justify-center bg-background">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
       </div>
     );
@@ -34,7 +34,7 @@ export const DiaryLayout: React.FC = () => {
 
   if (projects.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="h-[100dvh] flex items-center justify-center bg-background p-4">
         <div className="text-center space-y-4 max-w-sm">
           <FileEdit className="w-12 h-12 text-muted-foreground mx-auto" />
           <h2 className="text-xl font-bold text-foreground">Sem projetos atribuídos</h2>
@@ -50,7 +50,7 @@ export const DiaryLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
       {/* Header */}
       <header className="bg-card border-b border-border sticky top-0 z-20">
        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
@@ -102,7 +102,7 @@ export const DiaryLayout: React.FC = () => {
       </div>
 
       {/* Content */}
-      <div className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-6">
+      <div className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-6 overflow-y-auto">
         {/* Welcome */}
         <div className="mb-6">
           <h1 className="text-xl md:text-2xl font-bold text-foreground">
