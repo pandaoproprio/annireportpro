@@ -144,11 +144,21 @@ export const useTeamReports = (projectId?: string) => {
       if (error) throw error;
       await logAuditEvent({ userId: user.id, action: 'DELETE', entityType: 'team_reports', entityId: draftId, entityName: draftToDelete?.providerName });
     },
-    onSuccess: () => {
-      invalidate();
-      toast.success('Rascunho excluído');
+    onMutate: async (draftId) => {
+      await queryClient.cancelQueries({ queryKey: ['team-reports'] });
+      const previousData = queryClient.getQueriesData({ queryKey: ['team-reports'] });
+      queryClient.setQueriesData({ queryKey: ['team-reports'] }, (old: any) => {
+        if (!Array.isArray(old)) return old;
+        return old.filter((d: TeamReportDraft) => d.id !== draftId);
+      });
+      return { previousData };
     },
-    onError: () => toast.error('Erro ao excluir rascunho'),
+    onError: (_err, _vars, context) => {
+      context?.previousData?.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      toast.error('Erro ao excluir rascunho');
+    },
+    onSuccess: () => toast.success('Rascunho excluído'),
+    onSettled: () => invalidate(),
   });
 
   return {
