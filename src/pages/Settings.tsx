@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BatchDeleteProjects } from '@/components/BatchDeleteProjects';
+import { TrashBin } from '@/components/TrashBin';
 
 export const Settings: React.FC = () => {
   const { signOut } = useAuth();
@@ -405,6 +406,9 @@ export const Settings: React.FC = () => {
       {showBatchDelete && (
         <BatchDeleteProjects onClose={() => setShowBatchDelete(false)} />
       )}
+
+      {/* Trash / Recycle Bin */}
+      <TrashBin />
 
       <Card className="border-l-4 border-l-info">
         <CardContent className="pt-6">
