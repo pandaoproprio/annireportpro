@@ -8,6 +8,7 @@ import { LogIn, Loader2, Eye, EyeOff } from 'lucide-react';
 import logoGiraBranco from '@/assets/gira-logo-relatorios-branco.png';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 import { useToast } from '@/hooks/use-toast';
+import { PasswordResetDialog } from '@/components/PasswordResetDialog';
 import { z } from 'zod';
 
 const emailSchema = z.string().email('E-mail inválido');
@@ -20,6 +21,7 @@ export const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -203,16 +205,16 @@ export const Login: React.FC = () => {
             </Button>
           </form>
 
-          {/* Link recuperação */}
-          <div className="text-center">
-            <button
-              type="button"
-              className="text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
-              onClick={() => toast({ title: 'Recuperação de senha', description: 'Entre em contato com o administrador do sistema para redefinir sua senha.' })}
-            >
-              Esqueceu sua senha?
-            </button>
-          </div>
+           {/* Link recuperação */}
+           <div className="text-center">
+             <button
+               type="button"
+               className="text-sm text-primary hover:underline bg-transparent border-none cursor-pointer"
+               onClick={() => setResetDialogOpen(true)}
+             >
+               Esqueceu sua senha?
+             </button>
+           </div>
         </div>
 
         {/* Footer institucional */}
@@ -228,6 +230,8 @@ export const Login: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <PasswordResetDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen} />
     </div>
   );
 };
