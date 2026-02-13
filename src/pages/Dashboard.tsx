@@ -10,6 +10,7 @@ import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target } from 'l
 import { ActivitiesByMonthChart } from '@/components/dashboard/ActivitiesByMonthChart';
 import { ActivityTypesChart } from '@/components/dashboard/ActivityTypesChart';
 import { AttendeesByGoalChart } from '@/components/dashboard/AttendeesByGoalChart';
+import { PendingActivitiesBanner } from '@/components/PendingActivitiesBanner';
 
 const DashboardSkeleton = () => (
   <div className="space-y-6 animate-fadeIn">
@@ -79,6 +80,8 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {/* Pending Activities Reminder */}
+      <PendingActivitiesBanner />
       {/* Greeting */}
       <div>
         <p className="text-sm text-muted-foreground font-medium">
