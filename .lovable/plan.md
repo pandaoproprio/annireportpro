@@ -1,226 +1,124 @@
 
-# Auditoria Completa do Sistema GIRA Relatorios
 
-## Nota Geral: 6.2 / 10
-**Classificacao: Produto Intermediario** -- acima de MVP, abaixo de Enterprise-ready.
+# Diagnostico PWA - GIRA Relatorios
 
----
+## 1. Manifest (OK, com 1 problema)
 
-## 1. CONTEXTO IDENTIFICADO
+A configuracao do manifest em `vite.config.ts` esta correta:
+- `display: "standalone"` -- OK
+- `start_url: "/"` -- OK
+- `scope: "/"` -- OK
+- `orientation: "portrait"` -- OK
+- Icones 192x192 e 512x512 com maskable -- OK
 
-- **Tipo**: SaaS para gestao de projetos sociais (prestacao de contas)
-- **Publico-alvo**: ONGs brasileiras (CEAP, Aluande)
-- **Modelo**: B2B / assinatura (implicitamente)
-- **Mercado**: Brasil / nicho de projetos sociais com fomento publico
+**Problema encontrado:** Inconsistencia de `theme_color`:
+- `vite.config.ts` (manifest): `#0EA5E9` (azul claro)
+- `index.html` meta tag: `#2E7D32` (verde)
+- Cor real da marca: `#0DA3E7` (azul do botao de login)
 
----
+Isso pode causar barra de status com cor diferente do esperado no Android standalone.
 
-## 2. ANALISE TECNICA
+## 2. Service Worker (OK)
 
-### 2.1 Arquitetura (React + Supabase)
+- Registrado via `vite-plugin-pwa` com `registerType: "autoUpdate"` -- OK
+- `navigateFallbackDenylist: [/^\/~oauth/]` -- OK
+- Estrategias de cache corretas (CacheFirst para fonts, NetworkFirst para API)
+- Fallback offline em `public/offline.html` -- OK
 
-**Pontos positivos:**
-- Stack moderna e coerente (React 18, Vite, Tailwind, Supabase)
-- Separacao de contextos (AuthProvider, AppDataProvider)
-- RBAC com 4 niveis (SUPER_ADMIN, ADMIN, USER, OFICINEIRO)
-- Soft delete implementado em todas as tabelas principais
-- Audit logs centralizados
+**Nenhum problema critico aqui.**
 
-**Problemas identificados:**
+## 3. Meta Viewport e iOS (OK)
 
-| Problema | Severidade | Detalhes |
-|----------|-----------|---------|
-| Fotos armazenadas como Base64 no banco | CRITICO | As imagens de atividades e relatorios sao convertidas em base64 e salvas em colunas text/jsonb. Isso infla o banco de dados exponencialmente e causa lentidao em queries. Um projeto com 100 atividades e 3 fotos cada pode facilmente ultrapassar 1GB somente de imagens. |
-| Sem paginacao nas queries | ALTO | `useActivities` e `useProjects` carregam TODOS os registros de uma vez. Com 1000+ atividades o app vai travar. Limite do Supabase eh 1000 linhas por query. |
-| Sem TanStack Query para cache | ALTO | Os hooks usam `useState` + `useEffect` manual ao inves de `useQuery`/`useMutation` do TanStack. Isso significa zero cache, zero refetch automatico, zero stale-while-revalidate. O TanStack Query esta instalado mas quase nao eh usado (exceto no SecureDeleteDialog). |
-| Estado duplicado (Server State como Client State) | MEDIO | `useProjects` e `useActivities` mantem estado no `useState` e sincronizam manualmente com `setProjects(prev => ...)`. Isso deveria ser server state via TanStack Query. |
-| `role` nao incluido no `useCallback` dependencies | MEDIO | Em `useActivities`, o `fetchActivities` callback depende de `role` mas nao o inclui no array de dependencias. Admins podem ver dados incorretos apos troca de sessao. |
-| Componente ReportGenerator tem 1033 linhas | MEDIO | Arquivo monolitico dificil de manter e testar. Deveria ser quebrado em subcomponentes. |
-| `window.confirm` e `alert()` usados | BAIXO | Em Settings.tsx usa `window.confirm` para exclusao e `alert()` para feedback -- inconsistente com o resto da UX que usa Toast/Dialog. |
+- `viewport-fit=cover` -- OK
+- `apple-mobile-web-app-capable: yes` -- OK
+- `apple-mobile-web-app-status-bar-style: default` -- OK
+- Safe area CSS com `env(safe-area-inset-bottom)` -- OK
 
-### 2.2 Multi-tenancy
+## 4. CAUSA RAIZ PRINCIPAL: Layout nao e mobile-first
 
-**NAO EXISTE multi-tenancy real.** O sistema usa `user_id` para isolamento, mas nao tem conceito de "organizacao" ou "tenant". Se duas ONGs usarem o sistema, seus dados sao isolados por usuario, nao por organizacao. Isso impede:
-- Compartilhamento de dados entre membros da mesma ONG
-- Dashboard organizacional
-- Billing por organizacao
+Este e o problema central. O app "parece desktop encapsulado" porque o layout principal usa uma **sidebar fixa de 264px** que so se esconde via translate no mobile, mas o container principal ainda usa `min-h-screen` em vez de `100dvh`.
 
-### 2.3 Soft Delete e Auditoria
+### Problemas especificos encontrados:
 
-- Soft delete: Implementado corretamente com `deleted_at` em projects, activities e team_reports
-- Audit logs: Funcionando para DELETEs, mas nao para UPDATEs (alteracoes de dados por admins nao sao rastreadas)
-- Logs NAO sao imutaveis (sem politica RLS impedindo UPDATE/DELETE em audit_logs)
-- Sem sistema de "lixeira" com restore na UI
-- Sem exclusao automatica apos N dias
+| Arquivo | Problema |
+|---------|----------|
+| `AppRoutes.tsx` linha 80 | `min-h-screen` no container raiz do Layout |
+| `AppRoutes.tsx` linha 191 | `main` com `min-h-screen` redundante (causa scroll) |
+| `DiaryLayout.tsx` linha 53 | `min-h-screen` no container |
+| `DiaryLayout.tsx` linhas 29, 37 | `min-h-screen` nos estados de loading/vazio |
+| `Onboarding.tsx` linhas 113, 120 | `min-h-screen` |
+| `LgpdConsent.tsx` linha 43 | `min-h-screen` |
+| `ResetPassword.tsx` linhas 115, 126, 155 | `min-h-screen` (3 ocorrencias) |
+| `NotFound.tsx` linha 12 | `min-h-screen` |
+| `ProtectedRoute.tsx` linha 16 | `min-h-screen` |
+| `PrivacyPolicy.tsx` linha 9 | `min-h-screen` |
+| `TermsOfUse.tsx` linha 9 | `min-h-screen` |
 
----
+### Por que isso importa no standalone:
 
-## 3. SEGURANCA
+No modo `display: standalone`, o Android remove a barra de navegacao do browser. O `100vh` passa a significar a tela inteira. Mas `min-h-screen` (que e `min-height: 100vh`) permite que o conteudo **ultrapasse** a viewport, criando scroll indesejado. Usar `h-[100dvh]` com `overflow-hidden` no container raiz garante que o app ocupe exatamente a tela visivel.
 
-### 3.1 Vulnerabilidades Encontradas (Security Scan)
+### Layout do container principal (AppRoutes.tsx):
 
-| Risco | Nivel | Descricao |
-|-------|-------|-----------|
-| Dados sensiveis expostos | CRITICO | Tabelas `profiles`, `team_members` e `projects` nao negam acesso publico explicitamente. Politicas RLS existem para `authenticated` mas nao bloqueiam `anon`. |
-| Audit logs podem ser adulterados | ALTO | Nenhuma politica impede UPDATE ou DELETE em `audit_logs`. Um usuario mal-intencionado poderia apagar seus proprios rastros. |
-| Hard delete possivel | MEDIO | Tabelas `activities`, `team_reports` e `projects` nao tem politica `DELETE USING (false)` explicita. |
-| `user_roles` sem protecao de escrita | MEDIO | Tabela `user_roles` so tem politica SELECT. INSERT/UPDATE/DELETE nao estao protegidos por RLS (mas sao protegidos pelo Service Role Key na edge function). |
-| Edge Function admin-users com verify_jwt = false | ALTO | A funcao faz sua propria validacao JWT, mas desabilitar a verificacao no gateway eh um risco se houver erro na implementacao. |
+```text
+Atual:
++---------------------------+
+| min-h-screen flex         |  <-- permite scroll infinito
+|  +--------+-----------+   |
+|  |sidebar |  main     |   |  <-- main tambem min-h-screen (redundante!)
+|  | w-64   | flex-col  |   |
+|  |        | min-h-scr |   |
+|  +--------+-----------+   |
++---------------------------+
 
-### 3.2 LGPD Compliance
+Correto:
++---------------------------+
+| h-[100dvh] flex           |  <-- altura fixa da viewport
+| overflow-hidden           |
+|  +--------+-----------+   |
+|  |sidebar |  main     |   |  <-- main flex-1 overflow-auto
+|  | w-64   | flex-col  |   |
+|  |        | flex-1    |   |
+|  +--------+-----------+   |
++---------------------------+
+```
 
-| Requisito | Status |
-|-----------|--------|
-| Direito ao esquecimento | NAO implementado. Nao ha mecanismo para exclusao total de dados pessoais. |
-| Consentimento explicito | NAO implementado. Nao ha termos de uso ou consentimento no cadastro. |
-| Politica de privacidade | Links existem no login (/lgpd, /licenca) mas as paginas NAO existem (404). |
-| Exportacao de dados (portabilidade) | NAO implementado. |
-| DPO / Encarregado | NAO definido. |
+## 5. Sidebar no mobile
 
-### 3.3 Segregacao de Funcoes (SoD)
+A sidebar atual ja funciona como drawer (slide-in com overlay), o que esta correto. Mas o container `main` nao compensa corretamente porque usa `min-h-screen` em vez de `flex-1` com `overflow-auto`.
 
-- **Parcialmente implementada.** SUPER_ADMIN gerencia usuarios, ADMIN ve tudo, USER ve so o proprio, OFICINEIRO so acessa Diario.
-- **Falta:** ADMIN pode editar e deletar dados de outros sem aprovacao ou dupla autenticacao. Nao ha "maker/checker" para acoes criticas.
-- **10+ niveis de permissao:** NAO. Apenas 4 niveis. Para enterprise seria necessario permissoes granulares (ex: pode_ver_relatorios, pode_exportar_pdf, pode_deletar_projetos).
+## 6. Resumo das Correcoes Necessarias (Priorizado)
 
----
+### Prioridade 1 - Critico
+1. **Unificar `theme_color`**: Alinhar `index.html` meta tag com o manifest (`#0EA5E9` ou `#0DA3E7`)
+2. **Container raiz do Layout** (`AppRoutes.tsx` linha 80): Trocar `min-h-screen` por `h-[100dvh] overflow-hidden`
+3. **Main do Layout** (`AppRoutes.tsx` linha 191): Remover `min-h-screen`, manter `flex-1 flex flex-col`, conteudo interno com `overflow-y-auto`
 
-## 4. UX / PRODUTO
+### Prioridade 2 - Importante
+4. **DiaryLayout.tsx**: Trocar todas as 3 ocorrencias de `min-h-screen` por `h-[100dvh]` com overflow adequado
+5. **Onboarding.tsx**: Mesma correcao
+6. **LgpdConsent.tsx**: Mesma correcao
+7. **ResetPassword.tsx**: Trocar as 3 ocorrencias
+8. **ProtectedRoute.tsx**: Trocar loader
 
-### 4.1 Pontos positivos
-- Login bem desenhado com beneficios visuais
-- Sidebar organizada com secoes claras
-- Feedback visual (loaders, toasts, badges de papel)
-- Busca e filtros no Diario de Bordo
+### Prioridade 3 - Menor
+9. **NotFound.tsx, PrivacyPolicy.tsx, TermsOfUse.tsx**: Trocar `min-h-screen`
+10. Adicionar `overscroll-behavior: none` no CSS global para evitar "bounce" no iOS
 
-### 4.2 Problemas
-- **Recuperacao de senha:** Nao funciona. Mostra toast "entre em contato com o admin" em vez de fluxo real.
-- **Onboarding longo:** Formulario de criacao de projeto tem muitos campos sem wizards ou etapas.
-- **Sem dashboard analitico real:** Apenas 4 stat cards e listas simples. Sem graficos, sem tendencias, sem comparativos.
-- **Relatório tem 1000+ linhas em um unico componente:** UX de edicao confusa misturada com preview.
-- **Sem notificacoes:** Nenhum sistema de avisos, lembretes ou alertas.
-- **Sem modo offline:** Perda total se desconectar.
+## 7. Checklist de Validacao Standalone
 
-### 4.3 Oportunidades
-- IA para gerar narrativas de relatorios a partir das atividades do Diario de Bordo
-- Dashboard com graficos (Recharts ja esta instalado mas nao eh usado)
-- Automacao de relatorios periodicos
-- Templates de relatorios pre-configurados por financiador
+Apos implementar as correcoes:
 
----
+- [ ] `theme_color` no manifest e no `index.html` sao identicos
+- [ ] Nenhum arquivo usa `min-h-screen` nos containers raiz
+- [ ] Container principal usa `h-[100dvh] overflow-hidden`
+- [ ] Area de conteudo usa `flex-1 overflow-y-auto`
+- [ ] Sem scroll vertical na pagina inteira (apenas dentro do conteudo)
+- [ ] Testar `window.matchMedia('(display-mode: standalone)').matches` retorna `true` apos instalacao
+- [ ] Lighthouse PWA score acima de 90
+- [ ] Nao ha bounce/overscroll no iOS
 
-## 5. ESCALABILIDADE
+## Conclusao
 
-### Onde quebra primeiro?
+O PWA esta **tecnicamente configurado corretamente** (manifest, service worker, meta tags). O problema e puramente de **layout CSS**: o uso sistematico de `min-h-screen` em vez de `h-[100dvh]` faz com que o app se comporte como uma pagina web scrollavel em vez de um app nativo com viewport fixa. A correcao envolve trocar ~15 ocorrencias de `min-h-screen` e ajustar o overflow dos containers.
 
-| Escala | Ponto de falha |
-|--------|---------------|
-| 10x usuarios (~50) | Fotos em base64 inflam o banco. Queries lentas. |
-| 100x dados (~10k atividades) | `useActivities` carrega tudo sem paginacao. Limite de 1000 do Supabase oculta dados. |
-| Multi-ONG | Sem multi-tenancy. Admins de uma ONG veriam dados de outra. |
-
----
-
-## 6. MERCADO / COMPETITIVIDADE
-
-### Comparacao com lideres
-- **PROSAS** (plataforma de gestao de projetos sociais): Mais maduro, multi-tenant, com fluxos de aprovacao
-- **Bússola Social**: Dashboards analiticos, indicadores de impacto
-- **GIRA (este sistema)**: Diferencial na geracao de relatorios formatados (PDF/DOCX ABNT) e no Diario de Bordo integrado
-
-### Diferencial competitivo
-- Relatorios de prestacao de contas automatizados a partir do diario de bordo
-- UX limpa e moderna comparada a sistemas legados do setor
-- Papel OFICINEIRO dedicado para campo
-
-### Recursos obrigatorios que faltam
-1. Recuperacao de senha funcional
-2. Paginacao de dados
-3. Storage real para fotos (nao base64)
-4. Graficos e indicadores de impacto
-5. Exportacao de dados para portabilidade
-
-### Recursos irrelevantes que podem ser removidos
-- Nenhum identificado. O sistema eh enxuto.
-
----
-
-## 7. TOP 5 MELHORIAS TECNICAS
-
-1. **Migrar fotos para Storage** -- Usar o bucket de armazenamento existente (team-report-photos) para TODAS as fotos. Remover base64 do banco.
-2. **Adotar TanStack Query em todos os hooks** -- Substituir useState+useEffect manual por useQuery/useMutation. Ganho imediato em cache, retry, loading states.
-3. **Implementar paginacao** -- Queries com `.range()` e scroll infinito ou paginacao classica.
-4. **Blindar audit_logs** -- Adicionar politica `FOR UPDATE USING (false)` e `FOR DELETE USING (false)`.
-5. **Adicionar politicas `DELETE USING (false)`** em projects, activities e team_reports para impedir hard delete.
-
----
-
-## 8. TOP 5 MELHORIAS ESTRATEGICAS
-
-1. **IA para geracao de narrativas** -- Usar o modelo Gemini disponivel para gerar textos de relatorios a partir das atividades registradas.
-2. **Dashboard analitico** -- Graficos com Recharts: atividades por mes, participantes por meta, progresso temporal.
-3. **Multi-tenancy real** -- Criar tabela `organizations` e vincular projetos a organizacoes em vez de usuarios individuais.
-4. **Compliance LGPD** -- Implementar paginas de privacidade, consentimento, exclusao de dados e exportacao.
-5. **Recuperacao de senha funcional** -- Implementar fluxo de reset via email usando o Auth do backend.
-
----
-
-## 9. RISCOS OCULTOS
-
-1. **Base64 como bomba-relogio**: O banco vai crescer descontroladamente com uso real. Estimativa: 5MB por atividade com fotos = 5GB com 1000 atividades.
-2. **Limite de 1000 linhas**: Projetos com mais de 1000 atividades simplesmente nao mostrarao as mais antigas. O usuario nao sabera que dados estao faltando.
-3. **verify_jwt = false na edge function**: Se a validacao manual de JWT falhar por qualquer motivo, a funcao fica totalmente aberta.
-4. **Risco juridico**: Links de LGPD e Termos de Uso apontam para paginas inexistentes. Em caso de inspecao da ANPD, isso eh infração.
-5. **Ausencia de versionamento de registros**: Quando um admin altera uma atividade de outro usuario, a versao anterior se perde completamente.
-
----
-
-## 10. ROADMAP RECOMENDADO (90 DIAS)
-
-### Semanas 1-2: Fundacao Tecnica
-- Migrar fotos para Storage (bucket)
-- Implementar paginacao em atividades e projetos
-- Blindar audit_logs (RLS imutavel)
-- Adicionar politicas DELETE USING (false)
-
-### Semanas 3-4: Seguranca e Compliance
-- Implementar recuperacao de senha
-- Criar paginas LGPD e Termos de Uso
-- Adicionar consentimento no cadastro
-- Corrigir dependencias do useCallback
-
-### Semanas 5-6: TanStack Query Migration
-- Refatorar useProjects para useQuery
-- Refatorar useActivities para useQuery
-- Refatorar useTeamReports para useQuery
-- Implementar optimistic updates
-
-### Semanas 7-8: Produto
-- Dashboard analitico com graficos (Recharts)
-- IA para sugestao de narrativas nos relatorios
-- Quebrar ReportGenerator.tsx em subcomponentes
-
-### Semanas 9-10: Enterprise
-- Multi-tenancy (tabela organizations)
-- Audit logs para UPDATE (nao so DELETE)
-- Sistema de lixeira com restore na UI
-
-### Semanas 11-12: Polish
-- Testes automatizados (Vitest)
-- Notificacoes e lembretes
-- Revisao de acessibilidade
-- Documentacao tecnica
-
----
-
-## Secao Tecnica Detalhada
-
-### Causa raiz dos problemas
-
-**Base64 em banco**: As funcoes `handlePhotoUpload` em ActivityManager.tsx e ReportGenerator.tsx usam `FileReader.readAsDataURL()` e salvam o resultado diretamente nos arrays `photos` que vao para colunas `text[]` no PostgreSQL. A correcao exige upload para Storage com `supabase.storage.from('bucket').upload()` e armazenamento apenas da URL publica.
-
-**Falta de paginacao**: `useActivities` faz `supabase.from('activities').select('*')` sem `.range()`. Quando ultrapassa 1000 rows, o Supabase silenciosamente trunca o resultado.
-
-**TanStack Query subutilizado**: O pacote esta instalado (`@tanstack/react-query ^5.83.0`) e o QueryClientProvider esta configurado no App.tsx, mas os hooks principais (useProjects, useActivities, useTeamReports) fazem fetch manual com useState+useEffect. Apenas SecureDeleteDialog usa useMutation.
-
-**Audit logs frageis**: A tabela `audit_logs` tem RLS para SELECT e INSERT mas nao para UPDATE e DELETE. Um usuario com acesso direto ao banco (ou via falha de seguranca) poderia apagar evidencias.
