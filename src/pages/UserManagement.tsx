@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit } from 'lucide-react';
+import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound } from 'lucide-react';
 import { CollaboratorProjectsDialog } from '@/components/CollaboratorProjectsDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -34,6 +34,9 @@ export const UserManagement: React.FC = () => {
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [projectsUser, setProjectsUser] = useState<AdminUser | null>(null);
   const [createMethod, setCreateMethod] = useState<'invite' | 'direct'>('invite');
+  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+  const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null);
+  const [newPassword, setNewPassword] = useState('');
   
   // Form state
   const [email, setEmail] = useState('');
@@ -91,6 +94,16 @@ export const UserManagement: React.FC = () => {
 
   const handleDelete = async (userId: string) => {
     await deleteUser(userId);
+  };
+
+  const handleResetPassword = async () => {
+    if (!resetPasswordUser || !newPassword) return;
+    const result = await updateUser(resetPasswordUser.id, { password: newPassword });
+    if (result.success) {
+      setIsResetPasswordOpen(false);
+      setResetPasswordUser(null);
+      setNewPassword('');
+    }
   };
 
   const openEdit = (user: AdminUser) => {
@@ -256,6 +269,9 @@ export const UserManagement: React.FC = () => {
                         <Button variant="ghost" size="icon" title="Projetos vinculados" onClick={() => { setProjectsUser(user); setIsProjectsOpen(true); }}>
                           <FolderOpen className="w-4 h-4" />
                         </Button>
+                        <Button variant="ghost" size="icon" title="Resetar senha" onClick={() => { setResetPasswordUser(user); setNewPassword(''); setIsResetPasswordOpen(true); }}>
+                          <KeyRound className="w-4 h-4" />
+                        </Button>
                         <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
                           <Pencil className="w-4 h-4" />
                         </Button>
@@ -348,6 +364,39 @@ export const UserManagement: React.FC = () => {
         open={isProjectsOpen}
         onOpenChange={setIsProjectsOpen}
       />
+
+      {/* Reset Password Dialog */}
+      <Dialog open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Resetar Senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para <strong>{resetPasswordUser?.name}</strong> ({resetPasswordUser?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Nova Senha</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Mínimo 6 caracteres"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsResetPasswordOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleResetPassword} disabled={isLoading || newPassword.length < 6}>
+              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Redefinir Senha
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
