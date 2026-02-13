@@ -53,8 +53,9 @@ export const useProjects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pagination, setPagination] = useState({ page: 0, pageSize: 50, total: 0 });
 
-  const fetchProjects = useCallback(async () => {
+  const fetchProjects = useCallback(async (page: number = 0) => {
     if (!user) {
       setProjects([]);
       setActiveProjectId(null);
@@ -63,15 +64,18 @@ export const useProjects = () => {
     }
 
     const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+    const from = page * pagination.pageSize;
+    const to = from + pagination.pageSize - 1;
 
     let data: DbProject[] = [];
 
     if (isAdmin) {
       // Admins and Super Admins see ALL projects
-      const { data: allData, error } = await supabase
+      const { data: allData, error, count } = await supabase
         .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(from, to);
 
       if (error) {
         console.error('Error fetching projects:', error);
@@ -79,11 +83,12 @@ export const useProjects = () => {
         return;
       }
       data = (allData as DbProject[]) || [];
+      setPagination({ page, pageSize: pagination.pageSize, total: count || 0 });
     } else {
       // Regular users: own projects + collaborator projects
-      const { data: ownData, error: ownError } = await supabase
+      const { data: ownData, error: ownError, count: ownCount } = await supabase
         .from('projects')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
@@ -108,10 +113,13 @@ export const useProjects = () => {
         return;
       }
 
-      data = [
+      const allUserProjects = [
         ...((ownData as DbProject[]) || []),
         ...collabData.filter(c => !(ownData || []).some(o => o.id === c.id)),
       ];
+      
+      data = allUserProjects.slice(from, to + 1);
+      setPagination({ page, pageSize: pagination.pageSize, total: allUserProjects.length });
     }
 
     const mappedProjects = data.map(mapDbToProject);
@@ -122,10 +130,10 @@ export const useProjects = () => {
     }
     
     setIsLoading(false);
-  }, [user, role, activeProjectId]);
+  }, [user, role, pagination.pageSize]);
 
   useEffect(() => {
-    fetchProjects();
+    fetchProjects(0);
   }, [fetchProjects]);
 
   const addProject = async (project: Omit<Project, 'id'>) => {
@@ -302,14 +310,34 @@ export const useProjects = () => {
 
     await updateProject(updatedProject);
   };
-
   const activeProject = projects.find(p => p.id === activeProjectId) || null;
+
+  const goToPage = (page: number) => {
+    fetchProjects(page);
+  };
+
+  const nextPage = () => {
+    const maxPage = Math.ceil(pagination.total / pagination.pageSize) - 1;
+    if (pagination.page < maxPage) {
+      goToPage(pagination.page + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (pagination.page > 0) {
+      goToPage(pagination.page - 1);
+    }
+  };
 
   return {
     projects,
     activeProjectId,
     activeProject,
     isLoading,
+    pagination,
+    goToPage,
+    nextPage,
+    prevPage,
     addProject,
     updateProject,
     removeProject,

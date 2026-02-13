@@ -18,8 +18,11 @@ interface AppDataContextType {
   
   // Activities
   activities: Activity[];
-  allActivities: Activity[];
+  pagination: { page: number; pageSize: number; total: number };
   isLoadingActivities: boolean;
+  goToPage: (page: number) => void;
+  nextPage: () => void;
+  prevPage: () => void;
   addActivity: (activity: Omit<Activity, 'id'>) => Promise<Activity | null>;
   updateActivity: (activity: Activity) => Promise<void>;
   deleteActivity: (id: string) => Promise<void>;
@@ -47,8 +50,11 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
       
       // Activities
       activities: activitiesData.activities,
-      allActivities: activitiesData.allActivities,
+      pagination: activitiesData.pagination,
       isLoadingActivities: activitiesData.isLoading,
+      goToPage: activitiesData.goToPage,
+      nextPage: activitiesData.nextPage,
+      prevPage: activitiesData.prevPage,
       addActivity: activitiesData.addActivity,
       updateActivity: activitiesData.updateActivity,
       deleteActivity: activitiesData.deleteActivity
