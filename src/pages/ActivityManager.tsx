@@ -30,6 +30,8 @@ import {
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
   FolderGit2, Search, Users, Loader2
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 export const ActivityManager: React.FC = () => {
   const { activeProject: project, activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useAppData();
@@ -179,28 +181,65 @@ export const ActivityManager: React.FC = () => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
       
-      const base64Promises = files.map(file => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve(reader.result as string);
-          };
-          reader.readAsDataURL(file as Blob);
-        });
-      });
-
-      const newPhotos = await Promise.all(base64Promises);
-      
-      setNewActivity(prev => ({ 
-        ...prev, 
-        photos: [...(prev.photos || []), ...newPhotos] 
-      }));
+      for (const file of files) {
+        try {
+          // Generate unique file path
+          const photoId = crypto.randomUUID();
+          const fileExt = file.name.split('.').pop() || 'jpg';
+          const filePath = `activities/${project?.id}/${photoId}.${fileExt}`;
+          
+          // Upload to Storage
+          const { error } = await supabase.storage
+            .from('team-report-photos')
+            .upload(filePath, file, { cacheControl: '3600', upsert: false });
+          
+          if (error) {
+            console.error('Upload error:', error);
+            toast.error(`Erro ao enviar foto: ${file.name}`);
+            continue;
+          }
+          
+          // Get public URL
+          const { data: urlData } = supabase.storage
+            .from('team-report-photos')
+            .getPublicUrl(filePath);
+          
+          // Add URL to photos array (not base64)
+          setNewActivity(prev => ({ 
+            ...prev, 
+            photos: [...(prev.photos || []), urlData.publicUrl] 
+          }));
+          
+          toast.success(`Foto ${file.name} enviada com sucesso`);
+        } catch (error) {
+          console.error('Photo upload error:', error);
+          toast.error(`Erro ao processar foto: ${file.name}`);
+        }
+      }
       
       e.target.value = '';
     }
   };
 
-  const removePhoto = (indexToRemove: number) => {
+  const removePhoto = async (indexToRemove: number) => {
+    const photoUrl = newActivity.photos?.[indexToRemove];
+    
+    // Delete from Storage if it's a URL (not base64)
+    if (photoUrl && !photoUrl.startsWith('data:')) {
+      try {
+        // Extract file path from URL
+        const urlParts = new URL(photoUrl).pathname.split('/');
+        const filePath = urlParts.slice(-3).join('/'); // Gets 'activities/projectId/photoId.jpg'
+        
+        await supabase.storage
+          .from('team-report-photos')
+          .remove([filePath]);
+      } catch (error) {
+        console.error('Error deleting photo from storage:', error);
+        // Still remove from UI even if storage delete fails
+      }
+    }
+    
     setNewActivity(prev => ({
       ...prev,
       photos: prev.photos?.filter((_, index) => index !== indexToRemove)
