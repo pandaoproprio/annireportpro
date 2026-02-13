@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -12,136 +12,101 @@ export interface AdminUser {
   emailConfirmed: boolean;
 }
 
+const ADMIN_USERS_KEY = ['admin-users'];
+
 export const useAdminUsers = () => {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const fetchUsers = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-users', {
-        method: 'GET'
-      });
-
+  const usersQuery = useQuery({
+    queryKey: ADMIN_USERS_KEY,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('admin-users', { method: 'GET' });
       if (error) throw error;
-      setUsers(data.users || []);
-    } catch (error: any) {
-      console.error('Error fetching users:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: error.message || 'Erro ao carregar usuários'
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+      return (data.users || []) as AdminUser[];
+    },
+    enabled: false, // only fetch when explicitly enabled (super_admin check in consumer)
+  });
 
-  const createUser = async (userData: {
-    email: string;
-    password?: string;
-    name: string;
-    role: 'user' | 'admin' | 'super_admin' | 'oficineiro';
-    sendInvite?: boolean;
-  }) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-users', {
-        method: 'POST',
-        body: userData
-      });
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ADMIN_USERS_KEY });
 
+  const createUserMutation = useMutation({
+    mutationFn: async (userData: { email: string; password?: string; name: string; role: 'user' | 'admin' | 'super_admin' | 'oficineiro'; sendInvite?: boolean }) => {
+      const { data, error } = await supabase.functions.invoke('admin-users', { method: 'POST', body: userData });
       if (error) throw error;
-      
-      toast({
-        title: 'Sucesso',
-        description: userData.sendInvite 
-          ? 'Convite enviado com sucesso!' 
-          : 'Usuário criado com sucesso!'
-      });
-      
-      await fetchUsers();
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error creating user:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: error.message || 'Erro ao criar usuário'
-      });
-      return { success: false, error };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return data;
+    },
+    onSuccess: (_, vars) => {
+      toast({ title: 'Sucesso', description: vars.sendInvite ? 'Convite enviado com sucesso!' : 'Usuário criado com sucesso!' });
+      invalidate();
+    },
+    onError: (error: Error) => {
+      toast({ variant: 'destructive', title: 'Erro', description: error.message || 'Erro ao criar usuário' });
+    },
+  });
 
-  const updateUser = async (userId: string, updates: { name?: string; role?: 'user' | 'admin' | 'super_admin' | 'oficineiro'; password?: string }) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-users', {
-        method: 'PATCH',
-        body: { userId, ...updates }
-      });
-
+  const updateUserMutation = useMutation({
+    mutationFn: async ({ userId, ...updates }: { userId: string; name?: string; role?: 'user' | 'admin' | 'super_admin' | 'oficineiro'; password?: string }) => {
+      const { data, error } = await supabase.functions.invoke('admin-users', { method: 'PATCH', body: { userId, ...updates } });
       if (error) throw error;
-      
-      toast({
-        title: 'Sucesso',
-        description: updates.password ? 'Senha redefinida com sucesso!' : 'Usuário atualizado com sucesso!'
-      });
-      
-      await fetchUsers();
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error updating user:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: error.message || 'Erro ao atualizar usuário'
-      });
-      return { success: false, error };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return { data, updates };
+    },
+    onSuccess: (result) => {
+      toast({ title: 'Sucesso', description: result.updates.password ? 'Senha redefinida com sucesso!' : 'Usuário atualizado com sucesso!' });
+      invalidate();
+    },
+    onError: (error: Error) => {
+      toast({ variant: 'destructive', title: 'Erro', description: error.message || 'Erro ao atualizar usuário' });
+    },
+  });
 
-  const deleteUser = async (userId: string) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-users', {
-        method: 'DELETE',
-        body: { userId }
-      });
-
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('admin-users', { method: 'DELETE', body: { userId } });
       if (error) throw error;
-      
-      toast({
-        title: 'Sucesso',
-        description: 'Usuário removido com sucesso!'
-      });
-      
-      await fetchUsers();
-      return { success: true };
-    } catch (error: any) {
-      console.error('Error deleting user:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Erro',
-        description: error.message || 'Erro ao remover usuário'
-      });
-      return { success: false, error };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: 'Sucesso', description: 'Usuário removido com sucesso!' });
+      invalidate();
+    },
+    onError: (error: Error) => {
+      toast({ variant: 'destructive', title: 'Erro', description: error.message || 'Erro ao remover usuário' });
+    },
+  });
+
+  const isMutating = createUserMutation.isPending || updateUserMutation.isPending || deleteUserMutation.isPending;
 
   return {
-    users,
-    isLoading,
-    fetchUsers,
-    createUser,
-    updateUser,
-    deleteUser
+    users: usersQuery.data || [],
+    isLoading: usersQuery.isLoading || usersQuery.isFetching || isMutating,
+
+    // Backward-compatible fetch
+    fetchUsers: () => usersQuery.refetch(),
+
+    createUser: async (userData: { email: string; password?: string; name: string; role: 'user' | 'admin' | 'super_admin' | 'oficineiro'; sendInvite?: boolean }) => {
+      try {
+        await createUserMutation.mutateAsync(userData);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error };
+      }
+    },
+    updateUser: async (userId: string, updates: { name?: string; role?: 'user' | 'admin' | 'super_admin' | 'oficineiro'; password?: string }) => {
+      try {
+        await updateUserMutation.mutateAsync({ userId, ...updates });
+        return { success: true };
+      } catch (error) {
+        return { success: false, error };
+      }
+    },
+    deleteUser: async (userId: string) => {
+      try {
+        await deleteUserMutation.mutateAsync(userId);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error };
+      }
+    },
   };
 };
