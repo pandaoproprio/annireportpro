@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -28,215 +28,188 @@ export interface MemberProjectAssignment {
   project_name: string;
 }
 
-export const useTeamMembers = () => {
-  const [members, setMembers] = useState<TeamMember[]>([]);
-  const [projectMembers, setProjectMembers] = useState<ProjectTeamMember[]>([]);
-  const [allAssignments, setAllAssignments] = useState<MemberProjectAssignment[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
+const MEMBERS_KEY = ['team-members'];
+const ASSIGNMENTS_KEY = ['team-member-assignments'];
+const projectMembersKey = (projectId: string) => ['project-team-members', projectId];
 
-  const fetchMembers = useCallback(async () => {
-    setIsLoading(true);
-    try {
+export const useTeamMembers = (projectId?: string | null) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  // ── Queries ──
+
+  const membersQuery = useQuery({
+    queryKey: MEMBERS_KEY,
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('team_members')
         .select('*')
         .order('name');
       if (error) throw error;
-      setMembers(data || []);
-    } catch (error: any) {
-      console.error('Error fetching team members:', error);
-      toast({ variant: 'destructive', title: 'Erro', description: 'Erro ao carregar membros da equipe' });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+      return (data || []) as TeamMember[];
+    },
+  });
 
-  const fetchProjectMembers = useCallback(async (projectId: string) => {
-    try {
+  const projectMembersQuery = useQuery({
+    queryKey: projectMembersKey(projectId || ''),
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('project_team_members')
         .select('*')
-        .eq('project_id', projectId);
+        .eq('project_id', projectId!);
       if (error) throw error;
-      setProjectMembers(data || []);
-    } catch (error: any) {
-      console.error('Error fetching project team members:', error);
-    }
-  }, []);
+      return (data || []) as ProjectTeamMember[];
+    },
+    enabled: !!projectId,
+  });
 
-  const fetchAllAssignments = useCallback(async () => {
-    try {
+  const allAssignmentsQuery = useQuery({
+    queryKey: ASSIGNMENTS_KEY,
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('project_team_members')
         .select('team_member_id, project_id, projects(name)');
       if (error) throw error;
-      const mapped: MemberProjectAssignment[] = (data || []).map((d: any) => ({
+      return (data || []).map((d: any) => ({
         team_member_id: d.team_member_id,
         project_id: d.project_id,
         project_name: d.projects?.name || 'Projeto',
-      }));
-      setAllAssignments(mapped);
-    } catch (error: any) {
-      console.error('Error fetching all assignments:', error);
-    }
-  }, []);
+      })) as MemberProjectAssignment[];
+    },
+  });
 
-  const createMember = async (member: { name: string; document?: string; function_role: string; email?: string; phone?: string }) => {
-    setIsLoading(true);
-    try {
+  // ── Helpers ──
+
+  const invalidateAll = () => {
+    queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
+    queryClient.invalidateQueries({ queryKey: ASSIGNMENTS_KEY });
+    if (projectId) queryClient.invalidateQueries({ queryKey: projectMembersKey(projectId) });
+  };
+
+  // ── Mutations ──
+
+  const createMemberMutation = useMutation({
+    mutationFn: async (member: { name: string; document?: string; function_role: string; email?: string; phone?: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
-
       const { data, error } = await supabase
         .from('team_members')
         .insert({ ...member, created_by: user.id })
         .select()
         .single();
       if (error) throw error;
-      
+      return data;
+    },
+    onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Membro adicionado!' });
-      await fetchMembers();
-      return { success: true, data };
-    } catch (error: any) {
+      invalidateAll();
+    },
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Erro', description: error.message });
-      return { success: false };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  const updateMember = async (id: string, updates: Partial<TeamMember>) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('team_members')
-        .update(updates)
-        .eq('id', id);
+  const updateMemberMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: Partial<TeamMember> }) => {
+      const { error } = await supabase.from('team_members').update(updates).eq('id', id);
       if (error) throw error;
-      
+    },
+    onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Membro atualizado!' });
-      await fetchMembers();
-      return { success: true };
-    } catch (error: any) {
+      invalidateAll();
+    },
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Erro', description: error.message });
-      return { success: false };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  const deleteMember = async (id: string) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('id', id);
+  const deleteMemberMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('team_members').delete().eq('id', id);
       if (error) throw error;
-      
+    },
+    onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Membro removido!' });
-      await fetchMembers();
-      return { success: true };
-    } catch (error: any) {
+      invalidateAll();
+    },
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Erro', description: error.message });
-      return { success: false };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  const assignToProject = async (teamMemberId: string, projectId: string) => {
-    setIsLoading(true);
-    try {
+  const assignToProjectMutation = useMutation({
+    mutationFn: async ({ teamMemberId, projectId: pId }: { teamMemberId: string; projectId: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Não autenticado');
-
       const { error } = await supabase
         .from('project_team_members')
-        .insert({ team_member_id: teamMemberId, project_id: projectId, added_by: user.id });
+        .insert({ team_member_id: teamMemberId, project_id: pId, added_by: user.id });
       if (error) {
         if (error.code === '23505') throw new Error('Membro já vinculado a este projeto');
         throw error;
       }
-      
+    },
+    onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Membro vinculado ao projeto!' });
-      await fetchProjectMembers(projectId);
-      return { success: true };
-    } catch (error: any) {
+      invalidateAll();
+    },
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Erro', description: error.message });
-      return { success: false };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  const removeFromProject = async (teamMemberId: string, projectId: string) => {
-    setIsLoading(true);
-    try {
+  const removeFromProjectMutation = useMutation({
+    mutationFn: async ({ teamMemberId, projectId: pId }: { teamMemberId: string; projectId: string }) => {
       const { error } = await supabase
         .from('project_team_members')
         .delete()
         .eq('team_member_id', teamMemberId)
-        .eq('project_id', projectId);
+        .eq('project_id', pId);
       if (error) throw error;
-      
+    },
+    onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Vínculo removido!' });
-      await fetchProjectMembers(projectId);
-      return { success: true };
-    } catch (error: any) {
+      invalidateAll();
+    },
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Erro', description: error.message });
-      return { success: false };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  const linkUserAccount = async (teamMemberId: string, userId: string) => {
-    setIsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('team_members')
-        .update({ user_id: userId })
-        .eq('id', teamMemberId);
+  const linkUserAccountMutation = useMutation({
+    mutationFn: async ({ teamMemberId, userId }: { teamMemberId: string; userId: string }) => {
+      const { error } = await supabase.from('team_members').update({ user_id: userId }).eq('id', teamMemberId);
       if (error) throw error;
-      
+    },
+    onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Conta vinculada ao membro!' });
-      await fetchMembers();
-      return { success: true };
-    } catch (error: any) {
+      invalidateAll();
+    },
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Erro', description: error.message });
-      return { success: false };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  const createAccessForMember = async (member: TeamMember, password: string) => {
-    setIsLoading(true);
-    try {
+  const createAccessForMemberMutation = useMutation({
+    mutationFn: async ({ member, password }: { member: TeamMember; password: string }) => {
       if (!member.email) throw new Error('Membro precisa ter um e-mail cadastrado');
       if (password.length < 6) throw new Error('Senha deve ter pelo menos 6 caracteres');
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
-      // Create user account via admin edge function
       const { data, error } = await supabase.functions.invoke('admin-users', {
         method: 'POST',
         body: { email: member.email, password, name: member.name, role: 'user' },
       });
-
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
       const newUserId = data?.user?.id;
       if (!newUserId) throw new Error('Erro ao criar conta');
 
-      // Link user_id to team member
       await supabase.from('team_members').update({ user_id: newUserId }).eq('id', member.id);
 
-      // Add as collaborator to all projects the member is assigned to
       const { data: assignments } = await supabase
         .from('project_team_members')
         .select('project_id')
@@ -251,21 +224,92 @@ export const useTeamMembers = () => {
         }
       }
 
-      toast({ title: 'Acesso criado!', description: `Login: ${member.email} — Senha temporária definida. O membro agora pode acessar o Diário de Bordo.` });
-      await fetchMembers();
-      return { success: true };
-    } catch (error: any) {
+      return member;
+    },
+    onSuccess: (member) => {
+      toast({ title: 'Acesso criado!', description: `Login: ${member.email} — Senha temporária definida.` });
+      invalidateAll();
+    },
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Erro ao criar acesso', description: error.message });
-      return { success: false };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
+
+  // ── Backward-compatible API ──
+
+  const isLoading = membersQuery.isLoading || projectMembersQuery.isLoading;
+  const isMutating =
+    createMemberMutation.isPending || updateMemberMutation.isPending ||
+    deleteMemberMutation.isPending || assignToProjectMutation.isPending ||
+    removeFromProjectMutation.isPending || createAccessForMemberMutation.isPending;
 
   return {
-    members, projectMembers, allAssignments, isLoading,
-    fetchMembers, fetchProjectMembers, fetchAllAssignments,
-    createMember, updateMember, deleteMember,
-    assignToProject, removeFromProject, linkUserAccount, createAccessForMember
+    members: membersQuery.data || [],
+    projectMembers: projectMembersQuery.data || [],
+    allAssignments: allAssignmentsQuery.data || [],
+    isLoading: isLoading || isMutating,
+
+    // Keep fetch* for backward compat — they just refetch the queries
+    fetchMembers: () => queryClient.invalidateQueries({ queryKey: MEMBERS_KEY }),
+    fetchProjectMembers: (pId: string) => queryClient.invalidateQueries({ queryKey: projectMembersKey(pId) }),
+    fetchAllAssignments: () => queryClient.invalidateQueries({ queryKey: ASSIGNMENTS_KEY }),
+
+    // Mutations with same signatures
+    createMember: async (member: { name: string; document?: string; function_role: string; email?: string; phone?: string }) => {
+      try {
+        const data = await createMemberMutation.mutateAsync(member);
+        return { success: true, data };
+      } catch {
+        return { success: false };
+      }
+    },
+    updateMember: async (id: string, updates: Partial<TeamMember>) => {
+      try {
+        await updateMemberMutation.mutateAsync({ id, updates });
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
+    deleteMember: async (id: string) => {
+      try {
+        await deleteMemberMutation.mutateAsync(id);
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
+    assignToProject: async (teamMemberId: string, projectId: string) => {
+      try {
+        await assignToProjectMutation.mutateAsync({ teamMemberId, projectId });
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
+    removeFromProject: async (teamMemberId: string, projectId: string) => {
+      try {
+        await removeFromProjectMutation.mutateAsync({ teamMemberId, projectId });
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
+    linkUserAccount: async (teamMemberId: string, userId: string) => {
+      try {
+        await linkUserAccountMutation.mutateAsync({ teamMemberId, userId });
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
+    createAccessForMember: async (member: TeamMember, password: string) => {
+      try {
+        await createAccessForMemberMutation.mutateAsync({ member, password });
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
   };
 };

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,15 +14,8 @@ interface Props {
 }
 
 export const CollaboratorProjectsDialog: React.FC<Props> = ({ user, open, onOpenChange }) => {
-  const { projects, assignments, isLoading, fetchProjects, fetchAssignments, assignProject, removeAssignment } = useCollaboratorManagement();
+  const { projects, assignments, isLoading, assignProject, removeAssignment } = useCollaboratorManagement(open && user ? user.id : null);
   const [selectedProject, setSelectedProject] = useState('');
-
-  useEffect(() => {
-    if (open && user) {
-      fetchProjects();
-      fetchAssignments(user.id);
-    }
-  }, [open, user, fetchProjects, fetchAssignments]);
 
   const availableProjects = projects.filter(p => !assignments.some(a => a.project_id === p.id));
 

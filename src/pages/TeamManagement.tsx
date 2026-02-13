@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTeamMembers, TeamMember } from '@/hooks/useTeamMembers';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -19,10 +19,9 @@ export const TeamManagement: React.FC = () => {
   const { projects, activeProjectId } = useAppData();
   const {
     members, projectMembers, allAssignments, isLoading,
-    fetchMembers, fetchProjectMembers, fetchAllAssignments,
     createMember, updateMember, deleteMember,
     assignToProject, removeFromProject, createAccessForMember
-  } = useTeamMembers();
+  } = useTeamMembers(activeProjectId);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -41,16 +40,7 @@ export const TeamManagement: React.FC = () => {
   const [accessMember, setAccessMember] = useState<TeamMember | null>(null);
   const [accessPassword, setAccessPassword] = useState('');
 
-  useEffect(() => {
-    fetchMembers();
-    fetchAllAssignments();
-  }, [fetchMembers, fetchAllAssignments]);
-
-  useEffect(() => {
-    if (activeProjectId) {
-      fetchProjectMembers(activeProjectId);
-    }
-  }, [activeProjectId, fetchProjectMembers]);
+  // Data is now auto-fetched by TanStack Query via the hook
 
   const resetForm = () => {
     setName(''); setDocument(''); setFunctionRole(''); setEmail(''); setPhone(''); setCreateProjectId(activeProjectId || '');

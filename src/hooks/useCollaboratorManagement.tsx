@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,76 +14,101 @@ export interface CollaboratorAssignment {
   created_at: string;
 }
 
-export const useCollaboratorManagement = () => {
-  const [projects, setProjects] = useState<ProjectOption[]>([]);
-  const [assignments, setAssignments] = useState<CollaboratorAssignment[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+const COLLAB_PROJECTS_KEY = ['collaborator-projects'];
+const collabAssignmentsKey = (userId: string) => ['collaborator-assignments', userId];
+
+export const useCollaboratorManagement = (userId?: string | null) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-  const fetchProjects = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('admin-users?action=collaborators', {
-        method: 'GET'
-      });
+  const projectsQuery = useQuery({
+    queryKey: COLLAB_PROJECTS_KEY,
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('admin-users?action=collaborators', { method: 'GET' });
       if (error) throw error;
-      setProjects(data.projects || []);
-    } catch (error: any) {
-      console.error('Error fetching projects:', error);
-    }
-  }, []);
+      return (data.projects || []) as ProjectOption[];
+    },
+    enabled: !!userId,
+  });
 
-  const fetchAssignments = useCallback(async (userId: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke(`admin-users?action=collaborators&userId=${userId}`, {
-        method: 'GET'
-      });
+  const assignmentsQuery = useQuery({
+    queryKey: collabAssignmentsKey(userId || ''),
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke(`admin-users?action=collaborators&userId=${userId}`, { method: 'GET' });
       if (error) throw error;
-      setAssignments(data.collaborators || []);
-    } catch (error: any) {
-      console.error('Error fetching assignments:', error);
-    }
-  }, []);
+      return (data.collaborators || []) as CollaboratorAssignment[];
+    },
+    enabled: !!userId,
+  });
 
-  const assignProject = async (userId: string, projectId: string) => {
-    setIsLoading(true);
-    try {
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: COLLAB_PROJECTS_KEY });
+    if (userId) queryClient.invalidateQueries({ queryKey: collabAssignmentsKey(userId) });
+  };
+
+  const assignMutation = useMutation({
+    mutationFn: async ({ userId: uId, projectId }: { userId: string; projectId: string }) => {
       const { data, error } = await supabase.functions.invoke('admin-users?action=collaborators', {
         method: 'POST',
-        body: { userId, projectId }
+        body: { userId: uId, projectId },
       });
       if (error) throw error;
       if (data.error) throw new Error(data.error);
-      
+      return data;
+    },
+    onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Projeto vinculado ao colaborador!' });
-      await fetchAssignments(userId);
-      return { success: true };
-    } catch (error: any) {
+      invalidate();
+    },
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Erro', description: error.message || 'Erro ao vincular projeto' });
-      return { success: false };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  const removeAssignment = async (userId: string, projectId: string) => {
-    setIsLoading(true);
-    try {
+  const removeMutation = useMutation({
+    mutationFn: async ({ userId: uId, projectId }: { userId: string; projectId: string }) => {
       const { data, error } = await supabase.functions.invoke('admin-users?action=collaborators', {
         method: 'DELETE',
-        body: { userId, projectId }
+        body: { userId: uId, projectId },
       });
       if (error) throw error;
-      
+      return data;
+    },
+    onSuccess: () => {
       toast({ title: 'Sucesso', description: 'Vínculo removido!' });
-      await fetchAssignments(userId);
-      return { success: true };
-    } catch (error: any) {
+      invalidate();
+    },
+    onError: (error: Error) => {
       toast({ variant: 'destructive', title: 'Erro', description: error.message || 'Erro ao remover vínculo' });
-      return { success: false };
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
-  return { projects, assignments, isLoading, fetchProjects, fetchAssignments, assignProject, removeAssignment };
+  const isMutating = assignMutation.isPending || removeMutation.isPending;
+
+  return {
+    projects: projectsQuery.data || [],
+    assignments: assignmentsQuery.data || [],
+    isLoading: projectsQuery.isLoading || assignmentsQuery.isLoading || isMutating,
+
+    // Backward-compatible
+    fetchProjects: () => queryClient.invalidateQueries({ queryKey: COLLAB_PROJECTS_KEY }),
+    fetchAssignments: (uId: string) => queryClient.invalidateQueries({ queryKey: collabAssignmentsKey(uId) }),
+
+    assignProject: async (uId: string, projectId: string) => {
+      try {
+        await assignMutation.mutateAsync({ userId: uId, projectId });
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
+    removeAssignment: async (uId: string, projectId: string) => {
+      try {
+        await removeMutation.mutateAsync({ userId: uId, projectId });
+        return { success: true };
+      } catch {
+        return { success: false };
+      }
+    },
+  };
 };
