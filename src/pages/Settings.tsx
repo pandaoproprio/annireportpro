@@ -13,6 +13,7 @@ import {
 import { toast } from 'sonner';
 import { BatchDeleteProjects } from '@/components/BatchDeleteProjects';
 import { TrashBin } from '@/components/TrashBin';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export const Settings: React.FC = () => {
   const { signOut } = useAuth();
@@ -21,6 +22,8 @@ export const Settings: React.FC = () => {
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showBatchDelete, setShowBatchDelete] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
   // Form states
   const [formData, setFormData] = useState({
@@ -146,17 +149,14 @@ export const Settings: React.FC = () => {
 
   const handleDeleteProject = async () => {
     if (!activeProject) return;
-    if (window.confirm(`Tem certeza que deseja excluir o projeto "${activeProject.name}"? Esta ação não pode ser desfeita e todas as atividades e relatórios associados serão perdidos.`)) {
-      await removeProject(activeProject.id);
-      toast.success('Projeto excluído com sucesso!');
-    }
+    await removeProject(activeProject.id);
+    toast.success('Projeto excluído com sucesso!');
+    setShowDeleteConfirm(false);
   };
 
   const handleLogout = async () => {
-    if (window.confirm('Tem certeza que deseja sair da sua conta?')) {
-      await signOut();
-      window.location.reload();
-    }
+    await signOut();
+    window.location.reload();
   };
 
   return (
@@ -187,7 +187,7 @@ export const Settings: React.FC = () => {
                       <Button onClick={startEditing} variant="outline">
                         <Edit className="w-4 h-4 mr-2" /> Editar Projeto
                       </Button>
-                      <Button onClick={handleDeleteProject} variant="outline" className="text-destructive hover:bg-destructive/10">
+                      <Button onClick={() => setShowDeleteConfirm(true)} variant="outline" className="text-destructive hover:bg-destructive/10">
                         <Trash2 className="w-4 h-4 mr-2" /> Excluir Projeto
                       </Button>
                       <Button onClick={() => setShowBatchDelete(true)} variant="outline" className="text-destructive hover:bg-destructive/10">
@@ -438,7 +438,7 @@ export const Settings: React.FC = () => {
                 Encerre sua sessão atual. Você precisará fazer login novamente para acessar o sistema.
               </p>
               
-              <Button variant="outline" onClick={handleLogout}>
+              <Button variant="outline" onClick={() => setShowLogoutConfirm(true)}>
                 <LogOut className="w-4 h-4 mr-2" /> Sair da Conta
               </Button>
             </div>
@@ -450,6 +450,26 @@ export const Settings: React.FC = () => {
         <p>Os dados são armazenados de forma segura com Lovable Cloud.</p>
         <p>Seus dados estão sincronizados entre todos os dispositivos.</p>
       </div>
+
+      {/* Confirm Dialogs */}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        onOpenChange={setShowDeleteConfirm}
+        title="Excluir Projeto"
+        description={`Tem certeza que deseja excluir o projeto "${activeProject?.name}"? Esta ação não pode ser desfeita e todas as atividades e relatórios associados serão perdidos.`}
+        confirmLabel="Excluir"
+        variant="destructive"
+        onConfirm={handleDeleteProject}
+      />
+
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        onOpenChange={setShowLogoutConfirm}
+        title="Sair da Conta"
+        description="Tem certeza que deseja sair da sua conta?"
+        confirmLabel="Sair"
+        onConfirm={handleLogout}
+      />
     </div>
   );
 };
