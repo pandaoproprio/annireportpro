@@ -81,10 +81,10 @@ export const Login: React.FC = () => {
   const currentYear = new Date().getFullYear();
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Painel esquerdo */}
+    <div className="h-[100dvh] flex flex-col lg:flex-row overflow-hidden">
+      {/* Painel esquerdo - oculto no mobile */}
       <div
-        className="relative flex-shrink-0 lg:w-[52%] flex flex-col items-center justify-center px-10 py-14 lg:px-16 lg:py-20 overflow-hidden min-h-[50vh] lg:min-h-screen"
+        className="relative flex-shrink-0 hidden lg:flex lg:w-[52%] flex-col items-center justify-center px-16 py-20 overflow-hidden"
         style={{ backgroundColor: '#0DA3E7' }}
       >
         {/* Círculos decorativos */}
@@ -129,7 +129,7 @@ export const Login: React.FC = () => {
       </div>
 
       {/* Painel direito */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 bg-muted/30">
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 bg-muted/30 overflow-y-auto">
         <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7 animate-fade-in">
           {/* Logo mobile */}
           <div className="lg:hidden flex justify-center mb-2">
