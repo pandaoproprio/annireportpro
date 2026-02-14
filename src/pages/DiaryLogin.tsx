@@ -131,9 +131,9 @@ export const DiaryLogin: React.FC = () => {
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 bg-muted/30 overflow-y-auto">
         <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7 animate-fade-in">
           {/* Logo mobile */}
-          <div className="lg:hidden flex justify-center mb-2">
-            <img src={logoGira} alt="GIRA Diário de Bordo" className="w-12 h-12 object-contain" />
-          </div>
+           <div className="lg:hidden flex justify-center mb-4">
+             <img src={logoGira} alt="GIRA Diário de Bordo" className="h-48 object-contain" />
+           </div>
 
           {/* Título e subtítulo */}
           <div className="text-center space-y-2">
