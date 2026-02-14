@@ -39,8 +39,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
   }
 
   // Redirect to LGPD consent only when profile is loaded and consent is missing
+  // Skip if we're already on the consent page or just navigated from it
   if (!hasLgpdConsent && location.pathname !== '/consentimento') {
-    return <Navigate to="/consentimento" replace />;
+    // Double-check by re-reading lgpd_consent_at directly from profile
+    if (!profile.lgpd_consent_at) {
+      return <Navigate to="/consentimento" replace />;
+    }
   }
 
   // Oficineiro users can only access the Diário de Bordo
