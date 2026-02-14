@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppData } from '@/contexts/AppDataContext';
 import { SidebarLink } from '@/components/SidebarLink';
@@ -52,6 +52,12 @@ const Layout: React.FC = () => {
   const { signOut, profile, role } = useAuth();
   const { projects, activeProjectId, activeProject, switchProject, isLoadingProjects: projectsLoading } = useAppData();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Auto-close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
 
   const closeSidebar = () => setSidebarOpen(false);
 

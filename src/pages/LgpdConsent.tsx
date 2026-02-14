@@ -30,7 +30,8 @@ export const LgpdConsent: React.FC = () => {
 
       await refreshProfile();
       toast.success('Consentimento registrado com sucesso!');
-      navigate('/', { replace: true });
+      // Small delay to ensure state propagates before navigation
+      setTimeout(() => navigate('/', { replace: true }), 100);
     } catch (err) {
       console.error('Error saving consent:', err);
       toast.error('Erro ao registrar consentimento. Tente novamente.');
