@@ -13,11 +13,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UserPlus, Pencil, Trash2, Loader2, Users, Link2, Unlink, FolderPlus, FolderMinus, KeyRound } from 'lucide-react';
+import { UserPlus, Pencil, Trash2, Loader2, Users, Link2, Unlink, FolderPlus, FolderMinus, KeyRound, ShieldCheck } from 'lucide-react';
+import { UserPermissionsDialog } from '@/components/UserPermissionsDialog';
+import { useAdminUsers, AdminUser } from '@/hooks/useAdminUsers';
+import { useAuth } from '@/hooks/useAuth';
 
 export const TeamManagement: React.FC = () => {
+  const { role } = useAuth();
   const { hasPermission, isSuperAdmin } = usePermissions();
   const { projects, activeProjectId } = useAppData();
+  const { users, fetchUsers, updateUser, isLoading: isAdminLoading } = useAdminUsers();
   const {
     members, projectMembers, allAssignments, isLoading,
     createMember, updateMember, deleteMember,
@@ -40,6 +45,15 @@ export const TeamManagement: React.FC = () => {
   const [isAccessOpen, setIsAccessOpen] = useState(false);
   const [accessMember, setAccessMember] = useState<TeamMember | null>(null);
   const [accessPassword, setAccessPassword] = useState('');
+  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [permissionsUser, setPermissionsUser] = useState<AdminUser | null>(null);
+
+  // Fetch admin users for RBAC management
+  React.useEffect(() => {
+    if (isSuperAdmin) {
+      fetchUsers();
+    }
+  }, [isSuperAdmin, fetchUsers]);
 
   // Data is now auto-fetched by TanStack Query via the hook
 
@@ -248,6 +262,18 @@ export const TeamManagement: React.FC = () => {
                                 <KeyRound className="w-4 h-4 text-primary" />
                               </Button>
                             )}
+                            {m.user_id && isSuperAdmin && (
+                              <Button variant="ghost" size="icon" title="Permissões RBAC"
+                                onClick={() => {
+                                  const adminUser = users.find(u => u.id === m.user_id);
+                                  if (adminUser) {
+                                    setPermissionsUser(adminUser);
+                                    setIsPermissionsOpen(true);
+                                  }
+                                }}>
+                                <ShieldCheck className="w-4 h-4 text-primary" />
+                              </Button>
+                            )}
                             {hasPermission('team_management_edit') && (
                               <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
                                 <Pencil className="w-4 h-4" />
@@ -427,6 +453,15 @@ export const TeamManagement: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Permissions RBAC Dialog */}
+      <UserPermissionsDialog
+        user={permissionsUser}
+        open={isPermissionsOpen}
+        onOpenChange={setIsPermissionsOpen}
+        onSave={async (userId, permissions) => updateUser(userId, { permissions })}
+        isSaving={isAdminLoading}
+      />
     </div>
   );
 };
