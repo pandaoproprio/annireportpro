@@ -7,12 +7,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Shield, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { useQueryClient } from '@tanstack/react-query';
 
 export const LgpdConsent: React.FC = () => {
   const { user, refreshProfile } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [acceptedPrivacy, setAcceptedPrivacy] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -30,9 +28,9 @@ export const LgpdConsent: React.FC = () => {
 
       if (error) throw error;
 
-      // Refresh profile state and invalidate any cached queries
+      // refreshProfile does setState synchronously after fetch,
+      // so profile/hasLgpdConsent will be updated before navigate executes
       await refreshProfile();
-      await queryClient.invalidateQueries({ queryKey: ['profiles'] });
       toast.success('Consentimento registrado com sucesso!');
       navigate('/', { replace: true });
     } catch (err) {
