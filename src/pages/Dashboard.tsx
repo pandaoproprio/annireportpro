@@ -93,7 +93,7 @@ export const Dashboard: React.FC = () => {
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-sm text-muted-foreground">Painel de Controle Total</span>
           <span className="inline-block px-2.5 py-0.5 text-xs font-semibold bg-muted text-foreground rounded-full border border-border">
-            {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'ADMIN' ? 'Admin' : 'Usuário'}
+            {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'ADMIN' ? 'Admin' : role === 'ANALISTA' ? 'Analista' : 'Usuário'}
           </span>
         </div>
       </div>

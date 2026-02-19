@@ -1,9 +1,12 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useAppData } from '@/contexts/AppDataContext';
 import { SidebarLink } from '@/components/SidebarLink';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
+import { PermissionGuard } from '@/components/PermissionGuard';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { Login } from '@/pages/Login';
 import { ResetPassword } from '@/pages/ResetPassword';
 import { PrivacyPolicy } from '@/pages/PrivacyPolicy';
@@ -50,6 +53,7 @@ const PageFallback = () => (
 const Layout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { signOut, profile, role } = useAuth();
+  const { hasPermission, isAdmin } = usePermissions();
   const { projects, activeProjectId, activeProject, switchProject, isLoadingProjects: projectsLoading } = useAppData();
   const navigate = useNavigate();
   const location = useLocation();
@@ -151,10 +155,10 @@ const Layout: React.FC = () => {
             <div>
               <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Gestão</p>
               <div className="space-y-0.5">
-                <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" onClick={closeSidebar} />
-                <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" onClick={closeSidebar} />
-                <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" onClick={closeSidebar} />
-                <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />
+                {hasPermission('diary') && <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" onClick={closeSidebar} />}
+                {hasPermission('report_object') && <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" onClick={closeSidebar} />}
+                {hasPermission('report_team') && <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" onClick={closeSidebar} />}
+                {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />}
               </div>
             </div>
 
@@ -163,7 +167,7 @@ const Layout: React.FC = () => {
               <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Administração</p>
               <div className="space-y-0.5">
                 <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" onClick={closeSidebar} />
-                {(role === 'SUPER_ADMIN' || role === 'ADMIN') && (
+                {isAdmin && (
                   <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
                 )}
               </div>
@@ -213,17 +217,19 @@ const Layout: React.FC = () => {
 
         {/* Page Content */}
         <div className="flex-1 p-4 md:p-6 lg:p-8 overflow-y-auto pb-safe">
-          <Suspense fallback={<PageFallback />}>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/activities" element={<ActivityManager />} />
-              <Route path="/report" element={<ReportGenerator />} />
-              <Route path="/team-report" element={<TeamReportGenerator />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/users" element={<UserManagement />} />
-              <Route path="/team" element={<TeamManagement />} />
-            </Routes>
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<PageFallback />}>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/activities" element={<PermissionGuard permission="diary"><ActivityManager /></PermissionGuard>} />
+                <Route path="/report" element={<PermissionGuard permission="report_object"><ReportGenerator /></PermissionGuard>} />
+                <Route path="/team-report" element={<PermissionGuard permission="report_team"><TeamReportGenerator /></PermissionGuard>} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/users" element={<PermissionGuard requireAdmin><UserManagement /></PermissionGuard>} />
+                <Route path="/team" element={<PermissionGuard permission="team_management"><TeamManagement /></PermissionGuard>} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
         </div>
 
         {/* Footer */}
