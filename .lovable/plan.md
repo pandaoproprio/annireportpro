@@ -1,5 +1,5 @@
 
-# RELATORIO TECNICO COMPLETO - SISTEMA GIRA
+# RELATORIO TECNICO COMPLETO - SISTEMA GIRA (Atualizado)
 ## Auditoria de Qualidade, Seguranca e Experiencia
 
 ---
@@ -13,44 +13,43 @@
 | `scope: /` | OK | - |
 | `start_url: /` | OK | - |
 | `theme_color: #0EA5E9` | OK, consistente com meta tag | - |
-| `orientation: portrait` | OK para mobile-first | - |
-| Icons 192 + 512 | OK | - |
-| Icon maskable | OK (512px com purpose maskable) | - |
+| `orientation: portrait` | OK | - |
+| Icons 192 + 512 + maskable | OK | - |
 
 ### 1.2 Service Worker / Workbox
 | Item | Status | Severidade |
 |------|--------|------------|
-| `registerType: autoUpdate` | OK, atualiza automaticamente | - |
+| `registerType: autoUpdate` | OK | - |
 | `navigateFallbackDenylist: [/^\/~oauth/]` | OK | - |
-| Cache de API Supabase com `NetworkFirst` + timeout 10s | **Cache de dados potencialmente sensíveis** (atividades, projetos, perfis) no browser cache | **ALTO** |
-| `globPatterns: **/*.{js,css,html,ico,png,svg,woff2}` | OK | - |
-| `offline.html` como fallback | OK, bem implementado | - |
-| Nenhuma estrategia de cache para imagens de Storage | Fotos de atividades nao sao cacheadas offline | **BAIXO** |
+| Cache de API Supabase `NetworkFirst` + timeout 10s + 1h expiry | **Dados sensiveis (projetos, atividades, perfis) ficam cacheados no browser apos logout** | **CRITICO** |
+| `offline.html` fallback | OK | - |
+| Fotos de atividades nao cacheadas para offline | Sem experiencia offline real | **BAIXO** |
 
 ### 1.3 Standalone vs Navegador
 | Item | Status | Severidade |
 |------|--------|------------|
-| Hook `useIsStandalone` | OK, detecta corretamente com `matchMedia` + `navigator.standalone` (iOS) | - |
-| Login adapta layout em standalone | OK, remove sombras/bordas/footer | - |
-| Layout principal (sidebar) NAO adapta em standalone | **Sidebar drawer e identico em mobile browser e standalone** - nao parece app nativo | **ALTO** |
-| Footer institucional fixo no layout principal em standalone | **Footer de site aparece dentro do PWA standalone** | **MEDIO** |
+| `useIsStandalone` hook | OK - detecta via `matchMedia` + `navigator.standalone` + listener para mudancas | - |
+| Login standalone: layout full-screen, sem card/shadow | OK | - |
+| **Layout principal (sidebar/footer) NAO muda em standalone** | App inteiro parece site exceto na tela de login | **ALTO** |
+| Footer institucional aparece dentro do PWA standalone | "Cara de site" | **MEDIO** |
 
-### 1.4 Viewport e Scroll
+### 1.4 Viewport e Safe Area
 | Item | Status | Severidade |
 |------|--------|------------|
-| `100dvh` no root | OK, correto para mobile | - |
-| `overflow-hidden` no container raiz | OK | - |
-| `overscroll-behavior: none` no body | OK, previne bounce | - |
-| Safe area iOS (notch) | `pb-safe` existe mas so aplicado no content area, **padding top para notch ausente no header mobile** | **MEDIO** |
-| `env(safe-area-inset-*)` no html | OK no CSS global | - |
-| `viewport-fit=cover` na meta tag | OK | - |
+| `100dvh` nos containers raiz | OK | - |
+| `overflow-hidden` no root | OK | - |
+| `overscroll-behavior: none` no body | OK | - |
+| `viewport-fit=cover` | OK | - |
+| `env(safe-area-inset-*)` no html | OK | - |
+| `pb-safe` no content area | OK | - |
+| **Padding top para notch/barra de status ausente no header mobile** | Conteudo pode ficar atras da barra de status no iOS | **MEDIO** |
+| `apple-mobile-web-app-status-bar-style: default` | Barra branca nao integra com tema azul. Deveria ser `black-translucent` para PWA standalone | **BAIXO** |
 
-### 1.5 Problemas Identificados
-| Problema | Severidade |
-|----------|------------|
-| **Cache do Service Worker armazena respostas da API Supabase** (dados de projetos, atividades) no cache do browser por ate 1h. Dados sensiveis ficam acessíveis mesmo apos logout | **CRITICO** |
-| Nenhum splash screen nativo configurado (apple-launch-image ausente) | **MEDIO** |
-| `apple-mobile-web-app-status-bar-style: default` - barra de status branca, nao integra com tema azul | **BAIXO** |
+### 1.5 Instalacao e Splash
+| Item | Status | Severidade |
+|------|--------|------------|
+| `InstallPrompt` componente existe na sidebar | OK | - |
+| Sem `apple-touch-startup-image` (splash screen iOS) | Tela branca ao abrir PWA no iOS | **MEDIO** |
 
 ---
 
@@ -59,146 +58,137 @@
 ### 2.1 Fluxo de Login
 | Item | Status | Severidade |
 |------|--------|------------|
-| Validacao com Zod inline | OK | - |
-| Feedback de erro via toast | OK | - |
-| Visibilidade de senha (toggle) | OK | - |
-| Nao ha signup - apenas login | OK para o contexto (usuarios sao criados pelo admin) | - |
-| Reset de senha via dialog | OK para Login, **DiaryLogin apenas mostra toast pedindo contato com gestor** | **BAIXO** |
+| Validacao Zod inline + feedback visual | OK | - |
+| Erro via toast com mensagens traduzidas | OK | - |
+| Toggle visibilidade de senha | OK | - |
+| Standalone: inputs 48px, botao 48px | OK, bons touch targets | - |
+| **Botao com `onMouseEnter/onMouseLeave` inline** | Nao funciona em touch - hover state fica "preso" no mobile | **ALTO** |
+| DiaryLogin: fluxo em 2 etapas (splash + form) | OK, boa UX | - |
+| Reset senha: Login usa Dialog, DiaryLogin usa toast | Inconsistente, mas aceitavel para contexto | **BAIXO** |
 
-### 2.2 Fluxo LGPD / Consentimento
+### 2.2 LGPD / Consentimento
 | Item | Status | Severidade |
 |------|--------|------------|
-| **Consentimento reaparece** apos aceitar | Bug relatado pelo usuario. Causa raiz: `refreshProfile()` e assincrono e o `ProtectedRoute` avalia antes do estado propagar. O `setTimeout(100ms)` e um workaround fragil | **CRITICO** |
-| Double-check `profile.lgpd_consent_at` no ProtectedRoute | Workaround, mas `hasLgpdConsent` e derivado do mesmo profile que ja foi verificado - redundante | **MEDIO** |
-| Links de Termos e Privacidade abrem em `target="_blank"` | OK | - |
+| **Consentimento reaparece apos aceitar** | Race condition: `refreshProfile()` e async, `ProtectedRoute` avalia `hasLgpdConsent` antes da propagacao. O `setTimeout(100ms)` e workaround fragil que pode falhar em redes lentas | **CRITICO** |
+| ProtectedRoute espera `profile` carregar antes de avaliar | OK, melhoria recente | - |
+| Double-check `profile.lgpd_consent_at` direto | Redundante - `hasLgpdConsent` ja deriva do mesmo profile | **BAIXO** |
+| Sem mecanismo de exportar/excluir dados | Violacao LGPD Art. 18 | **CRITICO** |
+| Revogacao de consentimento: "contate o administrador" | Nao implementado funcionalmente | **ALTO** |
 
-### 2.3 Onboarding (Criar Projeto)
+### 2.3 Onboarding
 | Item | Status | Severidade |
 |------|--------|------------|
-| Wizard de 3 etapas | OK estruturalmente | - |
-| **Excesso de campos obrigatorios no step 1** (12+ campos) | Friccao alta para primeiro uso | **ALTO** |
-| Erro de projeto usa `alert()` nativo | **Inconsistente com o restante do sistema que usa `toast`** | **MEDIO** |
-| Sem validacao por step (pode avancar com campos vazios) | **MEDIO** |
-| Nao ha opcao de pular campos opcionais explicitamente | **BAIXO** |
+| Wizard 3 steps com progress bar | OK | - |
+| **Step 1: 12+ campos visíveis de uma vez** | Friccao alta, especialmente no mobile | **ALTO** |
+| Erro usa `alert()` nativo (linhas 104, 107) | Inconsistente com toast usado no resto do app | **MEDIO** |
+| Sem validacao por step - pode avancar com campos vazios | **MEDIO** |
+| IDs gerados com `Date.now().toString()` | Colisao possivel (improvavel) | **BAIXO** |
 
-### 2.4 Fluxo Principal
+### 2.4 Dashboard
 | Item | Status | Severidade |
 |------|--------|------------|
-| Dashboard mostra estatisticas e graficos | OK | - |
-| Estado vazio do Dashboard orientado ("Criar Projeto") | OK | - |
-| ActivityManager com formulario expandível | OK | - |
-| Formulario de atividade usa `alert()` para erro de datas | **Inconsistente** | **BAIXO** |
-| Busca e filtros nas atividades | OK | - |
-| Celebracao na primeira atividade | OK, boa microinteracao | - |
+| Estado vazio com CTA "Configurar Novo Projeto" | OK | - |
+| Skeleton loading | OK | - |
+| Graficos com Recharts | OK | - |
+| Stats cards com dados reais | OK | - |
+| Progresso de metas hardcoded a `count * 10%` | Nao reflete meta real, apenas multiplicacao arbitraria | **MEDIO** |
+| `PendingActivitiesBanner` | OK, boa UX | - |
 
-### 2.5 Pontos de Abandono Identificados
-1. Onboarding longo demais no Step 1 (12+ campos)
-2. Consentimento LGPD reaparecendo repetidamente
-3. Menu lateral nao fechando no mobile (relatado, corrigido parcialmente)
-4. Sem bottom navigation no mobile - usuario precisa abrir drawer sempre
+### 2.5 Activity Manager
+| Item | Status | Severidade |
+|------|--------|------------|
+| Formulario expansivel com animacao | OK | - |
+| Busca + filtros por tipo e meta | OK | - |
+| `alert()` para erro de datas (linha 136) | Inconsistente | **BAIXO** |
+| Upload de fotos para Storage | OK, migrou de base64 | - |
+| `getPublicUrl()` para fotos | **Qualquer pessoa com a URL acessa as fotos** | **ALTO** |
+| Celebracao na primeira atividade | OK | - |
+| Botao de remover foto usa `group-hover:opacity-100` | **Invisivel em touch** - usuario nao sabe que pode remover fotos no mobile | **ALTO** |
+
+### 2.6 Pontos de Abandono
+1. LGPD consent loop (bug ativo)
+2. Onboarding Step 1 com 12+ campos no mobile
+3. Sem bottom navigation - precisa abrir drawer para navegar
+4. Footer fixo ocupa espaco util no mobile
 
 ---
 
 ## 3. ANALISE UI / DESIGN
 
 ### 3.1 Sistema de Cores
-| Item | Status |
-|------|--------|
-| Primary: Sky Blue `#0EA5E9` | Consistente |
-| Sidebar: Verde GIRA `hsl(122, 46%, 34%)` | **Conflito visual** - sidebar usa verde enquanto o restante usa azul |
-| Botoes hardcoded com `style={{ backgroundColor: '#0DA3E7' }}` | **Anti-pattern** - ignora o tema e a variavel CSS `--primary` |
-| Hover via `onMouseEnter/onMouseLeave` inline | **Anti-pattern grave** - nao funciona em touch, ignora Tailwind |
-| Dark mode definido no CSS mas sem toggle | Incompleto |
+| Item | Status | Severidade |
+|------|--------|------------|
+| Primary: `#0EA5E9` (Sky Blue) | Consistente no CSS | - |
+| Sidebar: Verde GIRA `hsl(122, 46%, 34%)` | **Conflito visual** - verde na sidebar vs azul no resto | **MEDIO** |
+| **Botoes com `style={{ backgroundColor: '#0DA3E7' }}`** | Anti-pattern em 8+ instancias (Login, DiaryLogin). Ignora a variavel CSS `--primary` | **ALTO** |
+| **Hover via `onMouseEnter/onMouseLeave` em JavaScript** | Anti-pattern grave em todos os botoes primarios. Nao funciona em touch. Solucao: usar `hover:bg-primary/90` do Tailwind | **ALTO** |
 
 ### 3.2 Layout e Responsividade
 | Item | Status | Severidade |
 |------|--------|------------|
-| Split-screen 52/48 no login desktop | OK, design moderno | - |
-| Logo mobile no login com `h-48` (192px) | **Excessivamente grande**, ocupa quase metade da tela | **ALTO** |
-| Sidebar com `w-64` fixo | Nao responsiva, sem mini-sidebar | **BAIXO** |
-| Footer institucional dentro do layout standalone | **Cara de site** no PWA | **MEDIO** |
-| Breadcrumb no DiaryLayout | OK | - |
-| Sem bottom navigation bar | **Critico para UX mobile-native** | **ALTO** |
+| Login desktop: split-screen 52/48 | OK, moderno | - |
+| **Logo mobile (browser) no login: `h-48` (192px)** | Excessivamente grande, ocupa ~40% da viewport em telas pequenas. Logo correta no standalone e `h-36` | **ALTO** |
+| Sidebar `w-64` fixo | OK para desktop, drawer no mobile | - |
+| Footer permanente no layout principal | Ocupa ~60px fixos no mobile | **MEDIO** |
+| Sidebar logo `h-48 max-w-none` dentro de `h-[80px]` container | Logo estoura o container, apenas `overflow-hidden` a corta | **BAIXO** |
 
 ### 3.3 Tipografia
 | Item | Status |
 |------|--------|
-| Font families: DM Sans + Inter | OK, boa escolha |
-| `font-serif` no relatorio preview | OK, adequado para documentos |
-| Hierarquia de titulos consistente | OK |
+| DM Sans + Inter | OK |
+| Hierarquia com `font-display` e tamanhos | OK |
 
-### 3.4 Inconsistencias Visuais
-1. Botoes com cores inline (`style=`) vs botoes com classes Tailwind
-2. Sidebar verde vs tema azul do resto do app
-3. Logo diferente em cada tela (`logo-gira-relatorios.png` vs `logo-gira.png`)
-4. `h-11` (44px) nos inputs desktop vs `min-h-[48px]` no standalone - target inconsistente
+### 3.4 Inconsistencias Visuais Encontradas
+1. 8+ botoes com `style={{ backgroundColor }}` inline ao inves de classes Tailwind
+2. Sidebar verde vs app azul
+3. Logo `logo-gira-relatorios.png` no Login/Layout vs `logo-gira.png` no DiaryLogin/DiaryLayout
+4. Inputs `h-11` no browser vs `min-h-[48px]` no standalone
+5. Footer text difere entre Layout e DiaryLayout
 
 ---
 
 ## 4. ANALISE PERFORMANCE
 
-### 4.1 Code Splitting e Lazy Loading
+### 4.1 Code Splitting
 | Item | Status |
 |------|--------|
 | Todas as paginas com `lazy()` | OK |
-| `Suspense` com fallback Skeleton | OK |
-| Componentes de UI (shadcn) nao sao lazy | OK, sao pequenos |
-| `html2pdf.js` importado estaticamente no ReportGenerator | **Deveria ser lazy** - biblioteca pesada carregada mesmo sem uso | **MEDIO** |
+| `Suspense` com `PageFallback` skeleton | OK |
+| `html2pdf.js` importado no top-level do ReportGenerator | **Deveria ser lazy** - biblioteca pesada | **MEDIO** |
 
 ### 4.2 Re-renders
 | Item | Status | Severidade |
 |------|--------|------------|
-| `useProjects` faz `setActiveProjectId` durante render | **Anti-pattern** - causa re-render em cascata. Linhas 130-132: condicional com `setState` fora de `useEffect` | **ALTO** |
-| `AppDataProvider` re-renderiza toda a arvore ao mudar qualquer contexto | **Sem memoizacao do value** - todo update de projeto/atividade re-renderiza TUDO | **ALTO** |
-| `useQuery` com `staleTime: 30_000` | OK, previne refetches desnecessarios | - |
+| **`useProjects` linhas 130-132: `setActiveProjectId` durante render** | Anti-pattern React. `setState` chamado condicionalmente durante render causa re-render imediato. Deveria estar em `useEffect` | **ALTO** |
+| **`AppDataProvider` value nao memoizado** | Objeto recriado a cada render, propagando re-renders para toda a arvore de componentes | **ALTO** |
+| `useQuery` com `staleTime: 30_000` | OK | - |
+| Optimistic updates com rollback | OK, bem implementado | - |
 
-### 4.3 Bundle e Assets
-| Item | Status |
-|------|--------|
-| 3 logos diferentes importados (~3 assets) | OK |
-| `docx` library (pesada) usada para export | Carregada via lazy route, aceitavel |
-| `html2canvas` + `jspdf` + `html2pdf.js` | Tres bibliotecas de PDF, redundancia potencial | **BAIXO** |
-| `recharts` para graficos | OK |
-
-### 4.4 Queries e Dados
+### 4.3 Queries
 | Item | Status | Severidade |
 |------|--------|------------|
-| `useProjects` para users normais faz **3 queries sequenciais** (own + collab links + collab projects) | **Ineficiente** - deveria ser uma unica query com JOIN | **MEDIO** |
-| Pagination com `pageSize: 50` hardcoded | OK para o volume esperado | - |
-| `useActivities` nao filtra `deleted_at IS NULL` no cliente | OK, filtrado via RLS | - |
+| **Users normais: 3 queries sequenciais** para projetos (own + collab links + collab data) | Deveria ser 1 query com view ou function | **MEDIO** |
+| Pagination hardcoded 50 | OK | - |
 
 ---
 
 ## 5. ANALISE SEGURANCA
 
-### 5.1 RLS (Row Level Security)
-| Item | Status | Severidade |
-|------|--------|------------|
-| 45 politicas RLS configuradas | Abrangente | - |
-| Hard delete bloqueado em `projects`, `activities`, `team_reports` | OK, `DELETE USING (false)` | - |
-| Audit logs imutaveis (`UPDATE false`, `DELETE false`) | OK | - |
-| Todas as 9 tabelas com RLS habilitado | OK | - |
-| Linter sem issues | OK | - |
-| **Todas as policies sao RESTRICTIVE** | OK, seguro por padrao | - |
+### 5.1 RLS
+| Item | Status |
+|------|--------|
+| 9 tabelas com RLS habilitado | OK |
+| Hard delete bloqueado (`DELETE USING false`) | OK |
+| Audit logs imutaveis | OK |
+| Linter: 0 issues | OK |
 
 ### 5.2 Problemas de Seguranca
-| Item | Status | Severidade |
-|------|--------|------------|
-| **Service Worker cacheia dados da API Supabase** por ate 1h. Apos logout, dados permanecem no cache do browser | **CRITICO** |
-| Sessao Supabase armazenada em `localStorage` (padrao do SDK) | Risco conhecido, aceitavel para PWA | **BAIXO** |
-| Token JWT no `localStorage` persiste apos soft-logout se SW cache nao for limpo | **ALTO** |
-| Fotos de atividades com URL publica (Storage `getPublicUrl`) | **Qualquer pessoa com a URL pode acessar as fotos** | **ALTO** |
-| `profiles` politicas RESTRICTIVE so permitem `user_id = auth.uid()` | **Super Admin nao consegue ver perfis de outros usuarios** - potencial problema funcional | **MEDIO** |
-| Nenhuma rate limiting nas tentativas de login | **MEDIO** |
-
-### 5.3 LGPD
-| Item | Status | Severidade |
-|------|--------|------------|
-| Consentimento registrado com timestamp | OK | - |
-| Politica de Privacidade e Termos publicados | OK | - |
-| **Nao ha mecanismo de exportar dados do usuario (direito de portabilidade)** | **CRITICO** - Art. 18 LGPD | **CRITICO** |
-| **Nao ha mecanismo de exclusao de conta pelo usuario** | **CRITICO** - Art. 18 LGPD | **CRITICO** |
-| Revogacao de consentimento mencionada ("contate o administrador") mas **nao implementada** | **ALTO** |
+| Item | Severidade |
+|------|------------|
+| **Service Worker cacheia respostas da API por 1h** - dados persistem apos logout | **CRITICO** |
+| **Fotos com `getPublicUrl()`** - acessiveis sem autenticacao | **ALTO** |
+| **LGPD Art. 18 nao atendido** - sem export/exclusao de dados | **CRITICO** |
+| Sessao JWT em localStorage | Risco conhecido, aceitavel para PWA | **BAIXO** |
 
 ---
 
@@ -207,19 +197,18 @@
 ### 6.1 Comparacao com App Nativo
 | Caracteristica | Status | Nota |
 |----------------|--------|------|
-| Bottom navigation | **Ausente** | 0/10 |
-| Gesture feedback (haptic, swipe) | **Ausente** | 0/10 |
-| Splash screen real | **Ausente** (sem apple-launch-image, sem tela de splash customizada) | 1/10 |
-| Layout muda em standalone | **Apenas no login** - restante do app identico ao browser | 3/10 |
-| UX adaptada para toque | **Parcial** - inputs 48px no standalone, 44px no browser. Botoes de acao na sidebar sao pequenos | 5/10 |
-| Pull-to-refresh | **Ausente** | 0/10 |
-| Transicoes de pagina | Apenas fadeIn/slideUp basicos | 4/10 |
-| Offline data sync | **Ausente** - app nao funciona offline alem do fallback HTML | 1/10 |
+| Bottom navigation | Ausente | 0/10 |
+| Gesture feedback | Ausente | 0/10 |
+| Splash screen (iOS) | Ausente | 1/10 |
+| Layout condicional standalone | **Apenas login** - resto identico | 3/10 |
+| Touch targets adequados | Parcial - standalone OK, browser inconsistente | 5/10 |
+| Pull-to-refresh | Ausente | 0/10 |
+| Transicoes de pagina | fadeIn/slideUp basicos | 4/10 |
 
-### 6.2 Classificacao Visual
-- **Parece site responsivo?** Sim, fortemente.
-- **Parece web app?** Parcialmente - tem sidebar e PWA install, mas carece de padrao app.
-- **Parece app nativo?** Nao. Sidebar lateral, footer institucional, ausencia de bottom nav, sem gestos.
+### 6.2 Classificacao
+- **Parece site responsivo?** Sim - sidebar lateral, footer institucional, sem bottom nav
+- **Parece web app?** Parcialmente - tem PWA install, lazy loading
+- **Parece app nativo?** Nao
 
 ---
 
@@ -230,26 +219,27 @@
 | **Geral** | **5.5** |
 | PWA | 6.0 |
 | UX | 5.5 |
-| UI/Design | 6.0 |
+| UI/Design | 5.5 |
 | Performance | 5.0 |
 | Seguranca | 6.5 |
+| Arquitetura | 6.0 |
 
 ---
 
 ## 8. TOP 10 PROBLEMAS CRITICOS
 
-| # | Problema | Severidade | Categoria |
-|---|---------|------------|-----------|
-| 1 | **Consentimento LGPD reaparece** - race condition entre `refreshProfile` e `ProtectedRoute`. O `setTimeout(100ms)` e fragil | CRITICO | UX/Bug |
-| 2 | **Sem direito de portabilidade/exclusao de dados** - violacao Art. 18 LGPD | CRITICO | Juridico |
-| 3 | **Cache do SW armazena dados sensiveis** da API por 1h, persistem apos logout | CRITICO | Seguranca |
-| 4 | **Fotos de atividades com URL publica** - acessiveis sem autenticacao | ALTO | Seguranca |
-| 5 | **`setActiveProjectId` durante render** no useProjects causa loop de re-renders | ALTO | Performance |
-| 6 | **AppDataProvider sem memoizacao** - re-renderiza toda a arvore a cada mudanca | ALTO | Performance |
-| 7 | **Sem bottom navigation** no mobile - UX nao adaptada para app | ALTO | UX/Mobile |
-| 8 | **Inline styles nos botoes** (`style={{ backgroundColor }}` + `onMouseEnter/Leave`) - nao funciona em touch | ALTO | UI |
-| 9 | **Logo mobile h-48 (192px)** excessivamente grande na tela de login browser | ALTO | UI |
-| 10 | **3 queries sequenciais** para carregar projetos de usuarios normais | MEDIO | Performance |
+| # | Problema | Severidade | Causa Raiz |
+|---|---------|------------|------------|
+| 1 | **LGPD consent reaparece** | CRITICO | `setTimeout(100ms)` fragil em `LgpdConsent.tsx`. `refreshProfile()` async nao invalida query cache, `ProtectedRoute` avalia estado stale |
+| 2 | **Sem export/exclusao de dados (LGPD Art. 18)** | CRITICO | Nao implementado |
+| 3 | **Cache do SW armazena dados sensiveis** | CRITICO | `runtimeCaching` com `NetworkFirst` para rotas Supabase API. Sem limpeza no logout |
+| 4 | **Fotos com URL publica** | ALTO | `getPublicUrl()` gera URL sem autenticacao |
+| 5 | **`setActiveProjectId` durante render** | ALTO | `setState` condicional fora de `useEffect` em `useProjects.tsx` linha 130-132 |
+| 6 | **AppDataProvider sem `useMemo`** | ALTO | Objeto `value` recriado a cada render |
+| 7 | **Inline styles + onMouseEnter/Leave em botoes** | ALTO | 8+ instancias nos logins. Ignora Tailwind, quebra touch |
+| 8 | **Sem bottom navigation mobile** | ALTO | Nao implementado |
+| 9 | **Logo mobile `h-48` no browser** | ALTO | Excessivamente grande, ocupa ~40% da tela |
+| 10 | **Botao remover foto invisivel em touch** | ALTO | `group-hover:opacity-100` nao funciona em dispositivos touch |
 
 ---
 
@@ -257,74 +247,65 @@
 
 | # | Melhoria | Impacto | Esforco |
 |---|---------|---------|---------|
-| 1 | Implementar bottom navigation bar para mobile/standalone | Transforma a experiencia de "site" para "app" | Medio |
-| 2 | Corrigir race condition do LGPD consent usando state machine ou await com invalidacao de query | Elimina bug critico | Baixo |
-| 3 | Remover cache Supabase API do Service Worker ou limpar cache no logout | Elimina vazamento de dados | Baixo |
-| 4 | Usar Storage com politicas RLS ao inves de URLs publicas para fotos | Protege dados sensiveis | Medio |
-| 5 | Memoizar o value do AppDataProvider com `useMemo` | Melhora performance global | Baixo |
-| 6 | Mover `setActiveProjectId` para `useEffect` no useProjects | Elimina re-render loop | Baixo |
-| 7 | Substituir inline styles por variantes Tailwind/CVA nos botoes | Consistencia e touch support | Baixo |
-| 8 | Implementar pagina de "Meus Dados" com exportacao e exclusao de conta | Conformidade LGPD | Alto |
-| 9 | Adicionar splash screen Apple (apple-launch-image) | Experiencia nativa iOS | Baixo |
-| 10 | Simplificar onboarding - agrupar campos opcionais em accordion colapsavel | Reduz friccao de primeiro uso | Medio |
+| 1 | Corrigir LGPD consent: invalidar query `['profiles']` + usar `onSuccess` ao inves de `setTimeout` | Elimina bug critico | Baixo |
+| 2 | Remover cache Supabase API do SW OU limpar cache no `signOut` | Elimina vazamento de dados | Baixo |
+| 3 | Substituir inline styles por classes Tailwind em todos os botoes primarios | Consistencia + touch support | Baixo |
+| 4 | Mover `setActiveProjectId` para `useEffect` | Elimina re-render loop | Baixo |
+| 5 | Memoizar `value` do `AppDataProvider` com `useMemo` | Melhora performance global | Baixo |
+| 6 | Implementar bottom navigation para mobile/standalone | Transforma UX de "site" para "app" | Medio |
+| 7 | Implementar pagina "Meus Dados" (export + exclusao de conta) | Conformidade LGPD | Alto |
+| 8 | Usar URLs assinadas para fotos ao inves de `getPublicUrl` | Protege dados sensiveis | Medio |
+| 9 | Reduzir logo mobile para `h-20` no browser, manter `h-36` no standalone | Melhora proporcao visual | Baixo |
+| 10 | Substituir `alert()` por toast em Onboarding e ActivityManager | Consistencia UX | Baixo |
 
 ---
 
-## 10. RISCOS OCULTOS
+## 10. ROADMAP TECNICO 60 DIAS
 
-1. **Race condition silenciosa no useProjects** (linhas 130-132): `setActiveProjectId` chamado fora de `useEffect` pode causar renders infinitos em certas condicoes de timing com React StrictMode.
+### Semana 1-2: Critico (Bugs + Seguranca)
+1. Corrigir race condition LGPD consent (invalidar queries + await)
+2. Remover cache Supabase API do Service Worker
+3. Substituir `style={{ backgroundColor }}` + `onMouseEnter/Leave` por classes Tailwind em todos os botoes
+4. Mover `setActiveProjectId` para `useEffect`
+5. Memoizar `AppDataProvider` value
 
-2. **Duplicacao de politicas RLS RESTRICTIVE**: Com RESTRICTIVE, TODAS as policies precisam passar. Se um usuario e owner E admin, ele precisa satisfazer AMBAS as policies. Isso pode causar bloqueio inesperado em cenarios de borda (ex: admin que tambem e owner de um projeto deletado).
+### Semana 3-4: Seguranca + UX
+6. Implementar URLs assinadas para fotos (substituir `getPublicUrl`)
+7. Implementar pagina "Meus Dados" (LGPD Art. 18)
+8. Substituir `alert()` por toast em todo o app
+9. Corrigir logo mobile para tamanho proporcional
+10. Adicionar botao visivel de remover foto (sem depender de hover)
 
-3. **Logout nao limpa cache do Service Worker**: Dados de projetos e atividades permanecem no `supabase-api-cache` apos logout. Proximo usuario no mesmo dispositivo pode ver dados residuais.
+### Semana 5-6: Mobile Experience
+11. Implementar bottom navigation bar para mobile/standalone
+12. Ocultar footer no standalone
+13. Aplicar `pt-safe` no mobile header (notch iOS)
+14. Adicionar splash screen Apple (`apple-touch-startup-image`)
+15. Alterar `apple-mobile-web-app-status-bar-style` para `black-translucent`
 
-4. **`logAuditEvent` e fire-and-forget**: Se falhar silenciosamente, nao ha retry. Audit trail pode ter gaps sem que ninguem perceba.
-
-5. **Onboarding usa `Date.now().toString()` como ID** para goals/team members. Se dois itens forem criados no mesmo milissegundo (improvavel mas possivel), havera colisao de ID.
-
-6. **html2pdf.js importado no top-level** do ReportGenerator - mesmo quando o usuario so quer editar (mode=edit), a lib de 500KB+ e carregada.
-
----
-
-## 11. ROADMAP TECNICO PRIORIZADO
-
-### Fase 1 - Critico (1-2 semanas)
-1. Corrigir race condition LGPD consent (substituir setTimeout por invalidacao de query + await)
-2. Remover cache de API Supabase do Service Worker OU limpar cache no logout
-3. Implementar pagina de exportacao/exclusao de dados pessoais (LGPD Art. 18)
-
-### Fase 2 - Alto Impacto (2-4 semanas)
-4. Mover fotos para Storage com RLS (URLs assinadas)
-5. Corrigir `setActiveProjectId` para `useEffect`
-6. Memoizar AppDataProvider value
-7. Substituir inline styles por Tailwind/CVA em todos os botoes
-8. Implementar bottom navigation bar para mobile
-
-### Fase 3 - Refinamento (4-6 semanas)
-9. Splash screen Apple
-10. Simplificar onboarding (accordion para campos opcionais)
-11. Adicionar pull-to-refresh
-12. Consolidar 3 queries de projetos em 1 (DB function ou view)
-13. Lazy import de html2pdf.js
-
-### Fase 4 - Maturidade (6-8 semanas)
-14. Dark mode toggle funcional
-15. Transicoes de pagina com Framer Motion ou View Transitions API
-16. Offline data queue (sync quando reconectar)
-17. Rate limiting no login (backend)
+### Semana 7-8: Refinamento
+16. Simplificar onboarding Step 1 (accordion para campos opcionais)
+17. Consolidar queries de projetos em 1 (view ou DB function)
+18. Lazy import de html2pdf.js
+19. Adicionar pull-to-refresh
+20. Validacao por step no onboarding
 
 ---
 
-## 12. CLASSIFICACAO FINAL
-
-**Nivel atual: MVP+ (MVP funcional com gaps criticos)**
+## 11. CLASSIFICACAO FINAL
 
 ```text
 [ ] Enterprise-ready
 [ ] SaaS maduro
-[ ] Intermediario
-[x] MVP+ (funcional, mas com riscos juridicos e UX fragil)
+[ ] Produto Intermediario
+[x] MVP+ (funcional, com gaps criticos de seguranca e LGPD)
 [ ] MVP basico
 ```
 
-**Justificativa**: O sistema atende ao fluxo basico (criar projeto, registrar atividades, gerar relatorios) com uma arquitetura frontend razoavel (React Query, lazy loading, RLS abrangente). Porem, apresenta **riscos juridicos** (LGPD Art. 18 nao atendido), **bugs ativos** (consent loop), **vazamentos de seguranca** (cache de dados sensíveis, fotos publicas), e **UX de site responsivo** ao inves de app nativo. Para atingir nivel "Intermediario", precisa resolver os itens das Fases 1 e 2.
+**Justificativa**: O sistema atende ao fluxo basico completo (projeto -> atividade -> relatorio) com arquitetura frontend razoavel (React Query, lazy loading, RLS). Porem possui:
+- **2 riscos juridicos criticos** (LGPD Art. 18)
+- **1 bug ativo grave** (consent loop)
+- **1 vazamento de seguranca** (cache SW)
+- **UX de site responsivo**, nao de aplicativo
+
+Para atingir nivel "Intermediario", precisa resolver todos os itens das Semanas 1-4 do roadmap.
