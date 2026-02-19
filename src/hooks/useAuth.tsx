@@ -65,11 +65,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (roleData) {
       const roleMap: Record<string, UserRole> = {
         'usuario': 'USUARIO',
+        'oficineiro': 'OFICINEIRO',
+        'coordenador': 'COORDENADOR',
         'analista': 'ANALISTA',
         'admin': 'ADMIN',
         'super_admin': 'SUPER_ADMIN',
         'user': 'USUARIO',
-        'oficineiro': 'USUARIO',
       };
       setRole(roleMap[roleData.role] || 'USUARIO');
     }

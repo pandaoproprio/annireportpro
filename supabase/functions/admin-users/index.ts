@@ -6,7 +6,7 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
 };
 
-type AppRole = 'usuario' | 'analista' | 'admin' | 'super_admin';
+type AppRole = 'usuario' | 'oficineiro' | 'coordenador' | 'analista' | 'admin' | 'super_admin';
 
 interface CreateUserRequest {
   email: string;
