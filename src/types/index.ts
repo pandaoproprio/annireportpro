@@ -7,7 +7,7 @@ export enum ActivityType {
   OUTROS = 'Outras Ações',
 }
 
-export type UserRole = 'USUARIO' | 'ANALISTA' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserRole = 'USUARIO' | 'OFICINEIRO' | 'COORDENADOR' | 'ANALISTA' | 'ADMIN' | 'SUPER_ADMIN';
 
 export interface User {
   email: string;
