@@ -18,6 +18,13 @@ export async function logAction(params: LogParams): Promise<void> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Fetch profile name/email for modified_by tracking
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('name, email')
+      .eq('user_id', user.id)
+      .single();
+
     await supabase.from('system_logs').insert([{
       user_id: user.id,
       action: params.action,
@@ -26,6 +33,8 @@ export async function logAction(params: LogParams): Promise<void> {
       old_data: params.oldData ?? undefined,
       new_data: params.newData ?? undefined,
       user_agent: navigator.userAgent,
+      modified_by_name: profile?.name ?? null,
+      modified_by_email: profile?.email ?? null,
     }]);
   } catch (e) {
     console.warn('System log failed:', e);

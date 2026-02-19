@@ -320,6 +320,8 @@ export type Database = {
           entity_type: string
           id: string
           ip_address: string | null
+          modified_by_email: string | null
+          modified_by_name: string | null
           new_data: Json | null
           old_data: Json | null
           user_agent: string | null
@@ -332,6 +334,8 @@ export type Database = {
           entity_type: string
           id?: string
           ip_address?: string | null
+          modified_by_email?: string | null
+          modified_by_name?: string | null
           new_data?: Json | null
           old_data?: Json | null
           user_agent?: string | null
@@ -344,6 +348,8 @@ export type Database = {
           entity_type?: string
           id?: string
           ip_address?: string | null
+          modified_by_email?: string | null
+          modified_by_name?: string | null
           new_data?: Json | null
           old_data?: Json | null
           user_agent?: string | null
@@ -520,6 +526,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_role_level: { Args: { _user_id: string }; Returns: number }
       has_permission: {
         Args: {
           _permission: Database["public"]["Enums"]["app_permission"]
