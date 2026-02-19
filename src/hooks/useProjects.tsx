@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -127,9 +127,11 @@ export const useProjects = () => {
   const total = data?.total || 0;
 
   // Auto-select first project
-  if (projects.length > 0 && !activeProjectId) {
-    setActiveProjectId(projects[0].id);
-  }
+  useEffect(() => {
+    if (projects.length > 0 && !activeProjectId) {
+      setActiveProjectId(projects[0].id);
+    }
+  }, [projects, activeProjectId]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['projects'] });
 

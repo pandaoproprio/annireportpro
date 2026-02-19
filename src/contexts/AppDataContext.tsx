@@ -1,4 +1,4 @@
-import { createContext, useContext, ReactNode } from 'react';
+import { createContext, useContext, useMemo, ReactNode } from 'react';
 import { useProjects } from '@/hooks/useProjects';
 import { useActivities } from '@/hooks/useActivities';
 import { Project, Activity, ReportData } from '@/types';
@@ -34,31 +34,33 @@ export const AppDataProvider = ({ children }: { children: ReactNode }) => {
   const projectsData = useProjects();
   const activitiesData = useActivities(projectsData.activeProjectId);
 
+  const value = useMemo<AppDataContextType>(() => ({
+    // Projects
+    projects: projectsData.projects,
+    activeProjectId: projectsData.activeProjectId,
+    activeProject: projectsData.activeProject,
+    isLoadingProjects: projectsData.isLoading,
+    addProject: projectsData.addProject,
+    updateProject: projectsData.updateProject,
+    removeProject: projectsData.removeProject,
+    removeMultipleProjects: projectsData.removeMultipleProjects,
+    switchProject: projectsData.switchProject,
+    updateReportData: projectsData.updateReportData,
+    
+    // Activities
+    activities: activitiesData.activities,
+    pagination: activitiesData.pagination,
+    isLoadingActivities: activitiesData.isLoading,
+    goToPage: activitiesData.goToPage,
+    nextPage: activitiesData.nextPage,
+    prevPage: activitiesData.prevPage,
+    addActivity: activitiesData.addActivity,
+    updateActivity: activitiesData.updateActivity,
+    deleteActivity: activitiesData.deleteActivity,
+  }), [projectsData, activitiesData]);
+
   return (
-    <AppDataContext.Provider value={{
-      // Projects
-      projects: projectsData.projects,
-      activeProjectId: projectsData.activeProjectId,
-      activeProject: projectsData.activeProject,
-      isLoadingProjects: projectsData.isLoading,
-      addProject: projectsData.addProject,
-      updateProject: projectsData.updateProject,
-      removeProject: projectsData.removeProject,
-      removeMultipleProjects: projectsData.removeMultipleProjects,
-      switchProject: projectsData.switchProject,
-      updateReportData: projectsData.updateReportData,
-      
-      // Activities
-      activities: activitiesData.activities,
-      pagination: activitiesData.pagination,
-      isLoadingActivities: activitiesData.isLoading,
-      goToPage: activitiesData.goToPage,
-      nextPage: activitiesData.nextPage,
-      prevPage: activitiesData.prevPage,
-      addActivity: activitiesData.addActivity,
-      updateActivity: activitiesData.updateActivity,
-      deleteActivity: activitiesData.deleteActivity
-    }}>
+    <AppDataContext.Provider value={value}>
       {children}
     </AppDataContext.Provider>
   );
