@@ -229,13 +229,14 @@ export const UserManagement: React.FC = () => {
               <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
+            <div className="overflow-x-auto -mx-4 px-4">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Papel</TableHead>
-                  <TableHead>Último acesso</TableHead>
+                  <TableHead className="hidden md:table-cell">Último acesso</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -257,7 +258,7 @@ export const UserManagement: React.FC = () => {
                         {roleLabels[user.role].label}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden md:table-cell">
                       {user.lastSignIn 
                         ? format(new Date(user.lastSignIn), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
                         : 'Nunca'
@@ -305,6 +306,7 @@ export const UserManagement: React.FC = () => {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
