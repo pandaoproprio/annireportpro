@@ -128,27 +128,42 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          first_login_at: string | null
           id: string
+          last_login_at: string | null
           lgpd_consent_at: string | null
+          login_attempts_without_change: number
+          must_change_password: boolean
           name: string
+          password_changed_at: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           email: string
+          first_login_at?: string | null
           id?: string
+          last_login_at?: string | null
           lgpd_consent_at?: string | null
+          login_attempts_without_change?: number
+          must_change_password?: boolean
           name: string
+          password_changed_at?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           email?: string
+          first_login_at?: string | null
           id?: string
+          last_login_at?: string | null
           lgpd_consent_at?: string | null
+          login_attempts_without_change?: number
+          must_change_password?: boolean
           name?: string
+          password_changed_at?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -294,6 +309,45 @@ export type Database = {
           team?: Json
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      system_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
         }
         Relationships: []
       }

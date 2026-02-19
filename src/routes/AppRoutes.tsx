@@ -40,6 +40,7 @@ const TeamManagement = lazy(() => import('@/pages/TeamManagement').then(m => ({ 
 const DiaryLayout = lazy(() => import('@/pages/DiaryLayout').then(m => ({ default: m.DiaryLayout })));
 const Onboarding = lazy(() => import('@/pages/Onboarding').then(m => ({ default: m.Onboarding })));
 const LgpdConsent = lazy(() => import('@/pages/LgpdConsent').then(m => ({ default: m.LgpdConsent })));
+const ForcePasswordChange = lazy(() => import('@/pages/ForcePasswordChange').then(m => ({ default: m.ForcePasswordChange })));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -255,6 +256,11 @@ export const AppRoutes: React.FC = () => {
         <Route path="/consentimento" element={
           <ProtectedRoute>
             <LgpdConsent />
+          </ProtectedRoute>
+        } />
+        <Route path="/change-password" element={
+          <ProtectedRoute>
+            <ForcePasswordChange />
           </ProtectedRoute>
         } />
         <Route path="/diario/*" element={

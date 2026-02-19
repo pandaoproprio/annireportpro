@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Activity, ActivityType } from '@/types';
 import { logAuditEvent } from '@/lib/auditLog';
+import { logAction } from '@/lib/systemLog';
 import { Database } from '@/integrations/supabase/types';
 
 type DbActivityType = Database['public']['Enums']['activity_type'];
@@ -141,7 +142,10 @@ export const useActivities = (projectId: string | null) => {
       if (error) throw error;
       return mapDbToActivity(data as DbActivity);
     },
-    onSuccess: () => invalidate(),
+    onSuccess: (newActivity) => {
+      invalidate();
+      logAction({ action: 'activity_created', entityType: 'activity', entityId: newActivity.id, newData: { description: newActivity.description, type: newActivity.type } });
+    },
   });
 
   const updateActivityMutation = useMutation({
