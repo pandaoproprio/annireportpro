@@ -163,7 +163,7 @@ const Layout: React.FC = () => {
               <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Administração</p>
               <div className="space-y-0.5">
                 <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" onClick={closeSidebar} />
-                {role === 'SUPER_ADMIN' && (
+                {(role === 'SUPER_ADMIN' || role === 'ADMIN') && (
                   <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
                 )}
               </div>
@@ -179,7 +179,9 @@ const Layout: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm font-medium text-sidebar-primary">{profile?.name || 'Usuário'}</p>
-                  <p className="text-xs text-sidebar-foreground/70 uppercase tracking-wide">{role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'OFICINEIRO' ? 'Oficineiro' : role}</p>
+                  <p className="text-xs text-sidebar-foreground/70 uppercase tracking-wide">
+                    {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'ADMIN' ? 'Admin' : role === 'ANALISTA' ? 'Analista' : 'Usuário'}
+                  </p>
                 </div>
               </div>
               <button 

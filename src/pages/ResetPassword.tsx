@@ -236,9 +236,6 @@ export const ResetPassword = () => {
             <Button
               type="submit"
               className="w-full h-11 text-sm font-semibold gap-2"
-              style={{ backgroundColor: '#0DA3E7' }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0B8FCC')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0DA3E7')}
               disabled={isResettingPassword}
             >
               {isResettingPassword ? (

@@ -16,6 +16,7 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   role: UserRole;
+  permissions: string[];
   isLoading: boolean;
   hasLgpdConsent: boolean;
   signUp: (email: string, password: string, name?: string) => Promise<{ error: Error | null }>;
@@ -30,7 +31,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [role, setRole] = useState<UserRole>('USER');
+  const [role, setRole] = useState<UserRole>('USUARIO');
+  const [permissions, setPermissions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
@@ -52,12 +54,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     
     if (roleData) {
       const roleMap: Record<string, UserRole> = {
-        'user': 'USER',
+        'usuario': 'USUARIO',
+        'analista': 'ANALISTA',
         'admin': 'ADMIN',
         'super_admin': 'SUPER_ADMIN',
-        'oficineiro': 'OFICINEIRO'
+        // Legacy mappings for backward compat
+        'user': 'USUARIO',
+        'oficineiro': 'USUARIO',
       };
-      setRole(roleMap[roleData.role] || 'USER');
+      setRole(roleMap[roleData.role] || 'USUARIO');
+    }
+
+    // Fetch permissions
+    const { data: permsData } = await supabase
+      .from('user_permissions')
+      .select('permission')
+      .eq('user_id', userId);
+    
+    if (permsData) {
+      setPermissions(permsData.map(p => p.permission));
     }
   };
 
@@ -75,7 +90,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }, 0);
         } else {
           setProfile(null);
-          setRole('USER');
+          setRole('USUARIO');
+          setPermissions([]);
         }
       }
     );
@@ -124,7 +140,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setUser(null);
     setSession(null);
     setProfile(null);
-    setRole('USER');
+    setRole('USUARIO');
+    setPermissions([]);
   };
 
   const refreshProfile = async () => {
@@ -139,6 +156,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       session,
       profile,
       role,
+      permissions,
       isLoading,
       hasLgpdConsent,
       signUp,
