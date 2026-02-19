@@ -25,7 +25,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound 
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText 
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 
@@ -41,6 +41,7 @@ const DiaryLayout = lazy(() => import('@/pages/DiaryLayout').then(m => ({ defaul
 const Onboarding = lazy(() => import('@/pages/Onboarding').then(m => ({ default: m.Onboarding })));
 const LgpdConsent = lazy(() => import('@/pages/LgpdConsent').then(m => ({ default: m.LgpdConsent })));
 const ForcePasswordChange = lazy(() => import('@/pages/ForcePasswordChange').then(m => ({ default: m.ForcePasswordChange })));
+const SystemLogs = lazy(() => import('@/pages/SystemLogs').then(m => ({ default: m.SystemLogs })));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -171,7 +172,10 @@ const Layout: React.FC = () => {
               <div className="space-y-0.5">
                 <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" onClick={closeSidebar} />
                 {isAdmin && (
-                  <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
+                  <>
+                    <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
+                    <SidebarLink to="/logs" icon={<ScrollText className="w-5 h-5" />} label="Logs do Sistema" onClick={closeSidebar} />
+                  </>
                 )}
               </div>
             </div>
@@ -230,6 +234,7 @@ const Layout: React.FC = () => {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/users" element={<PermissionGuard requireAdmin><UserManagement /></PermissionGuard>} />
                 <Route path="/team" element={<PermissionGuard permission="team_management"><TeamManagement /></PermissionGuard>} />
+                <Route path="/logs" element={<PermissionGuard requireAdmin><SystemLogs /></PermissionGuard>} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
