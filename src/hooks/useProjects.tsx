@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Project, Goal, TeamMember, ReportData } from '@/types';
 import { logAuditEvent } from '@/lib/auditLog';
+import { logAction } from '@/lib/systemLog';
 import { Json } from '@/integrations/supabase/types';
 
 interface DbProject {
@@ -167,6 +168,7 @@ export const useProjects = () => {
     onSuccess: (newProject) => {
       invalidate();
       setActiveProjectId(newProject.id);
+      logAction({ action: 'project_created', entityType: 'project', entityId: newProject.id, newData: { name: newProject.name } });
     },
   });
 

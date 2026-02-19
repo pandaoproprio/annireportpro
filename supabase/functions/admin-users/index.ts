@@ -303,6 +303,18 @@ Deno.serve(async (req) => {
         await supabaseAdmin.from('user_roles').update({ role }).eq('user_id', userData.id);
         // Populate permissions for the role
         await supabaseAdmin.rpc('populate_default_permissions', { _user_id: userData.id, _role: role });
+        // Ensure must_change_password is true for new users (default)
+        await supabaseAdmin.from('profiles').update({ must_change_password: true }).eq('user_id', userData.id);
+        // Log user creation
+        await supabaseAdmin.from('system_logs').insert([{
+          user_id: callingUser.id,
+          action: 'user_created',
+          entity_type: 'user',
+          entity_id: userData.id,
+          new_data: { email, name, role },
+          ip_address: req.headers.get('x-forwarded-for') || null,
+          user_agent: req.headers.get('user-agent') || null,
+        }]);
       }
 
       return new Response(JSON.stringify({ success: true, user: userData }), {
@@ -346,9 +358,21 @@ Deno.serve(async (req) => {
       }
 
       if (role) {
+        // Get old role for logging
+        const { data: oldRoleData } = await supabaseAdmin.from('user_roles').select('role').eq('user_id', userId).single();
         await supabaseAdmin.from('user_roles').update({ role }).eq('user_id', userId);
-        // Re-populate default permissions when role changes
         await supabaseAdmin.rpc('populate_default_permissions', { _user_id: userId, _role: role });
+        // Log role change
+        await supabaseAdmin.from('system_logs').insert([{
+          user_id: callingUser.id,
+          action: 'user_role_changed',
+          entity_type: 'user',
+          entity_id: userId,
+          old_data: { role: oldRoleData?.role },
+          new_data: { role },
+          ip_address: req.headers.get('x-forwarded-for') || null,
+          user_agent: req.headers.get('user-agent') || null,
+        }]);
       }
 
       // Custom permissions override (only super_admin)
@@ -372,6 +396,12 @@ Deno.serve(async (req) => {
         }
         const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
         if (pwError) throw pwError;
+        // Reset password policy flags when admin resets password
+        await supabaseAdmin.from('profiles').update({
+          must_change_password: true,
+          login_attempts_without_change: 0,
+          first_login_at: null,
+        }).eq('user_id', userId);
       }
 
       return new Response(JSON.stringify({ success: true }), {

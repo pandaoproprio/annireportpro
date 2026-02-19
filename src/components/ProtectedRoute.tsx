@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { user, isLoading, role, hasLgpdConsent, profile } = useAuth();
+  const { user, isLoading, role, hasLgpdConsent, profile, mustChangePassword } = useAuth();
   const location = useLocation();
   
   if (isLoading) {
@@ -38,18 +38,17 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     );
   }
 
-  // Redirect to LGPD consent only when profile is loaded and consent is missing
-  // Skip if we're already on the consent page or just navigated from it
+  // Redirect to LGPD consent if needed
   if (!hasLgpdConsent && location.pathname !== '/consentimento') {
-    // Double-check by re-reading lgpd_consent_at directly from profile
     if (!profile.lgpd_consent_at) {
       return <Navigate to="/consentimento" replace />;
     }
   }
 
-  // USUARIO role can only access dashboard (read-only) and diary if permitted
-  // They should not access the full layout management routes
-  // This is now handled by permissions in the sidebar/routes
+  // Force password change redirect (skip if already on the page)
+  if (mustChangePassword && location.pathname !== '/change-password' && location.pathname !== '/consentimento') {
+    return <Navigate to="/change-password" replace />;
+  }
 
   return <>{children}</>;
 };
