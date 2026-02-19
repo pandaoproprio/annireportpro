@@ -141,11 +141,13 @@ const Layout: React.FC = () => {
                       {projects.map(p => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
-                      <SelectItem value="new" className="text-sidebar-primary font-medium">
-                        <span className="flex items-center gap-2">
-                          <PlusCircle className="w-4 h-4" /> Novo Projeto
-                        </span>
-                      </SelectItem>
+                      {isAdmin && (
+                        <SelectItem value="new" className="text-sidebar-primary font-medium">
+                          <span className="flex items-center gap-2">
+                            <PlusCircle className="w-4 h-4" /> Novo Projeto
+                          </span>
+                        </SelectItem>
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
