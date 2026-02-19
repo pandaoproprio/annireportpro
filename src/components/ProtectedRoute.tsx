@@ -47,11 +47,9 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     }
   }
 
-  // Oficineiro users can only access the Diário de Bordo
-  const isDiaryRoute = location.pathname.startsWith('/diario');
-  if (role === 'OFICINEIRO' && !isDiaryRoute) {
-    return <Navigate to="/diario" replace />;
-  }
+  // USUARIO role can only access dashboard (read-only) and diary if permitted
+  // They should not access the full layout management routes
+  // This is now handled by permissions in the sidebar/routes
 
   return <>{children}</>;
 };

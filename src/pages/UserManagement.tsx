@@ -11,17 +11,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound } from 'lucide-react';
+import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3 } from 'lucide-react';
 import { CollaboratorProjectsDialog } from '@/components/CollaboratorProjectsDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Navigate } from 'react-router-dom';
 
 const roleLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  user: { label: 'Usuário', icon: <Users className="w-3 h-3" />, color: 'bg-secondary text-secondary-foreground' },
+  usuario: { label: 'Usuário', icon: <Users className="w-3 h-3" />, color: 'bg-secondary text-secondary-foreground' },
+  analista: { label: 'Analista', icon: <BarChart3 className="w-3 h-3" />, color: 'bg-purple-500/20 text-purple-700 dark:text-purple-300' },
   admin: { label: 'Admin', icon: <Shield className="w-3 h-3" />, color: 'bg-blue-500/20 text-blue-700 dark:text-blue-300' },
   super_admin: { label: 'Super Admin', icon: <Crown className="w-3 h-3" />, color: 'bg-amber-500/20 text-amber-700 dark:text-amber-300' },
-  oficineiro: { label: 'Oficineiro', icon: <FileEdit className="w-3 h-3" />, color: 'bg-green-500/20 text-green-700 dark:text-green-300' },
 };
 
 export const UserManagement: React.FC = () => {
@@ -42,7 +42,7 @@ export const UserManagement: React.FC = () => {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
-  const [selectedRole, setSelectedRole] = useState<'user' | 'admin' | 'super_admin' | 'oficineiro'>('user');
+  const [selectedRole, setSelectedRole] = useState<'usuario' | 'analista' | 'admin' | 'super_admin'>('usuario');
 
   useEffect(() => {
     if (role === 'SUPER_ADMIN') {
@@ -50,8 +50,7 @@ export const UserManagement: React.FC = () => {
     }
   }, [role, fetchUsers]);
 
-  // Only Super Admin can access
-  if (role !== 'SUPER_ADMIN') {
+  if (role !== 'SUPER_ADMIN' && role !== 'ADMIN') {
     return <Navigate to="/" replace />;
   }
 
@@ -59,7 +58,7 @@ export const UserManagement: React.FC = () => {
     setEmail('');
     setName('');
     setPassword('');
-    setSelectedRole('user');
+    setSelectedRole('usuario');
   };
 
   const handleCreate = async () => {
@@ -194,10 +193,10 @@ export const UserManagement: React.FC = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="user">Usuário</SelectItem>
-                      <SelectItem value="admin">Admin</SelectItem>
-                      <SelectItem value="super_admin">Super Admin</SelectItem>
-                      <SelectItem value="oficineiro">Oficineiro</SelectItem>
+                      <SelectItem value="usuario">Usuário</SelectItem>
+                      <SelectItem value="analista">Analista</SelectItem>
+                      {role === 'SUPER_ADMIN' && <SelectItem value="admin">Admin</SelectItem>}
+                      {role === 'SUPER_ADMIN' && <SelectItem value="super_admin">Super Admin</SelectItem>}
                     </SelectContent>
                   </Select>
                 </div>
@@ -337,10 +336,10 @@ export const UserManagement: React.FC = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user">Usuário</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="super_admin">Super Admin</SelectItem>
-                  <SelectItem value="oficineiro">Oficineiro</SelectItem>
+                  <SelectItem value="usuario">Usuário</SelectItem>
+                  <SelectItem value="analista">Analista</SelectItem>
+                  {role === 'SUPER_ADMIN' && <SelectItem value="admin">Admin</SelectItem>}
+                  {role === 'SUPER_ADMIN' && <SelectItem value="super_admin">Super Admin</SelectItem>}
                 </SelectContent>
               </Select>
             </div>

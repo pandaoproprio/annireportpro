@@ -200,7 +200,7 @@ export const useTeamMembers = (projectId?: string | null) => {
 
       const { data, error } = await supabase.functions.invoke('admin-users', {
         method: 'POST',
-        body: { email: member.email, password, name: member.name, role: 'user' },
+        body: { email: member.email, password, name: member.name, role: 'usuario' },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);

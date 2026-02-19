@@ -6,19 +6,22 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
 };
 
+type AppRole = 'usuario' | 'analista' | 'admin' | 'super_admin';
+
 interface CreateUserRequest {
   email: string;
   password?: string;
   name: string;
-  role: 'user' | 'admin' | 'super_admin' | 'oficineiro';
+  role: AppRole;
   sendInvite?: boolean;
 }
 
 interface UpdateUserRequest {
   userId: string;
   name?: string;
-  role?: 'user' | 'admin' | 'super_admin' | 'oficineiro';
+  role?: AppRole;
   password?: string;
+  permissions?: string[];
 }
 
 interface DeleteUserRequest {
@@ -65,8 +68,11 @@ Deno.serve(async (req) => {
       .eq('user_id', callingUser.id)
       .single();
 
-    if (roleError || !roleData || roleData.role !== 'super_admin') {
-      return new Response(JSON.stringify({ error: 'Forbidden: Super Admin access required' }), {
+    const callerRole = roleData?.role;
+
+    // Only super_admin and admin can access this endpoint
+    if (roleError || !roleData || (callerRole !== 'super_admin' && callerRole !== 'admin')) {
+      return new Response(JSON.stringify({ error: 'Forbidden: Admin access required' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
@@ -75,14 +81,69 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
 
+    // ===== PERMISSIONS MANAGEMENT =====
+    if (action === 'permissions') {
+      // Only super_admin can manage permissions
+      if (callerRole !== 'super_admin') {
+        return new Response(JSON.stringify({ error: 'Forbidden: Super Admin access required' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (req.method === 'GET') {
+        const userId = url.searchParams.get('userId');
+        if (!userId) {
+          return new Response(JSON.stringify({ error: 'userId is required' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        const { data, error } = await supabaseAdmin
+          .from('user_permissions')
+          .select('permission')
+          .eq('user_id', userId);
+        if (error) throw error;
+        return new Response(JSON.stringify({ permissions: (data || []).map(d => d.permission) }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (req.method === 'PATCH') {
+        const { userId, permissions } = await req.json();
+        if (!userId || !permissions) {
+          return new Response(JSON.stringify({ error: 'userId and permissions are required' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        // Delete existing and re-insert
+        await supabaseAdmin.from('user_permissions').delete().eq('user_id', userId);
+        if (permissions.length > 0) {
+          const rows = permissions.map((p: string) => ({
+            user_id: userId,
+            permission: p,
+            granted_by: callingUser.id
+          }));
+          const { error } = await supabaseAdmin.from('user_permissions').insert(rows);
+          if (error) throw error;
+        }
+        return new Response(JSON.stringify({ success: true }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // ===== COLLABORATORS MANAGEMENT =====
     if (action === 'collaborators') {
-      // GET: List collaborators for a user
+      // Only super_admin can manage collaborators
+      if (callerRole !== 'super_admin') {
+        return new Response(JSON.stringify({ error: 'Forbidden: Super Admin access required' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       if (req.method === 'GET') {
         const userId = url.searchParams.get('userId');
         
         if (userId) {
-          // Get collaborator assignments for a specific user
           const { data, error } = await supabaseAdmin
             .from('project_collaborators')
             .select('id, project_id, created_at')
@@ -93,7 +154,6 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Get all projects for selection
         const { data: projects, error } = await supabaseAdmin
           .from('projects')
           .select('id, name, organization_name');
@@ -103,7 +163,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // POST: Assign user to project
       if (req.method === 'POST') {
         const { userId, projectId } = await req.json();
         if (!userId || !projectId) {
@@ -130,7 +189,6 @@ Deno.serve(async (req) => {
         });
       }
 
-      // DELETE: Remove user from project
       if (req.method === 'DELETE') {
         const { userId, projectId } = await req.json();
         if (!userId || !projectId) {
@@ -152,7 +210,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ===== USER MANAGEMENT (existing) =====
+    // ===== USER MANAGEMENT =====
 
     // GET: List all users
     if (req.method === 'GET') {
@@ -161,15 +219,18 @@ Deno.serve(async (req) => {
 
       const { data: profiles } = await supabaseAdmin.from('profiles').select('*');
       const { data: roles } = await supabaseAdmin.from('user_roles').select('*');
+      const { data: allPermissions } = await supabaseAdmin.from('user_permissions').select('*');
 
       const enrichedUsers = users.users.map(user => {
         const profile = profiles?.find(p => p.user_id === user.id);
         const role = roles?.find(r => r.user_id === user.id);
+        const userPerms = allPermissions?.filter(p => p.user_id === user.id).map(p => p.permission) || [];
         return {
           id: user.id,
           email: user.email,
           name: profile?.name || user.email?.split('@')[0],
-          role: role?.role || 'user',
+          role: role?.role || 'usuario',
+          permissions: userPerms,
           createdAt: user.created_at,
           lastSignIn: user.last_sign_in_at,
           emailConfirmed: user.email_confirmed_at !== null
@@ -189,6 +250,13 @@ Deno.serve(async (req) => {
       if (!email || !name || !role) {
         return new Response(JSON.stringify({ error: 'Email, name and role are required' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // Admin can only create usuario/analista; super_admin can create any
+      if (callerRole === 'admin' && (role === 'super_admin' || role === 'admin')) {
+        return new Response(JSON.stringify({ error: 'Admin não pode criar usuários com papel Admin ou Super Admin' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
@@ -231,7 +299,10 @@ Deno.serve(async (req) => {
       }
 
       if (userData) {
+        // Update role from default 'usuario' to requested role
         await supabaseAdmin.from('user_roles').update({ role }).eq('user_id', userData.id);
+        // Populate permissions for the role
+        await supabaseAdmin.rpc('populate_default_permissions', { _user_id: userData.id, _role: role });
       }
 
       return new Response(JSON.stringify({ success: true, user: userData }), {
@@ -242,7 +313,7 @@ Deno.serve(async (req) => {
     // PATCH: Update user
     if (req.method === 'PATCH') {
       const body: UpdateUserRequest = await req.json();
-      const { userId, name, role, password } = body;
+      const { userId, name, role, password, permissions } = body;
 
       if (!userId) {
         return new Response(JSON.stringify({ error: 'userId is required' }), {
@@ -250,7 +321,21 @@ Deno.serve(async (req) => {
         });
       }
 
-      if (userId === callingUser.id && role && role !== 'super_admin') {
+      // Admin restrictions
+      if (callerRole === 'admin') {
+        if (role === 'super_admin' || role === 'admin') {
+          return new Response(JSON.stringify({ error: 'Admin não pode definir papel Admin ou Super Admin' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        if (permissions) {
+          return new Response(JSON.stringify({ error: 'Admin não pode alterar permissões' }), {
+            status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+      }
+
+      if (userId === callingUser.id && role && role !== callerRole) {
         return new Response(JSON.stringify({ error: 'Cannot change your own role' }), {
           status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -262,6 +347,21 @@ Deno.serve(async (req) => {
 
       if (role) {
         await supabaseAdmin.from('user_roles').update({ role }).eq('user_id', userId);
+        // Re-populate default permissions when role changes
+        await supabaseAdmin.rpc('populate_default_permissions', { _user_id: userId, _role: role });
+      }
+
+      // Custom permissions override (only super_admin)
+      if (permissions && callerRole === 'super_admin') {
+        await supabaseAdmin.from('user_permissions').delete().eq('user_id', userId);
+        if (permissions.length > 0) {
+          const rows = permissions.map((p: string) => ({
+            user_id: userId,
+            permission: p,
+            granted_by: callingUser.id
+          }));
+          await supabaseAdmin.from('user_permissions').insert(rows);
+        }
       }
 
       if (password) {
@@ -281,6 +381,13 @@ Deno.serve(async (req) => {
 
     // DELETE: Delete user
     if (req.method === 'DELETE') {
+      // Only super_admin can delete users
+      if (callerRole !== 'super_admin') {
+        return new Response(JSON.stringify({ error: 'Forbidden: Super Admin access required' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
       const body: DeleteUserRequest = await req.json();
       const { userId } = body;
 

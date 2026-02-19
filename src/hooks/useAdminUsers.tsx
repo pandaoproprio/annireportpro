@@ -2,11 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+export type AdminRole = 'usuario' | 'analista' | 'admin' | 'super_admin';
+
 export interface AdminUser {
   id: string;
   email: string;
   name: string;
-  role: 'user' | 'admin' | 'super_admin' | 'oficineiro';
+  role: AdminRole;
+  permissions: string[];
   createdAt: string;
   lastSignIn: string | null;
   emailConfirmed: boolean;
@@ -31,7 +34,7 @@ export const useAdminUsers = () => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ADMIN_USERS_KEY });
 
   const createUserMutation = useMutation({
-    mutationFn: async (userData: { email: string; password?: string; name: string; role: 'user' | 'admin' | 'super_admin' | 'oficineiro'; sendInvite?: boolean }) => {
+    mutationFn: async (userData: { email: string; password?: string; name: string; role: AdminRole; sendInvite?: boolean }) => {
       const { data, error } = await supabase.functions.invoke('admin-users', { method: 'POST', body: userData });
       if (error) throw error;
       return data;
@@ -46,7 +49,7 @@ export const useAdminUsers = () => {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async ({ userId, ...updates }: { userId: string; name?: string; role?: 'user' | 'admin' | 'super_admin' | 'oficineiro'; password?: string }) => {
+    mutationFn: async ({ userId, ...updates }: { userId: string; name?: string; role?: AdminRole; password?: string; permissions?: string[] }) => {
       const { data, error } = await supabase.functions.invoke('admin-users', { method: 'PATCH', body: { userId, ...updates } });
       if (error) throw error;
       return { data, updates };
@@ -84,7 +87,7 @@ export const useAdminUsers = () => {
     // Backward-compatible fetch
     fetchUsers: () => usersQuery.refetch(),
 
-    createUser: async (userData: { email: string; password?: string; name: string; role: 'user' | 'admin' | 'super_admin' | 'oficineiro'; sendInvite?: boolean }) => {
+    createUser: async (userData: { email: string; password?: string; name: string; role: AdminRole; sendInvite?: boolean }) => {
       try {
         await createUserMutation.mutateAsync(userData);
         return { success: true };
@@ -92,7 +95,7 @@ export const useAdminUsers = () => {
         return { success: false, error };
       }
     },
-    updateUser: async (userId: string, updates: { name?: string; role?: 'user' | 'admin' | 'super_admin' | 'oficineiro'; password?: string }) => {
+    updateUser: async (userId: string, updates: { name?: string; role?: AdminRole; password?: string; permissions?: string[] }) => {
       try {
         await updateUserMutation.mutateAsync({ userId, ...updates });
         return { success: true };
