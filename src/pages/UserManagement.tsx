@@ -11,8 +11,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3 } from 'lucide-react';
+import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3, ShieldCheck } from 'lucide-react';
 import { CollaboratorProjectsDialog } from '@/components/CollaboratorProjectsDialog';
+import { UserPermissionsDialog } from '@/components/UserPermissionsDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Navigate } from 'react-router-dom';
@@ -33,6 +34,8 @@ export const UserManagement: React.FC = () => {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [isProjectsOpen, setIsProjectsOpen] = useState(false);
   const [projectsUser, setProjectsUser] = useState<AdminUser | null>(null);
+  const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
+  const [permissionsUser, setPermissionsUser] = useState<AdminUser | null>(null);
   const [createMethod, setCreateMethod] = useState<'invite' | 'direct'>('invite');
   const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
   const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null);
@@ -269,6 +272,11 @@ export const UserManagement: React.FC = () => {
                         <Button variant="ghost" size="icon" title="Projetos vinculados" onClick={() => { setProjectsUser(user); setIsProjectsOpen(true); }}>
                           <FolderOpen className="w-4 h-4" />
                         </Button>
+                        {role === 'SUPER_ADMIN' && (
+                          <Button variant="ghost" size="icon" title="Permissões" onClick={() => { setPermissionsUser(user); setIsPermissionsOpen(true); }}>
+                            <ShieldCheck className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" title="Resetar senha" onClick={() => { setResetPasswordUser(user); setNewPassword(''); setIsResetPasswordOpen(true); }}>
                           <KeyRound className="w-4 h-4" />
                         </Button>
@@ -364,6 +372,15 @@ export const UserManagement: React.FC = () => {
         user={projectsUser}
         open={isProjectsOpen}
         onOpenChange={setIsProjectsOpen}
+      />
+
+      {/* Permissions Dialog */}
+      <UserPermissionsDialog
+        user={permissionsUser}
+        open={isPermissionsOpen}
+        onOpenChange={setIsPermissionsOpen}
+        onSave={async (userId, permissions) => updateUser(userId, { permissions })}
+        isSaving={isLoading}
       />
 
       {/* Reset Password Dialog */}
