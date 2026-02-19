@@ -9,7 +9,11 @@ import { Loader2, Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 import { z } from 'zod';
 
-const passwordSchema = z.string().min(8, 'A senha deve ter pelo menos 8 caracteres');
+const passwordSchema = z.string()
+  .min(8, 'A senha deve ter pelo menos 8 caracteres')
+  .regex(/[a-z]/, 'A senha deve conter pelo menos uma letra minúscula')
+  .regex(/[A-Z]/, 'A senha deve conter pelo menos uma letra maiúscula')
+  .regex(/[0-9]/, 'A senha deve conter pelo menos um número');
 
 export const ResetPassword = () => {
   const [password, setPassword] = useState('');
@@ -202,6 +206,12 @@ export const ResetPassword = () => {
                 </button>
               </div>
               {passwordError && <p className="text-xs text-destructive">{passwordError}</p>}
+              <ul className="text-xs text-muted-foreground space-y-0.5 mt-1">
+                <li className={password.length >= 8 ? 'text-green-600' : ''}>• Mínimo 8 caracteres</li>
+                <li className={/[a-z]/.test(password) ? 'text-green-600' : ''}>• Pelo menos uma letra minúscula</li>
+                <li className={/[A-Z]/.test(password) ? 'text-green-600' : ''}>• Pelo menos uma letra maiúscula</li>
+                <li className={/[0-9]/.test(password) ? 'text-green-600' : ''}>• Pelo menos um número</li>
+              </ul>
             </div>
 
             <div className="space-y-1.5">
