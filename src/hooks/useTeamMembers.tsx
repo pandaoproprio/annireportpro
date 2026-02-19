@@ -198,12 +198,35 @@ export const useTeamMembers = (projectId?: string | null) => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Não autenticado');
 
+      // Determine role based on function_role
+      const functionLower = member.function_role.toLowerCase();
+      let memberRole = 'usuario';
+      if (functionLower.includes('coordenador')) {
+        memberRole = 'coordenador';
+      } else if (functionLower.includes('oficineiro')) {
+        memberRole = 'oficineiro';
+      }
+
       const { data, error } = await supabase.functions.invoke('admin-users', {
         method: 'POST',
-        body: { email: member.email, password, name: member.name, role: 'usuario' },
+        body: { email: member.email, password, name: member.name, role: memberRole },
       });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (error) {
+        // Parse edge function error for better messaging
+        const errBody = typeof error === 'object' && 'context' in (error as any)
+          ? (error as any).context?.body
+          : null;
+        if (errBody && typeof errBody === 'string' && errBody.includes('já está cadastrado')) {
+          throw new Error('Este e-mail já está cadastrado no sistema. Use a opção de vincular conta existente.');
+        }
+        throw error;
+      }
+      if (data?.error) {
+        if (data.error.includes('já está cadastrado')) {
+          throw new Error('Este e-mail já está cadastrado no sistema. Use a opção de vincular conta existente.');
+        }
+        throw new Error(data.error);
+      }
 
       const newUserId = data?.user?.id;
       if (!newUserId) throw new Error('Erro ao criar conta');
