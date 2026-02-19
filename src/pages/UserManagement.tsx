@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useAdminUsers, AdminUser, AdminRole } from '@/hooks/useAdminUsers';
 import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3, ShieldCheck } from 'lucide-react';
+import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3, ShieldCheck, UserCheck } from 'lucide-react';
 import { CollaboratorProjectsDialog } from '@/components/CollaboratorProjectsDialog';
 import { UserPermissionsDialog } from '@/components/UserPermissionsDialog';
 import { format } from 'date-fns';
@@ -49,11 +50,27 @@ export const UserManagement: React.FC = () => {
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<AdminRole>('usuario');
 
+  // Fetch team members to show linked member info
+  const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string; email: string | null; function_role: string }>>([]);
+
   useEffect(() => {
     if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
       fetchUsers();
+      // Fetch team members for linking
+      supabase.from('team_members').select('id, name, email, function_role').then(({ data }) => {
+        if (data) setTeamMembers(data);
+      });
     }
   }, [role, fetchUsers]);
+
+  // Map user email -> team member
+  const teamMemberByEmail = useMemo(() => {
+    const map = new Map<string, { name: string; function_role: string }>();
+    teamMembers.forEach(tm => {
+      if (tm.email) map.set(tm.email.toLowerCase(), { name: tm.name, function_role: tm.function_role });
+    });
+    return map;
+  }, [teamMembers]);
 
   const resetForm = () => {
     setEmail('');
@@ -239,6 +256,7 @@ export const UserManagement: React.FC = () => {
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Papel</TableHead>
+                  <TableHead className="hidden lg:table-cell">Membro de Equipe</TableHead>
                   <TableHead className="hidden md:table-cell">Último acesso</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -260,6 +278,22 @@ export const UserManagement: React.FC = () => {
                         {roleLabels[user.role].icon}
                         {roleLabels[user.role].label}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {(() => {
+                        const linked = teamMemberByEmail.get(user.email.toLowerCase());
+                        if (linked) {
+                          return (
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <UserCheck className="w-3.5 h-3.5 text-green-600 dark:text-green-400 shrink-0" />
+                              <span className="truncate max-w-[160px]" title={`${linked.name} — ${linked.function_role}`}>
+                                {linked.name}
+                              </span>
+                            </div>
+                          );
+                        }
+                        return <span className="text-muted-foreground text-xs">—</span>;
+                      })()}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {user.lastSignIn 
