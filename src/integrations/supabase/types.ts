@@ -419,6 +419,30 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          created_at: string
+          granted_by: string | null
+          id: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission: Database["public"]["Enums"]["app_permission"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          granted_by?: string | null
+          id?: string
+          permission?: Database["public"]["Enums"]["app_permission"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -442,6 +466,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_permission: {
+        Args: {
+          _permission: Database["public"]["Enums"]["app_permission"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -466,7 +497,19 @@ export type Database = {
         | "Divulgação/Mídia"
         | "Administrativo/Financeiro"
         | "Outras Ações"
-      app_role: "user" | "admin" | "super_admin" | "oficineiro"
+      app_permission:
+        | "dashboard"
+        | "diary"
+        | "report_object"
+        | "report_team"
+        | "team_management"
+      app_role:
+        | "user"
+        | "admin"
+        | "super_admin"
+        | "oficineiro"
+        | "analista"
+        | "usuario"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -602,7 +645,21 @@ export const Constants = {
         "Administrativo/Financeiro",
         "Outras Ações",
       ],
-      app_role: ["user", "admin", "super_admin", "oficineiro"],
+      app_permission: [
+        "dashboard",
+        "diary",
+        "report_object",
+        "report_team",
+        "team_management",
+      ],
+      app_role: [
+        "user",
+        "admin",
+        "super_admin",
+        "oficineiro",
+        "analista",
+        "usuario",
+      ],
     },
   },
 } as const
