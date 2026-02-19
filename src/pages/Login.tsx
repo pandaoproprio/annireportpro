@@ -140,10 +140,7 @@ export const Login: React.FC = () => {
 
             <Button
               type="submit"
-              className="w-full min-h-[48px] text-sm font-semibold gap-2"
-              style={{ backgroundColor: '#0DA3E7' }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0B8FCC')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0DA3E7')}
+              className="w-full min-h-[48px] text-sm font-semibold gap-2 bg-primary hover:bg-primary/90"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -180,9 +177,8 @@ export const Login: React.FC = () => {
   return (
     <div className="h-[100dvh] flex flex-col lg:flex-row overflow-hidden">
       {/* Painel esquerdo - oculto no mobile */}
-      <div
-        className="relative flex-shrink-0 hidden lg:flex lg:w-[52%] flex-col items-center justify-center px-16 py-20 overflow-hidden"
-        style={{ backgroundColor: '#0DA3E7' }}
+       <div
+        className="relative flex-shrink-0 hidden lg:flex lg:w-[52%] flex-col items-center justify-center px-16 py-20 overflow-hidden bg-primary"
       >
         {/* Círculos decorativos */}
         <div className="pointer-events-none absolute -top-24 -left-24 w-72 h-72 rounded-full border border-white/10" />
@@ -228,9 +224,9 @@ export const Login: React.FC = () => {
       {/* Painel direito */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-6 bg-muted/30 overflow-y-auto">
         <div className="w-full max-w-md bg-card rounded-2xl shadow-lg border border-border p-8 lg:p-10 space-y-7 animate-fade-in">
-          {/* Logo mobile */}
+           {/* Logo mobile */}
            <div className="lg:hidden flex justify-center mb-4">
-             <img src={logoGira} alt="GIRA Relatórios" className="h-48 object-contain" />
+             <img src={logoGira} alt="GIRA Relatórios" className="h-20 object-contain" />
            </div>
 
           {/* Título e subtítulo */}
@@ -282,10 +278,7 @@ export const Login: React.FC = () => {
 
             <Button
               type="submit"
-              className="w-full h-11 text-sm font-semibold gap-2"
-              style={{ backgroundColor: '#0DA3E7' }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0B8FCC')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0DA3E7')}
+              className="w-full h-11 text-sm font-semibold gap-2 bg-primary hover:bg-primary/90"
               disabled={isLoading}
             >
               {isLoading ? (
