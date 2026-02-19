@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useToast } from '@/hooks/use-toast';
 import { useTeamMembers, TeamMember } from '@/hooks/useTeamMembers';
 import { maskPhone, maskCpfCnpj } from '@/lib/masks';
 import { useAppData } from '@/contexts/AppDataContext';
@@ -19,6 +20,7 @@ import { useAdminUsers, AdminUser } from '@/hooks/useAdminUsers';
 import { useAuth } from '@/hooks/useAuth';
 
 export const TeamManagement: React.FC = () => {
+  const { toast } = useToast();
   const { role } = useAuth();
   const { hasPermission, isSuperAdmin } = usePermissions();
   const { projects, activeProjectId } = useAppData();
@@ -269,6 +271,12 @@ export const TeamManagement: React.FC = () => {
                                   if (adminUser) {
                                     setPermissionsUser(adminUser);
                                     setIsPermissionsOpen(true);
+                                  } else {
+                                    toast({
+                                      variant: 'destructive',
+                                      title: 'Usuário não encontrado',
+                                      description: `${m.name} não foi localizado na lista de usuários do sistema. Verifique se a conta está ativa.`,
+                                    });
                                   }
                                 }}>
                                 <ShieldCheck className="w-4 h-4 text-primary" />
