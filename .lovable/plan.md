@@ -1,311 +1,194 @@
 
-# RELATORIO TECNICO COMPLETO - SISTEMA GIRA (Atualizado)
-## Auditoria de Qualidade, Seguranca e Experiencia
+# Plano: Reestruturacao RBAC + Correcao de Senha
 
 ---
 
-## 1. ANALISE PWA
+## PARTE 1: DIAGNOSTICO COMPLETO
 
-### 1.1 Manifest
-| Item | Status | Severidade |
-|------|--------|------------|
-| `display: standalone` | OK | - |
-| `scope: /` | OK | - |
-| `start_url: /` | OK | - |
-| `theme_color: #0EA5E9` | OK, consistente com meta tag | - |
-| `orientation: portrait` | OK | - |
-| Icons 192 + 512 + maskable | OK | - |
+### 1.1 Estado Atual do RBAC
 
-### 1.2 Service Worker / Workbox
-| Item | Status | Severidade |
-|------|--------|------------|
-| `registerType: autoUpdate` | OK | - |
-| `navigateFallbackDenylist: [/^\/~oauth/]` | OK | - |
-| Cache de API Supabase `NetworkFirst` + timeout 10s + 1h expiry | **Dados sensiveis (projetos, atividades, perfis) ficam cacheados no browser apos logout** | **CRITICO** |
-| `offline.html` fallback | OK | - |
-| Fotos de atividades nao cacheadas para offline | Sem experiencia offline real | **BAIXO** |
+O enum `app_role` no banco possui 4 valores: `user`, `admin`, `super_admin`, `oficineiro`.
 
-### 1.3 Standalone vs Navegador
-| Item | Status | Severidade |
-|------|--------|------------|
-| `useIsStandalone` hook | OK - detecta via `matchMedia` + `navigator.standalone` + listener para mudancas | - |
-| Login standalone: layout full-screen, sem card/shadow | OK | - |
-| **Layout principal (sidebar/footer) NAO muda em standalone** | App inteiro parece site exceto na tela de login | **ALTO** |
-| Footer institucional aparece dentro do PWA standalone | "Cara de site" | **MEDIO** |
+**Problemas identificados:**
 
-### 1.4 Viewport e Safe Area
-| Item | Status | Severidade |
-|------|--------|------------|
-| `100dvh` nos containers raiz | OK | - |
-| `overflow-hidden` no root | OK | - |
-| `overscroll-behavior: none` no body | OK | - |
-| `viewport-fit=cover` | OK | - |
-| `env(safe-area-inset-*)` no html | OK | - |
-| `pb-safe` no content area | OK | - |
-| **Padding top para notch/barra de status ausente no header mobile** | Conteudo pode ficar atras da barra de status no iOS | **MEDIO** |
-| `apple-mobile-web-app-status-bar-style: default` | Barra branca nao integra com tema azul. Deveria ser `black-translucent` para PWA standalone | **BAIXO** |
+| # | Problema | Impacto |
+|---|---------|---------|
+| 1 | Roles atuais nao mapeiam para os perfis solicitados (SuperAdmin, Admin, **Analista**, Usuario) | Estrutural |
+| 2 | "Analista" nao existe como role — nao ha como controlar acesso granular | Bloqueante |
+| 3 | `oficineiro` e role de **sistema** mas deveria ser role de **equipe** (function_role na tabela team_members) | Confusao de dominio |
+| 4 | Nao existe conceito de **permissoes customizaveis** por usuario — roles sao fixas | Limitacao |
+| 5 | Sidebar mostra/esconde links apenas com `role === 'SUPER_ADMIN'` no frontend | Seguranca fraca |
+| 6 | `admin-users` edge function aceita apenas `super_admin` — Admin nao consegue gerenciar nada | Inconsistente com spec |
+| 7 | Nao ha RLS diferenciada entre Admin e SuperAdmin — ambos tem mesma policy (`has_role admin OR super_admin`) | Sem gradacao |
+| 8 | Nenhuma tabela de **permissoes granulares** existe | Bloqueante para customizacao |
 
-### 1.5 Instalacao e Splash
-| Item | Status | Severidade |
-|------|--------|------------|
-| `InstallPrompt` componente existe na sidebar | OK | - |
-| Sem `apple-touch-startup-image` (splash screen iOS) | Tela branca ao abrir PWA no iOS | **MEDIO** |
+### 1.2 Erro na Criacao de Senha
+
+**Fluxo atual na TeamManagement (Criar Acesso ao Diario):**
+
+1. Frontend chama `createAccessForMember` no hook `useTeamMembers`
+2. Hook chama edge function `admin-users` com `POST { email, password, name, role: 'user' }`
+3. Edge function usa `supabase.auth.admin.createUser({ email, password, email_confirm: true })`
+4. Depois faz `user_roles.update({ role }).eq('user_id', ...)`
+
+**Problemas encontrados:**
+
+| # | Problema | Causa |
+|---|---------|-------|
+| 1 | Role hardcoded como `'user'` na linha 203 do `useTeamMembers.tsx` | Ignora o `function_role` do membro |
+| 2 | Se o trigger `handle_new_user` ja insere role 'user', o `UPDATE` na edge function (linha 234) funciona. Mas se o trigger falhar ou houver delay, a role fica incorreta | Race condition potencial |
+| 3 | `createUser` com `email_confirm: true` funciona, mas o usuario **nunca recebe** instrucoes de como acessar o sistema | UX incompleta |
+| 4 | Na `UserManagement` (reset de senha), o `updateUser` via `admin.updateUserById` funciona corretamente | OK |
+| 5 | Na `ResetPassword.tsx` (self-service), o botao ainda usa `style={{ backgroundColor }}` inline — nao e bug funcional mas e regressao do fix da Semana 1 | Inconsistencia |
+
+**Causa raiz do "erro na criacao de senha":**
+- O fluxo de criacao via `admin.createUser` funciona tecnicamente
+- O problema provavel e que o usuario criado com `role: 'user'` quando deveria ser `oficineiro` nao consegue acessar o Diario de Bordo porque o `ProtectedRoute` redireciona `OFICINEIRO` para `/diario` mas `USER` fica no layout principal sem projetos visiveis
+- Ou seja: **nao e erro de senha, e erro de role incorreta** no momento da criacao
 
 ---
 
-## 2. ANALISE UX
+## PARTE 2: ARQUITETURA PROPOSTA
 
-### 2.1 Fluxo de Login
-| Item | Status | Severidade |
-|------|--------|------------|
-| Validacao Zod inline + feedback visual | OK | - |
-| Erro via toast com mensagens traduzidas | OK | - |
-| Toggle visibilidade de senha | OK | - |
-| Standalone: inputs 48px, botao 48px | OK, bons touch targets | - |
-| **Botao com `onMouseEnter/onMouseLeave` inline** | Nao funciona em touch - hover state fica "preso" no mobile | **ALTO** |
-| DiaryLogin: fluxo em 2 etapas (splash + form) | OK, boa UX | - |
-| Reset senha: Login usa Dialog, DiaryLogin usa toast | Inconsistente, mas aceitavel para contexto | **BAIXO** |
+### 2.1 Novo Modelo de Roles (Banco de Dados)
 
-### 2.2 LGPD / Consentimento
-| Item | Status | Severidade |
-|------|--------|------------|
-| **Consentimento reaparece apos aceitar** | Race condition: `refreshProfile()` e async, `ProtectedRoute` avalia `hasLgpdConsent` antes da propagacao. O `setTimeout(100ms)` e workaround fragil que pode falhar em redes lentas | **CRITICO** |
-| ProtectedRoute espera `profile` carregar antes de avaliar | OK, melhoria recente | - |
-| Double-check `profile.lgpd_consent_at` direto | Redundante - `hasLgpdConsent` ja deriva do mesmo profile | **BAIXO** |
-| Sem mecanismo de exportar/excluir dados | Violacao LGPD Art. 18 | **CRITICO** |
-| Revogacao de consentimento: "contate o administrador" | Nao implementado funcionalmente | **ALTO** |
-
-### 2.3 Onboarding
-| Item | Status | Severidade |
-|------|--------|------------|
-| Wizard 3 steps com progress bar | OK | - |
-| **Step 1: 12+ campos visíveis de uma vez** | Friccao alta, especialmente no mobile | **ALTO** |
-| Erro usa `alert()` nativo (linhas 104, 107) | Inconsistente com toast usado no resto do app | **MEDIO** |
-| Sem validacao por step - pode avancar com campos vazios | **MEDIO** |
-| IDs gerados com `Date.now().toString()` | Colisao possivel (improvavel) | **BAIXO** |
-
-### 2.4 Dashboard
-| Item | Status | Severidade |
-|------|--------|------------|
-| Estado vazio com CTA "Configurar Novo Projeto" | OK | - |
-| Skeleton loading | OK | - |
-| Graficos com Recharts | OK | - |
-| Stats cards com dados reais | OK | - |
-| Progresso de metas hardcoded a `count * 10%` | Nao reflete meta real, apenas multiplicacao arbitraria | **MEDIO** |
-| `PendingActivitiesBanner` | OK, boa UX | - |
-
-### 2.5 Activity Manager
-| Item | Status | Severidade |
-|------|--------|------------|
-| Formulario expansivel com animacao | OK | - |
-| Busca + filtros por tipo e meta | OK | - |
-| `alert()` para erro de datas (linha 136) | Inconsistente | **BAIXO** |
-| Upload de fotos para Storage | OK, migrou de base64 | - |
-| `getPublicUrl()` para fotos | **Qualquer pessoa com a URL acessa as fotos** | **ALTO** |
-| Celebracao na primeira atividade | OK | - |
-| Botao de remover foto usa `group-hover:opacity-100` | **Invisivel em touch** - usuario nao sabe que pode remover fotos no mobile | **ALTO** |
-
-### 2.6 Pontos de Abandono
-1. LGPD consent loop (bug ativo)
-2. Onboarding Step 1 com 12+ campos no mobile
-3. Sem bottom navigation - precisa abrir drawer para navegar
-4. Footer fixo ocupa espaco util no mobile
-
----
-
-## 3. ANALISE UI / DESIGN
-
-### 3.1 Sistema de Cores
-| Item | Status | Severidade |
-|------|--------|------------|
-| Primary: `#0EA5E9` (Sky Blue) | Consistente no CSS | - |
-| Sidebar: Verde GIRA `hsl(122, 46%, 34%)` | **Conflito visual** - verde na sidebar vs azul no resto | **MEDIO** |
-| **Botoes com `style={{ backgroundColor: '#0DA3E7' }}`** | Anti-pattern em 8+ instancias (Login, DiaryLogin). Ignora a variavel CSS `--primary` | **ALTO** |
-| **Hover via `onMouseEnter/onMouseLeave` em JavaScript** | Anti-pattern grave em todos os botoes primarios. Nao funciona em touch. Solucao: usar `hover:bg-primary/90` do Tailwind | **ALTO** |
-
-### 3.2 Layout e Responsividade
-| Item | Status | Severidade |
-|------|--------|------------|
-| Login desktop: split-screen 52/48 | OK, moderno | - |
-| **Logo mobile (browser) no login: `h-48` (192px)** | Excessivamente grande, ocupa ~40% da viewport em telas pequenas. Logo correta no standalone e `h-36` | **ALTO** |
-| Sidebar `w-64` fixo | OK para desktop, drawer no mobile | - |
-| Footer permanente no layout principal | Ocupa ~60px fixos no mobile | **MEDIO** |
-| Sidebar logo `h-48 max-w-none` dentro de `h-[80px]` container | Logo estoura o container, apenas `overflow-hidden` a corta | **BAIXO** |
-
-### 3.3 Tipografia
-| Item | Status |
-|------|--------|
-| DM Sans + Inter | OK |
-| Hierarquia com `font-display` e tamanhos | OK |
-
-### 3.4 Inconsistencias Visuais Encontradas
-1. 8+ botoes com `style={{ backgroundColor }}` inline ao inves de classes Tailwind
-2. Sidebar verde vs app azul
-3. Logo `logo-gira-relatorios.png` no Login/Layout vs `logo-gira.png` no DiaryLogin/DiaryLayout
-4. Inputs `h-11` no browser vs `min-h-[48px]` no standalone
-5. Footer text difere entre Layout e DiaryLayout
-
----
-
-## 4. ANALISE PERFORMANCE
-
-### 4.1 Code Splitting
-| Item | Status |
-|------|--------|
-| Todas as paginas com `lazy()` | OK |
-| `Suspense` com `PageFallback` skeleton | OK |
-| `html2pdf.js` importado no top-level do ReportGenerator | **Deveria ser lazy** - biblioteca pesada | **MEDIO** |
-
-### 4.2 Re-renders
-| Item | Status | Severidade |
-|------|--------|------------|
-| **`useProjects` linhas 130-132: `setActiveProjectId` durante render** | Anti-pattern React. `setState` chamado condicionalmente durante render causa re-render imediato. Deveria estar em `useEffect` | **ALTO** |
-| **`AppDataProvider` value nao memoizado** | Objeto recriado a cada render, propagando re-renders para toda a arvore de componentes | **ALTO** |
-| `useQuery` com `staleTime: 30_000` | OK | - |
-| Optimistic updates com rollback | OK, bem implementado | - |
-
-### 4.3 Queries
-| Item | Status | Severidade |
-|------|--------|------------|
-| **Users normais: 3 queries sequenciais** para projetos (own + collab links + collab data) | Deveria ser 1 query com view ou function | **MEDIO** |
-| Pagination hardcoded 50 | OK | - |
-
----
-
-## 5. ANALISE SEGURANCA
-
-### 5.1 RLS
-| Item | Status |
-|------|--------|
-| 9 tabelas com RLS habilitado | OK |
-| Hard delete bloqueado (`DELETE USING false`) | OK |
-| Audit logs imutaveis | OK |
-| Linter: 0 issues | OK |
-
-### 5.2 Problemas de Seguranca
-| Item | Severidade |
-|------|------------|
-| **Service Worker cacheia respostas da API por 1h** - dados persistem apos logout | **CRITICO** |
-| **Fotos com `getPublicUrl()`** - acessiveis sem autenticacao | **ALTO** |
-| **LGPD Art. 18 nao atendido** - sem export/exclusao de dados | **CRITICO** |
-| Sessao JWT em localStorage | Risco conhecido, aceitavel para PWA | **BAIXO** |
-
----
-
-## 6. ANALISE MOBILE APP EXPERIENCE
-
-### 6.1 Comparacao com App Nativo
-| Caracteristica | Status | Nota |
-|----------------|--------|------|
-| Bottom navigation | Ausente | 0/10 |
-| Gesture feedback | Ausente | 0/10 |
-| Splash screen (iOS) | Ausente | 1/10 |
-| Layout condicional standalone | **Apenas login** - resto identico | 3/10 |
-| Touch targets adequados | Parcial - standalone OK, browser inconsistente | 5/10 |
-| Pull-to-refresh | Ausente | 0/10 |
-| Transicoes de pagina | fadeIn/slideUp basicos | 4/10 |
-
-### 6.2 Classificacao
-- **Parece site responsivo?** Sim - sidebar lateral, footer institucional, sem bottom nav
-- **Parece web app?** Parcialmente - tem PWA install, lazy loading
-- **Parece app nativo?** Nao
-
----
-
-## 7. NOTAS GERAIS
-
-| Dimensao | Nota (0-10) |
-|----------|-------------|
-| **Geral** | **5.5** |
-| PWA | 6.0 |
-| UX | 5.5 |
-| UI/Design | 5.5 |
-| Performance | 5.0 |
-| Seguranca | 6.5 |
-| Arquitetura | 6.0 |
-
----
-
-## 8. TOP 10 PROBLEMAS CRITICOS
-
-| # | Problema | Severidade | Causa Raiz |
-|---|---------|------------|------------|
-| 1 | **LGPD consent reaparece** | CRITICO | `setTimeout(100ms)` fragil em `LgpdConsent.tsx`. `refreshProfile()` async nao invalida query cache, `ProtectedRoute` avalia estado stale |
-| 2 | **Sem export/exclusao de dados (LGPD Art. 18)** | CRITICO | Nao implementado |
-| 3 | **Cache do SW armazena dados sensiveis** | CRITICO | `runtimeCaching` com `NetworkFirst` para rotas Supabase API. Sem limpeza no logout |
-| 4 | **Fotos com URL publica** | ALTO | `getPublicUrl()` gera URL sem autenticacao |
-| 5 | **`setActiveProjectId` durante render** | ALTO | `setState` condicional fora de `useEffect` em `useProjects.tsx` linha 130-132 |
-| 6 | **AppDataProvider sem `useMemo`** | ALTO | Objeto `value` recriado a cada render |
-| 7 | **Inline styles + onMouseEnter/Leave em botoes** | ALTO | 8+ instancias nos logins. Ignora Tailwind, quebra touch |
-| 8 | **Sem bottom navigation mobile** | ALTO | Nao implementado |
-| 9 | **Logo mobile `h-48` no browser** | ALTO | Excessivamente grande, ocupa ~40% da tela |
-| 10 | **Botao remover foto invisivel em touch** | ALTO | `group-hover:opacity-100` nao funciona em dispositivos touch |
-
----
-
-## 9. TOP 10 MELHORIAS ESTRATEGICAS
-
-| # | Melhoria | Impacto | Esforco |
-|---|---------|---------|---------|
-| 1 | Corrigir LGPD consent: invalidar query `['profiles']` + usar `onSuccess` ao inves de `setTimeout` | Elimina bug critico | Baixo |
-| 2 | Remover cache Supabase API do SW OU limpar cache no `signOut` | Elimina vazamento de dados | Baixo |
-| 3 | Substituir inline styles por classes Tailwind em todos os botoes primarios | Consistencia + touch support | Baixo |
-| 4 | Mover `setActiveProjectId` para `useEffect` | Elimina re-render loop | Baixo |
-| 5 | Memoizar `value` do `AppDataProvider` com `useMemo` | Melhora performance global | Baixo |
-| 6 | Implementar bottom navigation para mobile/standalone | Transforma UX de "site" para "app" | Medio |
-| 7 | Implementar pagina "Meus Dados" (export + exclusao de conta) | Conformidade LGPD | Alto |
-| 8 | Usar URLs assinadas para fotos ao inves de `getPublicUrl` | Protege dados sensiveis | Medio |
-| 9 | Reduzir logo mobile para `h-20` no browser, manter `h-36` no standalone | Melhora proporcao visual | Baixo |
-| 10 | Substituir `alert()` por toast em Onboarding e ActivityManager | Consistencia UX | Baixo |
-
----
-
-## 10. ROADMAP TECNICO 60 DIAS
-
-### Semana 1-2: Critico (Bugs + Seguranca)
-1. Corrigir race condition LGPD consent (invalidar queries + await)
-2. Remover cache Supabase API do Service Worker
-3. Substituir `style={{ backgroundColor }}` + `onMouseEnter/Leave` por classes Tailwind em todos os botoes
-4. Mover `setActiveProjectId` para `useEffect`
-5. Memoizar `AppDataProvider` value
-
-### Semana 3-4: Seguranca + UX
-6. Implementar URLs assinadas para fotos (substituir `getPublicUrl`)
-7. Implementar pagina "Meus Dados" (LGPD Art. 18)
-8. Substituir `alert()` por toast em todo o app
-9. Corrigir logo mobile para tamanho proporcional
-10. Adicionar botao visivel de remover foto (sem depender de hover)
-
-### Semana 5-6: Mobile Experience
-11. Implementar bottom navigation bar para mobile/standalone
-12. Ocultar footer no standalone
-13. Aplicar `pt-safe` no mobile header (notch iOS)
-14. Adicionar splash screen Apple (`apple-touch-startup-image`)
-15. Alterar `apple-mobile-web-app-status-bar-style` para `black-translucent`
-
-### Semana 7-8: Refinamento
-16. Simplificar onboarding Step 1 (accordion para campos opcionais)
-17. Consolidar queries de projetos em 1 (view ou DB function)
-18. Lazy import de html2pdf.js
-19. Adicionar pull-to-refresh
-20. Validacao por step no onboarding
-
----
-
-## 11. CLASSIFICACAO FINAL
+**Alterar o enum `app_role`:**
 
 ```text
-[ ] Enterprise-ready
-[ ] SaaS maduro
-[ ] Produto Intermediario
-[x] MVP+ (funcional, com gaps criticos de seguranca e LGPD)
-[ ] MVP basico
+Atual:  user | admin | super_admin | oficineiro
+Novo:   usuario | analista | admin | super_admin
 ```
 
-**Justificativa**: O sistema atende ao fluxo basico completo (projeto -> atividade -> relatorio) com arquitetura frontend razoavel (React Query, lazy loading, RLS). Porem possui:
-- **2 riscos juridicos criticos** (LGPD Art. 18)
-- **1 bug ativo grave** (consent loop)
-- **1 vazamento de seguranca** (cache SW)
-- **UX de site responsivo**, nao de aplicativo
+- `oficineiro` deixa de ser role de sistema e passa a ser apenas `function_role` na tabela `team_members`
+- Novo role `analista` substitui o antigo `user` com permissoes expandidas
 
-Para atingir nivel "Intermediario", precisa resolver todos os itens das Semanas 1-4 do roadmap.
+### 2.2 Nova Tabela de Permissoes Granulares
+
+```text
+user_permissions
+  id          uuid PK
+  user_id     uuid FK -> auth.users
+  permission  text (enum ou check constraint)
+  granted_by  uuid FK -> auth.users
+  created_at  timestamptz
+```
+
+Permissoes possiveis:
+- `team_management` — acesso a Gestao de Equipes
+- `report_object` — acesso ao Relatorio do Objeto
+- `report_team` — acesso ao Relatorio da Equipe
+- `diary` — acesso ao Diario de Bordo
+- `dashboard` — acesso ao Dashboard
+
+**Defaults por role:**
+
+| Role | Permissoes Default |
+|------|-------------------|
+| super_admin | Todas (bypass total) |
+| admin | dashboard, diary, report_object, report_team |
+| analista | dashboard, diary, report_object, report_team |
+| usuario | dashboard (somente leitura) |
+
+**SuperAdmin pode:**
+- Conceder `team_management` a qualquer analista
+- Conceder permissoes de analista a qualquer usuario
+- Customizar permissoes individualmente
+
+### 2.3 Gestao de Equipes — Roles Internas
+
+Os perfis de equipe (Coordenador, Analista, Oficineiro, etc.) continuam sendo definidos pelo campo `function_role` na tabela `team_members`. Estes NAO sao roles de sistema — sao cargos dentro do projeto.
+
+O acesso ao sistema (login/Diario de Bordo) e controlado pelo `user_roles.role` do usuario vinculado ao membro (`team_members.user_id`).
+
+---
+
+## PARTE 3: PLANO DE IMPLEMENTACAO
+
+### Fase 1: Migracao do Banco (SQL)
+
+1. Adicionar novos valores ao enum `app_role`: `analista`, `usuario`
+2. Criar tabela `user_permissions` com RLS
+3. Migrar dados existentes:
+   - `user` -> `usuario`
+   - `oficineiro` -> `usuario` (e manter `function_role` no `team_members`)
+4. Remover valor `oficineiro` do enum (apos migracao)
+5. Criar funcao `has_permission(_user_id, _permission)` SECURITY DEFINER
+6. Atualizar RLS policies para usar `has_permission` onde necessario
+7. Criar trigger para popular `user_permissions` com defaults ao criar usuario
+
+### Fase 2: Edge Function `admin-users`
+
+1. Atualizar tipos aceitos: `usuario | analista | admin | super_admin`
+2. Ao criar usuario, popular `user_permissions` com defaults da role
+3. Adicionar endpoint PATCH para gerenciar permissoes individuais
+4. Permitir que `admin` gerencie usuarios dentro do escopo permitido (nao apenas `super_admin`)
+
+### Fase 3: Frontend — Tipos e Auth
+
+1. Atualizar `UserRole` type: `'USUARIO' | 'ANALISTA' | 'ADMIN' | 'SUPER_ADMIN'`
+2. Atualizar `useAuth` para carregar permissoes junto com role
+3. Criar hook `usePermissions` que expoe: `hasPermission('team_management')`, etc.
+4. Atualizar `ProtectedRoute` para usar permissoes ao inves de roles hardcoded
+
+### Fase 4: Frontend — UI
+
+1. Atualizar sidebar para mostrar/esconder links baseado em permissoes
+2. Atualizar `UserManagement` com novo seletor de roles e painel de permissoes
+3. Atualizar `TeamManagement` — criacao de acesso usa role `usuario` (nao `oficineiro`)
+4. Atualizar labels, badges e textos para novos nomes de roles
+5. Corrigir botao `ResetPassword.tsx` que ainda usa inline style
+
+### Fase 5: Correcao do Fluxo de Senha
+
+1. Na `TeamManagement`, ao criar acesso: usar role apropriada baseada no contexto
+2. Ao criar acesso via Diario, automaticamente conceder permissao `diary`
+3. Garantir que `email_confirm: true` funciona e o usuario consegue logar imediatamente
+4. Adicionar feedback claro ao admin: "Conta criada. Login: email / Senha: [definida]"
+
+---
+
+## PARTE 4: MAPEAMENTO DE ARQUIVOS AFETADOS
+
+| Arquivo | Mudanca |
+|---------|---------|
+| `supabase/migrations/` | Novo migration: enum, tabela, funcoes, RLS |
+| `supabase/functions/admin-users/index.ts` | Novos roles + permissoes |
+| `src/types/index.ts` | `UserRole` atualizado |
+| `src/hooks/useAuth.tsx` | Carregar permissoes |
+| `src/hooks/usePermissions.tsx` | **NOVO** — hook centralizado |
+| `src/components/ProtectedRoute.tsx` | Usar permissoes |
+| `src/routes/AppRoutes.tsx` | Sidebar condicional por permissao |
+| `src/pages/UserManagement.tsx` | Novos roles + UI de permissoes |
+| `src/pages/TeamManagement.tsx` | Role correta na criacao |
+| `src/hooks/useAdminUsers.tsx` | Tipos atualizados |
+| `src/hooks/useTeamMembers.tsx` | Role na criacao de acesso |
+| `src/pages/ResetPassword.tsx` | Fix inline style |
+| `src/pages/Dashboard.tsx` | Labels atualizados |
+| `src/pages/DiaryLogin.tsx` | Sem mudanca funcional |
+
+---
+
+## PARTE 5: GARANTIAS DE ZERO REGRESSAO
+
+1. **Migracao de dados**: todos os `user` existentes viram `usuario`, todos os `oficineiro` viram `usuario` com permissao `diary`
+2. **Backward compat**: `has_role` continua funcionando para roles existentes durante transicao
+3. **RLS**: policies existentes continuam validas — novas policies adicionam granularidade
+4. **Ordem de execucao**: banco primeiro, depois edge function, depois frontend
+5. **Rollback**: enum pode ser revertido adicionando valores antigos de volta
+6. **Testes**: validar cada role consegue acessar apenas suas rotas permitidas
+
+---
+
+## PARTE 6: SEQUENCIA DE IMPLEMENTACAO
+
+```text
+1. Migration SQL (enum + tabela + funcoes + dados)
+2. Deploy edge function atualizada
+3. Atualizar types + hooks (useAuth, usePermissions)
+4. Atualizar ProtectedRoute + AppRoutes
+5. Atualizar UserManagement + TeamManagement
+6. Fix ResetPassword inline style
+7. Testes end-to-end por role
+```
+
+Cada passo pode ser implementado e testado isoladamente antes de prosseguir ao proximo.
