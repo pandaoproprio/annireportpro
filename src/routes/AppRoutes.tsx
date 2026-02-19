@@ -234,7 +234,7 @@ const Layout: React.FC = () => {
         </div>
 
         {/* Footer */}
-        <footer className="bg-card border-t border-border py-4 px-6 text-center text-sm text-muted-foreground">
+        <footer className="bg-card border-t border-border py-2 sm:py-4 px-4 sm:px-6 text-center text-xs sm:text-sm text-muted-foreground">
           <p>
             <span className="font-semibold text-foreground">GIRA Relatórios</span> © 2026 — powered by <span className="font-medium">AnnIReport</span> | AnnITech
           </p>

@@ -877,7 +877,7 @@ export const TeamReportGenerator: React.FC = () => {
           {photosWithCaptions.length > 0 && (
             <div>
               <h2 className="text-lg font-bold mt-6 mb-3">{attachmentsTitle}</h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {photosWithCaptions.map((photo, idx) => (
                   <div key={photo.id} className="space-y-2">
                     <img
