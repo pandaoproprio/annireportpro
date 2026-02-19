@@ -571,6 +571,26 @@ export type Database = {
         | "report_object"
         | "report_team"
         | "team_management"
+        | "diary_create"
+        | "diary_edit"
+        | "diary_delete"
+        | "report_object_create"
+        | "report_object_edit"
+        | "report_object_delete"
+        | "report_team_create"
+        | "report_team_edit"
+        | "report_team_delete"
+        | "team_management_create"
+        | "team_management_edit"
+        | "team_management_delete"
+        | "user_management"
+        | "user_management_create"
+        | "user_management_edit"
+        | "user_management_delete"
+        | "system_logs"
+        | "settings_edit"
+        | "project_create"
+        | "project_delete"
       app_role:
         | "user"
         | "admin"
@@ -719,6 +739,26 @@ export const Constants = {
         "report_object",
         "report_team",
         "team_management",
+        "diary_create",
+        "diary_edit",
+        "diary_delete",
+        "report_object_create",
+        "report_object_edit",
+        "report_object_delete",
+        "report_team_create",
+        "report_team_edit",
+        "report_team_delete",
+        "team_management_create",
+        "team_management_edit",
+        "team_management_delete",
+        "user_management",
+        "user_management_create",
+        "user_management_edit",
+        "user_management_delete",
+        "system_logs",
+        "settings_edit",
+        "project_create",
+        "project_delete",
       ],
       app_role: [
         "user",

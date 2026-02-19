@@ -142,7 +142,7 @@ const Layout: React.FC = () => {
                       {projects.map(p => (
                         <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                       ))}
-                      {isAdmin && (
+                      {hasPermission('project_create') && (
                         <SelectItem value="new" className="text-sidebar-primary font-medium">
                           <span className="flex items-center gap-2">
                             <PlusCircle className="w-4 h-4" /> Novo Projeto
@@ -171,11 +171,11 @@ const Layout: React.FC = () => {
               <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Administração</p>
               <div className="space-y-0.5">
                 <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" onClick={closeSidebar} />
-                {isAdmin && (
-                  <>
-                    <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
-                    <SidebarLink to="/logs" icon={<ScrollText className="w-5 h-5" />} label="Logs do Sistema" onClick={closeSidebar} />
-                  </>
+                {hasPermission('user_management') && (
+                  <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
+                )}
+                {hasPermission('system_logs') && (
+                  <SidebarLink to="/logs" icon={<ScrollText className="w-5 h-5" />} label="Logs do Sistema" onClick={closeSidebar} />
                 )}
               </div>
             </div>
@@ -232,9 +232,9 @@ const Layout: React.FC = () => {
                 <Route path="/report" element={<PermissionGuard permission="report_object"><ReportGenerator /></PermissionGuard>} />
                 <Route path="/team-report" element={<PermissionGuard permission="report_team"><TeamReportGenerator /></PermissionGuard>} />
                 <Route path="/settings" element={<Settings />} />
-                <Route path="/users" element={<PermissionGuard requireAdmin><UserManagement /></PermissionGuard>} />
+                <Route path="/users" element={<PermissionGuard permission="user_management"><UserManagement /></PermissionGuard>} />
                 <Route path="/team" element={<PermissionGuard permission="team_management"><TeamManagement /></PermissionGuard>} />
-                <Route path="/logs" element={<PermissionGuard requireAdmin><SystemLogs /></PermissionGuard>} />
+                <Route path="/logs" element={<PermissionGuard permission="system_logs"><SystemLogs /></PermissionGuard>} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
