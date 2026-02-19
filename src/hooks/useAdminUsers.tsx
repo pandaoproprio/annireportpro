@@ -1,3 +1,4 @@
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -32,6 +33,8 @@ export const useAdminUsers = () => {
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ADMIN_USERS_KEY });
+
+  const fetchUsers = React.useCallback(() => usersQuery.refetch(), []);
 
   const createUserMutation = useMutation({
     mutationFn: async (userData: { email: string; password?: string; name: string; role: AdminRole; sendInvite?: boolean }) => {
@@ -84,8 +87,7 @@ export const useAdminUsers = () => {
     users: usersQuery.data || [],
     isLoading: usersQuery.isLoading || usersQuery.isFetching || isMutating,
 
-    // Backward-compatible fetch
-    fetchUsers: () => usersQuery.refetch(),
+    fetchUsers,
 
     createUser: async (userData: { email: string; password?: string; name: string; role: AdminRole; sendInvite?: boolean }) => {
       try {
