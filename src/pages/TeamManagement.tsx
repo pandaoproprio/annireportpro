@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTeamMembers, TeamMember } from '@/hooks/useTeamMembers';
+import { maskPhone, maskCpfCnpj } from '@/lib/masks';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -103,7 +104,7 @@ export const TeamManagement: React.FC = () => {
       <div className="grid grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>CPF/CNPJ</Label>
-          <Input value={document} onChange={e => setDocument(e.target.value)} placeholder="Documento" />
+          <Input value={document} onChange={e => setDocument(maskCpfCnpj(e.target.value))} placeholder="000.000.000-00" />
         </div>
         <div className="space-y-2">
           <Label>E-mail</Label>
@@ -111,7 +112,7 @@ export const TeamManagement: React.FC = () => {
         </div>
         <div className="space-y-2">
           <Label>Telefone</Label>
-          <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="(00) 00000-0000" />
+          <Input value={phone} onChange={e => setPhone(maskPhone(e.target.value))} placeholder="(00) 00000-0000" />
         </div>
       </div>
       {showProjectSelect && projects.length > 0 && (
