@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Goal, TeamMember } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export const Settings: React.FC = () => {
   const { signOut } = useAuth();
+  const { isAdmin } = usePermissions();
   const { activeProject, updateProject, removeProject, isLoadingProjects } = useAppData();
   
   const [isEditingProject, setIsEditingProject] = useState(false);
@@ -183,16 +185,20 @@ export const Settings: React.FC = () => {
                     </p>
                   </div>
                   {!isEditingProject && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Button onClick={startEditing} variant="outline">
                         <Edit className="w-4 h-4 mr-2" /> Editar Projeto
                       </Button>
-                      <Button onClick={() => setShowDeleteConfirm(true)} variant="outline" className="text-destructive hover:bg-destructive/10">
-                        <Trash2 className="w-4 h-4 mr-2" /> Excluir Projeto
-                      </Button>
-                      <Button onClick={() => setShowBatchDelete(true)} variant="outline" className="text-destructive hover:bg-destructive/10">
-                        <List className="w-4 h-4 mr-2" /> Excluir em Lote
-                      </Button>
+                      {isAdmin && (
+                        <>
+                          <Button onClick={() => setShowDeleteConfirm(true)} variant="outline" className="text-destructive hover:bg-destructive/10">
+                            <Trash2 className="w-4 h-4 mr-2" /> Excluir Projeto
+                          </Button>
+                          <Button onClick={() => setShowBatchDelete(true)} variant="outline" className="text-destructive hover:bg-destructive/10">
+                            <List className="w-4 h-4 mr-2" /> Excluir em Lote
+                          </Button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
@@ -403,28 +409,31 @@ export const Settings: React.FC = () => {
         </Card>
       )}
 
-      {showBatchDelete && (
+      {showBatchDelete && isAdmin && (
         <BatchDeleteProjects onClose={() => setShowBatchDelete(false)} />
       )}
 
-      {/* Trash / Recycle Bin */}
-      <TrashBin />
+      {/* Trash / Recycle Bin - Admin only */}
+      {isAdmin && <TrashBin />}
 
-      <Card className="border-l-4 border-l-info">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-4">
-            <div className="bg-info/10 p-3 rounded-full">
-              <Database className="w-6 h-6 text-info" />
+      {/* Storage Info - Admin only */}
+      {isAdmin && (
+        <Card className="border-l-4 border-l-info">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="bg-info/10 p-3 rounded-full">
+                <Database className="w-6 h-6 text-info" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-foreground">Armazenamento de Dados</h3>
+                <p className="text-sm text-muted-foreground mb-4 mt-1">
+                  Seus dados estão armazenados de forma segura no banco de dados. Você pode acessá-los de qualquer dispositivo após fazer login.
+                </p>
+              </div>
             </div>
-            <div className="flex-1">
-              <h3 className="text-lg font-semibold text-foreground">Armazenamento de Dados</h3>
-              <p className="text-sm text-muted-foreground mb-4 mt-1">
-                Seus dados estão armazenados de forma segura no banco de dados. Você pode acessá-los de qualquer dispositivo após fazer login.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       <Card className="border-l-4 border-l-warning">
         <CardContent className="pt-6">
