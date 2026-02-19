@@ -18,7 +18,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 export const Settings: React.FC = () => {
   const { signOut } = useAuth();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, hasPermission } = usePermissions();
   const { activeProject, updateProject, removeProject, isLoadingProjects } = useAppData();
   
   const [isEditingProject, setIsEditingProject] = useState(false);
@@ -189,7 +189,7 @@ export const Settings: React.FC = () => {
                       <Button onClick={startEditing} variant="outline">
                         <Edit className="w-4 h-4 mr-2" /> Editar Projeto
                       </Button>
-                      {isAdmin && (
+                      {hasPermission('project_delete') && (
                         <>
                           <Button onClick={() => setShowDeleteConfirm(true)} variant="outline" className="text-destructive hover:bg-destructive/10">
                             <Trash2 className="w-4 h-4 mr-2" /> Excluir Projeto
@@ -409,12 +409,12 @@ export const Settings: React.FC = () => {
         </Card>
       )}
 
-      {showBatchDelete && isAdmin && (
+      {showBatchDelete && hasPermission('project_delete') && (
         <BatchDeleteProjects onClose={() => setShowBatchDelete(false)} />
       )}
 
       {/* Trash / Recycle Bin - Admin only */}
-      {isAdmin && <TrashBin />}
+      {hasPermission('project_delete') && <TrashBin />}
 
       {/* Storage Info - Admin only */}
       {isAdmin && (

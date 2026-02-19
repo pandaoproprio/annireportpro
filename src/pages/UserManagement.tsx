@@ -48,14 +48,10 @@ export const UserManagement: React.FC = () => {
   const [selectedRole, setSelectedRole] = useState<'usuario' | 'analista' | 'admin' | 'super_admin'>('usuario');
 
   useEffect(() => {
-    if (role === 'SUPER_ADMIN') {
+    if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
       fetchUsers();
     }
   }, [role, fetchUsers]);
-
-  if (role !== 'SUPER_ADMIN' && role !== 'ADMIN') {
-    return <Navigate to="/" replace />;
-  }
 
   const resetForm = () => {
     setEmail('');

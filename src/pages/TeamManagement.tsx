@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTeamMembers, TeamMember } from '@/hooks/useTeamMembers';
 import { maskPhone, maskCpfCnpj } from '@/lib/masks';
 import { useAppData } from '@/contexts/AppDataContext';
-import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { UserPlus, Pencil, Trash2, Loader2, Users, Link2, Unlink, FolderPlus, FolderMinus, KeyRound } from 'lucide-react';
 
 export const TeamManagement: React.FC = () => {
-  const { role } = useAuth();
+  const { hasPermission, isSuperAdmin } = usePermissions();
   const { projects, activeProjectId } = useAppData();
   const {
     members, projectMembers, allAssignments, isLoading,
@@ -149,21 +149,23 @@ export const TeamManagement: React.FC = () => {
           <h1 className="text-2xl font-bold text-foreground">Gestão de Equipes</h1>
           <p className="text-muted-foreground">Gerencie os membros da equipe e suas vinculações a projetos</p>
         </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
-              <UserPlus className="w-4 h-4 mr-2" />
-              Novo Membro
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-lg">
-            <DialogHeader>
-              <DialogTitle>Adicionar Membro</DialogTitle>
-              <DialogDescription>Cadastre um novo membro de equipe</DialogDescription>
-            </DialogHeader>
-            {renderMemberForm(handleCreate, "Adicionar", true)}
-          </DialogContent>
-        </Dialog>
+        {hasPermission('team_management_create') && (
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+                <UserPlus className="w-4 h-4 mr-2" />
+                Novo Membro
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Adicionar Membro</DialogTitle>
+                <DialogDescription>Cadastre um novo membro de equipe</DialogDescription>
+              </DialogHeader>
+              {renderMemberForm(handleCreate, "Adicionar", true)}
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -240,37 +242,41 @@ export const TeamManagement: React.FC = () => {
                                 <FolderMinus className="w-4 h-4 text-amber-600" />
                               </Button>
                             )}
-                            {!m.user_id && m.email && (
+                            {!m.user_id && m.email && isSuperAdmin && (
                               <Button variant="ghost" size="icon" title="Criar acesso ao Diário de Bordo"
                                 onClick={() => { setAccessMember(m); setAccessPassword(''); setIsAccessOpen(true); }}>
                                 <KeyRound className="w-4 h-4 text-primary" />
                               </Button>
                             )}
-                            <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
-                              <Pencil className="w-4 h-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Remover membro?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    <strong>{m.name}</strong> será removido permanentemente de todos os projetos.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deleteMember(m.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                                    Remover
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            {hasPermission('team_management_edit') && (
+                              <Button variant="ghost" size="icon" onClick={() => openEdit(m)}>
+                                <Pencil className="w-4 h-4" />
+                              </Button>
+                            )}
+                            {hasPermission('team_management_delete') && (
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Remover membro?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      <strong>{m.name}</strong> será removido permanentemente de todos os projetos.
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => deleteMember(m.id)}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                                      Remover
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
