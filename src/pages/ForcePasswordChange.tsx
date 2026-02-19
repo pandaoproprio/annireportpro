@@ -12,7 +12,11 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 
 const passwordSchema = z.object({
-  password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres'),
+  password: z.string()
+    .min(8, 'A senha deve ter no mínimo 8 caracteres')
+    .regex(/[a-z]/, 'A senha deve conter pelo menos uma letra minúscula')
+    .regex(/[A-Z]/, 'A senha deve conter pelo menos uma letra maiúscula')
+    .regex(/[0-9]/, 'A senha deve conter pelo menos um número'),
   confirmPassword: z.string(),
 }).refine(data => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem',
@@ -103,6 +107,12 @@ export const ForcePasswordChange: React.FC = () => {
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password}</p>
               )}
+              <ul className="text-xs text-muted-foreground space-y-0.5 mt-1">
+                <li className={password.length >= 8 ? 'text-green-600' : ''}>• Mínimo 8 caracteres</li>
+                <li className={/[a-z]/.test(password) ? 'text-green-600' : ''}>• Pelo menos uma letra minúscula</li>
+                <li className={/[A-Z]/.test(password) ? 'text-green-600' : ''}>• Pelo menos uma letra maiúscula</li>
+                <li className={/[0-9]/.test(password) ? 'text-green-600' : ''}>• Pelo menos um número</li>
+              </ul>
             </div>
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirmar Senha</Label>
