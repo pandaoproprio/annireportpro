@@ -36,6 +36,7 @@ export const useReportState = () => {
   const [futureActions, setFutureActions] = useState('');
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [links, setLinks] = useState<{ attendance: string; registration: string; media: string }>({ attendance: '', registration: '', media: '' });
+  const [linkFileNames, setLinkFileNames] = useState<{ attendance: string; registration: string; media: string }>({ attendance: '', registration: '', media: '' });
   const [sections, setSections] = useState<ReportSection[]>(DEFAULT_SECTIONS);
 
   // Initialize from project data
@@ -60,6 +61,11 @@ export const useReportState = () => {
           attendance: rd.links.attendanceList || '',
           registration: rd.links.registrationList || '',
           media: rd.links.mediaFolder || '',
+        });
+        setLinkFileNames({
+          attendance: rd.links.attendanceFileName || '',
+          registration: rd.links.registrationFileName || '',
+          media: rd.links.mediaFileName || '',
         });
       }
       if (rd.sections && rd.sections.length > 0) {
@@ -87,6 +93,9 @@ export const useReportState = () => {
         attendanceList: links.attendance,
         registrationList: links.registration,
         mediaFolder: links.media,
+        attendanceFileName: linkFileNames.attendance,
+        registrationFileName: linkFileNames.registration,
+        mediaFileName: linkFileNames.media,
       },
       sections,
     });
@@ -266,6 +275,7 @@ export const useReportState = () => {
         if (error) { toast.error(`Erro ao enviar documento: ${file.name}`); return; }
         const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
         setLinks(prev => ({ ...prev, [linkField]: urlData.publicUrl }));
+        setLinkFileNames(prev => ({ ...prev, [linkField]: file.name }));
         toast.success(`Documento "${file.name}" enviado com sucesso`);
       } catch { toast.error(`Erro ao processar documento: ${file.name}`); }
       e.target.value = '';
@@ -281,7 +291,7 @@ export const useReportState = () => {
     otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,
     communicationNarrative, setCommunicationNarrative, communicationPhotos, setCommunicationPhotos,
     satisfaction, setSatisfaction, futureActions, setFutureActions,
-    expenses, links, setLinks, sections,
+    expenses, links, setLinks, linkFileNames, setLinkFileNames, sections,
     saveReportData,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent, addCustomSection, removeSection,
     addExpense, updateExpense, removeExpense,

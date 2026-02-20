@@ -39,6 +39,9 @@ export interface ReportLinks {
   attendanceList?: string;
   registrationList?: string;
   mediaFolder?: string;
+  attendanceFileName?: string;
+  registrationFileName?: string;
+  mediaFileName?: string;
 }
 
 export interface ReportSection {
