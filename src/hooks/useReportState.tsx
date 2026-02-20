@@ -35,7 +35,7 @@ export const useReportState = () => {
   const [satisfaction, setSatisfaction] = useState('');
   const [futureActions, setFutureActions] = useState('');
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
-  const [links, setLinks] = useState({ attendance: '', registration: '', media: '' });
+  const [links, setLinks] = useState<{ attendance: string; registration: string; media: string }>({ attendance: '', registration: '', media: '' });
   const [sections, setSections] = useState<ReportSection[]>(DEFAULT_SECTIONS);
 
   // Initialize from project data
@@ -253,6 +253,25 @@ export const useReportState = () => {
     return start;
   };
 
+  // Document upload for links section
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>, linkField: 'attendance' | 'registration' | 'media') => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      try {
+        const fileId = crypto.randomUUID();
+        const fileExt = file.name.split('.').pop() || 'pdf';
+        const folderMap = { attendance: 'listas-presenca', registration: 'listas-inscricao', media: 'midias' };
+        const filePath = `reports/${project?.id}/documentos/${folderMap[linkField]}/${fileId}.${fileExt}`;
+        const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
+        if (error) { toast.error(`Erro ao enviar documento: ${file.name}`); return; }
+        const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
+        setLinks(prev => ({ ...prev, [linkField]: urlData.publicUrl }));
+        toast.success(`Documento "${file.name}" enviado com sucesso`);
+      } catch { toast.error(`Erro ao processar documento: ${file.name}`); }
+      e.target.value = '';
+    }
+  };
+
   return {
     project, activities,
     mode, setMode, isExporting, setIsExporting, exportType, setExportType,
@@ -267,6 +286,7 @@ export const useReportState = () => {
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent, addCustomSection, removeSection,
     addExpense, updateExpense, removeExpense,
     handleLogoUpload, handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
+    handleDocumentUpload,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   };
 };
