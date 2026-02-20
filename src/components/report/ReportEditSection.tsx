@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Upload, ExternalLink } from 'lucide-react';
 import { AiNarrativeButton } from '@/components/report/AiNarrativeButton';
 
 interface Props {
@@ -54,6 +54,7 @@ interface Props {
   getCommunicationActivities: () => Activity[];
   getOtherActivities: () => Activity[];
   formatActivityDate: (date: string, endDate?: string) => string;
+  handleDocumentUpload: (e: React.ChangeEvent<HTMLInputElement>, linkField: 'attendance' | 'registration' | 'media') => void;
 }
 
 export const ReportEditSection: React.FC<Props> = (props) => {
@@ -284,25 +285,45 @@ const ExpensesSection: React.FC<Props> = ({ expenses, addExpense, updateExpense,
   </div>
 );
 
-const LinksSection: React.FC<Props> = ({ links, setLinks }) => (
-  <div className="space-y-4">
-    <p className="text-sm text-muted-foreground mb-4">Insira os links para os documentos de comprovação.</p>
-    <div className="grid grid-cols-1 gap-4">
-      <div className="space-y-2">
-        <Label>Link das Listas de Presença</Label>
-        <Input placeholder="https://..." value={links.attendance} onChange={e => setLinks({ ...links, attendance: e.target.value })} />
+const LinksSection: React.FC<Props> = ({ links, setLinks, handleDocumentUpload }) => {
+  const renderLinkField = (label: string, field: 'attendance' | 'registration' | 'media', accept: string) => (
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <div className="flex gap-2 items-center">
+        <Input
+          placeholder="https://..."
+          value={links[field]}
+          onChange={e => setLinks({ ...links, [field]: e.target.value })}
+          className="flex-1"
+        />
+        {links[field] && (
+          <a href={links[field]} target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 shrink-0" title="Abrir link">
+            <ExternalLink className="w-4 h-4" />
+          </a>
+        )}
       </div>
-      <div className="space-y-2">
-        <Label>Link das Listas de Inscrição</Label>
-        <Input placeholder="https://..." value={links.registration} onChange={e => setLinks({ ...links, registration: e.target.value })} />
-      </div>
-      <div className="space-y-2">
-        <Label>Link das Mídias (Fotos, Vídeos)</Label>
-        <Input placeholder="https://..." value={links.media} onChange={e => setLinks({ ...links, media: e.target.value })} />
+      <div className="flex items-center gap-2">
+        <Label htmlFor={`upload-${field}`} className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors">
+          <Upload className="w-3.5 h-3.5" />
+          Enviar documento
+        </Label>
+        <input id={`upload-${field}`} type="file" accept={accept} className="hidden" onChange={e => handleDocumentUpload(e, field)} />
+        <span className="text-xs text-muted-foreground">PDF, DOC, XLS, imagens...</span>
       </div>
     </div>
-  </div>
-);
+  );
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground mb-4">Envie os documentos de comprovação ou insira os links manualmente. Ao enviar um arquivo, o link será gerado automaticamente.</p>
+      <div className="grid grid-cols-1 gap-4">
+        {renderLinkField('Link das Listas de Presença', 'attendance', '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png')}
+        {renderLinkField('Link das Listas de Inscrição', 'registration', '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png')}
+        {renderLinkField('Link das Mídias (Fotos, Vídeos)', 'media', '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.mp4,.zip')}
+      </div>
+    </div>
+  );
+};
 
 const CustomSection: React.FC<Props> = ({ section, index, updateCustomContent }) => (
   <div className="space-y-2">

@@ -25,6 +25,7 @@ export const ReportGenerator: React.FC = () => {
     saveReportData, moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection, addExpense, updateExpense, removeExpense,
     handleLogoUpload, handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
+    handleDocumentUpload,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   } = state;
 
@@ -118,6 +119,7 @@ export const ReportGenerator: React.FC = () => {
     updateSectionTitle, updateCustomContent, removeSection,
     addExpense, updateExpense, removeExpense,
     handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
+    handleDocumentUpload,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   };
 
