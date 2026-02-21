@@ -42,6 +42,7 @@ const Onboarding = lazy(() => import('@/pages/Onboarding').then(m => ({ default:
 const LgpdConsent = lazy(() => import('@/pages/LgpdConsent').then(m => ({ default: m.LgpdConsent })));
 const ForcePasswordChange = lazy(() => import('@/pages/ForcePasswordChange').then(m => ({ default: m.ForcePasswordChange })));
 const SystemLogs = lazy(() => import('@/pages/SystemLogs').then(m => ({ default: m.SystemLogs })));
+const JustificationReportGenerator = lazy(() => import('@/pages/JustificationReportGenerator').then(m => ({ default: m.JustificationReportGenerator })));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -162,6 +163,7 @@ const Layout: React.FC = () => {
                 {hasPermission('diary') && <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" onClick={closeSidebar} />}
                 {hasPermission('report_object') && <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" onClick={closeSidebar} />}
                 {hasPermission('report_team') && <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" onClick={closeSidebar} />}
+                {hasPermission('report_team') && <SidebarLink to="/justificativa" icon={<FileText className="w-5 h-5" />} label="Justificativa Prorrogação" onClick={closeSidebar} />}
                 {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />}
               </div>
             </div>
@@ -231,6 +233,7 @@ const Layout: React.FC = () => {
                 <Route path="/activities" element={<PermissionGuard permission="diary"><ActivityManager /></PermissionGuard>} />
                 <Route path="/report" element={<PermissionGuard permission="report_object"><ReportGenerator /></PermissionGuard>} />
                 <Route path="/team-report" element={<PermissionGuard permission="report_team"><TeamReportGenerator /></PermissionGuard>} />
+                <Route path="/justificativa" element={<PermissionGuard permission="report_team"><JustificationReportGenerator /></PermissionGuard>} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/users" element={<PermissionGuard permission="user_management"><UserManagement /></PermissionGuard>} />
                 <Route path="/team" element={<PermissionGuard permission="team_management"><TeamManagement /></PermissionGuard>} />
