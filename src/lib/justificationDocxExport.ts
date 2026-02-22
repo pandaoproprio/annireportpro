@@ -9,7 +9,7 @@ import {
   convertInchesToTwip,
 } from 'docx';
 import { saveAs } from 'file-saver';
-import { Project } from '@/types';
+import { Project, ReportSection } from '@/types';
 import { JustificationReport } from '@/types/justificationReport';
 
 const ABNT = {
@@ -109,22 +109,23 @@ const parseHtmlToDocxParagraphs = (html: string): Paragraph[] => {
   return paragraphs;
 };
 
-interface JustificationExportData {
+export interface JustificationExportData {
   project: Project;
   report: JustificationReport;
+  sections?: ReportSection[];
 }
 
-const sections = [
-  { key: 'objectSection', title: '1. DO OBJETO DO TERMO ADITIVO' },
-  { key: 'justificationSection', title: '2. DA JUSTIFICATIVA PARA A PRORROGAÇÃO' },
-  { key: 'executedActionsSection', title: '3. DAS AÇÕES JÁ EXECUTADAS (RESULTADOS PARCIAIS)' },
-  { key: 'futureActionsSection', title: '4. DAS AÇÕES FUTURAS PREVISTAS NO PERÍODO DE PRORROGAÇÃO' },
-  { key: 'requestedDeadlineSection', title: '5. DO PRAZO SOLICITADO' },
-  { key: 'attachmentsSection', title: '6. ANEXOS' },
+const DEFAULT_SECTION_ORDER = [
+  { key: 'objectSection', title: 'DO OBJETO DO TERMO ADITIVO' },
+  { key: 'justificationSection', title: 'DA JUSTIFICATIVA PARA A PRORROGAÇÃO' },
+  { key: 'executedActionsSection', title: 'DAS AÇÕES JÁ EXECUTADAS (RESULTADOS PARCIAIS)' },
+  { key: 'futureActionsSection', title: 'DAS AÇÕES FUTURAS PREVISTAS NO PERÍODO DE PRORROGAÇÃO' },
+  { key: 'requestedDeadlineSection', title: 'DO PRAZO SOLICITADO' },
+  { key: 'attachmentsSection', title: 'ANEXOS' },
 ] as const;
 
 export const exportJustificationToDocx = async (data: JustificationExportData) => {
-  const { project, report } = data;
+  const { project, report, sections: dynamicSections } = data;
   const docSections: Paragraph[] = [];
 
   // Title
@@ -171,17 +172,37 @@ export const exportJustificationToDocx = async (data: JustificationExportData) =
     spacing: { after: 300, line: ABNT.LINE_SPACING },
   }));
 
-  // Sections
-  for (const section of sections) {
-    const content = report[section.key];
-    docSections.push(new Paragraph({
-      children: [new TextRun({
-        text: section.title, bold: true,
-        font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_HEADING,
-      })],
-      spacing: { before: 400, after: 200, line: ABNT.LINE_SPACING },
-    }));
-    docSections.push(...parseHtmlToDocxParagraphs(content));
+  // Sections - respect ordering and visibility from dynamic sections
+  if (dynamicSections && dynamicSections.length > 0) {
+    const visibleSections = dynamicSections.filter(s => s.isVisible);
+    visibleSections.forEach((section, idx) => {
+      const sectionNum = idx + 1;
+      const content = section.type === 'custom'
+        ? section.content || ''
+        : report[section.key as keyof JustificationReport] as string || '';
+
+      docSections.push(new Paragraph({
+        children: [new TextRun({
+          text: `${sectionNum}. ${section.title}`, bold: true,
+          font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_HEADING,
+        })],
+        spacing: { before: 400, after: 200, line: ABNT.LINE_SPACING },
+      }));
+      docSections.push(...parseHtmlToDocxParagraphs(content));
+    });
+  } else {
+    // Fallback to default order
+    DEFAULT_SECTION_ORDER.forEach((section, idx) => {
+      const content = report[section.key as keyof JustificationReport] as string;
+      docSections.push(new Paragraph({
+        children: [new TextRun({
+          text: `${idx + 1}. ${section.title}`, bold: true,
+          font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_HEADING,
+        })],
+        spacing: { before: 400, after: 200, line: ABNT.LINE_SPACING },
+      }));
+      docSections.push(...parseHtmlToDocxParagraphs(content));
+    });
   }
 
   // Signature
