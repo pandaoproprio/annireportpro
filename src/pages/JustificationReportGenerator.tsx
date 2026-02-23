@@ -21,11 +21,12 @@ export const JustificationReportGenerator: React.FC = () => {
     project, mode, setMode, isExporting, setIsExporting, exportType, setExportType,
     showDraftsList, setShowDraftsList, currentDraftId,
     drafts, isLoading, isSaving,
-    sections, sectionContents, SECTION_PLACEHOLDERS, hasContent,
+    sections, sectionContents, attachmentFiles, SECTION_PLACEHOLDERS, hasContent,
     resetForm, loadDraft, updateSectionContent,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection,
     saveDraft, deleteDraft, buildReportData,
+    handleDocumentUpload, removeAttachmentFile,
   } = state;
 
   if (!project) {
@@ -94,7 +95,7 @@ export const JustificationReportGenerator: React.FC = () => {
     setIsExporting(true);
     setExportType('docx');
     try {
-      await exportJustificationToDocx({ project, report: buildReportData(), sections });
+      await exportJustificationToDocx({ project, report: buildReportData(), sections, attachmentFiles });
       toast.success('DOCX exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar DOCX:', error);
@@ -177,10 +178,13 @@ export const JustificationReportGenerator: React.FC = () => {
                 index={index}
                 sectionContents={sectionContents}
                 placeholders={SECTION_PLACEHOLDERS}
+                attachmentFiles={attachmentFiles}
                 updateSectionContent={updateSectionContent}
                 updateSectionTitle={updateSectionTitle}
                 updateCustomContent={updateCustomContent}
                 removeSection={removeSection}
+                handleDocumentUpload={handleDocumentUpload}
+                removeAttachmentFile={removeAttachmentFile}
               />
             ))}
           </div>
@@ -220,6 +224,7 @@ export const JustificationReportGenerator: React.FC = () => {
                 section={section}
                 index={idx}
                 sectionContents={sectionContents}
+                attachmentFiles={attachmentFiles}
               />
             ))}
 

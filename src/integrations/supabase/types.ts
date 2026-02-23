@@ -126,6 +126,7 @@ export type Database = {
       }
       justification_reports: {
         Row: {
+          attachment_files: Json
           attachments_section: string
           created_at: string
           deleted_at: string | null
@@ -142,6 +143,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          attachment_files?: Json
           attachments_section?: string
           created_at?: string
           deleted_at?: string | null
@@ -158,6 +160,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          attachment_files?: Json
           attachments_section?: string
           created_at?: string
           deleted_at?: string | null

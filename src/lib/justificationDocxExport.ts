@@ -10,7 +10,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Project, ReportSection } from '@/types';
-import { JustificationReport } from '@/types/justificationReport';
+import { JustificationReport, AttachmentFileData } from '@/types/justificationReport';
 
 const ABNT = {
   FONT_FAMILY: 'Times New Roman',
@@ -113,6 +113,7 @@ export interface JustificationExportData {
   project: Project;
   report: JustificationReport;
   sections?: ReportSection[];
+  attachmentFiles?: AttachmentFileData[];
 }
 
 const DEFAULT_SECTION_ORDER = [
@@ -125,7 +126,7 @@ const DEFAULT_SECTION_ORDER = [
 ] as const;
 
 export const exportJustificationToDocx = async (data: JustificationExportData) => {
-  const { project, report, sections: dynamicSections } = data;
+  const { project, report, sections: dynamicSections, attachmentFiles } = data;
   const docSections: Paragraph[] = [];
 
   // Title
@@ -202,6 +203,27 @@ export const exportJustificationToDocx = async (data: JustificationExportData) =
         spacing: { before: 400, after: 200, line: ABNT.LINE_SPACING },
       }));
       docSections.push(...parseHtmlToDocxParagraphs(content));
+    });
+  }
+
+  // Add attachment files list if any
+  if (attachmentFiles && attachmentFiles.length > 0) {
+    docSections.push(new Paragraph({
+      children: [new TextRun({
+        text: 'Documentos anexados:', bold: true,
+        font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY,
+      })],
+      spacing: { before: 200, after: 100, line: ABNT.LINE_SPACING },
+    }));
+    attachmentFiles.forEach((file, idx) => {
+      docSections.push(new Paragraph({
+        children: [new TextRun({
+          text: `${idx + 1}. ${file.name}`,
+          font: ABNT.FONT_FAMILY, size: ABNT.FONT_SIZE_BODY,
+        })],
+        spacing: { after: 50, line: ABNT.LINE_SPACING },
+        indent: { left: 720 },
+      }));
     });
   }
 
