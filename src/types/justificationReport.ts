@@ -13,6 +13,7 @@ export interface JustificationReport {
   requestedDeadlineSection: string;
   attachmentsSection: string;
   attachmentFiles?: AttachmentFileData[];
+  sectionPhotos?: Record<string, string[]>;
   newDeadlineDate?: string;
   isDraft: boolean;
   createdAt: string;

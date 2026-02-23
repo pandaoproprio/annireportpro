@@ -3,7 +3,7 @@ import { ReportSection } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Trash2, Upload, FileText } from 'lucide-react';
+import { Trash2, Upload, FileText, Image as ImageIcon } from 'lucide-react';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { JustificationSectionKey, AttachmentFile } from '@/hooks/useJustificationReportState';
 
@@ -13,23 +13,29 @@ interface Props {
   sectionContents: Record<JustificationSectionKey, string>;
   placeholders: Record<string, string>;
   attachmentFiles: AttachmentFile[];
+  sectionPhotos: Record<string, string[]>;
   updateSectionContent: (key: JustificationSectionKey, value: string) => void;
   updateSectionTitle: (index: number, title: string) => void;
   updateCustomContent: (index: number, content: string) => void;
   removeSection: (index: number) => void;
   handleDocumentUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   removeAttachmentFile: (index: number) => void;
+  handleSectionPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => void;
+  removeSectionPhoto: (sectionKey: string, index: number) => void;
 }
 
 export const JustificationEditSection: React.FC<Props> = ({
   section, index, sectionContents, placeholders,
-  attachmentFiles,
+  attachmentFiles, sectionPhotos,
   updateSectionContent, updateSectionTitle, updateCustomContent, removeSection,
   handleDocumentUpload, removeAttachmentFile,
+  handleSectionPhotoUpload, removeSectionPhoto,
 }) => {
   if (!section.isVisible) return null;
 
   const isAttachmentsSection = section.key === 'attachmentsSection';
+  const sectionKey = section.type === 'custom' ? section.id : section.key;
+  const photos = sectionPhotos[sectionKey] || [];
 
   return (
     <Card className="mb-6 border-l-4 border-l-primary/30">
@@ -76,6 +82,36 @@ export const JustificationEditSection: React.FC<Props> = ({
             placeholder={placeholders[section.key] || 'Preencha esta seção...'}
           />
         )}
+
+        {/* Photo upload for all sections */}
+        <div className="mt-4 space-y-3 border-t pt-4">
+          <Label className="flex items-center gap-2 text-sm font-semibold">
+            <ImageIcon className="w-4 h-4" /> Registro Fotográfico
+          </Label>
+          <Input
+            type="file"
+            accept="image/*"
+            multiple
+            onChange={e => handleSectionPhotoUpload(e, sectionKey)}
+            className="text-sm"
+          />
+          {photos.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {photos.map((photo, pIdx) => (
+                <div key={pIdx} className="relative group">
+                  <img src={photo} alt={`Foto ${pIdx + 1}`} className="h-20 w-20 object-cover rounded border" />
+                  <button
+                    type="button"
+                    onClick={() => removeSectionPhoto(sectionKey, pIdx)}
+                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Upload de documentos na seção de Anexos */}
         {isAttachmentsSection && (
