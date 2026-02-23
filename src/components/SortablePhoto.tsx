@@ -53,11 +53,11 @@ export const SortablePhoto: React.FC<SortablePhotoProps> = ({
       </button>
 
       {/* Photo Thumbnail */}
-      <div className="relative w-32 h-32 flex-shrink-0">
+      <div className="relative w-32 h-32 flex-shrink-0 bg-muted rounded-lg border overflow-hidden flex items-center justify-center">
         <img
           src={photo.url}
           alt={`Foto ${index + 1}`}
-          className="w-full h-full object-cover rounded-lg border"
+          className="max-w-full max-h-full object-contain"
           draggable={false}
         />
         <button
