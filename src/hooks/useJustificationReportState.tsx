@@ -6,6 +6,11 @@ import { toast } from 'sonner';
 import { ReportSection } from '@/types';
 import { JustificationReport, JustificationReportDraft } from '@/types/justificationReport';
 
+export interface AttachmentFile {
+  name: string;
+  url: string;
+}
+
 const DEFAULT_SECTIONS: ReportSection[] = [
   { id: 'object', type: 'fixed', key: 'objectSection', title: 'DO OBJETO DO TERMO ADITIVO', isVisible: true },
   { id: 'justification', type: 'fixed', key: 'justificationSection', title: 'DA JUSTIFICATIVA PARA A PRORROGAÇÃO', isVisible: true },
@@ -55,6 +60,7 @@ export const useJustificationReportState = () => {
     requestedDeadlineSection: '',
     attachmentsSection: '',
   });
+  const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([]);
 
   // Fetch drafts
   const fetchDrafts = useCallback(async () => {
@@ -79,6 +85,7 @@ export const useJustificationReportState = () => {
         futureActionsSection: d.future_actions_section,
         requestedDeadlineSection: d.requested_deadline_section,
         attachmentsSection: d.attachments_section,
+        attachmentFiles: d.attachment_files || [],
         newDeadlineDate: d.new_deadline_date,
         isDraft: d.is_draft,
         createdAt: d.created_at,
@@ -102,6 +109,7 @@ export const useJustificationReportState = () => {
       objectSection: '', justificationSection: '', executedActionsSection: '',
       futureActionsSection: '', requestedDeadlineSection: '', attachmentsSection: '',
     });
+    setAttachmentFiles([]);
     setSections(DEFAULT_SECTIONS);
     setMode('edit');
   };
@@ -117,7 +125,7 @@ export const useJustificationReportState = () => {
       requestedDeadlineSection: draft.requestedDeadlineSection,
       attachmentsSection: draft.attachmentsSection,
     });
-    // TODO: load saved sections ordering if persisted
+    setAttachmentFiles(draft.attachmentFiles || []);
     setSections(DEFAULT_SECTIONS);
     setShowDraftsList(false);
   };
@@ -195,6 +203,7 @@ export const useJustificationReportState = () => {
         future_actions_section: sectionContents.futureActionsSection,
         requested_deadline_section: sectionContents.requestedDeadlineSection,
         attachments_section: sectionContents.attachmentsSection,
+        attachment_files: attachmentFiles as any,
         is_draft: true,
       };
 
@@ -253,7 +262,36 @@ export const useJustificationReportState = () => {
     updatedAt: new Date().toISOString(),
   });
 
-  const hasContent = Object.values(sectionContents).some(v => v.trim() !== '');
+  const hasContent = Object.values(sectionContents).some(v => v.trim() !== '') || attachmentFiles.length > 0;
+
+  // Document upload handler
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0] || !project?.id) return;
+    const file = e.target.files[0];
+    try {
+      const fileId = crypto.randomUUID();
+      const fileExt = file.name.split('.').pop() || 'pdf';
+      const filePath = `reports/${project.id}/justificativas/${fileId}.${fileExt}`;
+      const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
+      if (error) { toast.error(`Erro ao enviar documento: ${file.name}`); return; }
+      const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
+      setAttachmentFiles(prev => [...prev, { name: file.name, url: urlData.publicUrl }]);
+      toast.success(`Documento "${file.name}" enviado com sucesso`);
+    } catch { toast.error(`Erro ao processar documento: ${file.name}`); }
+    e.target.value = '';
+  };
+
+  const removeAttachmentFile = async (index: number) => {
+    const file = attachmentFiles[index];
+    if (file?.url) {
+      try {
+        const urlParts = new URL(file.url).pathname.split('/');
+        const filePath = urlParts.slice(-4).join('/');
+        await supabase.storage.from('team-report-photos').remove([filePath]);
+      } catch { /* still remove from UI */ }
+    }
+    setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
   return {
     project,
@@ -264,6 +302,7 @@ export const useJustificationReportState = () => {
     currentDraftId,
     drafts, isLoading, isSaving,
     sections, sectionContents,
+    attachmentFiles,
     SECTION_PLACEHOLDERS,
     hasContent,
     resetForm, loadDraft,
@@ -272,5 +311,6 @@ export const useJustificationReportState = () => {
     addCustomSection, removeSection,
     saveDraft, deleteDraft,
     buildReportData,
+    handleDocumentUpload, removeAttachmentFile,
   };
 };

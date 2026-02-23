@@ -1,3 +1,8 @@
+export interface AttachmentFileData {
+  name: string;
+  url: string;
+}
+
 export interface JustificationReport {
   id: string;
   projectId: string;
@@ -7,6 +12,7 @@ export interface JustificationReport {
   futureActionsSection: string;
   requestedDeadlineSection: string;
   attachmentsSection: string;
+  attachmentFiles?: AttachmentFileData[];
   newDeadlineDate?: string;
   isDraft: boolean;
   createdAt: string;
