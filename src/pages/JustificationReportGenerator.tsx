@@ -21,12 +21,13 @@ export const JustificationReportGenerator: React.FC = () => {
     project, mode, setMode, isExporting, setIsExporting, exportType, setExportType,
     showDraftsList, setShowDraftsList, currentDraftId,
     drafts, isLoading, isSaving,
-    sections, sectionContents, attachmentFiles, SECTION_PLACEHOLDERS, hasContent,
+    sections, sectionContents, attachmentFiles, sectionPhotos, SECTION_PLACEHOLDERS, hasContent,
     resetForm, loadDraft, updateSectionContent,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection,
     saveDraft, deleteDraft, buildReportData,
     handleDocumentUpload, removeAttachmentFile,
+    handleSectionPhotoUpload, removeSectionPhoto,
   } = state;
 
   if (!project) {
@@ -179,12 +180,15 @@ export const JustificationReportGenerator: React.FC = () => {
                 sectionContents={sectionContents}
                 placeholders={SECTION_PLACEHOLDERS}
                 attachmentFiles={attachmentFiles}
+                sectionPhotos={sectionPhotos}
                 updateSectionContent={updateSectionContent}
                 updateSectionTitle={updateSectionTitle}
                 updateCustomContent={updateCustomContent}
                 removeSection={removeSection}
                 handleDocumentUpload={handleDocumentUpload}
                 removeAttachmentFile={removeAttachmentFile}
+                handleSectionPhotoUpload={handleSectionPhotoUpload}
+                removeSectionPhoto={removeSectionPhoto}
               />
             ))}
           </div>
@@ -225,6 +229,7 @@ export const JustificationReportGenerator: React.FC = () => {
                 index={idx}
                 sectionContents={sectionContents}
                 attachmentFiles={attachmentFiles}
+                sectionPhotos={sectionPhotos}
               />
             ))}
 

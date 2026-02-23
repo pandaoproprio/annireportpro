@@ -8,9 +8,10 @@ interface Props {
   index: number;
   sectionContents: Record<JustificationSectionKey, string>;
   attachmentFiles?: AttachmentFile[];
+  sectionPhotos?: Record<string, string[]>;
 }
 
-export const JustificationPreviewSection: React.FC<Props> = ({ section, index, sectionContents, attachmentFiles }) => {
+export const JustificationPreviewSection: React.FC<Props> = ({ section, index, sectionContents, attachmentFiles, sectionPhotos }) => {
   if (!section.isVisible) return null;
 
   const content = section.type === 'custom'
@@ -21,12 +22,15 @@ export const JustificationPreviewSection: React.FC<Props> = ({ section, index, s
   const isAttachmentsSection = section.key === 'attachmentsSection';
   const hasFiles = isAttachmentsSection && attachmentFiles && attachmentFiles.length > 0;
 
+  const sectionKey = section.type === 'custom' ? section.id : section.key;
+  const photos = sectionPhotos?.[sectionKey] || [];
+
   return (
     <section className="mb-8 page-break">
       <h3 className="text-lg font-bold uppercase mb-4">
         {index + 1}. {section.title}
       </h3>
-      {isEmpty && !hasFiles ? (
+      {isEmpty && !hasFiles && photos.length === 0 ? (
         <p className="text-muted-foreground italic">[Seção não preenchida]</p>
       ) : (
         <>
@@ -35,6 +39,20 @@ export const JustificationPreviewSection: React.FC<Props> = ({ section, index, s
               className="prose prose-sm max-w-none text-justify leading-relaxed [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
               dangerouslySetInnerHTML={{ __html: content }}
             />
+          )}
+          {photos.length > 0 && (
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              {photos.map((photo, pIdx) => (
+                <div key={pIdx} className="text-center">
+                  <img
+                    src={photo}
+                    alt={`Foto ${pIdx + 1}`}
+                    className="w-full h-auto max-h-56 object-contain rounded border"
+                  />
+                  <p className="text-xs text-muted-foreground italic mt-1">Foto {pIdx + 1}</p>
+                </div>
+              ))}
+            </div>
           )}
           {hasFiles && (
             <div className="mt-4 space-y-2">

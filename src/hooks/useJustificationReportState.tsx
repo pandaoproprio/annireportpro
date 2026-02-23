@@ -61,6 +61,7 @@ export const useJustificationReportState = () => {
     attachmentsSection: '',
   });
   const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([]);
+  const [sectionPhotos, setSectionPhotos] = useState<Record<string, string[]>>({});
 
   // Fetch drafts
   const fetchDrafts = useCallback(async () => {
@@ -86,6 +87,7 @@ export const useJustificationReportState = () => {
         requestedDeadlineSection: d.requested_deadline_section,
         attachmentsSection: d.attachments_section,
         attachmentFiles: d.attachment_files || [],
+        sectionPhotos: d.section_photos || {},
         newDeadlineDate: d.new_deadline_date,
         isDraft: d.is_draft,
         createdAt: d.created_at,
@@ -110,6 +112,7 @@ export const useJustificationReportState = () => {
       futureActionsSection: '', requestedDeadlineSection: '', attachmentsSection: '',
     });
     setAttachmentFiles([]);
+    setSectionPhotos({});
     setSections(DEFAULT_SECTIONS);
     setMode('edit');
   };
@@ -126,6 +129,7 @@ export const useJustificationReportState = () => {
       attachmentsSection: draft.attachmentsSection,
     });
     setAttachmentFiles(draft.attachmentFiles || []);
+    setSectionPhotos(draft.sectionPhotos || {});
     setSections(DEFAULT_SECTIONS);
     setShowDraftsList(false);
   };
@@ -204,6 +208,7 @@ export const useJustificationReportState = () => {
         requested_deadline_section: sectionContents.requestedDeadlineSection,
         attachments_section: sectionContents.attachmentsSection,
         attachment_files: attachmentFiles as any,
+        section_photos: sectionPhotos as any,
         is_draft: true,
       };
 
@@ -281,6 +286,43 @@ export const useJustificationReportState = () => {
     e.target.value = '';
   };
 
+  // Section photo upload
+  const handleSectionPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => {
+    if (!e.target.files || !e.target.files.length || !project?.id) return;
+    for (const file of Array.from(e.target.files)) {
+      try {
+        const photoId = crypto.randomUUID();
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const filePath = `reports/${project.id}/justificativas/photos/${sectionKey}/${photoId}.${fileExt}`;
+        const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
+        if (error) { toast.error(`Erro ao enviar foto: ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
+        setSectionPhotos(prev => ({
+          ...prev,
+          [sectionKey]: [...(prev[sectionKey] || []), urlData.publicUrl],
+        }));
+      } catch { toast.error(`Erro ao processar foto: ${file.name}`); }
+    }
+    e.target.value = '';
+    toast.success('Foto(s) enviada(s) com sucesso!');
+  };
+
+  const removeSectionPhoto = async (sectionKey: string, index: number) => {
+    const photos = sectionPhotos[sectionKey] || [];
+    const photoUrl = photos[index];
+    if (photoUrl) {
+      try {
+        const urlParts = new URL(photoUrl).pathname.split('/');
+        const filePath = urlParts.slice(-5).join('/');
+        await supabase.storage.from('team-report-photos').remove([filePath]);
+      } catch { /* still remove from UI */ }
+    }
+    setSectionPhotos(prev => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || []).filter((_, i) => i !== index),
+    }));
+  };
+
   const removeAttachmentFile = async (index: number) => {
     const file = attachmentFiles[index];
     if (file?.url) {
@@ -302,7 +344,7 @@ export const useJustificationReportState = () => {
     currentDraftId,
     drafts, isLoading, isSaving,
     sections, sectionContents,
-    attachmentFiles,
+    attachmentFiles, sectionPhotos,
     SECTION_PLACEHOLDERS,
     hasContent,
     resetForm, loadDraft,
@@ -312,5 +354,6 @@ export const useJustificationReportState = () => {
     saveDraft, deleteDraft,
     buildReportData,
     handleDocumentUpload, removeAttachmentFile,
+    handleSectionPhotoUpload, removeSectionPhoto,
   };
 };
