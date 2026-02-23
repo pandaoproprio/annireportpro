@@ -150,7 +150,7 @@ export const TeamReportGenerator: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    for (const file of Array.from(files)) {
+    const uploadPromises = Array.from(files).map(async (file) => {
       const photoId = crypto.randomUUID();
       const fileExt = file.name.split('.').pop() || 'jpg';
       const filePath = `${user?.id}/${photoId}.${fileExt}`;
@@ -162,20 +162,27 @@ export const TeamReportGenerator: React.FC = () => {
       if (error) {
         console.error('Upload error:', error);
         toast.error(`Erro ao enviar foto: ${file.name}`);
-        continue;
+        return null;
       }
 
       const { data: urlData } = supabase.storage
         .from('team-report-photos')
         .getPublicUrl(filePath);
 
-      const newPhoto: PhotoWithCaption = {
+      return {
         id: photoId,
         url: urlData.publicUrl,
         caption: 'Registro fotográfico das atividades realizadas',
-      };
-      setPhotosWithCaptions(prev => [...prev, newPhoto]);
+      } as PhotoWithCaption;
+    });
+
+    const results = await Promise.all(uploadPromises);
+    const successfulUploads = results.filter((r): r is PhotoWithCaption => r !== null);
+    if (successfulUploads.length > 0) {
+      setPhotosWithCaptions(prev => [...prev, ...successfulUploads]);
+      toast.success(`${successfulUploads.length} foto(s) enviada(s) com sucesso!`);
     }
+    e.target.value = '';
   };
 
   const removePhoto = (index: number) => {

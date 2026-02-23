@@ -39,7 +39,8 @@ const SECTION_PLACEHOLDERS: Record<string, string> = {
 
 export const useJustificationReportState = () => {
   const { activeProject: project } = useAppData();
-  const { user } = useAuth();
+  const { user, role } = useAuth();
+  const isSuperAdmin = role === 'SUPER_ADMIN';
 
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const [isExporting, setIsExporting] = useState(false);
@@ -213,9 +214,11 @@ export const useJustificationReportState = () => {
       };
 
       if (currentDraftId) {
+        // On update, don't override user_id (SuperAdmin editing another user's draft)
+        const { user_id, ...updatePayload } = payload;
         const { error } = await supabase
           .from('justification_reports')
-          .update(payload)
+          .update(updatePayload)
           .eq('id', currentDraftId);
         if (error) throw error;
       } else {
