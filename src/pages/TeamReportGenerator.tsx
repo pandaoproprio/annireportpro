@@ -887,12 +887,14 @@ export const TeamReportGenerator: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {photosWithCaptions.map((photo, idx) => (
                   <div key={photo.id} className="space-y-2">
-                    <img
-                      src={photo.url}
-                      alt={`Registro ${idx + 1}`}
-                      className="w-full aspect-video object-cover rounded-lg border"
-                    />
-                    <p className="text-xs text-center italic text-gray-600">
+                    <div className="w-full bg-muted rounded-lg border overflow-hidden flex items-center justify-center" style={{ minHeight: '180px' }}>
+                      <img
+                        src={photo.url}
+                        alt={`Registro ${idx + 1}`}
+                        className="max-w-full max-h-[400px] object-contain"
+                      />
+                    </div>
+                    <p className="text-xs text-center italic text-muted-foreground">
                       Foto {idx + 1}: {photo.caption}
                     </p>
                   </div>
