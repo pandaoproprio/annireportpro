@@ -3,7 +3,6 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, X, Edit2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { PhotoWithCaption } from '@/types';
 
 interface SortablePhotoProps {
@@ -38,22 +37,12 @@ export const SortablePhoto: React.FC<SortablePhotoProps> = ({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex gap-4 items-start p-4 border rounded-lg bg-muted/30 ${
+      className={`flex flex-col gap-2 p-3 border rounded-lg bg-muted/30 ${
         isDragging ? 'ring-2 ring-primary shadow-lg' : ''
       }`}
     >
-      {/* Drag Handle */}
-      <button
-        {...attributes}
-        {...listeners}
-        className="p-2 hover:bg-muted rounded cursor-grab active:cursor-grabbing flex-shrink-0 touch-none"
-        title="Arraste para reordenar"
-      >
-        <GripVertical className="w-5 h-5 text-muted-foreground" />
-      </button>
-
-      {/* Photo Thumbnail */}
-      <div className="relative w-32 h-32 flex-shrink-0 bg-muted rounded-lg border overflow-hidden flex items-center justify-center">
+      {/* Photo */}
+      <div className="relative w-full aspect-square bg-muted rounded-md overflow-hidden flex items-center justify-center">
         <img
           src={photo.url}
           alt={`Foto ${index + 1}`}
@@ -62,26 +51,27 @@ export const SortablePhoto: React.FC<SortablePhotoProps> = ({
         />
         <button
           onClick={() => onRemove(index)}
-          className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full shadow-md hover:bg-destructive/90"
+          className="absolute top-1 right-1 p-1 bg-destructive text-destructive-foreground rounded-full shadow-md hover:bg-destructive/90"
         >
           <X className="w-3 h-3" />
         </button>
+        <button
+          {...attributes}
+          {...listeners}
+          className="absolute top-1 left-1 p-1 bg-background/80 rounded cursor-grab active:cursor-grabbing touch-none"
+          title="Arraste para reordenar"
+        >
+          <GripVertical className="w-4 h-4 text-muted-foreground" />
+        </button>
       </div>
 
-      {/* Caption Input */}
-      <div className="flex-1 space-y-2">
-        <Label htmlFor={`caption-${index}`} className="text-sm font-medium flex items-center gap-1">
-          <Edit2 className="w-3 h-3" />
-          Legenda da Foto {index + 1}
-        </Label>
-        <Input
-          id={`caption-${index}`}
-          value={photo.caption}
-          onChange={(e) => onUpdateCaption(index, e.target.value)}
-          placeholder="Descreva esta foto..."
-          className="w-full"
-        />
-      </div>
+      {/* Caption */}
+      <Input
+        value={photo.caption}
+        onChange={(e) => onUpdateCaption(index, e.target.value)}
+        placeholder={`Legenda da foto ${index + 1}...`}
+        className="text-xs h-8"
+      />
     </div>
   );
 };
