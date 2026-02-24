@@ -38,7 +38,7 @@ export const ReportGenerator: React.FC = () => {
     try {
       const filename = `Relatorio_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       const opt = {
-        margin: [15, 10, 20, 10],
+        margin: [30, 20, 25, 30],
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
@@ -55,7 +55,7 @@ export const ReportGenerator: React.FC = () => {
         const pageWidth = pdf.internal.pageSize.getWidth();
         const pageHeight = pdf.internal.pageSize.getHeight();
         const text = `Página ${i} de ${totalPages}`;
-        pdf.text(text, (pageWidth - pdf.getTextWidth(text)) / 2, pageHeight - 10);
+        pdf.text(text, pageWidth - 20 - pdf.getTextWidth(text), 20);
       }
       pdf.save(filename);
     } catch (error) {
@@ -163,7 +163,7 @@ export const ReportGenerator: React.FC = () => {
 
       {mode === 'preview' && (
         <div className="bg-muted p-4 md:p-8 rounded-lg overflow-auto no-print animate-fadeIn">
-          <div ref={reportRef} className="bg-card shadow-2xl p-8 md:p-12 max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 font-serif text-foreground leading-relaxed animate-slideUp">
+          <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 25mm 30mm' }}>
             <div className="flex flex-col items-center justify-center min-h-[800px] pb-10 mb-10 page-break">
               <ReportHeader />
               <div className="flex-1 flex flex-col items-center justify-center text-center">

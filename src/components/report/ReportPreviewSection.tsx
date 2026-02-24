@@ -59,14 +59,14 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
 const ObjectPreview: React.FC<Props> = ({ section, objectText }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
-    <p className="text-justify leading-relaxed">{objectText}</p>
+    <p className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>{objectText}</p>
   </section>
 );
 
 const SummaryPreview: React.FC<Props> = ({ section, summary }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
-    <div className="whitespace-pre-line text-justify leading-relaxed">{summary}</div>
+    <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>{summary}</div>
   </section>
 );
 
@@ -82,7 +82,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
       return (
         <div key={goal.id} className="mb-10">
           <h4 className="font-bold text-primary mb-3">META {idx + 1} – {goal.title}</h4>
-          <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
+          <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
             {goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'}
           </div>
           {goalActs.length > 0 && (
@@ -125,7 +125,7 @@ const OtherPreview: React.FC<Props> = ({
     <React.Fragment>
       <section className="mb-8 page-break">
         <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
-        <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
+        <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
           {otherActionsNarrative || '[Descreva outras informações diversas sobre o projeto]'}
         </div>
         {otherActs.length > 0 && (
@@ -157,7 +157,7 @@ const CommunicationPreview: React.FC<Props> = ({
     <React.Fragment>
       <section className="mb-8 page-break">
         <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
-        <div className="whitespace-pre-line text-justify mb-4 leading-relaxed">
+        <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
           {communicationNarrative || '[Descreva as ações de divulgação]'}
         </div>
         {commActs.length > 0 && (
@@ -182,7 +182,7 @@ const CommunicationPreview: React.FC<Props> = ({
 const SatisfactionPreview: React.FC<Props> = ({ section, satisfaction }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
-    <div className="whitespace-pre-line text-justify leading-relaxed">
+    <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>
       {satisfaction || '[Descreva a visão do público sobre o projeto e os principais feedbacks]'}
     </div>
   </section>
@@ -191,7 +191,7 @@ const SatisfactionPreview: React.FC<Props> = ({ section, satisfaction }) => (
 const FuturePreview: React.FC<Props> = ({ section, futureActions }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
-    <div className="whitespace-pre-line text-justify leading-relaxed">
+    <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>
       {futureActions || '[Descreva as ações futuras do projeto]'}
     </div>
   </section>
