@@ -75,6 +75,7 @@ export interface ReportData {
   footerText?: string;
   footerShowAddress?: boolean;
   footerShowContact?: boolean;
+  footerAlignment?: 'left' | 'center' | 'right';
   objectOverride?: string;
   executiveSummary?: string;
   goalNarratives?: Record<string, string>;

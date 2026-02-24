@@ -24,7 +24,7 @@ export const ReportGenerator: React.FC = () => {
     coverTitle, setCoverTitle, coverSubtitle, setCoverSubtitle,
     headerLeftText, setHeaderLeftText, headerRightText, setHeaderRightText,
     headerBannerUrl, setHeaderBannerUrl,
-    footerText, setFooterText, footerShowAddress, setFooterShowAddress, footerShowContact, setFooterShowContact,
+    footerText, setFooterText, footerShowAddress, setFooterShowAddress, footerShowContact, setFooterShowContact, footerAlignment, setFooterAlignment,
     goalNarratives, setGoalNarratives, goalPhotos,
     otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,
     communicationNarrative, setCommunicationNarrative, communicationPhotos, setCommunicationPhotos,
@@ -198,6 +198,7 @@ export const ReportGenerator: React.FC = () => {
             footerText={footerText} setFooterText={setFooterText}
             footerShowAddress={footerShowAddress} setFooterShowAddress={setFooterShowAddress}
             footerShowContact={footerShowContact} setFooterShowContact={setFooterShowContact}
+            footerAlignment={footerAlignment} setFooterAlignment={setFooterAlignment}
             organizationName={project.organizationName}
             organizationAddress={project.organizationAddress}
             organizationEmail={project.organizationEmail}

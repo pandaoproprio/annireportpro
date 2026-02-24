@@ -37,6 +37,7 @@ export const useReportState = () => {
   const [footerText, setFooterText] = useState('');
   const [footerShowAddress, setFooterShowAddress] = useState(true);
   const [footerShowContact, setFooterShowContact] = useState(true);
+  const [footerAlignment, setFooterAlignment] = useState<'left' | 'center' | 'right'>('center');
   const [headerBannerUrl, setHeaderBannerUrl] = useState('');
   const [objectText, setObjectText] = useState('');
   const [summary, setSummary] = useState('');
@@ -74,6 +75,7 @@ export const useReportState = () => {
       setFooterText(rd.footerText || '');
       setFooterShowAddress(rd.footerShowAddress !== false);
       setFooterShowContact(rd.footerShowContact !== false);
+      setFooterAlignment(rd.footerAlignment || 'center');
       setObjectText(rd.objectOverride || project.object || '');
       setSummary(rd.executiveSummary || project.summary || '');
       setGoalNarratives(rd.goalNarratives || {});
@@ -119,6 +121,7 @@ export const useReportState = () => {
       footerText,
       footerShowAddress,
       footerShowContact,
+      footerAlignment,
       objectOverride: objectText,
       executiveSummary: summary,
       goalNarratives,
@@ -481,7 +484,7 @@ export const useReportState = () => {
     coverTitle, setCoverTitle, coverSubtitle, setCoverSubtitle,
     headerLeftText, setHeaderLeftText, headerRightText, setHeaderRightText,
     headerBannerUrl, setHeaderBannerUrl,
-    footerText, setFooterText, footerShowAddress, setFooterShowAddress, footerShowContact, setFooterShowContact,
+    footerText, setFooterText, footerShowAddress, setFooterShowAddress, footerShowContact, setFooterShowContact, footerAlignment, setFooterAlignment,
     objectText, setObjectText, summary, setSummary,
     goalNarratives, setGoalNarratives, goalPhotos, setGoalPhotos,
     otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,
