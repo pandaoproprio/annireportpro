@@ -157,7 +157,22 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   const coverSpacingSB = vc?.coverSpacingSubtitleBottom ?? 20;
   const coverLineH = (vc?.coverLineSpacing ?? 1.5) * 4.8; // approximate mm per line
 
-  ctx.currentY = PAGE_H / 2 - 40;
+  // Cover logo
+  const coverLogoWidthMm = vc?.coverLogoWidthMm ?? 40;
+  const coverLogoTopMm = vc?.coverLogoTopMm ?? 30;
+  const coverLogoCenterV = vc?.coverLogoCenterV ?? false;
+
+  if (logoImg && vc?.logoConfig?.visible !== false) {
+    const aspect = logoImg.width / logoImg.height;
+    const drawW = coverLogoWidthMm;
+    const drawH = drawW / aspect;
+    const drawX = (PAGE_W - drawW) / 2;
+    const drawY = coverLogoCenterV ? (PAGE_H / 2 - 60) : coverLogoTopMm;
+    try { pdf.addImage(logoImg.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Cover logo error:', e); }
+    ctx.currentY = drawY + drawH + coverSpacingLT;
+  } else {
+    ctx.currentY = coverLogoCenterV ? (PAGE_H / 2 - 40) : (coverLogoTopMm + coverSpacingLT);
+  }
 
   const coverTitle = customCoverTitle || 'RELATÓRIO PARCIAL DE CUMPRIMENTO DO OBJETO';
   pdf.setFontSize(coverTitleFontSize);
