@@ -18,6 +18,9 @@ export interface ReportVisualConfig {
   logo: string;
   logoCenter: string;
   logoSecondary: string;
+  // Cover logo (dedicated)
+  coverLogo: string;
+  coverLogoVisible: boolean;
   // Logo controls
   logoConfig: LogoConfig;
   logoCenterConfig: LogoConfig;
@@ -63,6 +66,8 @@ const DEFAULT_CONFIG: ReportVisualConfig = {
   logo: '',
   logoCenter: '',
   logoSecondary: '',
+  coverLogo: '',
+  coverLogoVisible: true,
   logoConfig: { visible: true, widthMm: 12 },
   logoCenterConfig: { visible: true, widthMm: 12 },
   logoSecondaryConfig: { visible: true, widthMm: 12 },
@@ -181,7 +186,7 @@ export const useReportVisualConfig = (projectId: string | undefined, reportType:
   // Logo upload helper
   const handleLogoUpload = useCallback(async (
     e: React.ChangeEvent<HTMLInputElement>,
-    position: 'primary' | 'center' | 'secondary' = 'primary',
+    position: 'primary' | 'center' | 'secondary' | 'cover' = 'primary',
   ) => {
     if (!e.target.files?.[0] || !projectId) return;
     const file = e.target.files[0];
@@ -192,7 +197,7 @@ export const useReportVisualConfig = (projectId: string | undefined, reportType:
       const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
       if (error) { toast.error('Erro ao enviar logo'); return; }
       const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
-      const key = position === 'secondary' ? 'logoSecondary' : position === 'center' ? 'logoCenter' : 'logo';
+      const key = position === 'cover' ? 'coverLogo' : position === 'secondary' ? 'logoSecondary' : position === 'center' ? 'logoCenter' : 'logo';
       updateConfig({ [key]: urlData.publicUrl });
       toast.success('Logo enviado com sucesso');
     } catch { toast.error('Erro ao processar logo'); }

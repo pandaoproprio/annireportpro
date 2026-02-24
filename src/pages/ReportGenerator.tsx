@@ -127,6 +127,8 @@ export const ReportGenerator: React.FC = () => {
   const coverSubAlign = config.coverSubtitleAlignment || 'center';
   const coverOrgAlign = config.coverOrgAlignment || 'center';
   const coverFomentoAlign = config.coverFomentoAlignment || 'center';
+  // Cover logo: dedicated coverLogo or fallback to primary header logo
+  const coverLogoSrc = config.coverLogo || config.logo;
 
   const ReportFooter = React.forwardRef<HTMLDivElement>((_, ref) => (
     <div ref={ref} className="mt-8 pt-4 border-t text-xs text-muted-foreground print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2" style={{ textAlign: config.footerAlignment }}>
@@ -221,9 +223,9 @@ export const ReportGenerator: React.FC = () => {
           <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
             <div className="flex flex-col items-center min-h-[800px] pb-10 mb-10 page-break" style={{ justifyContent: config.coverLogoCenterV ? 'center' : 'flex-start' }}>
               {/* Cover-specific logo */}
-              {config.logo && config.logoConfig.visible && (
+              {coverLogoSrc && config.coverLogoVisible !== false && (
                 <div style={{ marginTop: config.coverLogoCenterV ? 0 : `${config.coverLogoTopMm * 2.5}px` }}>
-                  <img src={config.logo} alt="Logo Capa" className="object-contain mx-auto" style={{ width: `${config.coverLogoWidthMm * 2.5}px` }} />
+                  <img src={coverLogoSrc} alt="Logo Capa" className="object-contain mx-auto" style={{ width: `${config.coverLogoWidthMm * 2.5}px` }} />
                 </div>
               )}
               <div className="flex flex-col items-center w-full" style={{ gap: `${config.coverSpacingLogoTitle}px`, lineHeight: config.coverLineSpacing, marginTop: `${config.coverSpacingLogoTitle}px` }}>

@@ -157,18 +157,25 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   const coverSpacingSB = vc?.coverSpacingSubtitleBottom ?? 20;
   const coverLineH = (vc?.coverLineSpacing ?? 1.5) * 4.8; // approximate mm per line
 
-  // Cover logo
+  // Cover logo — dedicated coverLogo or fallback to primary header logo
   const coverLogoWidthMm = vc?.coverLogoWidthMm ?? 40;
   const coverLogoTopMm = vc?.coverLogoTopMm ?? 30;
   const coverLogoCenterV = vc?.coverLogoCenterV ?? false;
+  const coverLogoVisible = vc?.coverLogoVisible !== false;
 
-  if (logoImg && vc?.logoConfig?.visible !== false) {
-    const aspect = logoImg.width / logoImg.height;
+  // Load cover logo if dedicated one exists, otherwise use header logo
+  let coverLogoImg = logoImg;
+  if (vc?.coverLogo) {
+    coverLogoImg = await loadImage(vc.coverLogo);
+  }
+
+  if (coverLogoImg && coverLogoVisible) {
+    const aspect = coverLogoImg.width / coverLogoImg.height;
     const drawW = coverLogoWidthMm;
     const drawH = drawW / aspect;
     const drawX = (PAGE_W - drawW) / 2;
     const drawY = coverLogoCenterV ? (PAGE_H / 2 - 60) : coverLogoTopMm;
-    try { pdf.addImage(logoImg.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Cover logo error:', e); }
+    try { pdf.addImage(coverLogoImg.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Cover logo error:', e); }
     ctx.currentY = drawY + drawH + coverSpacingLT;
   } else {
     ctx.currentY = coverLogoCenterV ? (PAGE_H / 2 - 40) : (coverLogoTopMm + coverSpacingLT);
