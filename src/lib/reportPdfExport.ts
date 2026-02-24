@@ -259,6 +259,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     logoGapMm: vc?.headerLogoGap,
     topPaddingMm: vc?.headerTopPadding,
     headerHeightMm: vc?.headerHeight,
+    contentSpacingMm: vc?.headerContentSpacing,
   };
   addPage(ctx);
 

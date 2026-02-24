@@ -48,6 +48,7 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
       logoGapMm: vc.headerLogoGap,
       topPaddingMm: vc.headerTopPadding,
       headerHeightMm: vc.headerHeight,
+      contentSpacingMm: vc.headerContentSpacing,
     };
   }
 

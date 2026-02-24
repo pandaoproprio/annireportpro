@@ -53,6 +53,7 @@ export interface HeaderConfig {
   logoGapMm?: number;
   topPaddingMm?: number;
   headerHeightMm?: number;
+  contentSpacingMm?: number; // gap between header bottom and content start
 }
 
 export interface PdfContext {
@@ -80,17 +81,17 @@ export const addPage = (ctx: PdfContext): void => {
 export const getContentStartY = (ctx: PdfContext): number => {
   if (!ctx.headerConfig) return MT;
   const topPad = ctx.headerConfig.topPaddingMm ?? HEADER_TOP_Y;
+  const gap = ctx.headerConfig.contentSpacingMm ?? 8;
   if (ctx.headerConfig.bannerImg && ctx.headerConfig.bannerVisible !== false) {
-    // Use bannerHeightMm (not headerHeightMm) to calculate real space occupied
     const bannerH = ctx.headerConfig.bannerHeightMm ?? ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H;
-    return topPad + bannerH + 8;
+    return topPad + bannerH + gap;
   }
   const headerH = ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H;
   const hasAnyLogo = (ctx.headerConfig.logoImg && ctx.headerConfig.logoVisible !== false)
     || (ctx.headerConfig.logoCenterImg && ctx.headerConfig.logoCenterVisible !== false)
     || (ctx.headerConfig.logoSecondaryImg && ctx.headerConfig.logoSecondaryVisible !== false);
   if (hasAnyLogo) {
-    return topPad + 3 + (headerH || HEADER_LOGO_H) + 4;
+    return topPad + 3 + (headerH || HEADER_LOGO_H) + gap;
   }
   return MT;
 };
