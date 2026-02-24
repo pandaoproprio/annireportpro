@@ -36,6 +36,7 @@ export interface HeaderConfig {
   bannerImg?: PreloadedImage | null;
   logoImg?: PreloadedImage | null;
   logoSecondaryImg?: PreloadedImage | null;
+  logoCenterImg?: PreloadedImage | null;
   headerLeftText?: string;
   headerRightText?: string;
 }
@@ -430,6 +431,7 @@ export interface FooterInfo {
   email?: string;
   phone?: string;
   customText?: string;
+  alignment?: 'left' | 'center' | 'right';
 }
 
 // ── Preload header images for reuse on all pages ──
@@ -437,18 +439,20 @@ export const preloadHeaderImages = async (
   bannerUrl?: string,
   logoUrl?: string,
   logoSecondaryUrl?: string,
-): Promise<{ bannerImg: PreloadedImage | null; logoImg: PreloadedImage | null; logoSecondaryImg: PreloadedImage | null }> => {
-  const [bannerImg, logoImg, logoSecondaryImg] = await Promise.all([
+  logoCenterUrl?: string,
+): Promise<{ bannerImg: PreloadedImage | null; logoImg: PreloadedImage | null; logoSecondaryImg: PreloadedImage | null; logoCenterImg: PreloadedImage | null }> => {
+  const [bannerImg, logoImg, logoSecondaryImg, logoCenterImg] = await Promise.all([
     bannerUrl ? loadImage(bannerUrl) : Promise.resolve(null),
     logoUrl ? loadImage(logoUrl) : Promise.resolve(null),
     logoSecondaryUrl ? loadImage(logoSecondaryUrl) : Promise.resolve(null),
+    logoCenterUrl ? loadImage(logoCenterUrl) : Promise.resolve(null),
   ]);
-  return { bannerImg, logoImg, logoSecondaryImg };
+  return { bannerImg, logoImg, logoSecondaryImg, logoCenterImg };
 };
 
 // ── Render header on a specific page (called in post-pass) ──
 const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
-  const { bannerImg, logoImg, logoSecondaryImg, headerLeftText, headerRightText } = config;
+  const { bannerImg, logoImg, logoSecondaryImg, logoCenterImg, headerLeftText, headerRightText } = config;
 
   if (bannerImg) {
     const bannerAspect = bannerImg.width / bannerImg.height;
@@ -461,23 +465,33 @@ const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
 
   // Fallback: logos + text
   const headerY = HEADER_TOP_Y + 3;
+  const hasAnyLogo = logoImg || logoCenterImg || logoSecondaryImg;
 
-  if (logoImg) {
-    const logoW = HEADER_LOGO_H * (logoImg.width / logoImg.height);
-    try { pdf.addImage(logoImg.data, 'JPEG', ML, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
+  if (hasAnyLogo) {
+    // Three-logo layout: left, center, right — evenly spaced across CW
+    if (logoImg) {
+      const logoW = HEADER_LOGO_H * (logoImg.width / logoImg.height);
+      try { pdf.addImage(logoImg.data, 'JPEG', ML, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
+    }
+
+    if (logoCenterImg) {
+      const logoW = HEADER_LOGO_H * (logoCenterImg.width / logoCenterImg.height);
+      const cx = ML + (CW - logoW) / 2;
+      try { pdf.addImage(logoCenterImg.data, 'JPEG', cx, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
+    }
+
+    if (logoSecondaryImg) {
+      const logoW = HEADER_LOGO_H * (logoSecondaryImg.width / logoSecondaryImg.height);
+      try { pdf.addImage(logoSecondaryImg.data, 'JPEG', PAGE_W - MR - logoW, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
+    }
   }
 
   if (headerLeftText) {
     pdf.setFontSize(8);
     pdf.setFont('times', 'normal');
     pdf.setTextColor(100, 100, 100);
-    pdf.text(headerLeftText, ML + 15, headerY + 8);
+    pdf.text(headerLeftText, ML + (logoImg ? 15 : 0), headerY + 8);
     pdf.setTextColor(0);
-  }
-
-  if (logoSecondaryImg) {
-    const logoW = HEADER_LOGO_H * (logoSecondaryImg.width / logoSecondaryImg.height);
-    try { pdf.addImage(logoSecondaryImg.data, 'JPEG', PAGE_W - MR - logoW, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
   }
 
   if (headerRightText) {
@@ -520,10 +534,21 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
     pdf.setTextColor(80, 80, 80);
     let footerY = footerLineY + 4;
 
+    // Alignment helper
+    const align = info.alignment || 'center';
+    const getTextX = (text: string, fontSize?: number): number => {
+      if (fontSize) pdf.setFontSize(fontSize);
+      const tw = pdf.getTextWidth(text);
+      if (align === 'left') return ML;
+      if (align === 'right') return PAGE_W - MR - tw;
+      return (PAGE_W - tw) / 2;
+    };
+
     // Org name (bold)
     pdf.setFont('times', 'bold');
+    pdf.setFontSize(FONT_CAPTION);
     const orgText = info.orgName || orgName;
-    pdf.text(orgText, (PAGE_W - pdf.getTextWidth(orgText)) / 2, footerY);
+    pdf.text(orgText, getTextX(orgText), footerY);
     footerY += 3.5;
 
     pdf.setFont('times', 'normal');
@@ -531,7 +556,7 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
     // Address
     if (info.address) {
       pdf.setFontSize(7);
-      pdf.text(info.address, (PAGE_W - pdf.getTextWidth(info.address)) / 2, footerY);
+      pdf.text(info.address, getTextX(info.address, 7), footerY);
       footerY += 3;
     }
 
@@ -543,7 +568,7 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
     if (contactParts.length > 0) {
       pdf.setFontSize(7);
       const contactLine = contactParts.join(' | ');
-      pdf.text(contactLine, (PAGE_W - pdf.getTextWidth(contactLine)) / 2, footerY);
+      pdf.text(contactLine, getTextX(contactLine, 7), footerY);
       footerY += 3;
     }
 
@@ -551,7 +576,7 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
     if (info.customText) {
       pdf.setFontSize(7);
       pdf.setFont('times', 'italic');
-      pdf.text(info.customText, (PAGE_W - pdf.getTextWidth(info.customText)) / 2, footerY);
+      pdf.text(info.customText, getTextX(info.customText, 7), footerY);
     }
 
     pdf.setTextColor(0, 0, 0);

@@ -29,6 +29,7 @@ export const useReportState = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportType, setExportType] = useState<'pdf' | 'docx' | null>(null);
   const [logo, setLogo] = useState('');
+  const [logoCenter, setLogoCenter] = useState('');
   const [logoSecondary, setLogoSecondary] = useState('');
   const [coverTitle, setCoverTitle] = useState('Relatório Parcial de Cumprimento do Objeto');
   const [coverSubtitle, setCoverSubtitle] = useState('');
@@ -66,6 +67,7 @@ export const useReportState = () => {
     if (project) {
       const rd = project.reportData || {};
       setLogo(rd.logo || '');
+      setLogoCenter(rd.logoCenter || '');
       setLogoSecondary(rd.logoSecondary || '');
       setCoverTitle(rd.coverTitle || 'Relatório Parcial de Cumprimento do Objeto');
       setCoverSubtitle(rd.coverSubtitle || '');
@@ -112,6 +114,7 @@ export const useReportState = () => {
   const saveReportData = (showToast = true) => {
     updateReportData({
       logo,
+      logoCenter,
       logoSecondary,
       coverTitle,
       coverSubtitle,
@@ -223,17 +226,18 @@ export const useReportState = () => {
   const removeExpense = (id: string) => setExpenses(expenses.filter(e => e.id !== id));
 
   // Photo uploads
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isSecondary = false) => {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, position: 'primary' | 'center' | 'secondary' = 'primary') => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       try {
         const photoId = crypto.randomUUID();
         const fileExt = file.name.split('.').pop() || 'png';
-        const filePath = `reports/${project?.id}/logos/${isSecondary ? 'secondary' : 'primary'}_${photoId}.${fileExt}`;
+        const filePath = `reports/${project?.id}/logos/${position}_${photoId}.${fileExt}`;
         const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
         if (error) { toast.error('Erro ao enviar logo'); return; }
         const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
-        if (isSecondary) setLogoSecondary(urlData.publicUrl);
+        if (position === 'secondary') setLogoSecondary(urlData.publicUrl);
+        else if (position === 'center') setLogoCenter(urlData.publicUrl);
         else setLogo(urlData.publicUrl);
         toast.success('Logo enviado com sucesso');
       } catch { toast.error('Erro ao processar logo'); }
@@ -480,7 +484,7 @@ export const useReportState = () => {
   return {
     project, activities,
     mode, setMode, isExporting, setIsExporting, exportType, setExportType,
-    logo, setLogo, logoSecondary, setLogoSecondary,
+    logo, setLogo, logoCenter, setLogoCenter, logoSecondary, setLogoSecondary,
     coverTitle, setCoverTitle, coverSubtitle, setCoverSubtitle,
     headerLeftText, setHeaderLeftText, headerRightText, setHeaderRightText,
     headerBannerUrl, setHeaderBannerUrl,

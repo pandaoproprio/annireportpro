@@ -36,9 +36,11 @@ export interface ReportPdfExportData {
   headerRightText?: string;
   logo?: string;
   logoSecondary?: string;
+  logoCenter?: string;
   footerText?: string;
   footerShowAddress?: boolean;
   footerShowContact?: boolean;
+  footerAlignment?: 'left' | 'center' | 'right';
   pageLayouts?: Record<string, PageLayout>;
 }
 
@@ -62,10 +64,11 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     coverTitle: customCoverTitle,
     coverSubtitle,
     headerBannerUrl, headerLeftText, headerRightText,
-    logo, logoSecondary,
+    logo, logoSecondary, logoCenter,
     footerText,
     footerShowAddress,
     footerShowContact,
+    footerAlignment,
     pageLayouts = {},
   } = data;
 
@@ -81,8 +84,8 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   };
 
   // ── Preload header images once for reuse on ALL pages ──
-  const { bannerImg, logoImg, logoSecondaryImg } = await preloadHeaderImages(
-    headerBannerUrl, logo, logoSecondary,
+  const { bannerImg, logoImg, logoSecondaryImg, logoCenterImg } = await preloadHeaderImages(
+    headerBannerUrl, logo, logoSecondary, logoCenter,
   );
 
   const ctx = createPdfContext();
@@ -201,6 +204,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     bannerImg,
     logoImg,
     logoSecondaryImg,
+    logoCenterImg,
     headerLeftText,
     headerRightText,
   };
@@ -419,6 +423,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     email: footerShowContact ? project.organizationEmail : undefined,
     phone: footerShowContact ? project.organizationPhone : undefined,
     customText: footerText,
+    alignment: footerAlignment,
   };
   addFooterAndPageNumbers(ctx, project.organizationName, true, footerInfo);
 
