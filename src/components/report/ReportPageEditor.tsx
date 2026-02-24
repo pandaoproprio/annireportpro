@@ -1,0 +1,148 @@
+import React from 'react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { BookOpen, FileText, PanelBottom } from 'lucide-react';
+
+interface Props {
+  coverTitle: string;
+  setCoverTitle: (v: string) => void;
+  coverSubtitle: string;
+  setCoverSubtitle: (v: string) => void;
+  headerLeftText: string;
+  setHeaderLeftText: (v: string) => void;
+  headerRightText: string;
+  setHeaderRightText: (v: string) => void;
+  footerText: string;
+  setFooterText: (v: string) => void;
+  footerShowAddress: boolean;
+  setFooterShowAddress: (v: boolean) => void;
+  footerShowContact: boolean;
+  setFooterShowContact: (v: boolean) => void;
+  organizationName: string;
+  organizationAddress?: string;
+  organizationEmail?: string;
+  organizationPhone?: string;
+  organizationWebsite?: string;
+}
+
+export const ReportPageEditor: React.FC<Props> = ({
+  coverTitle, setCoverTitle,
+  coverSubtitle, setCoverSubtitle,
+  headerLeftText, setHeaderLeftText,
+  headerRightText, setHeaderRightText,
+  footerText, setFooterText,
+  footerShowAddress, setFooterShowAddress,
+  footerShowContact, setFooterShowContact,
+  organizationName, organizationAddress, organizationEmail, organizationPhone, organizationWebsite,
+}) => (
+  <div className="space-y-4">
+    {/* Cover Page */}
+    <Card className="border-l-4 border-l-accent">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 mb-4 border-b pb-2">
+          <BookOpen className="w-5 h-5 text-accent-foreground" />
+          <h3 className="text-lg font-semibold">Página de Rosto</h3>
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Título Principal</Label>
+            <Input
+              value={coverTitle}
+              onChange={e => setCoverTitle(e.target.value)}
+              placeholder="Relatório Parcial de Cumprimento do Objeto"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Subtítulo (opcional)</Label>
+            <Input
+              value={coverSubtitle}
+              onChange={e => setCoverSubtitle(e.target.value)}
+              placeholder="Ex: Período de Referência, Convênio nº..."
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            O nome do projeto, Termo de Fomento e nome da organização são exibidos automaticamente.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* Header */}
+    <Card className="border-l-4 border-l-primary">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 mb-4 border-b pb-2">
+          <FileText className="w-5 h-5 text-primary" />
+          <h3 className="text-lg font-semibold">Cabeçalho</h3>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Texto opcional exibido junto aos logos em todas as páginas. Os logos são configurados na seção "Capa e Logos".
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>Texto Esquerda</Label>
+            <Input
+              value={headerLeftText}
+              onChange={e => setHeaderLeftText(e.target.value)}
+              placeholder="Ex: Nome da Instituição"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Texto Direita</Label>
+            <Input
+              value={headerRightText}
+              onChange={e => setHeaderRightText(e.target.value)}
+              placeholder="Ex: Nº do Convênio"
+            />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+
+    {/* Footer */}
+    <Card className="border-l-4 border-l-muted-foreground">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 mb-4 border-b pb-2">
+          <PanelBottom className="w-5 h-5 text-muted-foreground" />
+          <h3 className="text-lg font-semibold">Rodapé</h3>
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Texto Personalizado do Rodapé</Label>
+            <Textarea
+              value={footerText}
+              onChange={e => setFooterText(e.target.value)}
+              placeholder="Texto adicional para o rodapé (opcional)"
+              rows={2}
+            />
+          </div>
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2">
+              <Switch checked={footerShowAddress} onCheckedChange={setFooterShowAddress} id="footer-address" />
+              <Label htmlFor="footer-address" className="text-sm cursor-pointer">Exibir endereço</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={footerShowContact} onCheckedChange={setFooterShowContact} id="footer-contact" />
+              <Label htmlFor="footer-contact" className="text-sm cursor-pointer">Exibir contato</Label>
+            </div>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+            <p className="font-semibold">Pré-visualização do rodapé:</p>
+            <p className="font-medium">{organizationName}</p>
+            {footerShowAddress && organizationAddress && <p>{organizationAddress}</p>}
+            {footerShowContact && (
+              <p>
+                {organizationWebsite && <span>{organizationWebsite}</span>}
+                {organizationEmail && <span> | {organizationEmail}</span>}
+                {organizationPhone && <span> | {organizationPhone}</span>}
+              </p>
+            )}
+            {footerText && <p className="italic mt-1">{footerText}</p>}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  </div>
+);

@@ -67,6 +67,13 @@ export interface ReportPhotoMeta {
 export interface ReportData {
   logo?: string;
   logoSecondary?: string;
+  coverTitle?: string;
+  coverSubtitle?: string;
+  headerLeftText?: string;
+  headerRightText?: string;
+  footerText?: string;
+  footerShowAddress?: boolean;
+  footerShowContact?: boolean;
   objectOverride?: string;
   executiveSummary?: string;
   goalNarratives?: Record<string, string>;
