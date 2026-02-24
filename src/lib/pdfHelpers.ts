@@ -1,6 +1,12 @@
 import jsPDF from 'jspdf';
 import { PageLayout, ImageLayoutItem } from '@/types/imageLayout';
 
+// ── Strip zero-width and invisible Unicode characters that break jsPDF ──
+// U+200B (zero-width space), U+200C/D (zero-width non-joiner/joiner),
+// U+FEFF (BOM), U+200E/F (LTR/RTL marks), U+2060 (word joiner)
+const INVISIBLE_CHARS = /[\u200B\u200C\u200D\uFEFF\u200E\u200F\u2060\u00AD]/g;
+export const sanitizeText = (text: string): string => text.replace(INVISIBLE_CHARS, '');
+
 // ══════════════════════════════════════════════════════════════
 // ABNT NBR 14724 constants — SINGLE SOURCE OF TRUTH
 // ══════════════════════════════════════════════════════════════
@@ -124,7 +130,8 @@ const justifyLine = (pdf: jsPDF, words: string[], x: number, maxWidth: number, y
 };
 
 // ── Justified paragraph with 1.25 cm first-line indent and 1.5 line spacing ──
-export const addParagraph = (ctx: PdfContext, text: string): void => {
+export const addParagraph = (ctx: PdfContext, rawText: string): void => {
+  const text = sanitizeText(rawText);
   if (!text || text.trim() === '') return;
   const { pdf } = ctx;
   pdf.setFontSize(FONT_BODY);
@@ -191,7 +198,8 @@ const justifyBulletLine = (pdf: jsPDF, words: string[], x: number, maxWidth: num
 };
 
 // ── Bullet item with bold label detection and manual justification ──
-export const addBulletItem = (ctx: PdfContext, text: string): void => {
+export const addBulletItem = (ctx: PdfContext, rawText: string): void => {
+  const text = sanitizeText(rawText);
   const { pdf } = ctx;
   pdf.setFontSize(FONT_BODY);
   const bulletIndent = 8;
@@ -316,7 +324,7 @@ const extractSegments = (el: Node, parentBold = false, parentItalic = false, par
 export const parseHtmlToBlocks = (html: string): TextBlock[] => {
   if (!html) return [];
   const temp = document.createElement('div');
-  temp.innerHTML = html;
+  temp.innerHTML = sanitizeText(html);
   const blocks: TextBlock[] = [];
 
   const processNode = (node: Node) => {
@@ -347,6 +355,8 @@ export const parseHtmlToBlocks = (html: string): TextBlock[] => {
 // ── Rich paragraph renderer: justified with bold/italic segments ──
 export const addRichParagraph = (ctx: PdfContext, segments: StyledSegment[]): void => {
   if (!segments || segments.length === 0) return;
+  // Sanitize all segment texts
+  const cleanSegments = segments.map(s => ({ ...s, text: sanitizeText(s.text) })).filter(s => s.text);
   const { pdf } = ctx;
   pdf.setFontSize(FONT_BODY);
 
@@ -358,7 +368,7 @@ export const addRichParagraph = (ctx: PdfContext, segments: StyledSegment[]): vo
   const compositeWords: CompositeWord[] = [];
   let currentWord: CompositeWord = { parts: [] };
 
-  for (const seg of segments) {
+  for (const seg of cleanSegments) {
     const rawParts = seg.text.split(/(\s+)/);
     for (const part of rawParts) {
       if (/^\s+$/.test(part)) {
