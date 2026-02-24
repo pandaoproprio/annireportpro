@@ -25,7 +25,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 
@@ -46,6 +46,7 @@ const JustificationReportGenerator = lazy(() => import('@/pages/JustificationRep
 const ReportTemplates = lazy(() => import('@/pages/ReportTemplates').then(m => ({ default: m.ReportTemplates })));
 const ReportTemplateEditor = lazy(() => import('@/pages/ReportTemplateEditor').then(m => ({ default: m.ReportTemplateEditor })));
 const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'));
+const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -178,6 +179,7 @@ const Layout: React.FC = () => {
                 <div className="space-y-0.5">
                   <SidebarLink to="/templates" icon={<Layers className="w-5 h-5" />} label="Templates de Relatórios" onClick={closeSidebar} />
                   <SidebarLink to="/editor" icon={<FileCode2 className="w-5 h-5" />} label="Editor de Documentos" onClick={closeSidebar} />
+                  <SidebarLink to="/wysiwyg" icon={<PenTool className="w-5 h-5" />} label="Editor WYSIWYG" onClick={closeSidebar} />
                 </div>
               </div>
             )}
@@ -256,6 +258,8 @@ const Layout: React.FC = () => {
                 <Route path="/logs" element={<PermissionGuard permission="system_logs"><SystemLogs /></PermissionGuard>} />
                 <Route path="/editor/:id" element={<DocumentEditorPage />} />
                 <Route path="/editor" element={<DocumentEditorPage />} />
+                <Route path="/wysiwyg/:id" element={<WysiwygEditorPage />} />
+                <Route path="/wysiwyg" element={<WysiwygEditorPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
