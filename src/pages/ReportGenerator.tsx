@@ -1,15 +1,14 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileEdit } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
 import { exportReportToPdf } from '@/lib/reportPdfExport';
 import { exportToDocx } from '@/lib/docxExport';
 import { useReportState } from '@/hooks/useReportState';
+import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportStructureEditor } from '@/components/report/ReportStructureEditor';
-import { ReportLogoEditor } from '@/components/report/ReportLogoEditor';
-import { ReportPageEditor } from '@/components/report/ReportPageEditor';
+import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
 import { ReportEditSection } from '@/components/report/ReportEditSection';
 import { ReportPreviewSection } from '@/components/report/ReportPreviewSection';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -22,11 +21,7 @@ export const ReportGenerator: React.FC = () => {
 
   const {
     project, activities, mode, setMode, isExporting, setIsExporting, exportType, setExportType,
-    logo, logoSecondary, logoCenter, objectText, setObjectText, summary, setSummary,
-    coverTitle, setCoverTitle, coverSubtitle, setCoverSubtitle,
-    headerLeftText, setHeaderLeftText, headerRightText, setHeaderRightText,
-    headerBannerUrl, setHeaderBannerUrl,
-    footerText, setFooterText, footerShowAddress, setFooterShowAddress, footerShowContact, setFooterShowContact, footerAlignment, setFooterAlignment,
+    objectText, setObjectText, summary, setSummary,
     goalNarratives, setGoalNarratives, goalPhotos,
     otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,
     communicationNarrative, setCommunicationNarrative, communicationPhotos, setCommunicationPhotos,
@@ -38,32 +33,17 @@ export const ReportGenerator: React.FC = () => {
     saveReportData, moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection, pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     addExpense, updateExpense, removeExpense,
-    handleLogoUpload, handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
+    handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
     handleDocumentUpload,
     handleSectionPhotoUpload, removeSectionPhoto,
     handleSectionDocUpload, removeSectionDoc,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   } = state;
 
+  // Visual config scoped to this project + report_object
+  const vc = useReportVisualConfig(project?.id, 'report_object');
+
   if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
-
-  const handleHeaderBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      try {
-        const photoId = crypto.randomUUID();
-        const fileExt = file.name.split('.').pop() || 'png';
-        const filePath = `reports/${project.id}/logos/header_banner_${photoId}.${fileExt}`;
-        const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
-        if (error) { toast.error('Erro ao enviar banner'); return; }
-        const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
-        setHeaderBannerUrl(urlData.publicUrl);
-        toast.success('Banner do cabeçalho enviado');
-      } catch { toast.error('Erro ao processar banner'); }
-    }
-  };
-
-  const handleHeaderBannerRemove = () => setHeaderBannerUrl('');
 
   const exportToPdf = async () => {
     setIsExporting(true);
@@ -76,10 +56,18 @@ export const ReportGenerator: React.FC = () => {
         communicationNarrative, communicationPhotos,
         satisfaction, futureActions, expenses, links,
         sectionPhotos, photoMetadata,
-        coverTitle, coverSubtitle,
-        headerBannerUrl, headerLeftText, headerRightText,
-        logo, logoSecondary, logoCenter,
-        footerText, footerShowAddress, footerShowContact, footerAlignment,
+        coverTitle: vc.config.coverTitle,
+        coverSubtitle: vc.config.coverSubtitle,
+        headerBannerUrl: vc.config.headerBannerUrl,
+        headerLeftText: vc.config.headerLeftText,
+        headerRightText: vc.config.headerRightText,
+        logo: vc.config.logo,
+        logoSecondary: vc.config.logoSecondary,
+        logoCenter: vc.config.logoCenter,
+        footerText: vc.config.footerText,
+        footerShowAddress: vc.config.footerShowAddress,
+        footerShowContact: vc.config.footerShowContact,
+        footerAlignment: vc.config.footerAlignment,
         pageLayouts,
       });
     } catch (error) {
@@ -97,7 +85,7 @@ export const ReportGenerator: React.FC = () => {
     try {
       await exportToDocx({
         project, activities, sections, objectText, summary,
-        goalNarratives, otherActionsNarrative: otherActionsNarrative,
+        goalNarratives, otherActionsNarrative,
         communicationNarrative, satisfaction, futureActions, expenses, links,
       });
     } catch (error) {
@@ -109,22 +97,24 @@ export const ReportGenerator: React.FC = () => {
     }
   };
 
+  const { config } = vc;
+
   const ReportHeader = () => (
     <div className="mb-6 pb-4 border-b print:border-b-0">
-      {headerBannerUrl ? (
-        <img src={headerBannerUrl} alt="Cabeçalho" className="w-full h-auto max-h-24 object-contain" />
+      {config.headerBannerUrl ? (
+        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full h-auto max-h-24 object-contain" />
       ) : (
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
-            {logo ? <img src={logo} alt="Logo" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
-            {headerLeftText && <span className="text-xs text-muted-foreground">{headerLeftText}</span>}
+            {config.logo ? <img src={config.logo} alt="Logo" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
+            {config.headerLeftText && <span className="text-xs text-muted-foreground">{config.headerLeftText}</span>}
           </div>
           <div className="flex items-center justify-center">
-            {logoCenter ? <img src={logoCenter} alt="Logo Centro" className="h-12 object-contain" /> : null}
+            {config.logoCenter ? <img src={config.logoCenter} alt="Logo Centro" className="h-12 object-contain" /> : null}
           </div>
           <div className="flex items-center gap-3">
-            {headerRightText && <span className="text-xs text-muted-foreground">{headerRightText}</span>}
-            {logoSecondary ? <img src={logoSecondary} alt="Logo Secundário" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
+            {config.headerRightText && <span className="text-xs text-muted-foreground">{config.headerRightText}</span>}
+            {config.logoSecondary ? <img src={config.logoSecondary} alt="Logo Secundário" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
           </div>
         </div>
       )}
@@ -132,17 +122,17 @@ export const ReportGenerator: React.FC = () => {
   );
 
   const ReportFooter = React.forwardRef<HTMLDivElement>((_, ref) => (
-    <div ref={ref} className="mt-8 pt-4 border-t text-center text-xs text-muted-foreground print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2">
+    <div ref={ref} className="mt-8 pt-4 border-t text-xs text-muted-foreground print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2" style={{ textAlign: config.footerAlignment }}>
       <p className="font-semibold">{project.organizationName}</p>
-      {footerShowAddress && project.organizationAddress && <p>{project.organizationAddress}</p>}
-      {footerShowContact && (
+      {config.footerShowAddress && project.organizationAddress && <p>{project.organizationAddress}</p>}
+      {config.footerShowContact && (
         <p>
           {project.organizationWebsite && <span>{project.organizationWebsite}</span>}
           {project.organizationEmail && <span> | {project.organizationEmail}</span>}
           {project.organizationPhone && <span> | {project.organizationPhone}</span>}
         </p>
       )}
-      {footerText && <p className="italic mt-1">{footerText}</p>}
+      {config.footerText && <p className="italic mt-1">{config.footerText}</p>}
     </div>
   ));
   ReportFooter.displayName = 'ReportFooter';
@@ -192,25 +182,19 @@ export const ReportGenerator: React.FC = () => {
             sections={sections} moveSection={moveSection} toggleVisibility={toggleVisibility}
             updateSectionTitle={updateSectionTitle} removeSection={removeSection} addCustomSection={addCustomSection}
           />
-          <ReportPageEditor
-            coverTitle={coverTitle} setCoverTitle={setCoverTitle}
-            coverSubtitle={coverSubtitle} setCoverSubtitle={setCoverSubtitle}
-            headerLeftText={headerLeftText} setHeaderLeftText={setHeaderLeftText}
-            headerRightText={headerRightText} setHeaderRightText={setHeaderRightText}
-            headerBannerUrl={headerBannerUrl}
-            onHeaderBannerUpload={handleHeaderBannerUpload}
-            onHeaderBannerRemove={handleHeaderBannerRemove}
-            footerText={footerText} setFooterText={setFooterText}
-            footerShowAddress={footerShowAddress} setFooterShowAddress={setFooterShowAddress}
-            footerShowContact={footerShowContact} setFooterShowContact={setFooterShowContact}
-            footerAlignment={footerAlignment} setFooterAlignment={setFooterAlignment}
+          <ReportVisualConfigEditor
+            config={vc.config}
+            updateConfig={vc.updateConfig}
+            onSave={() => vc.saveConfig()}
+            onLogoUpload={vc.handleLogoUpload}
+            onBannerUpload={vc.handleBannerUpload}
             organizationName={project.organizationName}
             organizationAddress={project.organizationAddress}
             organizationEmail={project.organizationEmail}
             organizationPhone={project.organizationPhone}
             organizationWebsite={project.organizationWebsite}
+            showCoverConfig={true}
           />
-          <ReportLogoEditor logo={logo} logoCenter={logoCenter} logoSecondary={logoSecondary} onLogoUpload={handleLogoUpload} />
           <div className="space-y-6">
             <h3 className="font-bold text-muted-foreground uppercase text-sm tracking-wide ml-1">Preenchimento do Conteúdo</h3>
             {sections.map((section, index) => (
@@ -231,8 +215,8 @@ export const ReportGenerator: React.FC = () => {
             <div className="flex flex-col items-center justify-center min-h-[800px] pb-10 mb-10 page-break">
               <ReportHeader />
               <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <h2 className="text-xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>{coverTitle}</h2>
-                {coverSubtitle && <p className="text-base mb-4" style={{ textAlign: 'center' }}>{coverSubtitle}</p>}
+                <h2 className="text-xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>{config.coverTitle || 'Relatório Parcial de Cumprimento do Objeto'}</h2>
+                {config.coverSubtitle && <p className="text-base mb-4" style={{ textAlign: 'center' }}>{config.coverSubtitle}</p>}
                 <h1 className="text-2xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>{project.name}</h1>
                 <h3 className="text-lg mb-8" style={{ textAlign: 'center' }}>Termo de Fomento nº {project.fomentoNumber}</h3>
                 <p className="text-lg font-semibold" style={{ textAlign: 'center' }}>{project.organizationName}</p>

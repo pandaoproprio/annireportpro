@@ -3,13 +3,15 @@ import { JustificationReport } from '@/types/justificationReport';
 import {
   createPdfContext, ensureSpace, addParagraph, addBulletItem,
   addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock,
-  parseHtmlToBlocks,
+  parseHtmlToBlocks, preloadHeaderImages,
   PAGE_W, CW, LINE_H,
 } from '@/lib/pdfHelpers';
+import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
 
 interface JustificationExportData {
   project: Project;
   report: JustificationReport;
+  visualConfig?: ReportVisualConfig;
 }
 
 const sectionDefs = [
@@ -22,8 +24,19 @@ const sectionDefs = [
 ] as const;
 
 export const exportJustificationToPdf = async (data: JustificationExportData) => {
-  const { project, report } = data;
+  const { project, report, visualConfig: vc } = data;
+
+  // Preload header images if visual config exists
+  const { bannerImg, logoImg, logoSecondaryImg, logoCenterImg } = await preloadHeaderImages(
+    vc?.headerBannerUrl, vc?.logo, vc?.logoSecondary, vc?.logoCenter,
+  );
+
   const ctx = createPdfContext();
+  
+  if (vc && (bannerImg || logoImg || logoCenterImg || logoSecondaryImg)) {
+    ctx.headerConfig = { bannerImg, logoImg, logoSecondaryImg, logoCenterImg, headerLeftText: vc.headerLeftText, headerRightText: vc.headerRightText };
+  }
+
   const { pdf } = ctx;
 
   // ── Title (centered, 16pt bold) ──
@@ -66,7 +79,16 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
   addSignatureBlock(ctx, project.organizationName, dateText, 'Assinatura do responsável legal');
 
   // ── Footer + page numbers (skip page 1) ──
-  addFooterAndPageNumbers(ctx, project.organizationName, true);
+  const footerInfo = vc ? {
+    orgName: project.organizationName,
+    address: vc.footerShowAddress ? project.organizationAddress : undefined,
+    website: vc.footerShowContact ? project.organizationWebsite : undefined,
+    email: vc.footerShowContact ? project.organizationEmail : undefined,
+    phone: vc.footerShowContact ? project.organizationPhone : undefined,
+    customText: vc.footerText,
+    alignment: vc.footerAlignment,
+  } : { orgName: project.organizationName };
+  addFooterAndPageNumbers(ctx, project.organizationName, true, footerInfo);
 
   // Save
   const filename = `Justificativa_Prorrogacao_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
