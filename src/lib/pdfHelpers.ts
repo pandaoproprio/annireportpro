@@ -216,14 +216,19 @@ export const addBulletItem = (ctx: PdfContext, text: string): void => {
   ctx.currentY += 1;
 };
 
-// ── Section title (bold, Times 12pt) ──
+// ── Section title (bold, Times 12pt) with underline ──
 export const addSectionTitle = (ctx: PdfContext, title: string): void => {
   ensureSpace(ctx, LINE_H * 2);
   ctx.currentY += 4;
   ctx.pdf.setFontSize(FONT_BODY);
   ctx.pdf.setFont('times', 'bold');
   ctx.pdf.text(title, ML, ctx.currentY);
-  ctx.currentY += LINE_H + 2;
+  // Draw underline beneath the title
+  const lineY = ctx.currentY + 2;
+  ctx.pdf.setDrawColor(0, 0, 0);
+  ctx.pdf.setLineWidth(0.4);
+  ctx.pdf.line(ML, lineY, ML + CW, lineY);
+  ctx.currentY += LINE_H + 4;
 };
 
 // ── Header label: value pair ──
