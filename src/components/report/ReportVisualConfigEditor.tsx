@@ -361,44 +361,80 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
           <h3 className="text-lg font-semibold">Rodapé</h3>
         </div>
         <div className="space-y-4">
+          {/* Toggle institucional */}
+          <div className="flex items-center gap-2">
+            <Switch checked={config.footerInstitutionalEnabled} onCheckedChange={v => updateConfig({ footerInstitutionalEnabled: v })} id="vc-footer-inst" />
+            <Label htmlFor="vc-footer-inst" className="text-sm cursor-pointer font-medium">Exibir rodapé institucional</Label>
+          </div>
+
+          {config.footerInstitutionalEnabled && (
+            <div className="space-y-4 bg-muted/30 rounded-lg p-3">
+              {/* Line 1 – bold */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Linha 1 (negrito)</Label>
+                <Input value={config.footerLine1Text} onChange={e => updateConfig({ footerLine1Text: e.target.value })} placeholder="Ex: Centro de Articulação de Populações Marginalizadas - CEAP" />
+                <div className="flex items-center gap-3">
+                  <Label className="text-[10px] whitespace-nowrap">Tamanho: {config.footerLine1FontSize}pt</Label>
+                  <Slider value={[config.footerLine1FontSize]} min={6} max={14} step={0.5} onValueChange={([v]) => updateConfig({ footerLine1FontSize: v })} className="max-w-[180px]" />
+                </div>
+              </div>
+
+              {/* Line 2 – normal */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Linha 2 (normal)</Label>
+                <Input value={config.footerLine2Text} onChange={e => updateConfig({ footerLine2Text: e.target.value })} placeholder="Ex: R. Sr. dos Passos, 174 - Sl 701 - Centro, Rio de Janeiro - RJ, 20061-011" />
+                <div className="flex items-center gap-3">
+                  <Label className="text-[10px] whitespace-nowrap">Tamanho: {config.footerLine2FontSize}pt</Label>
+                  <Slider value={[config.footerLine2FontSize]} min={5} max={12} step={0.5} onValueChange={([v]) => updateConfig({ footerLine2FontSize: v })} className="max-w-[180px]" />
+                </div>
+              </div>
+
+              {/* Line 3 – normal */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium">Linha 3 (normal)</Label>
+                <Input value={config.footerLine3Text} onChange={e => updateConfig({ footerLine3Text: e.target.value })} placeholder="Ex: ceapoficial.org.br | falecom@ceapoficial.org.br | (21) 9 7286-4717" />
+                <div className="flex items-center gap-3">
+                  <Label className="text-[10px] whitespace-nowrap">Tamanho: {config.footerLine3FontSize}pt</Label>
+                  <Slider value={[config.footerLine3FontSize]} min={5} max={12} step={0.5} onValueChange={([v]) => updateConfig({ footerLine3FontSize: v })} className="max-w-[180px]" />
+                </div>
+              </div>
+
+              {/* Spacing controls */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[10px]">Espaço entre linhas ({config.footerLineSpacing}mm)</Label>
+                  <Slider value={[config.footerLineSpacing]} min={1} max={8} step={0.5} onValueChange={([v]) => updateConfig({ footerLineSpacing: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-[10px]">Espaço superior ({config.footerTopSpacing}mm)</Label>
+                  <Slider value={[config.footerTopSpacing]} min={1} max={10} step={0.5} onValueChange={([v]) => updateConfig({ footerTopSpacing: v })} />
+                </div>
+              </div>
+
+              {/* Preview */}
+              <div className="bg-background rounded-lg p-3 text-center space-y-0 border">
+                <p className="text-[10px] text-muted-foreground mb-1 font-medium">Pré-visualização:</p>
+                <p className="font-bold" style={{ fontSize: `${config.footerLine1FontSize}pt`, lineHeight: `${config.footerLineSpacing * 1.5 + config.footerLine1FontSize}pt` }}>
+                  {config.footerLine1Text || organizationName}
+                </p>
+                {config.footerLine2Text && (
+                  <p style={{ fontSize: `${config.footerLine2FontSize}pt`, lineHeight: `${config.footerLineSpacing * 1.5 + config.footerLine2FontSize}pt` }}>
+                    {config.footerLine2Text}
+                  </p>
+                )}
+                {config.footerLine3Text && (
+                  <p style={{ fontSize: `${config.footerLine3FontSize}pt`, lineHeight: `${config.footerLineSpacing * 1.5 + config.footerLine3FontSize}pt` }}>
+                    {config.footerLine3Text}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Legacy footer controls (text customizado extra) */}
           <div className="space-y-2">
-            <Label>Texto Personalizado do Rodapé</Label>
+            <Label>Texto Adicional do Rodapé (opcional, itálico)</Label>
             <Textarea value={config.footerText} onChange={e => updateConfig({ footerText: e.target.value })} placeholder="Texto adicional para o rodapé (opcional)" rows={2} />
-          </div>
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <Switch checked={config.footerShowAddress} onCheckedChange={v => updateConfig({ footerShowAddress: v })} id="vc-footer-address" />
-              <Label htmlFor="vc-footer-address" className="text-sm cursor-pointer">Exibir endereço</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={config.footerShowContact} onCheckedChange={v => updateConfig({ footerShowContact: v })} id="vc-footer-contact" />
-              <Label htmlFor="vc-footer-contact" className="text-sm cursor-pointer">Exibir contato</Label>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Alinhamento do Rodapé</Label>
-            <Select value={config.footerAlignment} onValueChange={(v) => updateConfig({ footerAlignment: v as 'left' | 'center' | 'right' })}>
-              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="left">Esquerda</SelectItem>
-                <SelectItem value="center">Centralizado</SelectItem>
-                <SelectItem value="right">Direita</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {/* Preview */}
-          <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1" style={{ textAlign: config.footerAlignment }}>
-            <p className="font-semibold">Pré-visualização do rodapé:</p>
-            <p className="font-medium">{organizationName}</p>
-            {config.footerShowAddress && organizationAddress && <p>{organizationAddress}</p>}
-            {config.footerShowContact && (
-              <p>
-                {organizationWebsite && <span>{organizationWebsite}</span>}
-                {organizationEmail && <span> | {organizationEmail}</span>}
-                {organizationPhone && <span> | {organizationPhone}</span>}
-              </p>
-            )}
-            {config.footerText && <p className="italic mt-1">{config.footerText}</p>}
           </div>
         </div>
       </CardContent>

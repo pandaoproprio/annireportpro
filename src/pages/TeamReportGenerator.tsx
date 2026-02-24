@@ -296,7 +296,7 @@ export const TeamReportGenerator: React.FC = () => {
         updatedAt: new Date().toISOString(),
       };
 
-      await exportTeamReportToDocx({ project, report: reportData });
+      await exportTeamReportToDocx({ project, report: reportData, visualConfig: vc.config });
       toast.success('Relatório DOCX exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar DOCX:', error);

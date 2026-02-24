@@ -417,49 +417,45 @@ export const exportToDocx = async (data: ExportData) => {
           default: new Footer({
             children: (() => {
               const vc = data.visualConfig;
-              const footerAlign = vc?.footerAlignment === 'left' ? AlignmentType.LEFT
-                : vc?.footerAlignment === 'right' ? AlignmentType.RIGHT
-                : AlignmentType.CENTER;
               const children: Paragraph[] = [];
+              const instEnabled = vc ? vc.footerInstitutionalEnabled !== false : true;
 
-              // Org name (bold)
-              children.push(new Paragraph({
-                alignment: footerAlign,
-                spacing: { after: 40 },
-                children: [new TextRun({ text: project.organizationName, size: 18, font: 'Times New Roman', bold: true })],
-              }));
-
-              // Address
-              const showAddress = vc ? vc.footerShowAddress : true;
-              if (showAddress && project.organizationAddress) {
+              if (instEnabled) {
+                // Line 1 (bold)
+                const l1Text = vc?.footerLine1Text || project.organizationName;
+                const l1Size = Math.round((vc?.footerLine1FontSize ?? 9) * 2);
                 children.push(new Paragraph({
-                  alignment: footerAlign,
-                  spacing: { after: 20 },
-                  children: [new TextRun({ text: project.organizationAddress, size: 14, font: 'Times New Roman' })],
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 40 },
+                  children: [new TextRun({ text: l1Text, size: l1Size, font: 'Times New Roman', bold: true })],
                 }));
-              }
 
-              // Contact line
-              const showContact = vc ? vc.footerShowContact : true;
-              if (showContact) {
-                const parts: string[] = [];
-                if (project.organizationWebsite) parts.push(project.organizationWebsite);
-                if (project.organizationEmail) parts.push(project.organizationEmail);
-                if (project.organizationPhone) parts.push(project.organizationPhone);
-                if (parts.length > 0) {
+                // Line 2 (normal)
+                if (vc?.footerLine2Text) {
+                  const l2Size = Math.round((vc.footerLine2FontSize ?? 7) * 2);
                   children.push(new Paragraph({
-                    alignment: footerAlign,
+                    alignment: AlignmentType.CENTER,
                     spacing: { after: 20 },
-                    children: [new TextRun({ text: parts.join(' | '), size: 14, font: 'Times New Roman' })],
+                    children: [new TextRun({ text: vc.footerLine2Text, size: l2Size, font: 'Times New Roman' })],
+                  }));
+                }
+
+                // Line 3 (normal)
+                if (vc?.footerLine3Text) {
+                  const l3Size = Math.round((vc.footerLine3FontSize ?? 7) * 2);
+                  children.push(new Paragraph({
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 20 },
+                    children: [new TextRun({ text: vc.footerLine3Text, size: l3Size, font: 'Times New Roman' })],
                   }));
                 }
               }
 
-              // Custom text
+              // Custom text (italic)
               const customText = vc?.footerText;
               if (customText) {
                 children.push(new Paragraph({
-                  alignment: footerAlign,
+                  alignment: AlignmentType.CENTER,
                   spacing: { after: 20 },
                   children: [new TextRun({ text: customText, size: 14, font: 'Times New Roman', italics: true })],
                 }));

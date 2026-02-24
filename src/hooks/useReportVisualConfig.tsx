@@ -60,6 +60,16 @@ export interface ReportVisualConfig {
   footerShowAddress: boolean;
   footerShowContact: boolean;
   footerAlignment: 'left' | 'center' | 'right';
+  // Institutional footer (per-line controls)
+  footerInstitutionalEnabled: boolean;
+  footerLine1Text: string;
+  footerLine1FontSize: number; // pt (default 9)
+  footerLine2Text: string;
+  footerLine2FontSize: number; // pt (default 7)
+  footerLine3Text: string;
+  footerLine3FontSize: number; // pt (default 7)
+  footerLineSpacing: number; // mm between lines (default 3)
+  footerTopSpacing: number; // mm above footer (default 4)
 }
 
 const DEFAULT_CONFIG: ReportVisualConfig = {
@@ -105,6 +115,15 @@ const DEFAULT_CONFIG: ReportVisualConfig = {
   footerShowAddress: true,
   footerShowContact: true,
   footerAlignment: 'center',
+  footerInstitutionalEnabled: true,
+  footerLine1Text: '',
+  footerLine1FontSize: 9,
+  footerLine2Text: '',
+  footerLine2FontSize: 7,
+  footerLine3Text: '',
+  footerLine3FontSize: 7,
+  footerLineSpacing: 3,
+  footerTopSpacing: 4,
 };
 
 export const useReportVisualConfig = (projectId: string | undefined, reportType: ReportType) => {
