@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   Type, Image, Table2, Minus, Plus, FileDown, FileText,
-  Undo2, Redo2, Save,
+  Undo2, Redo2, Save, History,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -22,11 +22,13 @@ interface ToolbarProps {
   isDirty: boolean;
   isSaving: boolean;
   title: string;
+  onToggleVersions?: () => void;
+  showVersions?: boolean;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
   onAddBlock, onAddPage, onExportPdf, onExportDocx,
-  isDirty, isSaving, title,
+  isDirty, isSaving, title, onToggleVersions, showVersions,
 }) => {
   const addText = () => onAddBlock(createDefaultTextBlock(crypto.randomUUID()));
   const addImage = () => onAddBlock(createDefaultImageBlock(crypto.randomUUID()));
@@ -121,8 +123,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
       <div className="flex-1" />
 
-      {/* Export */}
+      {/* Export + Versions */}
       <div className="flex items-center gap-1">
+        {onToggleVersions && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant={showVersions ? 'secondary' : 'ghost'} size="sm" className="h-8 text-xs gap-1" onClick={onToggleVersions}>
+                <History className="h-3 w-3" /> Versões
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Histórico de versões</TooltipContent>
+          </Tooltip>
+        )}
         <Button variant="outline" size="sm" className="h-8 text-xs gap-1" onClick={onExportPdf}>
           <FileDown className="h-3 w-3" /> PDF
         </Button>
