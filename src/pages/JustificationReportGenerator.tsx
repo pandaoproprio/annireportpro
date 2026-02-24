@@ -5,8 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Save, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
-import html2pdf from 'html2pdf.js';
 import { exportJustificationToDocx } from '@/lib/justificationDocxExport';
+import { exportJustificationToPdf } from '@/lib/justificationPdfExport';
 import { useJustificationReportState } from '@/hooks/useJustificationReportState';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportStructureEditor } from '@/components/report/ReportStructureEditor';
@@ -58,31 +58,10 @@ export const JustificationReportGenerator: React.FC = () => {
 
   const handleExportPdf = async () => {
     if (!hasContent) { toast.error('Preencha ao menos uma seção'); return; }
-    if (!reportRef.current) return;
     setIsExporting(true);
     setExportType('pdf');
     try {
-      const filename = `Justificativa_Prorrogacao_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-      const opt = {
-        margin: [30, 20, 20, 30],
-        filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-      };
-      const worker = html2pdf().set(opt).from(reportRef.current);
-      const pdf = await worker.toPdf().get('pdf');
-      const totalPages = pdf.internal.getNumberOfPages();
-      for (let i = 2; i <= totalPages; i++) {
-        pdf.setPage(i);
-        pdf.setFontSize(10);
-        pdf.setTextColor(0, 0, 0);
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const text = `${i}`;
-        pdf.text(text, pageWidth - 20, 20);
-      }
-      pdf.save(filename);
+      await exportJustificationToPdf({ project, report: buildReportData() });
       toast.success('PDF exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
