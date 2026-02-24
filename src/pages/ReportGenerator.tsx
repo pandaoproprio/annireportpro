@@ -289,7 +289,7 @@ export const ReportGenerator: React.FC = () => {
                 <ReportFooter />
               </div>
               {/* Page number */}
-              <span className="absolute top-[15mm] right-[20mm] text-xs text-muted-foreground">{idx + 2}</span>
+              <span className="absolute bottom-[10mm] right-[20mm] text-xs text-muted-foreground">{idx + 2}</span>
             </div>
           ))}
 
