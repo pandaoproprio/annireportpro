@@ -171,6 +171,32 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
                   <Slider value={[config.coverLineSpacing * 10]} min={10} max={30} step={1} onValueChange={([v]) => updateConfig({ coverLineSpacing: v / 10 })} />
                 </div>
               </div>
+              {/* Cover logo upload */}
+              <div className="space-y-2 bg-background rounded-lg p-3 border">
+                <Label className="text-xs font-medium uppercase text-muted-foreground">Logo da Página de Rosto</Label>
+                {config.coverLogo ? (
+                  <div className="relative inline-block">
+                    <img src={config.coverLogo} className="h-16 w-16 object-contain border rounded" style={{ opacity: config.coverLogoVisible ? 1 : 0.3 }} />
+                    <Button
+                      variant="ghost" size="icon"
+                      className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-background shadow"
+                      onClick={() => updateConfig({ coverLogoVisible: !config.coverLogoVisible })}
+                      title={config.coverLogoVisible ? 'Ocultar' : 'Mostrar'}
+                    >
+                      {config.coverLogoVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                    </Button>
+                    <Button variant="destructive" size="icon" className="absolute -top-1 -left-1 h-5 w-5 rounded-full" onClick={() => updateConfig({ coverLogo: '' })}>
+                      <X className="w-3 h-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-[10px] text-muted-foreground">Se não enviar, o logo primário do cabeçalho será usado.</p>
+                    <Input type="file" accept="image/*" className="text-xs" onChange={e => onLogoUpload(e, 'cover' as any)} />
+                  </>
+                )}
+              </div>
+
               <div className="space-y-1">
                 <Label className="text-xs">Logo da capa — Largura ({config.coverLogoWidthMm}mm)</Label>
                 <Slider value={[config.coverLogoWidthMm]} min={10} max={120} step={1} onValueChange={([v]) => updateConfig({ coverLogoWidthMm: v })} />
