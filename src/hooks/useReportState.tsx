@@ -29,6 +29,13 @@ export const useReportState = () => {
   const [exportType, setExportType] = useState<'pdf' | 'docx' | null>(null);
   const [logo, setLogo] = useState('');
   const [logoSecondary, setLogoSecondary] = useState('');
+  const [coverTitle, setCoverTitle] = useState('Relatório Parcial de Cumprimento do Objeto');
+  const [coverSubtitle, setCoverSubtitle] = useState('');
+  const [headerLeftText, setHeaderLeftText] = useState('');
+  const [headerRightText, setHeaderRightText] = useState('');
+  const [footerText, setFooterText] = useState('');
+  const [footerShowAddress, setFooterShowAddress] = useState(true);
+  const [footerShowContact, setFooterShowContact] = useState(true);
   const [objectText, setObjectText] = useState('');
   const [summary, setSummary] = useState('');
   const [goalNarratives, setGoalNarratives] = useState<Record<string, string>>({});
@@ -56,6 +63,13 @@ export const useReportState = () => {
       const rd = project.reportData || {};
       setLogo(rd.logo || '');
       setLogoSecondary(rd.logoSecondary || '');
+      setCoverTitle(rd.coverTitle || 'Relatório Parcial de Cumprimento do Objeto');
+      setCoverSubtitle(rd.coverSubtitle || '');
+      setHeaderLeftText(rd.headerLeftText || '');
+      setHeaderRightText(rd.headerRightText || '');
+      setFooterText(rd.footerText || '');
+      setFooterShowAddress(rd.footerShowAddress !== false);
+      setFooterShowContact(rd.footerShowContact !== false);
       setObjectText(rd.objectOverride || project.object || '');
       setSummary(rd.executiveSummary || project.summary || '');
       setGoalNarratives(rd.goalNarratives || {});
@@ -92,6 +106,13 @@ export const useReportState = () => {
     updateReportData({
       logo,
       logoSecondary,
+      coverTitle,
+      coverSubtitle,
+      headerLeftText,
+      headerRightText,
+      footerText,
+      footerShowAddress,
+      footerShowContact,
       objectOverride: objectText,
       executiveSummary: summary,
       goalNarratives,
@@ -450,6 +471,9 @@ export const useReportState = () => {
     project, activities,
     mode, setMode, isExporting, setIsExporting, exportType, setExportType,
     logo, setLogo, logoSecondary, setLogoSecondary,
+    coverTitle, setCoverTitle, coverSubtitle, setCoverSubtitle,
+    headerLeftText, setHeaderLeftText, headerRightText, setHeaderRightText,
+    footerText, setFooterText, footerShowAddress, setFooterShowAddress, footerShowContact, setFooterShowContact,
     objectText, setObjectText, summary, setSummary,
     goalNarratives, setGoalNarratives, goalPhotos, setGoalPhotos,
     otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,

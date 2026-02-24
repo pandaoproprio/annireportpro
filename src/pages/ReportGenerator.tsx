@@ -7,6 +7,7 @@ import { useReportState } from '@/hooks/useReportState';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportStructureEditor } from '@/components/report/ReportStructureEditor';
 import { ReportLogoEditor } from '@/components/report/ReportLogoEditor';
+import { ReportPageEditor } from '@/components/report/ReportPageEditor';
 import { ReportEditSection } from '@/components/report/ReportEditSection';
 import { ReportPreviewSection } from '@/components/report/ReportPreviewSection';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -19,6 +20,9 @@ export const ReportGenerator: React.FC = () => {
   const {
     project, activities, mode, setMode, isExporting, setIsExporting, exportType, setExportType,
     logo, logoSecondary, objectText, setObjectText, summary, setSummary,
+    coverTitle, setCoverTitle, coverSubtitle, setCoverSubtitle,
+    headerLeftText, setHeaderLeftText, headerRightText, setHeaderRightText,
+    footerText, setFooterText, footerShowAddress, setFooterShowAddress, footerShowContact, setFooterShowContact,
     goalNarratives, setGoalNarratives, goalPhotos,
     otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,
     communicationNarrative, setCommunicationNarrative, communicationPhotos, setCommunicationPhotos,
@@ -79,10 +83,12 @@ export const ReportGenerator: React.FC = () => {
 
   const ReportHeader = () => (
     <div className="flex justify-between items-center mb-6 pb-4 border-b print:border-b-0">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         {logo ? <img src={logo} alt="Logo" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
+        {headerLeftText && <span className="text-xs text-muted-foreground">{headerLeftText}</span>}
       </div>
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
+        {headerRightText && <span className="text-xs text-muted-foreground">{headerRightText}</span>}
         {logoSecondary ? <img src={logoSecondary} alt="Logo Secundário" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
       </div>
     </div>
@@ -91,12 +97,15 @@ export const ReportGenerator: React.FC = () => {
   const ReportFooter = React.forwardRef<HTMLDivElement>((_, ref) => (
     <div ref={ref} className="mt-8 pt-4 border-t text-center text-xs text-muted-foreground print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2">
       <p className="font-semibold">{project.organizationName}</p>
-      {project.organizationAddress && <p>{project.organizationAddress}</p>}
-      <p>
-        {project.organizationWebsite && <span>{project.organizationWebsite}</span>}
-        {project.organizationEmail && <span> | {project.organizationEmail}</span>}
-        {project.organizationPhone && <span> | {project.organizationPhone}</span>}
-      </p>
+      {footerShowAddress && project.organizationAddress && <p>{project.organizationAddress}</p>}
+      {footerShowContact && (
+        <p>
+          {project.organizationWebsite && <span>{project.organizationWebsite}</span>}
+          {project.organizationEmail && <span> | {project.organizationEmail}</span>}
+          {project.organizationPhone && <span> | {project.organizationPhone}</span>}
+        </p>
+      )}
+      {footerText && <p className="italic mt-1">{footerText}</p>}
     </div>
   ));
   ReportFooter.displayName = 'ReportFooter';
@@ -145,6 +154,20 @@ export const ReportGenerator: React.FC = () => {
             sections={sections} moveSection={moveSection} toggleVisibility={toggleVisibility}
             updateSectionTitle={updateSectionTitle} removeSection={removeSection} addCustomSection={addCustomSection}
           />
+          <ReportPageEditor
+            coverTitle={coverTitle} setCoverTitle={setCoverTitle}
+            coverSubtitle={coverSubtitle} setCoverSubtitle={setCoverSubtitle}
+            headerLeftText={headerLeftText} setHeaderLeftText={setHeaderLeftText}
+            headerRightText={headerRightText} setHeaderRightText={setHeaderRightText}
+            footerText={footerText} setFooterText={setFooterText}
+            footerShowAddress={footerShowAddress} setFooterShowAddress={setFooterShowAddress}
+            footerShowContact={footerShowContact} setFooterShowContact={setFooterShowContact}
+            organizationName={project.organizationName}
+            organizationAddress={project.organizationAddress}
+            organizationEmail={project.organizationEmail}
+            organizationPhone={project.organizationPhone}
+            organizationWebsite={project.organizationWebsite}
+          />
           <ReportLogoEditor logo={logo} logoSecondary={logoSecondary} onLogoUpload={handleLogoUpload} />
           <div className="space-y-6">
             <h3 className="font-bold text-muted-foreground uppercase text-sm tracking-wide ml-1">Preenchimento do Conteúdo</h3>
@@ -166,7 +189,8 @@ export const ReportGenerator: React.FC = () => {
             <div className="flex flex-col items-center justify-center min-h-[800px] pb-10 mb-10 page-break">
               <ReportHeader />
               <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <h2 className="text-xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>Relatório Parcial de Cumprimento do Objeto</h2>
+                <h2 className="text-xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>{coverTitle}</h2>
+                {coverSubtitle && <p className="text-base mb-4" style={{ textAlign: 'center' }}>{coverSubtitle}</p>}
                 <h1 className="text-2xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>{project.name}</h1>
                 <h3 className="text-lg mb-8" style={{ textAlign: 'center' }}>Termo de Fomento nº {project.fomentoNumber}</h3>
                 <p className="text-lg font-semibold" style={{ textAlign: 'center' }}>{project.organizationName}</p>
