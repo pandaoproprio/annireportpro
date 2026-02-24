@@ -1,118 +1,166 @@
 
 
-# Correcao Controlada + Padronizacao ABNT
+# Padronizacao Definitiva dos Exportadores PDF
 
-## Escopo
+## Resumo
 
-6 correcoes pontuais, sem refatoracao, sem alteracao de logica de negocio, sem mudanca de schema/RLS.
-
----
-
-## 1. Titulos de Metas Duplicados
-
-**Causa raiz:** Os `goal.title` no banco ja contem o prefixo "META X -" (ex: "META 1 -- Realizar o planejamento..."). O `GoalsPreview` e o `docxExport.ts` adicionam dinamicamente outro prefixo `META {idx+1} -`, gerando "META 1 -- META 1 -- Realizar...".
-
-**Estrategia:** Remover o prefixo dinamico do codigo (preview e DOCX). Manter o titulo como esta no banco.
-
-**Arquivos afetados:**
-- `src/components/report/ReportPreviewSection.tsx` -- linha 84: trocar `META {idx + 1} – {goal.title}` por `{goal.title}`
-- `src/lib/docxExport.ts` -- linha 141: trocar `` `META ${idx + 1} – ${goal.title}` `` por `goal.title`
+Criar `src/lib/pdfHelpers.ts` como modulo central unico, extraindo as funcoes de renderizacao do `teamReportPdfExport.ts` (modelo correto). Refatorar os 3 exportadores para importar desse modulo. Eliminar `html2pdf.js` da Justificativa.
 
 ---
 
-## 2. DOCX nao Quebra Paragrafos com `\n`
+## Estrutura Final de Dependencia
 
-**Causa raiz:** Narrativas longas (objectText, summary, goalNarratives, otherActionsNarrative, communicationNarrative, satisfaction, futureActions, custom content) sao passadas como `text` unico a `new Paragraph()`. Quebras de linha sao ignoradas.
+```text
+src/lib/pdfHelpers.ts  (UNICA FONTE DE VERDADE)
+    |
+    +-- src/lib/teamReportPdfExport.ts   (importa de pdfHelpers)
+    |
+    +-- src/lib/reportPdfExport.ts       (importa de pdfHelpers)
+    |
+    +-- src/lib/justificationPdfExport.ts (importa de pdfHelpers)
 
-**Correcao:** Criar funcao helper `textToParagraphs(text, options)` que faz `text.split('\n').filter(Boolean).map(...)`. Aplicar em todos os cases do switch que tratam narrativas (object, summary, goals narrative, other, communication, satisfaction, future, custom).
-
-**Arquivo afetado:** `src/lib/docxExport.ts`
-
----
-
-## 3. Remover alert() / confirm() Nativos
-
-**Correcao por arquivo:**
-
-| Arquivo | Linha | De | Para |
-|---|---|---|---|
-| `src/pages/ReportGenerator.tsx` | 63 | `alert('Erro ao exportar PDF...')` | `toast.error('Erro ao exportar PDF...')` |
-| `src/pages/ReportGenerator.tsx` | 81 | `alert('Erro ao exportar DOCX...')` | `toast.error('Erro ao exportar DOCX...')` |
-| `src/pages/ActivityManager.tsx` | 142 | `alert('A data de término...')` | `toast.error('A data de término...')` |
-| `src/pages/Onboarding.tsx` | 104 | `alert('Erro ao criar projeto...')` | `toast.error('Erro ao criar projeto...')` |
-| `src/pages/Onboarding.tsx` | 107 | `alert('Por favor, preencha...')` | `toast.error('Por favor, preencha...')` |
-| `src/hooks/useReportState.tsx` | 154 | `confirm('Tem certeza...')` | Estado + ConfirmDialog |
-| `src/hooks/useJustificationReportState.tsx` | 192 | `confirm('Tem certeza...')` | Estado + ConfirmDialog |
-| `src/components/BatchDeleteProjects.tsx` | 38 | `window.confirm(...)` | Estado + ConfirmDialog |
-
-Para os `confirm()` em hooks (`useReportState`, `useJustificationReportState`): como hooks nao podem renderizar UI, a correcao sera expor estados `pendingRemoveIndex` e `confirmRemoveSection` como retorno do hook, e renderizar o `ConfirmDialog` no componente pai (`ReportGenerator.tsx` e `JustificationReportGenerator.tsx`).
-
-Para `BatchDeleteProjects.tsx`: adicionar estado local + ConfirmDialog inline.
-
-Importar `toast` de `sonner` nos arquivos que usam `alert()`.
+src/pages/JustificationReportGenerator.tsx
+    -> remove html2pdf.js
+    -> chama exportJustificationToPdf()
+```
 
 ---
 
-## 4. Remover Placeholder Textual "LOGO"
+## ETAPA 1 -- Criar `src/lib/pdfHelpers.ts`
 
-**Causa raiz:** `ReportHeader` em `ReportGenerator.tsx` (linhas 91, 94) renderiza `<div>...LOGO</div>` quando nao ha logo. O html2pdf captura esse texto.
+Novo arquivo contendo todas as constantes e funcoes extraidas do `teamReportPdfExport.ts`:
 
-**Correcao:** Trocar por `<div className="w-12 h-12" />` (div vazia com dimensoes fixas, sem texto).
+**Constantes ABNT exportadas:**
+- `PAGE_W = 210`, `PAGE_H = 297`
+- `ML = 30`, `MR = 20`, `MT = 30`, `MB = 20`
+- `CW = 160` (PAGE_W - ML - MR)
+- `MAX_Y = 277` (PAGE_H - MB)
+- `LINE_H = 7.2`
+- `INDENT = 12.5`
+- `FONT_BODY = 12`, `FONT_CAPTION = 10`
 
-**Arquivo afetado:** `src/pages/ReportGenerator.tsx` -- linhas 91 e 94
+**Tipo auxiliar exportado:**
+- `TextBlock = { type: 'paragraph' | 'bullet'; content: string }`
 
----
+**Interface de contexto (para evitar passar pdf + currentY como globals):**
+- `PdfContext = { pdf: jsPDF; currentY: number; pageCount: number }`
 
-## 5. DOCX Headings com Times New Roman
+**Funcoes exportadas (todas recebem/retornam PdfContext):**
 
-**Causa raiz:** O estilo global `styles.default.document.run` define Times New Roman para texto normal, mas headings usam estilos do Word (Calibri/Arial por padrao).
-
-**Correcao:** Adicionar `paragraphStyles` customizados para Heading1, Heading2 e Heading3 no bloco `styles` do documento, forcando `font: 'Times New Roman'`.
-
-**Arquivo afetado:** `src/lib/docxExport.ts` -- bloco `styles` (linhas 367-380)
-
----
-
-## 6. Ajustes ABNT Finais no PDF
-
-**Estado atual do PDF:**
-- Margens: `[30, 20, 25, 30]` (top 30mm, right 20mm, bottom 25mm, left 30mm) -- bottom deveria ser 20mm
-- Paginacao: posicao X calculada incorretamente com `pageWidth - 20 - textWidth`
-- Capa exibe numero de pagina (ABNT: capa nao exibe)
-
-**Correcoes:**
-- Margem bottom: `25` para `20` --> `[30, 20, 20, 30]`
-- Padding inline do preview: `30mm 20mm 25mm 30mm` para `30mm 20mm 20mm 30mm`
-- Paginacao: posicionar com `pdf.text(text, pageWidth - 20, 20)` (alinhamento direito nativo nao e suportado, usar offset fixo a 2cm da borda)
-- Pular pagina 1 (capa) na numeracao: iniciar loop em `i = 2`
-- Texto da paginacao: apenas numero (ex: `"2"`) em vez de `"Página 2 de 5"` (ABNT usa apenas o numero)
-
-**Arquivo afetado:** `src/pages/ReportGenerator.tsx` -- linhas 41, 51-58, 166
-
----
-
-## Secao Tecnica -- Resumo de Arquivos e Linhas
-
-| Arquivo | Alteracoes |
+| Funcao | Descricao |
 |---|---|
-| `src/pages/ReportGenerator.tsx` | alert->toast (2x), logo placeholder (2x), margens PDF, paginacao PDF |
-| `src/lib/docxExport.ts` | Meta title, paragraphs split, heading styles |
-| `src/components/report/ReportPreviewSection.tsx` | Meta title (1 linha) |
-| `src/pages/ActivityManager.tsx` | alert->toast (1x) |
-| `src/pages/Onboarding.tsx` | alert->toast (2x) |
-| `src/hooks/useReportState.tsx` | confirm->estado (1x) |
-| `src/hooks/useJustificationReportState.tsx` | confirm->estado (1x) |
-| `src/components/BatchDeleteProjects.tsx` | window.confirm->ConfirmDialog (1x) |
-
-**Nenhum arquivo fora deste escopo sera tocado.**
+| `createPdfContext()` | Cria jsPDF A4 portrait e retorna PdfContext |
+| `addPage(ctx)` | Adiciona pagina, reseta currentY |
+| `ensureSpace(ctx, h)` | Verifica espaco, chama addPage se necessario |
+| `addParagraph(ctx, text)` | Paragrafo justificado com recuo 12.5mm, 1.5 spacing |
+| `addSectionTitle(ctx, title)` | Titulo de secao em negrito, Times 12pt |
+| `addBulletItem(ctx, text)` | Item com bullet, deteccao de label em negrito |
+| `addHeaderLine(ctx, label, value)` | Par label:valor no cabecalho |
+| `parseHtmlToBlocks(html)` | Converte HTML em TextBlock[] |
+| `loadImage(url)` | Carrega imagem como dataURL |
+| `addPhotoGrid(ctx, photos, label)` | Grade 2 colunas com legendas |
+| `addFooterAndPageNumbers(ctx, orgName, skipPage1)` | Loop final: rodape + paginacao |
+| `addSignatureBlock(ctx, orgName, date, sigLabel, extra?)` | Bloco de assinatura padrao |
 
 ---
 
-## Validacao Pos-Correcao
+## ETAPA 2 -- Refatorar `teamReportPdfExport.ts`
 
-1. Preview do relatorio: metas sem duplicacao no titulo
-2. Exportar PDF: margens corretas, paginacao no canto superior direito sem numero na capa, sem texto "LOGO"
-3. Exportar DOCX: paragrafos quebrados corretamente, headings em Times New Roman, margens ABNT
-4. Console sem erros
-5. Nenhum `alert()` ou `confirm()` restante no codigo
-6. Build sem warnings de TypeScript
+**Remover:** Todas as constantes duplicadas (PAGE_W, ML, LINE_H, etc.), funcoes `addParagraph`, `addBulletText`, `addSectionTitle`, `addHeaderLine`, `ensureSpace`, `loadImage`, `parseHtmlToBlocks`.
+
+**Adicionar:** `import { ... } from '@/lib/pdfHelpers'`
+
+**Manter:** Logica especifica do relatorio da equipe (dados de identificacao, relato de execucao, secoes adicionais, fotos com legendas customizadas, bloco de assinatura com Nome/Cargo/CNPJ).
+
+Nenhuma alteracao visual -- o PDF gerado sera identico ao atual.
+
+---
+
+## ETAPA 3 -- Refatorar `reportPdfExport.ts`
+
+**Remover:** Todas as constantes duplicadas e funcoes locais (`addParagraph`, `addSectionTitle`, `addSubSectionTitle`, `addBulletItem`, `addPhotoGrid`, `loadImage`, `ensureSpace`).
+
+**Adicionar:** `import { ... } from '@/lib/pdfHelpers'`
+
+**Correcoes aplicadas:**
+- Remover `.toUpperCase()` do `addSectionTitle` (linha 111) -- o titulo ja vem formatado corretamente da estrutura de secoes
+- Assinatura: usar `addSignatureBlock()` do pdfHelpers para alinhar com o modelo da Equipe
+- Rodape: usar `addFooterAndPageNumbers()` unificado
+
+**Manter:** Logica especifica (capa, tabela de despesas, links, atividades por meta).
+
+---
+
+## ETAPA 4 -- Reescrever `justificationPdfExport.ts`
+
+**Remover:** Todo o conteudo atual (constantes `ABNT`, funcoes `writeWrappedText`, `parseHtmlAndWrite`, `checkPageBreak`, `addFooter`).
+
+**Reescrever usando pdfHelpers:**
+- `import { createPdfContext, addParagraph, addSectionTitle, addHeaderLine, parseHtmlToBlocks, addBulletItem, addFooterAndPageNumbers, addSignatureBlock, ensureSpace, LINE_H, ML, PAGE_W, CW } from '@/lib/pdfHelpers'`
+- Titulo centralizado (Times 16pt bold)
+- Header: 3x `addHeaderLine()` (Projeto, Termo, Organizacao)
+- Destinatario: paragrafo "Ao [funder],"
+- Secoes: loop usando `addSectionTitle()` + `parseHtmlToBlocks()` + `addParagraph()`/`addBulletItem()`
+- Assinatura: `addSignatureBlock()`
+- Rodape: `addFooterAndPageNumbers(ctx, orgName, true)` (pular pag 1)
+
+**Bugs corrigidos:**
+- LINE_HEIGHT de 7 para 7.2
+- Adicionar `align: 'justify'` nos paragrafos
+- Adicionar recuo 12.5mm na primeira linha
+- Assinatura com linha horizontal (nao underscores)
+
+---
+
+## ETAPA 5 -- Corrigir `JustificationReportGenerator.tsx`
+
+**Remover:**
+- `import html2pdf from 'html2pdf.js'` (linha 8)
+- `const reportRef = useRef<HTMLDivElement>(null)` (linha 19) -- nao mais necessario para PDF
+- Todo o bloco `handleExportPdf` (linhas 59-93) que usa html2pdf
+
+**Adicionar:**
+- `import { exportJustificationToPdf } from '@/lib/justificationPdfExport'`
+
+**Novo `handleExportPdf`:**
+```typescript
+const handleExportPdf = async () => {
+  if (!hasContent) { toast.error('Preencha ao menos uma secao'); return; }
+  setIsExporting(true);
+  setExportType('pdf');
+  try {
+    await exportJustificationToPdf({ project, report: buildReportData() });
+    toast.success('PDF exportado com sucesso!');
+  } catch (error) {
+    console.error('Erro ao exportar PDF:', error);
+    toast.error('Erro ao exportar PDF');
+  } finally {
+    setIsExporting(false);
+    setExportType(null);
+  }
+};
+```
+
+**Nota:** O `reportRef` ainda e necessario para o preview HTML, entao ele permanece, mas nao e mais usado pelo exportador PDF.
+
+---
+
+## Arquivos Modificados (resumo)
+
+| Arquivo | Acao |
+|---|---|
+| `src/lib/pdfHelpers.ts` | **NOVO** -- modulo central |
+| `src/lib/teamReportPdfExport.ts` | Refatorado -- importa de pdfHelpers |
+| `src/lib/reportPdfExport.ts` | Refatorado -- importa de pdfHelpers, remove .toUpperCase() |
+| `src/lib/justificationPdfExport.ts` | Reescrito -- usa pdfHelpers, corrige LINE_H/justify/indent |
+| `src/pages/JustificationReportGenerator.tsx` | Remove html2pdf, chama exportJustificationToPdf nativo |
+
+---
+
+## Riscos de Regressao
+
+1. **Equipe:** Risco minimo -- apenas extraindo funcoes para modulo externo, sem alterar logica
+2. **Objeto:** Risco baixo -- remocao do .toUpperCase() pode alterar visualmente titulos de secao (intencional)
+3. **Justificativa:** Risco medio -- reescrita completa do exportador; o PDF tera aparencia diferente da versao html2pdf (intencional, pois agora seguira ABNT corretamente)
+4. **html2pdf.js removido:** O pacote ainda ficara no package.json mas nao sera mais importado em nenhum lugar; pode ser removido do package.json separadamente se desejado
+
