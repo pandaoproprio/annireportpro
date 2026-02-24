@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileEdit } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { exportReportToPdf } from '@/lib/reportPdfExport';
 import { exportToDocx } from '@/lib/docxExport';
 import { useReportState } from '@/hooks/useReportState';
@@ -22,6 +23,7 @@ export const ReportGenerator: React.FC = () => {
     logo, logoSecondary, objectText, setObjectText, summary, setSummary,
     coverTitle, setCoverTitle, coverSubtitle, setCoverSubtitle,
     headerLeftText, setHeaderLeftText, headerRightText, setHeaderRightText,
+    headerBannerUrl, setHeaderBannerUrl,
     footerText, setFooterText, footerShowAddress, setFooterShowAddress, footerShowContact, setFooterShowContact,
     goalNarratives, setGoalNarratives, goalPhotos,
     otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,
@@ -41,6 +43,24 @@ export const ReportGenerator: React.FC = () => {
   } = state;
 
   if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
+
+  const handleHeaderBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      try {
+        const photoId = crypto.randomUUID();
+        const fileExt = file.name.split('.').pop() || 'png';
+        const filePath = `reports/${project.id}/logos/header_banner_${photoId}.${fileExt}`;
+        const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
+        if (error) { toast.error('Erro ao enviar banner'); return; }
+        const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
+        setHeaderBannerUrl(urlData.publicUrl);
+        toast.success('Banner do cabeçalho enviado');
+      } catch { toast.error('Erro ao processar banner'); }
+    }
+  };
+
+  const handleHeaderBannerRemove = () => setHeaderBannerUrl('');
 
   const exportToPdf = async () => {
     setIsExporting(true);
@@ -82,15 +102,21 @@ export const ReportGenerator: React.FC = () => {
   };
 
   const ReportHeader = () => (
-    <div className="flex justify-between items-center mb-6 pb-4 border-b print:border-b-0">
-      <div className="flex items-center gap-3">
-        {logo ? <img src={logo} alt="Logo" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
-        {headerLeftText && <span className="text-xs text-muted-foreground">{headerLeftText}</span>}
-      </div>
-      <div className="flex items-center gap-3">
-        {headerRightText && <span className="text-xs text-muted-foreground">{headerRightText}</span>}
-        {logoSecondary ? <img src={logoSecondary} alt="Logo Secundário" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
-      </div>
+    <div className="mb-6 pb-4 border-b print:border-b-0">
+      {headerBannerUrl ? (
+        <img src={headerBannerUrl} alt="Cabeçalho" className="w-full h-auto max-h-24 object-contain" />
+      ) : (
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            {logo ? <img src={logo} alt="Logo" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
+            {headerLeftText && <span className="text-xs text-muted-foreground">{headerLeftText}</span>}
+          </div>
+          <div className="flex items-center gap-3">
+            {headerRightText && <span className="text-xs text-muted-foreground">{headerRightText}</span>}
+            {logoSecondary ? <img src={logoSecondary} alt="Logo Secundário" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -159,6 +185,9 @@ export const ReportGenerator: React.FC = () => {
             coverSubtitle={coverSubtitle} setCoverSubtitle={setCoverSubtitle}
             headerLeftText={headerLeftText} setHeaderLeftText={setHeaderLeftText}
             headerRightText={headerRightText} setHeaderRightText={setHeaderRightText}
+            headerBannerUrl={headerBannerUrl}
+            onHeaderBannerUpload={handleHeaderBannerUpload}
+            onHeaderBannerRemove={handleHeaderBannerRemove}
             footerText={footerText} setFooterText={setFooterText}
             footerShowAddress={footerShowAddress} setFooterShowAddress={setFooterShowAddress}
             footerShowContact={footerShowContact} setFooterShowContact={setFooterShowContact}
