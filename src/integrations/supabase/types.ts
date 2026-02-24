@@ -266,6 +266,51 @@ export type Database = {
           },
         ]
       }
+      project_report_templates: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          project_id: string
+          report_data: Json
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          project_id: string
+          report_data?: Json
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          project_id?: string
+          report_data?: Json
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_report_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_report_templates_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_team_members: {
         Row: {
           added_by: string
@@ -374,6 +419,42 @@ export type Database = {
           team?: Json
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      report_templates: {
+        Row: {
+          created_at: string
+          created_by: string
+          export_config: Json
+          id: string
+          is_active: boolean
+          name: string
+          structure: Json
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          export_config?: Json
+          id?: string
+          is_active?: boolean
+          name: string
+          structure?: Json
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          export_config?: Json
+          id?: string
+          is_active?: boolean
+          name?: string
+          structure?: Json
+          type?: string
+          updated_at?: string
         }
         Relationships: []
       }

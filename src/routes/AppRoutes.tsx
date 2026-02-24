@@ -25,7 +25,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText 
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 
@@ -43,6 +43,8 @@ const LgpdConsent = lazy(() => import('@/pages/LgpdConsent').then(m => ({ defaul
 const ForcePasswordChange = lazy(() => import('@/pages/ForcePasswordChange').then(m => ({ default: m.ForcePasswordChange })));
 const SystemLogs = lazy(() => import('@/pages/SystemLogs').then(m => ({ default: m.SystemLogs })));
 const JustificationReportGenerator = lazy(() => import('@/pages/JustificationReportGenerator').then(m => ({ default: m.JustificationReportGenerator })));
+const ReportTemplates = lazy(() => import('@/pages/ReportTemplates').then(m => ({ default: m.ReportTemplates })));
+const ReportTemplateEditor = lazy(() => import('@/pages/ReportTemplateEditor').then(m => ({ default: m.ReportTemplateEditor })));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -168,6 +170,16 @@ const Layout: React.FC = () => {
               </div>
             </div>
 
+            {/* Templates */}
+            {isAdmin && (
+              <div>
+                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Templates</p>
+                <div className="space-y-0.5">
+                  <SidebarLink to="/templates" icon={<Layers className="w-5 h-5" />} label="Templates de Relatórios" onClick={closeSidebar} />
+                </div>
+              </div>
+            )}
+
             {/* Administração */}
             <div>
               <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Administração</p>
@@ -237,6 +249,8 @@ const Layout: React.FC = () => {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/users" element={<PermissionGuard permission="user_management"><UserManagement /></PermissionGuard>} />
                 <Route path="/team" element={<PermissionGuard permission="team_management"><TeamManagement /></PermissionGuard>} />
+                <Route path="/templates" element={<ReportTemplates />} />
+                <Route path="/templates/:id" element={<ReportTemplateEditor />} />
                 <Route path="/logs" element={<PermissionGuard permission="system_logs"><SystemLogs /></PermissionGuard>} />
               </Routes>
             </Suspense>
