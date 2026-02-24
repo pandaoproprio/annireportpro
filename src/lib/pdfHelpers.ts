@@ -525,38 +525,40 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
       pdf.text(String(p), PAGE_W - MR, 15, { align: 'right' });
     }
 
+    // Skip footer on cover page
+    if (isCoverPage) continue;
+
     // Footer line
     pdf.setDrawColor(180, 180, 180);
     const footerLineY = PAGE_H - 18;
     pdf.line(ML, footerLineY, PAGE_W - MR, footerLineY);
 
-    pdf.setFontSize(FONT_CAPTION);
     pdf.setTextColor(80, 80, 80);
     let footerY = footerLineY + 4;
 
     // Alignment helper
     const align = info.alignment || 'center';
-    const getTextX = (text: string, fontSize?: number): number => {
-      if (fontSize) pdf.setFontSize(fontSize);
-      const tw = pdf.getTextWidth(text);
+    const getAlignedX = (textWidth: number): number => {
       if (align === 'left') return ML;
-      if (align === 'right') return PAGE_W - MR - tw;
-      return (PAGE_W - tw) / 2;
+      if (align === 'right') return PAGE_W - MR - textWidth;
+      return (PAGE_W - textWidth) / 2;
     };
 
-    // Org name (bold)
+    // Org name (bold, 9pt)
     pdf.setFont('times', 'bold');
-    pdf.setFontSize(FONT_CAPTION);
+    pdf.setFontSize(9);
     const orgText = info.orgName || orgName;
-    pdf.text(orgText, getTextX(orgText), footerY);
+    const orgTw = pdf.getTextWidth(orgText);
+    pdf.text(orgText, getAlignedX(orgTw), footerY);
     footerY += 3.5;
 
     pdf.setFont('times', 'normal');
+    pdf.setFontSize(7);
 
     // Address
     if (info.address) {
-      pdf.setFontSize(7);
-      pdf.text(info.address, getTextX(info.address, 7), footerY);
+      const addrTw = pdf.getTextWidth(info.address);
+      pdf.text(info.address, getAlignedX(addrTw), footerY);
       footerY += 3;
     }
 
@@ -566,17 +568,17 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
     if (info.email) contactParts.push(info.email);
     if (info.phone) contactParts.push(info.phone);
     if (contactParts.length > 0) {
-      pdf.setFontSize(7);
       const contactLine = contactParts.join(' | ');
-      pdf.text(contactLine, getTextX(contactLine, 7), footerY);
+      const contactTw = pdf.getTextWidth(contactLine);
+      pdf.text(contactLine, getAlignedX(contactTw), footerY);
       footerY += 3;
     }
 
     // Custom text
     if (info.customText) {
-      pdf.setFontSize(7);
       pdf.setFont('times', 'italic');
-      pdf.text(info.customText, getTextX(info.customText, 7), footerY);
+      const customTw = pdf.getTextWidth(info.customText);
+      pdf.text(info.customText, getAlignedX(customTw), footerY);
     }
 
     pdf.setTextColor(0, 0, 0);
