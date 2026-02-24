@@ -719,12 +719,12 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
       renderHeaderOnPage(pdf, headerConfig);
     }
 
-    // Page number – top right, 2 cm from edge (skip cover)
+    // Page number – bottom right (skip cover)
     if (!isCoverPage) {
       pdf.setFontSize(FONT_BODY);
       pdf.setFont('times', 'normal');
       pdf.setTextColor(0);
-      pdf.text(String(p), PAGE_W - MR, 15, { align: 'right' });
+      pdf.text(String(p), PAGE_W - MR, PAGE_H - 10, { align: 'right' });
     }
 
     // Skip footer on cover page
@@ -739,8 +739,13 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
     const topSp = info.topSpacing ?? 4;
     let footerY = footerLineY + topSp;
 
-    // Center-align helper (institutional footer is always centered)
-    const getCenterX = (textWidth: number): number => (PAGE_W - textWidth) / 2;
+    // Alignment helper based on footerInfo.alignment
+    const align = info.alignment || 'center';
+    const getTextX = (textWidth: number): number => {
+      if (align === 'left') return ML;
+      if (align === 'right') return PAGE_W - MR - textWidth;
+      return (PAGE_W - textWidth) / 2; // center
+    };
 
     const instEnabled = info.institutionalEnabled !== false;
 
@@ -753,7 +758,7 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
       pdf.setFont('times', 'bold');
       pdf.setFontSize(l1Size);
       const l1Tw = pdf.getTextWidth(l1Text);
-      pdf.text(l1Text, getCenterX(l1Tw), footerY);
+      pdf.text(l1Text, getTextX(l1Tw), footerY);
       footerY += ls;
 
       // Line 2 (normal)
@@ -762,7 +767,7 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
         pdf.setFont('times', 'normal');
         pdf.setFontSize(l2Size);
         const l2Tw = pdf.getTextWidth(info.line2Text);
-        pdf.text(info.line2Text, getCenterX(l2Tw), footerY);
+        pdf.text(info.line2Text, getTextX(l2Tw), footerY);
         footerY += ls;
       }
 
@@ -772,7 +777,7 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
         pdf.setFont('times', 'normal');
         pdf.setFontSize(l3Size);
         const l3Tw = pdf.getTextWidth(info.line3Text);
-        pdf.text(info.line3Text, getCenterX(l3Tw), footerY);
+        pdf.text(info.line3Text, getTextX(l3Tw), footerY);
         footerY += ls;
       }
     }
@@ -782,7 +787,7 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
       pdf.setFont('times', 'italic');
       pdf.setFontSize(7);
       const customTw = pdf.getTextWidth(info.customText);
-      pdf.text(info.customText, getCenterX(customTw), footerY);
+      pdf.text(info.customText, getTextX(customTw), footerY);
     }
 
     pdf.setTextColor(0, 0, 0);

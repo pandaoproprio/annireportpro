@@ -62,12 +62,12 @@ const LogoSlot: React.FC<{
   </div>
 );
 
-export const ReportVisualConfigEditor: React.FC<Props> = ({
+export const ReportVisualConfigEditor = React.forwardRef<HTMLDivElement, Props>(({
   config, updateConfig, onSave, onLogoUpload, onBannerUpload,
   organizationName, organizationAddress, organizationEmail, organizationPhone, organizationWebsite,
   showCoverConfig = false,
-}) => (
-  <div className="space-y-4">
+}, ref) => (
+  <div ref={ref} className="space-y-4">
     {/* Cover Page (optional) */}
     {showCoverConfig && (
       <Card className="border-l-4 border-l-accent">
@@ -468,4 +468,5 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
       </Button>
     </div>
   </div>
-);
+));
+ReportVisualConfigEditor.displayName = 'ReportVisualConfigEditor';
