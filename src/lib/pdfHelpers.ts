@@ -243,47 +243,74 @@ export const loadImage = async (url: string): Promise<{ data: string; width: num
   }
 };
 
-// ── Photo grid (2 columns) ──
+// ── Photo grid (2 columns, larger photos, individual captions) ──
 export const addPhotoGrid = async (
   ctx: PdfContext,
   photoUrls: string[],
   sectionLabel: string,
+  captions?: string[],
 ): Promise<void> => {
   if (photoUrls.length === 0) return;
 
-  addPage(ctx);
   const { pdf } = ctx;
+
+  // Section title — no forced page break, just ensure space
+  ensureSpace(ctx, LINE_H * 3);
+  ctx.currentY += 4;
   pdf.setFontSize(FONT_BODY);
   pdf.setFont('times', 'bold');
   const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
   pdf.text(titleText, ML, ctx.currentY);
   ctx.currentY += LINE_H + 4;
 
-  const photoW = (CW - 10) / 2;
-  const photoH = photoW * 0.75;
-  const COL_GAP = 10;
+  const COL_GAP = 8;
+  const photoW = (CW - COL_GAP) / 2;   // ~76mm each
+  const photoH = photoW * 0.85;          // taller aspect ratio ~65mm
+  const CAPTION_H = 6;
 
   let idx = 0;
   while (idx < photoUrls.length) {
-    if (ctx.currentY + photoH + 15 > MAX_Y) addPage(ctx);
+    const rowNeeded = photoH + CAPTION_H + 6;
+    if (ctx.currentY + rowNeeded > MAX_Y) addPage(ctx);
     const rowY = ctx.currentY;
 
     for (let col = 0; col < 2 && idx < photoUrls.length; col++) {
       const x = col === 0 ? ML : ML + photoW + COL_GAP;
       const imgData = await loadImage(photoUrls[idx]);
       if (imgData) {
-        try { pdf.addImage(imgData.data, 'JPEG', x, rowY, photoW, photoH); }
+        // Fit image proportionally inside the cell (object-contain style)
+        const imgAspect = imgData.width / imgData.height;
+        const cellAspect = photoW / photoH;
+        let drawW: number, drawH: number, drawX: number, drawY: number;
+        if (imgAspect > cellAspect) {
+          drawW = photoW;
+          drawH = photoW / imgAspect;
+          drawX = x;
+          drawY = rowY + (photoH - drawH) / 2;
+        } else {
+          drawH = photoH;
+          drawW = photoH * imgAspect;
+          drawX = x + (photoW - drawW) / 2;
+          drawY = rowY;
+        }
+        try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); }
         catch (e) { console.warn('Image error:', e); }
       }
 
+      // Caption
+      const caption = captions?.[idx] || `Foto ${idx + 1}`;
       pdf.setFontSize(FONT_CAPTION);
       pdf.setFont('times', 'italic');
-      pdf.text(`Foto ${idx + 1}`, x + photoW / 2, rowY + photoH + 4, { align: 'center' });
+      const capLines: string[] = pdf.splitTextToSize(caption, photoW);
+      const capY = rowY + photoH + 3;
+      for (let cl = 0; cl < Math.min(capLines.length, 2); cl++) {
+        pdf.text(capLines[cl], x + photoW / 2, capY + cl * 4, { align: 'center' });
+      }
 
       idx++;
     }
 
-    ctx.currentY = rowY + photoH + 10;
+    ctx.currentY = rowY + photoH + CAPTION_H + 4;
   }
 };
 
