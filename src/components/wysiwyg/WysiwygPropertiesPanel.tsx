@@ -192,6 +192,17 @@ export const WysiwygPropertiesPanel: React.FC<Props> = ({
                 <Label className="text-xs">Tamanho fonte</Label>
                 <Input type="number" value={globalHeader.fontSize} onChange={(e) => onUpdateGlobalHeader({ fontSize: Number(e.target.value) })} className="h-7 text-xs" min={6} max={24} />
               </div>
+              <div>
+                <Label className="text-xs">Alinhamento</Label>
+                <Select value={globalHeader.alignment} onValueChange={(v) => onUpdateGlobalHeader({ alignment: v as 'left' | 'center' | 'right' })}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                    <SelectItem value="center">Centro</SelectItem>
+                    <SelectItem value="right">Direita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           )}
           <Separator />
@@ -208,6 +219,17 @@ export const WysiwygPropertiesPanel: React.FC<Props> = ({
               <div>
                 <Label className="text-xs">Tamanho fonte</Label>
                 <Input type="number" value={globalFooter.fontSize} onChange={(e) => onUpdateGlobalFooter({ fontSize: Number(e.target.value) })} className="h-7 text-xs" min={6} max={24} />
+              </div>
+              <div>
+                <Label className="text-xs">Alinhamento</Label>
+                <Select value={globalFooter.alignment} onValueChange={(v) => onUpdateGlobalFooter({ alignment: v as 'left' | 'center' | 'right' })}>
+                  <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                    <SelectItem value="center">Centro</SelectItem>
+                    <SelectItem value="right">Direita</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           )}
