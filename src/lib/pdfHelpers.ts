@@ -175,7 +175,22 @@ export const addParagraph = (ctx: PdfContext, text: string): void => {
   }
 };
 
-// ── Bullet item with bold label detection ──
+// ── Manual bullet justification helper ──
+const justifyBulletLine = (pdf: jsPDF, words: string[], x: number, maxWidth: number, y: number) => {
+  if (words.length <= 1) {
+    pdf.text(words.join(''), x, y);
+    return;
+  }
+  const totalTextW = words.reduce((sum, w) => sum + pdf.getTextWidth(w), 0);
+  const gap = (maxWidth - totalTextW) / (words.length - 1);
+  let cx = x;
+  for (const word of words) {
+    pdf.text(word, cx, y);
+    cx += pdf.getTextWidth(word) + gap;
+  }
+};
+
+// ── Bullet item with bold label detection and manual justification ──
 export const addBulletItem = (ctx: PdfContext, text: string): void => {
   const { pdf } = ctx;
   pdf.setFontSize(FONT_BODY);
@@ -193,31 +208,53 @@ export const addBulletItem = (ctx: PdfContext, text: string): void => {
   if (hasLabel) {
     const label = text.substring(0, colonIdx + 1);
     const content = text.substring(colonIdx + 1).trim();
+
+    // Print bold label on first line
     pdf.setFont('times', 'bold');
     pdf.text(label, textX, ctx.currentY);
     const lw = pdf.getTextWidth(label + ' ');
     pdf.setFont('times', 'normal');
 
+    // Wrap remaining content after the label
     const remaining = textW - lw;
-    if (pdf.getTextWidth(content) <= remaining) {
-      pdf.text(content, textX + lw, ctx.currentY);
-      ctx.currentY += LINE_H;
-    } else {
-      const allLines: string[] = pdf.splitTextToSize(label + ' ' + content, textW);
-      const firstRest = allLines[0].substring(label.length).trim();
-      if (firstRest) pdf.text(firstRest, textX + lw, ctx.currentY);
-      ctx.currentY += LINE_H;
-      for (let i = 1; i < allLines.length; i++) {
+    const contentLines: string[] = pdf.splitTextToSize(content, remaining);
+
+    // First content line: same line as the label
+    if (contentLines.length > 0 && contentLines[0]) {
+      // Check if we need to re-wrap: first line fits in remaining, rest in full width
+      pdf.text(contentLines[0], textX + lw, ctx.currentY);
+    }
+    ctx.currentY += LINE_H;
+
+    // If there's more content, re-split for full width lines
+    if (contentLines.length > 1) {
+      // Get leftover text (everything after what fit on first line)
+      const firstLineText = contentLines[0];
+      const leftover = content.substring(firstLineText.length).trim();
+      const fullLines: string[] = pdf.splitTextToSize(leftover, textW);
+      for (let i = 0; i < fullLines.length; i++) {
         ensureSpace(ctx, LINE_H);
-        pdf.text(allLines[i], textX, ctx.currentY, { maxWidth: textW, align: 'justify' });
+        const words = fullLines[i].split(/\s+/).filter(w => w);
+        const isLast = i === fullLines.length - 1;
+        if (!isLast && words.length > 1) {
+          justifyBulletLine(pdf, words, textX, textW, ctx.currentY);
+        } else {
+          pdf.text(fullLines[i], textX, ctx.currentY);
+        }
         ctx.currentY += LINE_H;
       }
     }
   } else {
-    const lines: string[] = pdf.splitTextToSize(text, textW);
-    for (let i = 0; i < lines.length; i++) {
+    const splitLines: string[] = pdf.splitTextToSize(text, textW);
+    for (let i = 0; i < splitLines.length; i++) {
       if (i > 0) ensureSpace(ctx, LINE_H);
-      pdf.text(lines[i], textX, ctx.currentY, { maxWidth: textW, align: 'justify' });
+      const words = splitLines[i].split(/\s+/).filter(w => w);
+      const isLast = i === splitLines.length - 1;
+      if (!isLast && words.length > 1) {
+        justifyBulletLine(pdf, words, textX, textW, ctx.currentY);
+      } else {
+        pdf.text(splitLines[i], textX, ctx.currentY);
+      }
       ctx.currentY += LINE_H;
     }
   }
