@@ -280,19 +280,31 @@ export const ReportGenerator: React.FC = () => {
             </div>
           </div>
 
-          {/* ── Content Pages (separate A4 container) ── */}
-          <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
+          {/* ── Content Pages (each visible section as a separate A4 page) ── */}
+          {sections.filter(s => s.isVisible).map((section, idx) => (
+            <div key={section.id} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp relative" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
+              <ReportHeader />
+              <ReportPreviewSection section={section} {...previewSectionProps} />
+              <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
+                <ReportFooter />
+              </div>
+              {/* Page number */}
+              <span className="absolute top-[15mm] right-[20mm] text-xs text-muted-foreground">{idx + 2}</span>
+            </div>
+          ))}
+
+          {/* ── Signature Page ── */}
+          <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp relative" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
             <ReportHeader />
-            {sections.map(section => (
-              <ReportPreviewSection key={section.id} section={section} {...previewSectionProps} />
-            ))}
             <div className="mt-16 pt-10 flex flex-col items-center break-inside-avoid">
               <p className="mb-8">Rio de Janeiro, {new Date().toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
               <div className="w-80 border-t border-foreground mb-2 mt-16"></div>
               <p className="font-bold uppercase">Assinatura do Responsável</p>
               <p className="text-sm">{project.organizationName}</p>
             </div>
-            <ReportFooter />
+            <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
+              <ReportFooter />
+            </div>
           </div>
         </div>
       )}
