@@ -1,89 +1,118 @@
 
 
-# Plano de Correcao: Gaps de RLS e Permissoes
+# Correcao Controlada + Padronizacao ABNT
 
-## Resumo dos Problemas
+## Escopo
 
-O sistema esta em nivel de maturidade 6.5/10. As policies RLS foram corrigidas para PERMISSIVE, mas restam 3 problemas criticos que impedem o papel admin de funcionar corretamente:
+6 correcoes pontuais, sem refatoracao, sem alteracao de logica de negocio, sem mudanca de schema/RLS.
 
-1. Permissoes RBAC do Raphael (admin) estao incompletas no banco
-2. Tabela `activities` nao tem policies de INSERT/UPDATE para admins
-3. Tabela `profiles` nao tem policy SELECT para admins verem outros usuarios
+---
 
-## Etapa 1 — Corrigir permissoes do Raphael no banco
+## 1. Titulos de Metas Duplicados
 
-Executar SQL para adicionar as permissoes faltantes ao usuario admin, alinhando com o que `populate_default_permissions` define para o role admin:
-- `user_management`, `user_management_create`, `user_management_edit`, `user_management_delete`
-- `settings_edit`
-- `system_logs`
-- `project_delete`
+**Causa raiz:** Os `goal.title` no banco ja contem o prefixo "META X -" (ex: "META 1 -- Realizar o planejamento..."). O `GoalsPreview` e o `docxExport.ts` adicionam dinamicamente outro prefixo `META {idx+1} -`, gerando "META 1 -- META 1 -- Realizar...".
 
-## Etapa 2 — Adicionar policies RLS para admin em activities
+**Estrategia:** Remover o prefixo dinamico do codigo (preview e DOCX). Manter o titulo como esta no banco.
 
-Criar 2 novas policies PERMISSIVE em `activities`:
-- "Admins can insert activities": INSERT com `has_role(auth.uid(), 'admin')` OR `has_role(auth.uid(), 'super_admin')`
-- "Admins can update all activities": UPDATE com a mesma logica
+**Arquivos afetados:**
+- `src/components/report/ReportPreviewSection.tsx` -- linha 84: trocar `META {idx + 1} – {goal.title}` por `{goal.title}`
+- `src/lib/docxExport.ts` -- linha 141: trocar `` `META ${idx + 1} – ${goal.title}` `` por `goal.title`
 
-Isso permite que admins criem e editem atividades em qualquer projeto.
+---
 
-## Etapa 3 — Adicionar policy SELECT em profiles para admin
+## 2. DOCX nao Quebra Paragrafos com `\n`
 
-Criar policy PERMISSIVE:
-- "Admins can view all profiles": SELECT com `has_role(auth.uid(), 'admin')` OR `has_role(auth.uid(), 'super_admin')`
+**Causa raiz:** Narrativas longas (objectText, summary, goalNarratives, otherActionsNarrative, communicationNarrative, satisfaction, futureActions, custom content) sao passadas como `text` unico a `new Paragraph()`. Quebras de linha sao ignoradas.
 
-Isso permite que admins vejam perfis de todos os usuarios no frontend (necessario para gestao de usuarios e exibicao de nomes).
+**Correcao:** Criar funcao helper `textToParagraphs(text, options)` que faz `text.split('\n').filter(Boolean).map(...)`. Aplicar em todos os cases do switch que tratam narrativas (object, summary, goals narrative, other, communication, satisfaction, future, custom).
 
-## Etapa 4 — Corrigir warning do Tiptap (menor)
+**Arquivo afetado:** `src/lib/docxExport.ts`
 
-No componente `rich-text-editor.tsx`, remover a extensao `Underline` duplicada do StarterKit ou da importacao avulsa.
+---
 
-## Detalhes Tecnicos
+## 3. Remover alert() / confirm() Nativos
 
-### Migration SQL (Etapas 1-3)
+**Correcao por arquivo:**
 
-```sql
--- Etapa 1: Permissoes faltantes do Raphael
-INSERT INTO public.user_permissions (user_id, permission)
-SELECT '1f296ff9-78c3-481b-b28d-f631f1866e7f', p.perm
-FROM (VALUES 
-  ('user_management'), ('user_management_create'), ('user_management_edit'), ('user_management_delete'),
-  ('settings_edit'), ('system_logs'), ('project_delete')
-) AS p(perm)
-WHERE NOT EXISTS (
-  SELECT 1 FROM user_permissions 
-  WHERE user_id = '1f296ff9-78c3-481b-b28d-f631f1866e7f' AND permission = p.perm::app_permission
-);
+| Arquivo | Linha | De | Para |
+|---|---|---|---|
+| `src/pages/ReportGenerator.tsx` | 63 | `alert('Erro ao exportar PDF...')` | `toast.error('Erro ao exportar PDF...')` |
+| `src/pages/ReportGenerator.tsx` | 81 | `alert('Erro ao exportar DOCX...')` | `toast.error('Erro ao exportar DOCX...')` |
+| `src/pages/ActivityManager.tsx` | 142 | `alert('A data de término...')` | `toast.error('A data de término...')` |
+| `src/pages/Onboarding.tsx` | 104 | `alert('Erro ao criar projeto...')` | `toast.error('Erro ao criar projeto...')` |
+| `src/pages/Onboarding.tsx` | 107 | `alert('Por favor, preencha...')` | `toast.error('Por favor, preencha...')` |
+| `src/hooks/useReportState.tsx` | 154 | `confirm('Tem certeza...')` | Estado + ConfirmDialog |
+| `src/hooks/useJustificationReportState.tsx` | 192 | `confirm('Tem certeza...')` | Estado + ConfirmDialog |
+| `src/components/BatchDeleteProjects.tsx` | 38 | `window.confirm(...)` | Estado + ConfirmDialog |
 
--- Etapa 2: Admin activities policies
-CREATE POLICY "Admins can insert activities"
-ON public.activities FOR INSERT TO authenticated
-WITH CHECK (
-  has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'super_admin'::app_role)
-);
+Para os `confirm()` em hooks (`useReportState`, `useJustificationReportState`): como hooks nao podem renderizar UI, a correcao sera expor estados `pendingRemoveIndex` e `confirmRemoveSection` como retorno do hook, e renderizar o `ConfirmDialog` no componente pai (`ReportGenerator.tsx` e `JustificationReportGenerator.tsx`).
 
-CREATE POLICY "Admins can update all activities"
-ON public.activities FOR UPDATE TO authenticated
-USING (
-  has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'super_admin'::app_role)
-);
+Para `BatchDeleteProjects.tsx`: adicionar estado local + ConfirmDialog inline.
 
--- Etapa 3: Admin profiles SELECT
-CREATE POLICY "Admins can view all profiles"
-ON public.profiles FOR SELECT TO authenticated
-USING (
-  has_role(auth.uid(), 'admin'::app_role) OR has_role(auth.uid(), 'super_admin'::app_role)
-);
-```
+Importar `toast` de `sonner` nos arquivos que usam `alert()`.
 
-### Arquivo a editar (Etapa 4)
-- `src/components/ui/rich-text-editor.tsx`: Remover extensao Underline duplicada
+---
 
-## Resultado Esperado
+## 4. Remover Placeholder Textual "LOGO"
 
-Apos estas correcoes:
-- Raphael tera acesso completo de admin: Gestao de Usuarios, Logs, Configuracoes
-- Admin podera criar/editar atividades em qualquer projeto
-- Admin podera ver perfis de todos os usuarios
-- Warning do console sera eliminado
-- Nivel de maturidade sobe para ~7/10
+**Causa raiz:** `ReportHeader` em `ReportGenerator.tsx` (linhas 91, 94) renderiza `<div>...LOGO</div>` quando nao ha logo. O html2pdf captura esse texto.
 
+**Correcao:** Trocar por `<div className="w-12 h-12" />` (div vazia com dimensoes fixas, sem texto).
+
+**Arquivo afetado:** `src/pages/ReportGenerator.tsx` -- linhas 91 e 94
+
+---
+
+## 5. DOCX Headings com Times New Roman
+
+**Causa raiz:** O estilo global `styles.default.document.run` define Times New Roman para texto normal, mas headings usam estilos do Word (Calibri/Arial por padrao).
+
+**Correcao:** Adicionar `paragraphStyles` customizados para Heading1, Heading2 e Heading3 no bloco `styles` do documento, forcando `font: 'Times New Roman'`.
+
+**Arquivo afetado:** `src/lib/docxExport.ts` -- bloco `styles` (linhas 367-380)
+
+---
+
+## 6. Ajustes ABNT Finais no PDF
+
+**Estado atual do PDF:**
+- Margens: `[30, 20, 25, 30]` (top 30mm, right 20mm, bottom 25mm, left 30mm) -- bottom deveria ser 20mm
+- Paginacao: posicao X calculada incorretamente com `pageWidth - 20 - textWidth`
+- Capa exibe numero de pagina (ABNT: capa nao exibe)
+
+**Correcoes:**
+- Margem bottom: `25` para `20` --> `[30, 20, 20, 30]`
+- Padding inline do preview: `30mm 20mm 25mm 30mm` para `30mm 20mm 20mm 30mm`
+- Paginacao: posicionar com `pdf.text(text, pageWidth - 20, 20)` (alinhamento direito nativo nao e suportado, usar offset fixo a 2cm da borda)
+- Pular pagina 1 (capa) na numeracao: iniciar loop em `i = 2`
+- Texto da paginacao: apenas numero (ex: `"2"`) em vez de `"Página 2 de 5"` (ABNT usa apenas o numero)
+
+**Arquivo afetado:** `src/pages/ReportGenerator.tsx` -- linhas 41, 51-58, 166
+
+---
+
+## Secao Tecnica -- Resumo de Arquivos e Linhas
+
+| Arquivo | Alteracoes |
+|---|---|
+| `src/pages/ReportGenerator.tsx` | alert->toast (2x), logo placeholder (2x), margens PDF, paginacao PDF |
+| `src/lib/docxExport.ts` | Meta title, paragraphs split, heading styles |
+| `src/components/report/ReportPreviewSection.tsx` | Meta title (1 linha) |
+| `src/pages/ActivityManager.tsx` | alert->toast (1x) |
+| `src/pages/Onboarding.tsx` | alert->toast (2x) |
+| `src/hooks/useReportState.tsx` | confirm->estado (1x) |
+| `src/hooks/useJustificationReportState.tsx` | confirm->estado (1x) |
+| `src/components/BatchDeleteProjects.tsx` | window.confirm->ConfirmDialog (1x) |
+
+**Nenhum arquivo fora deste escopo sera tocado.**
+
+---
+
+## Validacao Pos-Correcao
+
+1. Preview do relatorio: metas sem duplicacao no titulo
+2. Exportar PDF: margens corretas, paginacao no canto superior direito sem numero na capa, sem texto "LOGO"
+3. Exportar DOCX: paragrafos quebrados corretamente, headings em Times New Roman, margens ABNT
+4. Console sem erros
+5. Nenhum `alert()` ou `confirm()` restante no codigo
+6. Build sem warnings de TypeScript
