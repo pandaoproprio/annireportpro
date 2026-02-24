@@ -63,7 +63,7 @@ export const JustificationReportGenerator: React.FC = () => {
     try {
       const filename = `Justificativa_Prorrogacao_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       const opt = {
-        margin: [15, 10, 20, 10],
+        margin: [30, 20, 20, 30],
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
@@ -73,15 +73,15 @@ export const JustificationReportGenerator: React.FC = () => {
       const worker = html2pdf().set(opt).from(reportRef.current);
       const pdf = await worker.toPdf().get('pdf');
       const totalPages = pdf.internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
+      for (let i = 2; i <= totalPages; i++) {
         pdf.setPage(i);
-        pdf.setFontSize(9);
-        pdf.setTextColor(128, 128, 128);
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
         const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const text = `Página ${i} de ${totalPages}`;
-        pdf.text(text, (pageWidth - pdf.getTextWidth(text)) / 2, pageHeight - 10);
+        const text = `${i}`;
+        pdf.text(text, pageWidth - 20, 20);
       }
+      pdf.save(filename);
       pdf.save(filename);
       toast.success('PDF exportado com sucesso!');
     } catch (error) {
@@ -208,11 +208,12 @@ export const JustificationReportGenerator: React.FC = () => {
         <div className="bg-muted p-4 md:p-8 rounded-lg overflow-auto no-print animate-fadeIn">
           <div
             ref={reportRef}
-            className="bg-card shadow-2xl p-8 md:p-12 max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 font-serif text-foreground leading-relaxed animate-slideUp"
+            className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp"
+            style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}
           >
             {/* Title */}
             <div className="text-center mb-10">
-              <h1 className="text-xl font-bold uppercase mb-6">
+              <h1 className="text-xl font-bold uppercase mb-6" style={{ textAlign: 'center' }}>
                 Justificativa para Prorrogação de Prazo do Projeto
               </h1>
               <div className="text-left space-y-1 mb-6">
