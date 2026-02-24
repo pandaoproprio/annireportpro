@@ -177,10 +177,10 @@ export const useReportVisualConfig = (projectId: string | undefined, reportType:
     setConfig(prev => ({ ...prev, ...partial }));
   }, []);
 
-  const saveConfig = useCallback(async (showToast = true) => {
+  const saveConfig = useCallback(async (showToast = true, overrideData?: Partial<ReportVisualConfig>) => {
     if (!projectId || !user?.id) return;
 
-    const reportData = { ...config };
+    const reportData = overrideData ? { ...config, ...overrideData } : { ...config };
 
     try {
       if (rowId) {
@@ -225,10 +225,13 @@ export const useReportVisualConfig = (projectId: string | undefined, reportType:
       if (error) { toast.error('Erro ao enviar logo'); return; }
       const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
       const key = position === 'cover' ? 'coverLogo' : position === 'secondary' ? 'logoSecondary' : position === 'center' ? 'logoCenter' : 'logo';
-      updateConfig({ [key]: urlData.publicUrl });
+      const patch = { [key]: urlData.publicUrl };
+      updateConfig(patch);
+      // Auto-save with the new value to ensure persistence
+      await saveConfig(false, patch);
       toast.success('Logo enviado com sucesso');
     } catch { toast.error('Erro ao processar logo'); }
-  }, [projectId, reportType, updateConfig]);
+  }, [projectId, reportType, updateConfig, saveConfig]);
 
   const handleBannerUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files?.[0] || !projectId) return;
@@ -240,10 +243,12 @@ export const useReportVisualConfig = (projectId: string | undefined, reportType:
       const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
       if (error) { toast.error('Erro ao enviar banner'); return; }
       const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
-      updateConfig({ headerBannerUrl: urlData.publicUrl });
+      const patch = { headerBannerUrl: urlData.publicUrl };
+      updateConfig(patch);
+      await saveConfig(false, patch);
       toast.success('Banner enviado com sucesso');
     } catch { toast.error('Erro ao processar banner'); }
-  }, [projectId, reportType, updateConfig]);
+  }, [projectId, reportType, updateConfig, saveConfig]);
 
   return {
     config,
