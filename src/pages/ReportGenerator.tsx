@@ -78,6 +78,7 @@ export const ReportGenerator: React.FC = () => {
         headerBannerUrl, headerLeftText, headerRightText,
         logo, logoSecondary,
         footerText, footerShowAddress, footerShowContact,
+        pageLayouts,
       });
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
