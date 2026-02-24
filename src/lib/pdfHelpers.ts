@@ -23,10 +23,25 @@ export interface TextBlock {
   content: string;
 }
 
+export interface PreloadedImage {
+  data: string;
+  width: number;
+  height: number;
+}
+
+export interface HeaderConfig {
+  bannerImg?: PreloadedImage | null;
+  logoImg?: PreloadedImage | null;
+  logoSecondaryImg?: PreloadedImage | null;
+  headerLeftText?: string;
+  headerRightText?: string;
+}
+
 export interface PdfContext {
   pdf: jsPDF;
   currentY: number;
   pageCount: number;
+  headerConfig?: HeaderConfig;
 }
 
 // ── Context creation ──
@@ -399,13 +414,78 @@ export interface FooterInfo {
   customText?: string;
 }
 
-// ── Footer + page numbers (top-right per ABNT) ──
+// ── Preload header images for reuse on all pages ──
+export const preloadHeaderImages = async (
+  bannerUrl?: string,
+  logoUrl?: string,
+  logoSecondaryUrl?: string,
+): Promise<{ bannerImg: PreloadedImage | null; logoImg: PreloadedImage | null; logoSecondaryImg: PreloadedImage | null }> => {
+  const [bannerImg, logoImg, logoSecondaryImg] = await Promise.all([
+    bannerUrl ? loadImage(bannerUrl) : Promise.resolve(null),
+    logoUrl ? loadImage(logoUrl) : Promise.resolve(null),
+    logoSecondaryUrl ? loadImage(logoSecondaryUrl) : Promise.resolve(null),
+  ]);
+  return { bannerImg, logoImg, logoSecondaryImg };
+};
+
+// ── Render header on a specific page (called in post-pass) ──
+const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
+  const { bannerImg, logoImg, logoSecondaryImg, headerLeftText, headerRightText } = config;
+
+  if (bannerImg) {
+    const bannerW = CW;
+    const bannerAspect = bannerImg.width / bannerImg.height;
+    const bannerH = Math.min(bannerW / bannerAspect, 25);
+    const drawW = bannerH * bannerAspect;
+    const drawX = ML + (CW - drawW) / 2;
+    try { pdf.addImage(bannerImg.data, 'JPEG', drawX, MT - 15, drawW, bannerH); } catch (e) { console.warn('Banner error:', e); }
+    return;
+  }
+
+  // Fallback: logos + text
+  const headerY = MT - 12;
+
+  if (logoImg) {
+    const logoH = 12;
+    const logoW = logoH * (logoImg.width / logoImg.height);
+    try { pdf.addImage(logoImg.data, 'JPEG', ML, headerY, logoW, logoH); } catch (e) { /* skip */ }
+  }
+
+  if (headerLeftText) {
+    pdf.setFontSize(8);
+    pdf.setFont('times', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(headerLeftText, ML + 15, headerY + 8);
+    pdf.setTextColor(0);
+  }
+
+  if (logoSecondaryImg) {
+    const logoH = 12;
+    const logoW = logoH * (logoSecondaryImg.width / logoSecondaryImg.height);
+    try { pdf.addImage(logoSecondaryImg.data, 'JPEG', PAGE_W - MR - logoW, headerY, logoW, logoH); } catch (e) { /* skip */ }
+  }
+
+  if (headerRightText) {
+    pdf.setFontSize(8);
+    pdf.setFont('times', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(headerRightText, PAGE_W - MR, headerY + 8, { align: 'right' });
+    pdf.setTextColor(0);
+  }
+};
+
+// ── Footer + page numbers + headers (top-right per ABNT) ──
 export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPage1 = false, footerInfo?: FooterInfo): void => {
-  const { pdf, pageCount } = ctx;
+  const { pdf, pageCount, headerConfig } = ctx;
   const info = footerInfo || { orgName };
 
   for (let p = 1; p <= pageCount; p++) {
     pdf.setPage(p);
+
+    // ── Header on every page ──
+    if (headerConfig) {
+      renderHeaderOnPage(pdf, headerConfig);
+    }
 
     // Page number – top right, 2 cm from edge
     if (!(skipPage1 && p === 1)) {

@@ -6,6 +6,7 @@ import {
   createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem,
   addSectionTitle, addFooterAndPageNumbers, addSignatureBlock,
   loadImage, addPhotoGrid, addPhotoLayout, parseHtmlToBlocks, PdfContext,
+  preloadHeaderImages,
   PAGE_W, PAGE_H, ML, MR, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION, MT,
 } from '@/lib/pdfHelpers';
 
@@ -47,71 +48,7 @@ const formatActivityDate = (date: string, endDate?: string) => {
   return start;
 };
 
-// ── Render header (banner or logos+text) at the top of a page ──
-const addHeader = async (ctx: PdfContext, data: ReportPdfExportData): Promise<void> => {
-  const { pdf } = ctx;
-  const { headerBannerUrl, logo, logoSecondary, headerLeftText, headerRightText } = data;
-
-  if (headerBannerUrl) {
-    const bannerImg = await loadImage(headerBannerUrl);
-    if (bannerImg) {
-      const bannerW = CW;
-      const bannerAspect = bannerImg.width / bannerImg.height;
-      const bannerH = Math.min(bannerW / bannerAspect, 25); // max ~25mm height
-      const drawW = bannerH * bannerAspect;
-      const drawX = ML + (CW - drawW) / 2;
-      try { pdf.addImage(bannerImg.data, 'JPEG', drawX, MT - 15, drawW, bannerH); } catch (e) { console.warn('Banner error:', e); }
-      ctx.currentY = MT - 15 + bannerH + 4;
-      return;
-    }
-  }
-
-  // Fallback: logos + text
-  let hasHeader = false;
-  const headerY = MT - 12;
-
-  if (logo) {
-    const logoImg = await loadImage(logo);
-    if (logoImg) {
-      const logoH = 12;
-      const logoW = logoH * (logoImg.width / logoImg.height);
-      try { pdf.addImage(logoImg.data, 'JPEG', ML, headerY, logoW, logoH); } catch (e) { /* skip */ }
-      hasHeader = true;
-    }
-  }
-
-  if (headerLeftText) {
-    pdf.setFontSize(8);
-    pdf.setFont('times', 'normal');
-    pdf.setTextColor(100, 100, 100);
-    pdf.text(headerLeftText, ML + 15, headerY + 8);
-    pdf.setTextColor(0);
-    hasHeader = true;
-  }
-
-  if (logoSecondary) {
-    const logoImg = await loadImage(logoSecondary);
-    if (logoImg) {
-      const logoH = 12;
-      const logoW = logoH * (logoImg.width / logoImg.height);
-      try { pdf.addImage(logoImg.data, 'JPEG', PAGE_W - MR - logoW, headerY, logoW, logoH); } catch (e) { /* skip */ }
-      hasHeader = true;
-    }
-  }
-
-  if (headerRightText) {
-    pdf.setFontSize(8);
-    pdf.setFont('times', 'normal');
-    pdf.setTextColor(100, 100, 100);
-    pdf.text(headerRightText, PAGE_W - MR, headerY + 8, { align: 'right' });
-    pdf.setTextColor(0);
-    hasHeader = true;
-  }
-
-  if (hasHeader) {
-    ctx.currentY = headerY + 16;
-  }
-};
+// addHeader removed — headers are now rendered in the post-pass via addFooterAndPageNumbers
 
 export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void> => {
   const {
@@ -124,6 +61,8 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     photoMetadata = {},
     coverTitle: customCoverTitle,
     coverSubtitle,
+    headerBannerUrl, headerLeftText, headerRightText,
+    logo, logoSecondary,
     footerText,
     footerShowAddress,
     footerShowContact,
@@ -141,7 +80,20 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     }
   };
 
+  // ── Preload header images once for reuse on ALL pages ──
+  const { bannerImg, logoImg, logoSecondaryImg } = await preloadHeaderImages(
+    headerBannerUrl, logo, logoSecondary,
+  );
+
   const ctx = createPdfContext();
+  // Store header config in context so the post-pass renders it on every page
+  ctx.headerConfig = {
+    bannerImg,
+    logoImg,
+    logoSecondaryImg,
+    headerLeftText,
+    headerRightText,
+  };
   const { pdf } = ctx;
 
   // Helper to render HTML content from rich-text editor
@@ -198,8 +150,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // COVER PAGE
   // ══════════════════════════════════════════════════════════════
 
-  // Header on cover page
-  await addHeader(ctx, data);
+  // Headers are rendered in the post-pass (addFooterAndPageNumbers) on ALL pages
 
   ctx.currentY = PAGE_H / 2 - 40;
 
@@ -253,8 +204,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // ══════════════════════════════════════════════════════════════
   addPage(ctx);
 
-  // Header on first content page
-  await addHeader(ctx, data);
+  // Headers rendered in the post-pass
 
   for (const section of sections) {
     if (!section.isVisible) continue;
