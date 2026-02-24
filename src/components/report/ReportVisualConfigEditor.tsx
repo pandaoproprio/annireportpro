@@ -407,6 +407,19 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
                 </div>
               </div>
 
+              {/* Alignment */}
+              <div className="space-y-1">
+                <Label className="text-xs font-medium">Alinhamento</Label>
+                <Select value={config.footerAlignment || 'center'} onValueChange={v => updateConfig({ footerAlignment: v as 'left' | 'center' | 'right' })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="left">Esquerda</SelectItem>
+                    <SelectItem value="center">Centralizado</SelectItem>
+                    <SelectItem value="right">Direita</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Spacing controls */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -420,8 +433,8 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
               </div>
 
               {/* Preview */}
-              <div className="bg-background rounded-lg p-3 text-center space-y-0 border">
-                <p className="text-[10px] text-muted-foreground mb-1 font-medium">Pré-visualização:</p>
+              <div className="bg-background rounded-lg p-3 space-y-0 border" style={{ textAlign: (config.footerAlignment || 'center') as 'left' | 'center' | 'right' }}>
+                <p className="text-[10px] text-muted-foreground mb-1 font-medium text-center">Pré-visualização:</p>
                 <p className="font-bold" style={{ fontSize: `${config.footerLine1FontSize}pt`, lineHeight: `${config.footerLineSpacing * 1.5 + config.footerLine1FontSize}pt` }}>
                   {config.footerLine1Text || organizationName}
                 </p>

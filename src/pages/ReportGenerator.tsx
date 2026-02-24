@@ -139,8 +139,9 @@ export const ReportGenerator: React.FC = () => {
 
   const ReportFooter = React.forwardRef<HTMLDivElement>((_, ref) => {
     const instEnabled = config.footerInstitutionalEnabled !== false;
+    const footerAlign = config.footerAlignment || 'center';
     return (
-      <div ref={ref} className="mt-8 pt-4 border-t text-center print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2" style={{ paddingTop: `${config.footerTopSpacing || 4}px` }}>
+      <div ref={ref} className="mt-8 pt-4 border-t print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2" style={{ paddingTop: `${config.footerTopSpacing || 4}px`, textAlign: footerAlign }}>
         {instEnabled && (
           <div className="space-y-0">
             <p className="font-bold" style={{ fontSize: `${config.footerLine1FontSize || 9}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
