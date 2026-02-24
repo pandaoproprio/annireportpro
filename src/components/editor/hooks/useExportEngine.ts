@@ -1,21 +1,39 @@
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { DocumentModel } from '@/types/document';
 import { toast } from 'sonner';
+import { generatePdf } from '../export/pdfExport';
+import { generateDocx } from '../export/docxExport';
 
-/**
- * Export engine stub — Phase 3 will implement full @react-pdf/renderer + DOCX export.
- * For now, provides the interface and a placeholder.
- */
 export const useExportEngine = (model: DocumentModel, title: string) => {
+  const [isExporting, setIsExporting] = useState(false);
+
   const exportPdf = useCallback(async () => {
-    toast.info('Exportação PDF será implementada na Fase 3');
-    // Phase 3: Use @react-pdf/renderer to generate PDF from model
+    setIsExporting(true);
+    try {
+      toast.info('Gerando PDF...');
+      await generatePdf(model, title);
+      toast.success('PDF exportado com sucesso!');
+    } catch (e) {
+      console.error('PDF export error:', e);
+      toast.error('Erro ao exportar PDF');
+    } finally {
+      setIsExporting(false);
+    }
   }, [model, title]);
 
   const exportDocx = useCallback(async () => {
-    toast.info('Exportação DOCX será implementada na Fase 3');
-    // Phase 3: Use docx library to generate DOCX from model
+    setIsExporting(true);
+    try {
+      toast.info('Gerando DOCX...');
+      await generateDocx(model, title);
+      toast.success('DOCX exportado com sucesso!');
+    } catch (e) {
+      console.error('DOCX export error:', e);
+      toast.error('Erro ao exportar DOCX');
+    } finally {
+      setIsExporting(false);
+    }
   }, [model, title]);
 
-  return { exportPdf, exportDocx };
+  return { exportPdf, exportDocx, isExporting };
 };
