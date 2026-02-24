@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTeamReports, TeamReportDraft } from '@/hooks/useTeamReports';
+import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
+import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
 import { TeamReport, PhotoWithCaption } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,6 +58,7 @@ import {
 
 export const TeamReportGenerator: React.FC = () => {
   const { activeProject: project } = useAppData();
+  const vc = useReportVisualConfig(project?.id, 'report_team');
   const { user } = useAuth();
   const navigate = useNavigate();
   const { drafts, isLoading: isDraftsLoading, isSaving, saveDraft, deleteDraft } = useTeamReports(project?.id);
@@ -341,7 +344,7 @@ export const TeamReportGenerator: React.FC = () => {
         updatedAt: new Date().toISOString(),
       };
 
-      await exportTeamReportToPdf({ project, report: reportData });
+      await exportTeamReportToPdf({ project, report: reportData, visualConfig: vc.config });
       toast.success('Relatório PDF exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
@@ -507,6 +510,20 @@ export const TeamReportGenerator: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Visual Config (Header/Footer) */}
+        <ReportVisualConfigEditor
+          config={vc.config}
+          updateConfig={vc.updateConfig}
+          onSave={() => vc.saveConfig()}
+          onLogoUpload={vc.handleLogoUpload}
+          onBannerUpload={vc.handleBannerUpload}
+          organizationName={project.organizationName}
+          organizationAddress={project.organizationAddress}
+          organizationEmail={project.organizationEmail}
+          organizationPhone={project.organizationPhone}
+          organizationWebsite={project.organizationWebsite}
+        />
 
         {/* Identification Section */}
         <Card>

@@ -346,7 +346,8 @@ export type Database = {
           id: string
           project_id: string
           report_data: Json
-          template_id: string
+          report_type: string | null
+          template_id: string | null
           updated_at: string
         }
         Insert: {
@@ -355,7 +356,8 @@ export type Database = {
           id?: string
           project_id: string
           report_data?: Json
-          template_id: string
+          report_type?: string | null
+          template_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -364,7 +366,8 @@ export type Database = {
           id?: string
           project_id?: string
           report_data?: Json
-          template_id?: string
+          report_type?: string | null
+          template_id?: string | null
           updated_at?: string
         }
         Relationships: [

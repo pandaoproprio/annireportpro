@@ -9,8 +9,10 @@ import { toast } from 'sonner';
 import { exportJustificationToDocx } from '@/lib/justificationDocxExport';
 import { exportJustificationToPdf } from '@/lib/justificationPdfExport';
 import { useJustificationReportState } from '@/hooks/useJustificationReportState';
+import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportStructureEditor } from '@/components/report/ReportStructureEditor';
+import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
 import { JustificationEditSection } from '@/components/justification/JustificationEditSection';
 import { JustificationPreviewSection } from '@/components/justification/JustificationPreviewSection';
 import { JustificationDraftsList } from '@/components/justification/JustificationDraftsList';
@@ -19,6 +21,8 @@ export const JustificationReportGenerator: React.FC = () => {
   const state = useJustificationReportState();
   const reportRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+
+  const vc = useReportVisualConfig(state.project?.id, 'justification');
 
   const {
     project, mode, setMode, isExporting, setIsExporting, exportType, setExportType,
@@ -63,7 +67,7 @@ export const JustificationReportGenerator: React.FC = () => {
     setIsExporting(true);
     setExportType('pdf');
     try {
-      await exportJustificationToPdf({ project, report: buildReportData() });
+      await exportJustificationToPdf({ project, report: buildReportData(), visualConfig: vc.config });
       toast.success('PDF exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
@@ -126,6 +130,19 @@ export const JustificationReportGenerator: React.FC = () => {
             updateSectionTitle={updateSectionTitle}
             removeSection={removeSection}
             addCustomSection={addCustomSection}
+          />
+
+          <ReportVisualConfigEditor
+            config={vc.config}
+            updateConfig={vc.updateConfig}
+            onSave={() => vc.saveConfig()}
+            onLogoUpload={vc.handleLogoUpload}
+            onBannerUpload={vc.handleBannerUpload}
+            organizationName={project.organizationName}
+            organizationAddress={project.organizationAddress}
+            organizationEmail={project.organizationEmail}
+            organizationPhone={project.organizationPhone}
+            organizationWebsite={project.organizationWebsite}
           />
 
           {/* Project Info */}

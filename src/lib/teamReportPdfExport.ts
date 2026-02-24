@@ -4,13 +4,15 @@ import { ptBR } from 'date-fns/locale';
 import {
   createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem,
   addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock,
-  parseHtmlToBlocks, loadImage,
+  parseHtmlToBlocks, loadImage, preloadHeaderImages,
   PAGE_W, ML, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION,
 } from '@/lib/pdfHelpers';
+import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
 
 interface TeamReportExportData {
   project: Project;
   report: TeamReport;
+  visualConfig?: ReportVisualConfig;
 }
 
 const formatPeriod = (start: string, end: string) => {
@@ -22,8 +24,20 @@ const formatPeriod = (start: string, end: string) => {
 };
 
 export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise<void> => {
-  const { project, report } = data;
+  const { project, report, visualConfig: vc } = data;
+
+  // Preload header images if visual config exists
+  const { bannerImg, logoImg, logoSecondaryImg, logoCenterImg } = await preloadHeaderImages(
+    vc?.headerBannerUrl, vc?.logo, vc?.logoSecondary, vc?.logoCenter,
+  );
+
   const ctx = createPdfContext();
+  
+  // Set header config for post-pass rendering
+  if (vc && (bannerImg || logoImg || logoCenterImg || logoSecondaryImg)) {
+    ctx.headerConfig = { bannerImg, logoImg, logoSecondaryImg, logoCenterImg, headerLeftText: vc.headerLeftText, headerRightText: vc.headerRightText };
+  }
+
   const { pdf } = ctx;
 
   // Identification bullet (simple label: value)
@@ -149,7 +163,16 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   ]);
 
   // ── Footer + page numbers ──
-  addFooterAndPageNumbers(ctx, footerContent, false);
+  const footerInfo = vc ? {
+    orgName: project.organizationName,
+    address: vc.footerShowAddress ? project.organizationAddress : undefined,
+    website: vc.footerShowContact ? project.organizationWebsite : undefined,
+    email: vc.footerShowContact ? project.organizationEmail : undefined,
+    phone: vc.footerShowContact ? project.organizationPhone : undefined,
+    customText: vc.footerText,
+    alignment: vc.footerAlignment,
+  } : { orgName: footerContent };
+  addFooterAndPageNumbers(ctx, footerContent, false, footerInfo);
 
   // Save
   const memberName = report.responsibleName.replace(/\s+/g, '_');
