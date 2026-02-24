@@ -47,6 +47,7 @@ export const ReportGenerator: React.FC = () => {
         otherActionsNarrative, otherActionsPhotos,
         communicationNarrative, communicationPhotos,
         satisfaction, futureActions, expenses, links,
+        sectionPhotos,
       });
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
