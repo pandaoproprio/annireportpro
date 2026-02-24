@@ -1,10 +1,11 @@
 import { Project, Activity, ActivityType, ExpenseItem, ReportSection, ReportPhotoMeta } from '@/types';
+import { PageLayout } from '@/types/imageLayout';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem,
   addSectionTitle, addFooterAndPageNumbers, addSignatureBlock,
-  loadImage, addPhotoGrid, parseHtmlToBlocks, PdfContext,
+  loadImage, addPhotoGrid, addPhotoLayout, parseHtmlToBlocks, PdfContext,
   PAGE_W, PAGE_H, ML, MR, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION, MT,
 } from '@/lib/pdfHelpers';
 
@@ -37,6 +38,7 @@ export interface ReportPdfExportData {
   footerText?: string;
   footerShowAddress?: boolean;
   footerShowContact?: boolean;
+  pageLayouts?: Record<string, PageLayout>;
 }
 
 const formatActivityDate = (date: string, endDate?: string) => {
@@ -125,7 +127,19 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     footerText,
     footerShowAddress,
     footerShowContact,
+    pageLayouts = {},
   } = data;
+
+  // Helper: render photos using layout if available, otherwise fallback to grid
+  const renderPhotos = async (photos: string[], sectionKey: string, label: string, captions?: string[]) => {
+    if (photos.length === 0) return;
+    const layout = pageLayouts[sectionKey];
+    if (layout && layout.images && layout.images.length > 0) {
+      await addPhotoLayout(ctx, layout, label);
+    } else {
+      await addPhotoGrid(ctx, photos, label, captions);
+    }
+  };
 
   const ctx = createPdfContext();
   const { pdf } = ctx;
@@ -282,7 +296,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
           if (allGoalPhotos.length > 0) {
             const goalMetas = photoMetadata[goal.id] || [];
             const captions = allGoalPhotos.map((_, i) => goalMetas[i]?.caption || `Foto ${i + 1}`);
-            await addPhotoGrid(ctx, allGoalPhotos, goal.title, captions);
+            await renderPhotos(allGoalPhotos, goal.id, goal.title, captions);
           }
         }
         break;
@@ -309,7 +323,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         if (otherPhotosAll.length > 0) {
           const otherMetas = photoMetadata['other'] || [];
           const captions = otherPhotosAll.map((_, i) => otherMetas[i]?.caption || `Foto ${i + 1}`);
-          await addPhotoGrid(ctx, otherPhotosAll, 'OUTRAS AÇÕES', captions);
+          await renderPhotos(otherPhotosAll, 'other', 'OUTRAS AÇÕES', captions);
         }
         break;
       }
@@ -336,7 +350,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         if (commPhotosAll.length > 0) {
           const commMetas = photoMetadata['communication'] || [];
           const captions = commPhotosAll.map((_, i) => commMetas[i]?.caption || `Foto ${i + 1}`);
-          await addPhotoGrid(ctx, commPhotosAll, 'PUBLICAÇÕES E DIVULGAÇÃO', captions);
+          await renderPhotos(commPhotosAll, 'communication', 'PUBLICAÇÕES E DIVULGAÇÃO', captions);
         }
         break;
       }
@@ -439,7 +453,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
       const secKey = sectionPhotos[section.key] ? section.key : section.id;
       const secMetas = photoMetadata[secKey] || [];
       const captions = secPhotos.map((_, i) => secMetas[i]?.caption || `Foto ${i + 1}`);
-      await addPhotoGrid(ctx, secPhotos, section.title, captions);
+      await renderPhotos(secPhotos, secKey, section.title, captions);
     }
   }
 

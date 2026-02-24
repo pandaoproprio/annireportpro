@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { PageLayout, ImageLayoutItem } from '@/types/imageLayout';
 
 // ══════════════════════════════════════════════════════════════
 // ABNT NBR 14724 constants — SINGLE SOURCE OF TRUTH
@@ -313,6 +314,79 @@ export const addPhotoGrid = async (
 
     ctx.currentY = rowY + photoH + CAPTION_H + 4;
   }
+};
+
+// ── Render photos using advanced Konva layout (coordinates in mm) ──
+export const addPhotoLayout = async (
+  ctx: PdfContext,
+  layout: PageLayout,
+  sectionLabel: string,
+): Promise<void> => {
+  if (!layout.images || layout.images.length === 0) return;
+
+  const { pdf } = ctx;
+
+  // Start on a new page for the layout
+  addPage(ctx);
+
+  // Section title at top
+  pdf.setFontSize(FONT_BODY);
+  pdf.setFont('times', 'bold');
+  const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
+  pdf.text(titleText, ML, ctx.currentY);
+  ctx.currentY += LINE_H + 4;
+
+  // Sort by zIndex for correct layering
+  const sorted = [...layout.images].sort((a, b) => a.zIndex - b.zIndex);
+
+  for (const item of sorted) {
+    const imgData = await loadImage(item.src);
+    if (!imgData) continue;
+
+    // Draw border rectangle if borderWidth > 0
+    if (item.borderWidth > 0) {
+      const hexToRgb = (hex: string) => {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return [r, g, b] as const;
+      };
+      const [br, bg, bb] = hexToRgb(item.borderColor || '#000000');
+      pdf.setDrawColor(br, bg, bb);
+      pdf.setLineWidth(item.borderWidth);
+      pdf.rect(
+        item.x - item.borderWidth / 2,
+        item.y - item.borderWidth / 2,
+        item.width + item.borderWidth,
+        item.height + item.borderWidth,
+        'S'
+      );
+    }
+
+    // Draw image at exact mm coordinates
+    try {
+      pdf.addImage(imgData.data, 'JPEG', item.x, item.y, item.width, item.height);
+    } catch (e) {
+      console.warn('Layout image error:', e);
+    }
+
+    // Caption below image
+    if (item.caption) {
+      pdf.setFontSize(FONT_CAPTION);
+      pdf.setFont('times', 'italic');
+      pdf.setTextColor(0);
+      const capX = item.x + item.width / 2;
+      const capY = item.y + item.height + 4;
+      const capLines: string[] = pdf.splitTextToSize(item.caption, item.width);
+      for (let cl = 0; cl < Math.min(capLines.length, 2); cl++) {
+        pdf.text(capLines[cl], capX, capY + cl * 4, { align: 'center' });
+      }
+    }
+  }
+
+  // Update currentY to after the lowest image
+  const maxBottom = Math.max(...sorted.map(i => i.y + i.height + (i.caption ? 10 : 0)));
+  ctx.currentY = maxBottom + 4;
 };
 
 // ── Footer info for rich footer ──
