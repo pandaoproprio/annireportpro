@@ -39,6 +39,17 @@ export interface HeaderConfig {
   logoCenterImg?: PreloadedImage | null;
   headerLeftText?: string;
   headerRightText?: string;
+  // Advanced controls
+  logoVisible?: boolean;
+  logoCenterVisible?: boolean;
+  logoSecondaryVisible?: boolean;
+  logoWidthMm?: number;
+  logoCenterWidthMm?: number;
+  logoSecondaryWidthMm?: number;
+  logoAlignment?: 'left' | 'center' | 'right' | 'space-between' | 'space-around';
+  logoGapMm?: number;
+  topPaddingMm?: number;
+  headerHeightMm?: number;
 }
 
 export interface PdfContext {
@@ -65,13 +76,16 @@ export const addPage = (ctx: PdfContext): void => {
 // Calculate where content should start based on header config
 export const getContentStartY = (ctx: PdfContext): number => {
   if (!ctx.headerConfig) return MT;
+  const topPad = ctx.headerConfig.topPaddingMm ?? HEADER_TOP_Y;
+  const headerH = ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H;
   if (ctx.headerConfig.bannerImg) {
-    // Banner at y=5, max height=20 → bottom at ~25, content starts at 28
-    return HEADER_TOP_Y + HEADER_BANNER_H + 8;
+    return topPad + headerH + 8;
   }
-  if (ctx.headerConfig.logoImg || ctx.headerConfig.logoSecondaryImg) {
-    // Logos at y=8, height=12 → bottom at ~20, content starts at 24
-    return HEADER_TOP_Y + 3 + HEADER_LOGO_H + 4;
+  const hasAnyLogo = (ctx.headerConfig.logoImg && ctx.headerConfig.logoVisible !== false)
+    || (ctx.headerConfig.logoCenterImg && ctx.headerConfig.logoCenterVisible !== false)
+    || (ctx.headerConfig.logoSecondaryImg && ctx.headerConfig.logoSecondaryVisible !== false);
+  if (hasAnyLogo) {
+    return topPad + 3 + (headerH || HEADER_LOGO_H) + 4;
   }
   return MT;
 };
@@ -453,36 +467,71 @@ export const preloadHeaderImages = async (
 // ── Render header on a specific page (called in post-pass) ──
 const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
   const { bannerImg, logoImg, logoSecondaryImg, logoCenterImg, headerLeftText, headerRightText } = config;
+  const topY = config.topPaddingMm ?? HEADER_TOP_Y;
+  const maxH = config.headerHeightMm ?? HEADER_BANNER_H;
 
   if (bannerImg) {
     const bannerAspect = bannerImg.width / bannerImg.height;
-    const bannerH = Math.min(CW / bannerAspect, HEADER_BANNER_H);
+    const bannerH = Math.min(CW / bannerAspect, maxH);
     const drawW = bannerH * bannerAspect;
     const drawX = ML + (CW - drawW) / 2;
-    try { pdf.addImage(bannerImg.data, 'JPEG', drawX, HEADER_TOP_Y, drawW, bannerH); } catch (e) { console.warn('Banner error:', e); }
+    try { pdf.addImage(bannerImg.data, 'JPEG', drawX, topY, drawW, bannerH); } catch (e) { console.warn('Banner error:', e); }
     return;
   }
 
   // Fallback: logos + text
-  const headerY = HEADER_TOP_Y + 3;
-  const hasAnyLogo = logoImg || logoCenterImg || logoSecondaryImg;
+  const headerY = topY + 3;
+  const logoVisible = config.logoVisible !== false;
+  const logoCenterVisible = config.logoCenterVisible !== false;
+  const logoSecVisible = config.logoSecondaryVisible !== false;
+  const logoH = Math.min(maxH, HEADER_LOGO_H);
+  const gap = config.logoGapMm ?? 0;
+  const alignment = config.logoAlignment ?? 'space-between';
 
-  if (hasAnyLogo) {
-    // Three-logo layout: left, center, right — evenly spaced across CW
-    if (logoImg) {
-      const logoW = HEADER_LOGO_H * (logoImg.width / logoImg.height);
-      try { pdf.addImage(logoImg.data, 'JPEG', ML, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
+  // Collect visible logos with their computed widths
+  const logos: { img: PreloadedImage; computedW: number; position: 'left' | 'center' | 'right' }[] = [];
+  if (logoImg && logoVisible) {
+    const w = config.logoWidthMm ?? logoH * (logoImg.width / logoImg.height);
+    const h = w / (logoImg.width / logoImg.height);
+    logos.push({ img: logoImg, computedW: w, position: 'left' });
+  }
+  if (logoCenterImg && logoCenterVisible) {
+    const w = config.logoCenterWidthMm ?? logoH * (logoCenterImg.width / logoCenterImg.height);
+    logos.push({ img: logoCenterImg, computedW: w, position: 'center' });
+  }
+  if (logoSecondaryImg && logoSecVisible) {
+    const w = config.logoSecondaryWidthMm ?? logoH * (logoSecondaryImg.width / logoSecondaryImg.height);
+    logos.push({ img: logoSecondaryImg, computedW: w, position: 'right' });
+  }
+
+  if (logos.length > 0) {
+    const totalLogosW = logos.reduce((s, l) => s + l.computedW, 0);
+    const totalGapW = (logos.length - 1) * gap;
+
+    let startX = ML;
+    let effectiveGap = gap;
+
+    if (alignment === 'space-between' && logos.length > 1) {
+      effectiveGap = (CW - totalLogosW) / (logos.length - 1);
+      startX = ML;
+    } else if (alignment === 'space-around' && logos.length > 0) {
+      effectiveGap = (CW - totalLogosW) / (logos.length + 1);
+      startX = ML + effectiveGap;
+    } else if (alignment === 'center') {
+      startX = ML + (CW - totalLogosW - totalGapW) / 2;
+      effectiveGap = gap;
+    } else if (alignment === 'right') {
+      startX = ML + CW - totalLogosW - totalGapW;
+      effectiveGap = gap;
+    } else {
+      effectiveGap = gap;
     }
 
-    if (logoCenterImg) {
-      const logoW = HEADER_LOGO_H * (logoCenterImg.width / logoCenterImg.height);
-      const cx = ML + (CW - logoW) / 2;
-      try { pdf.addImage(logoCenterImg.data, 'JPEG', cx, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
-    }
-
-    if (logoSecondaryImg) {
-      const logoW = HEADER_LOGO_H * (logoSecondaryImg.width / logoSecondaryImg.height);
-      try { pdf.addImage(logoSecondaryImg.data, 'JPEG', PAGE_W - MR - logoW, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
+    let cx = startX;
+    for (const logo of logos) {
+      const h = logo.computedW / (logo.img.width / logo.img.height);
+      try { pdf.addImage(logo.img.data, 'JPEG', cx, headerY, logo.computedW, Math.min(h, logoH)); } catch (e) { /* skip */ }
+      cx += logo.computedW + effectiveGap;
     }
   }
 
@@ -490,7 +539,7 @@ const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
     pdf.setFontSize(8);
     pdf.setFont('times', 'normal');
     pdf.setTextColor(100, 100, 100);
-    pdf.text(headerLeftText, ML + (logoImg ? 15 : 0), headerY + 8);
+    pdf.text(headerLeftText, ML + (logoImg && logoVisible ? 15 : 0), headerY + 8);
     pdf.setTextColor(0);
   }
 

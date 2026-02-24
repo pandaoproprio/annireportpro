@@ -56,18 +56,7 @@ export const ReportGenerator: React.FC = () => {
         communicationNarrative, communicationPhotos,
         satisfaction, futureActions, expenses, links,
         sectionPhotos, photoMetadata,
-        coverTitle: vc.config.coverTitle,
-        coverSubtitle: vc.config.coverSubtitle,
-        headerBannerUrl: vc.config.headerBannerUrl,
-        headerLeftText: vc.config.headerLeftText,
-        headerRightText: vc.config.headerRightText,
-        logo: vc.config.logo,
-        logoSecondary: vc.config.logoSecondary,
-        logoCenter: vc.config.logoCenter,
-        footerText: vc.config.footerText,
-        footerShowAddress: vc.config.footerShowAddress,
-        footerShowContact: vc.config.footerShowContact,
-        footerAlignment: vc.config.footerAlignment,
+        visualConfig: vc.config,
         pageLayouts,
       });
     } catch (error) {
@@ -100,27 +89,44 @@ export const ReportGenerator: React.FC = () => {
 
   const { config } = vc;
 
+  // Build justify-content from alignment
+  const logoJustify = config.headerLogoAlignment === 'left' ? 'flex-start'
+    : config.headerLogoAlignment === 'right' ? 'flex-end'
+    : config.headerLogoAlignment === 'center' ? 'center'
+    : config.headerLogoAlignment; // space-between, space-around
+
   const ReportHeader = () => (
-    <div className="mb-6 pb-4 border-b print:border-b-0">
+    <div className="mb-6 pb-4 border-b print:border-b-0" style={{ paddingTop: `${config.headerTopPadding}px`, minHeight: `${config.headerHeight * 2}px` }}>
       {config.headerBannerUrl ? (
-        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full h-auto max-h-24 object-contain" />
+        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full h-auto object-contain" style={{ maxHeight: `${config.headerHeight * 3}px` }} />
       ) : (
-        <div className="flex justify-between items-center">
+        <div className="flex items-center" style={{ justifyContent: logoJustify, gap: `${config.headerLogoGap * 2}px` }}>
           <div className="flex items-center gap-3">
-            {config.logo ? <img src={config.logo} alt="Logo" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
+            {config.logo && config.logoConfig.visible && (
+              <img src={config.logo} alt="Logo" className="object-contain" style={{ width: `${config.logoConfig.widthMm * 2.5}px` }} />
+            )}
             {config.headerLeftText && <span className="text-xs text-muted-foreground">{config.headerLeftText}</span>}
           </div>
           <div className="flex items-center justify-center">
-            {config.logoCenter ? <img src={config.logoCenter} alt="Logo Centro" className="h-12 object-contain" /> : null}
+            {config.logoCenter && config.logoCenterConfig.visible && (
+              <img src={config.logoCenter} alt="Logo Centro" className="object-contain" style={{ width: `${config.logoCenterConfig.widthMm * 2.5}px` }} />
+            )}
           </div>
           <div className="flex items-center gap-3">
             {config.headerRightText && <span className="text-xs text-muted-foreground">{config.headerRightText}</span>}
-            {config.logoSecondary ? <img src={config.logoSecondary} alt="Logo Secundário" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
+            {config.logoSecondary && config.logoSecondaryConfig.visible && (
+              <img src={config.logoSecondary} alt="Logo Secundário" className="object-contain" style={{ width: `${config.logoSecondaryConfig.widthMm * 2.5}px` }} />
+            )}
           </div>
         </div>
       )}
     </div>
   );
+
+  const coverTitleAlign = config.coverTitleAlignment || 'center';
+  const coverSubAlign = config.coverSubtitleAlignment || 'center';
+  const coverOrgAlign = config.coverOrgAlignment || 'center';
+  const coverFomentoAlign = config.coverFomentoAlignment || 'center';
 
   const ReportFooter = React.forwardRef<HTMLDivElement>((_, ref) => (
     <div ref={ref} className="mt-8 pt-4 border-t text-xs text-muted-foreground print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2" style={{ textAlign: config.footerAlignment }}>
@@ -215,12 +221,32 @@ export const ReportGenerator: React.FC = () => {
           <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
             <div className="flex flex-col items-center justify-center min-h-[800px] pb-10 mb-10 page-break">
               <ReportHeader />
-              <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <h2 className="text-xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>{config.coverTitle || 'Relatório Parcial de Cumprimento do Objeto'}</h2>
-                {config.coverSubtitle && <p className="text-base mb-4" style={{ textAlign: 'center' }}>{config.coverSubtitle}</p>}
-                <h1 className="text-2xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>{project.name}</h1>
-                <h3 className="text-lg mb-8" style={{ textAlign: 'center' }}>Termo de Fomento nº {project.fomentoNumber}</h3>
-                <p className="text-lg font-semibold" style={{ textAlign: 'center' }}>{project.organizationName}</p>
+              <div className="flex-1 flex flex-col items-center justify-center w-full" style={{ gap: `${config.coverSpacingLogoTitle}px`, lineHeight: config.coverLineSpacing }}>
+                <h2
+                  className="uppercase mb-2 w-full"
+                  style={{
+                    textAlign: coverTitleAlign,
+                    fontSize: `${config.coverTitleFontSize}pt`,
+                    fontWeight: config.coverTitleBold ? 'bold' : 'normal',
+                    fontStyle: config.coverTitleItalic ? 'italic' : 'normal',
+                  }}
+                >
+                  {config.coverTitle || 'Relatório Parcial de Cumprimento do Objeto'}
+                </h2>
+                {!config.coverHideSubtitle && config.coverSubtitle && (
+                  <p className="w-full" style={{ textAlign: coverSubAlign, fontSize: `${config.coverSubtitleFontSize}pt`, marginBottom: `${config.coverSpacingTitleSubtitle}px` }}>
+                    {config.coverSubtitle}
+                  </p>
+                )}
+                <h1 className="text-2xl font-bold uppercase mb-4 w-full" style={{ textAlign: coverTitleAlign }}>{project.name}</h1>
+                {!config.coverHideFomento && (
+                  <h3 className="text-lg w-full" style={{ textAlign: coverFomentoAlign, marginBottom: `${config.coverSpacingSubtitleBottom}px` }}>
+                    Termo de Fomento nº {project.fomentoNumber}
+                  </h3>
+                )}
+                {!config.coverHideOrg && (
+                  <p className="text-lg font-semibold w-full" style={{ textAlign: coverOrgAlign }}>{project.organizationName}</p>
+                )}
               </div>
               <ReportFooter />
             </div>
