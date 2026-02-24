@@ -49,15 +49,27 @@ export const ReportGenerator: React.FC = () => {
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
       };
       const worker = html2pdf().set(opt).from(reportRef.current);
-      const pdf = await worker.toPdf().get('pdf');
+      const pdf = await worker.toPdf().get('pdf') as any;
       const totalPages = pdf.internal.getNumberOfPages();
-      for (let i = 2; i <= totalPages; i++) {
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      for (let i = 1; i <= totalPages; i++) {
         pdf.setPage(i);
+        // Page number – top right (skip cover page)
+        if (i >= 2) {
+          pdf.setFontSize(10);
+          pdf.setTextColor(0, 0, 0);
+          pdf.text(`${i}`, pageWidth - 20, 20);
+        }
+        // Footer – line + org name centered
+        pdf.setDrawColor(180, 180, 180);
+        pdf.line(30, pageHeight - 15, pageWidth - 20, pageHeight - 15);
         pdf.setFontSize(10);
+        pdf.setTextColor(80, 80, 80);
+        const footerText = project.organizationName;
+        const fw = pdf.getTextWidth(footerText);
+        pdf.text(footerText, (pageWidth - fw) / 2, pageHeight - 10);
         pdf.setTextColor(0, 0, 0);
-        const pageWidth = pdf.internal.pageSize.getWidth();
-        const text = `${i}`;
-        pdf.text(text, pageWidth - 20, 20);
       }
       pdf.save(filename);
     } catch (error) {
