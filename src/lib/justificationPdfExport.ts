@@ -1,7 +1,7 @@
 import { Project } from '@/types';
 import { JustificationReport } from '@/types/justificationReport';
 import {
-  createPdfContext, ensureSpace, addParagraph, addBulletItem,
+  createPdfContext, ensureSpace, addParagraph, addBulletItem, addRichParagraph,
   addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
   parseHtmlToBlocks, preloadHeaderImages,
   PAGE_W, CW, LINE_H,
@@ -81,6 +81,7 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
     const blocks = parseHtmlToBlocks(report[section.key]);
     for (const block of blocks) {
       if (block.type === 'bullet') addBulletItem(ctx, block.content);
+      else if (block.segments && block.segments.some(s => s.bold || s.italic || s.underline)) addRichParagraph(ctx, block.segments);
       else addParagraph(ctx, block.content);
     }
     ctx.currentY += 4;

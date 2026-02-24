@@ -4,7 +4,7 @@ import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
-  createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem,
+  createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem, addRichParagraph,
   addSectionTitle, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
   loadImage, addPhotoGrid, addPhotoLayout, parseHtmlToBlocks, PdfContext,
   preloadHeaderImages,
@@ -90,12 +90,16 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // We set it AFTER the cover page so addPage() uses correct content start Y.
   const { pdf } = ctx;
 
-  // Helper to render HTML content from rich-text editor
+  // Helper to render HTML content from rich-text editor (preserves bold/italic)
   const writeHtmlContent = (html: string, fallback: string) => {
     const blocks = parseHtmlToBlocks(html || fallback);
     for (const block of blocks) {
       if (block.type === 'bullet') addBulletItem(ctx, block.content);
-      else addParagraph(ctx, block.content);
+      else if (block.segments && block.segments.some(s => s.bold || s.italic || s.underline)) {
+        addRichParagraph(ctx, block.segments);
+      } else {
+        addParagraph(ctx, block.content);
+      }
     }
   };
 

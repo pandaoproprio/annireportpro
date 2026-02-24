@@ -2,7 +2,7 @@ import { Project, TeamReport } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
-  createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem,
+  createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem, addRichParagraph,
   addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
   parseHtmlToBlocks, loadImage, preloadHeaderImages,
   PAGE_W, ML, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION,
@@ -96,6 +96,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   const blocks = parseHtmlToBlocks(report.executionReport || '<p>[Nenhum relato informado]</p>');
   for (const block of blocks) {
     if (block.type === 'bullet') addBulletItem(ctx, block.content);
+    else if (block.segments && block.segments.some(s => s.bold || s.italic || s.underline)) addRichParagraph(ctx, block.segments);
     else addParagraph(ctx, block.content);
   }
 
@@ -105,6 +106,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     const sBlocks = parseHtmlToBlocks(section.content || '<p>[Nenhum conteúdo]</p>');
     for (const b of sBlocks) {
       if (b.type === 'bullet') addBulletItem(ctx, b.content);
+      else if (b.segments && b.segments.some(s => s.bold || s.italic || s.underline)) addRichParagraph(ctx, b.segments);
       else addParagraph(ctx, b.content);
     }
   }
