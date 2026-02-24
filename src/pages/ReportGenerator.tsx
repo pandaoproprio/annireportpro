@@ -25,6 +25,7 @@ export const ReportGenerator: React.FC = () => {
     satisfaction, setSatisfaction, futureActions, setFutureActions,
     expenses, links, setLinks, linkFileNames, setLinkFileNames, sections,
     sectionPhotos, sectionDocs,
+    photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     saveReportData, moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection, pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     addExpense, updateExpense, removeExpense,
@@ -47,7 +48,7 @@ export const ReportGenerator: React.FC = () => {
         otherActionsNarrative, otherActionsPhotos,
         communicationNarrative, communicationPhotos,
         satisfaction, futureActions, expenses, links,
-        sectionPhotos,
+        sectionPhotos, photoMetadata,
       });
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
@@ -108,7 +109,9 @@ export const ReportGenerator: React.FC = () => {
     satisfaction, setSatisfaction, futureActions, setFutureActions,
     expenses, links, setLinks, linkFileNames, setLinkFileNames,
     sectionPhotos, sectionDocs,
+    photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     goals: project.goals, projectName: project.name, projectObject: project.object, activities,
+    projectId: project.id,
     updateSectionTitle, updateCustomContent, removeSection,
     addExpense, updateExpense, removeExpense,
     handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,

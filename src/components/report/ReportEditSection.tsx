@@ -1,13 +1,15 @@
-import React from 'react';
-import { ReportSection, Activity, Goal, ExpenseItem } from '@/types';
+import React, { useState } from 'react';
+import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, PhotoSize } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
-import { Trash2, Plus, Image as ImageIcon, Upload, FileText } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil } from 'lucide-react';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
+import { ImageEditorDialog } from '@/components/report/ImageEditorDialog';
 import { SectionDoc } from '@/hooks/useReportState';
 
 interface Props {
@@ -41,10 +43,16 @@ interface Props {
   // Per-section uploads
   sectionPhotos: Record<string, string[]>;
   sectionDocs: Record<string, SectionDoc[]>;
+  // Photo metadata
+  photoMetadata: Record<string, ReportPhotoMeta[]>;
+  updatePhotoCaption: (key: string, index: number, caption: string) => void;
+  updatePhotoSize: (key: string, index: number, size: PhotoSize) => void;
+  replacePhotoUrl: (key: string, index: number, newUrl: string, setter: React.Dispatch<React.SetStateAction<string[]>> | null, goalId?: string) => void;
   // Project data
   goals: Goal[];
   projectName: string;
   projectObject: string;
+  projectId: string;
   activities: Activity[];
   // Actions
   updateSectionTitle: (index: number, title: string) => void;
@@ -68,6 +76,65 @@ interface Props {
   removeSectionDoc: (sectionKey: string, index: number) => void;
 }
 
+// ── Photo card with caption, size selector, and edit button ──
+const PhotoCard: React.FC<{
+  photo: string;
+  index: number;
+  metaKey: string;
+  meta?: ReportPhotoMeta;
+  projectId: string;
+  updatePhotoCaption: Props['updatePhotoCaption'];
+  updatePhotoSize: Props['updatePhotoSize'];
+  onReplace: (newUrl: string) => void;
+  onRemove: () => void;
+}> = ({ photo, index, metaKey, meta, projectId, updatePhotoCaption, updatePhotoSize, onReplace, onRemove }) => {
+  const [editOpen, setEditOpen] = useState(false);
+  const caption = meta?.caption || '';
+  const size = meta?.size || 'medium';
+
+  return (
+    <div className="border rounded-lg p-2 bg-card space-y-2">
+      <div className="relative group">
+        <img src={photo} alt={caption || `Foto ${index + 1}`} className="w-full h-32 object-contain rounded bg-muted" />
+        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button type="button" onClick={() => setEditOpen(true)}
+            className="bg-primary text-primary-foreground rounded-full p-1.5 shadow-md" title="Editar imagem">
+            <Pencil className="w-3 h-3" />
+          </button>
+          <button type="button" onClick={onRemove}
+            className="bg-destructive text-destructive-foreground rounded-full p-1.5 shadow-md" title="Remover">
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+      <Input
+        value={caption}
+        onChange={e => updatePhotoCaption(metaKey, index, e.target.value)}
+        placeholder={`Legenda da foto ${index + 1}...`}
+        className="text-xs h-8"
+      />
+      <Select value={size} onValueChange={(v) => updatePhotoSize(metaKey, index, v as PhotoSize)}>
+        <SelectTrigger className="h-7 text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="small">Pequena</SelectItem>
+          <SelectItem value="medium">Média</SelectItem>
+          <SelectItem value="large">Grande</SelectItem>
+          <SelectItem value="full">Largura total</SelectItem>
+        </SelectContent>
+      </Select>
+      <ImageEditorDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        imageUrl={photo}
+        projectId={projectId}
+        onSave={onReplace}
+      />
+    </div>
+  );
+};
+
 export const ReportEditSection: React.FC<Props> = (props) => {
   const { section, index } = props;
   if (!section.isVisible) return null;
@@ -77,7 +144,6 @@ export const ReportEditSection: React.FC<Props> = (props) => {
       <CardContent className="pt-6">
         <SectionHeader {...props} />
         <SectionContent {...props} />
-        {/* Per-section uploads (except OBJETO) */}
         {section.key !== 'object' && section.key !== 'expenses' && section.key !== 'links' && (
           <SectionUploads {...props} />
         )}
@@ -86,29 +152,34 @@ export const ReportEditSection: React.FC<Props> = (props) => {
   );
 };
 
-const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc }) => {
+const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc }) => {
   const sectionKey = section.type === 'custom' ? section.id : section.key;
   const photos = sectionPhotos[sectionKey] || [];
   const docs = sectionDocs[sectionKey] || [];
+  const metas = photoMetadata[sectionKey] || [];
 
   return (
     <div className="mt-4 space-y-4 border-t pt-4">
-      {/* Photos */}
       <div className="space-y-2">
         <Label className="flex items-center gap-2 text-sm font-semibold">
           <ImageIcon className="w-4 h-4" /> Registro Fotográfico
         </Label>
         <Input type="file" accept="image/*" multiple onChange={e => handleSectionPhotoUpload(e, sectionKey)} className="text-sm" />
         {photos.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
             {photos.map((photo, pIdx) => (
-              <div key={pIdx} className="relative group">
-                <img src={photo} alt={`Foto ${pIdx + 1}`} className="h-20 w-20 object-contain rounded border bg-muted" />
-                <button type="button" onClick={() => removeSectionPhoto(sectionKey, pIdx)}
-                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </div>
+              <PhotoCard
+                key={pIdx}
+                photo={photo}
+                index={pIdx}
+                metaKey={sectionKey}
+                meta={metas[pIdx]}
+                projectId={projectId}
+                updatePhotoCaption={updatePhotoCaption}
+                updatePhotoSize={updatePhotoSize}
+                onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
+                onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
+              />
             ))}
           </div>
         )}
@@ -183,7 +254,6 @@ const SectionContent: React.FC<Props> = (props) => {
   }
 };
 
-// OBJETO - NO uploads, NO AI
 const ObjectSection: React.FC<Props> = ({ objectText, setObjectText }) => (
   <div className="space-y-2">
     <Label>Texto do Objeto</Label>
@@ -202,13 +272,15 @@ const SummarySection: React.FC<Props> = ({ summary, setSummary, activities, proj
 );
 
 const GoalsSection: React.FC<Props> = ({
-  goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject,
+  goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject, projectId,
   handleGoalPhotoUpload, removeGoalPhoto, getActivitiesByGoal, formatActivityDate,
+  photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
 }) => (
   <div className="space-y-6">
     {goals.map((goal, idx) => {
       const goalActs = getActivitiesByGoal(goal.id);
       const photos = goalPhotos[goal.id] || [];
+      const metas = photoMetadata[goal.id] || [];
       return (
         <div key={goal.id} className="p-4 border rounded-lg bg-muted/50">
           <h4 className="font-bold text-primary mb-2">META {idx + 1}: {goal.title}</h4>
@@ -237,15 +309,20 @@ const GoalsSection: React.FC<Props> = ({
           <Label className="flex items-center gap-2 mt-4"><ImageIcon className="w-4 h-4" /> Fotos da Meta</Label>
           <Input type="file" accept="image/*" multiple onChange={e => handleGoalPhotoUpload(e, goal.id)} className="mb-2" />
           {photos.length > 0 && (
-            <div className="flex flex-wrap gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {photos.map((photo, pIdx) => (
-                <div key={pIdx} className="relative group">
-                  <img src={photo} alt="" className="h-20 w-20 object-contain rounded border bg-muted" />
-                  <button type="button" onClick={() => removeGoalPhoto(goal.id, pIdx)}
-                    className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100">
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                </div>
+                <PhotoCard
+                  key={pIdx}
+                  photo={photo}
+                  index={pIdx}
+                  metaKey={goal.id}
+                  meta={metas[pIdx]}
+                  projectId={projectId}
+                  updatePhotoCaption={updatePhotoCaption}
+                  updatePhotoSize={updatePhotoSize}
+                  onReplace={(newUrl) => replacePhotoUrl(goal.id, pIdx, newUrl, null, goal.id)}
+                  onRemove={() => removeGoalPhoto(goal.id, pIdx)}
+                />
               ))}
             </div>
           )}
