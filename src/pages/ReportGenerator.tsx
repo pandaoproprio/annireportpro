@@ -219,9 +219,14 @@ export const ReportGenerator: React.FC = () => {
       {mode === 'preview' && (
         <div className="bg-muted p-4 md:p-8 rounded-lg overflow-auto no-print animate-fadeIn">
           <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
-            <div className="flex flex-col items-center justify-center min-h-[800px] pb-10 mb-10 page-break">
-              <ReportHeader />
-              <div className="flex-1 flex flex-col items-center justify-center w-full" style={{ gap: `${config.coverSpacingLogoTitle}px`, lineHeight: config.coverLineSpacing }}>
+            <div className="flex flex-col items-center min-h-[800px] pb-10 mb-10 page-break" style={{ justifyContent: config.coverLogoCenterV ? 'center' : 'flex-start' }}>
+              {/* Cover-specific logo */}
+              {config.logo && config.logoConfig.visible && (
+                <div style={{ marginTop: config.coverLogoCenterV ? 0 : `${config.coverLogoTopMm * 2.5}px` }}>
+                  <img src={config.logo} alt="Logo Capa" className="object-contain mx-auto" style={{ width: `${config.coverLogoWidthMm * 2.5}px` }} />
+                </div>
+              )}
+              <div className="flex flex-col items-center w-full" style={{ gap: `${config.coverSpacingLogoTitle}px`, lineHeight: config.coverLineSpacing, marginTop: `${config.coverSpacingLogoTitle}px` }}>
                 <h2
                   className="uppercase mb-2 w-full"
                   style={{
@@ -248,7 +253,9 @@ export const ReportGenerator: React.FC = () => {
                   <p className="text-lg font-semibold w-full" style={{ textAlign: coverOrgAlign }}>{project.organizationName}</p>
                 )}
               </div>
-              <ReportFooter />
+              <div className="mt-auto">
+                <ReportFooter />
+              </div>
             </div>
             <ReportHeader />
             {sections.map(section => (

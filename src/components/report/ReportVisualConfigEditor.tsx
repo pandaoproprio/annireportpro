@@ -179,6 +179,10 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
                 <Label className="text-xs">Logo da capa — Dist. do topo ({config.coverLogoTopMm}mm)</Label>
                 <Slider value={[config.coverLogoTopMm]} min={5} max={100} step={1} onValueChange={([v]) => updateConfig({ coverLogoTopMm: v })} />
               </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={config.coverLogoCenterV} onCheckedChange={v => updateConfig({ coverLogoCenterV: v })} id="cover-centerv" />
+                <Label htmlFor="cover-centerv" className="text-xs cursor-pointer">Centralizar logo verticalmente na capa</Label>
+              </div>
             </div>
 
             <p className="text-xs text-muted-foreground">O nome do projeto é exibido automaticamente.</p>
