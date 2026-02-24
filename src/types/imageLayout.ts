@@ -12,6 +12,16 @@ export interface ImageLayoutItem {
   rotation: number; // degrees
   caption: string;
   zIndex: number;
+  brightness: number;  // 0-200 (100 = normal)
+  contrast: number;    // 0-200 (100 = normal)
+  borderWidth: number; // mm
+  borderColor: string; // hex color
+  borderRadius: number; // mm
+  shadowEnabled: boolean;
+  shadowBlur: number;  // px on canvas
+  shadowColor: string; // hex color
+  shadowOffsetX: number; // mm
+  shadowOffsetY: number; // mm
 }
 
 export interface PageLayout {
@@ -77,6 +87,16 @@ export const generateGridLayout = (
       rotation: 0,
       caption: '',
       zIndex: i,
+      brightness: 100,
+      contrast: 100,
+      borderWidth: 0,
+      borderColor: '#000000',
+      borderRadius: 0,
+      shadowEnabled: false,
+      shadowBlur: 10,
+      shadowColor: 'rgba(0,0,0,0.5)',
+      shadowOffsetX: 2,
+      shadowOffsetY: 2,
     };
   });
 };
