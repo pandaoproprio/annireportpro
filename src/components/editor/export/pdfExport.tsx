@@ -20,6 +20,13 @@ import {
   HeaderFooterConfig,
   LayoutConfig,
 } from '@/types/document';
+import {
+  StructuredRichContent,
+  RichTextParagraph,
+  RichTextSpan,
+  RichTextVariable,
+  resolveVariable,
+} from '@/types/richText';
 
 // ── Font registration ──
 Font.register({
@@ -248,15 +255,65 @@ const BlockView: React.FC<{ block: DocumentBlock }> = ({ block }) => {
   }
 };
 
+// ── Structured Rich Text Renderer for PDF ──
+const StructuredContentView: React.FC<{
+  content: StructuredRichContent;
+  config: HeaderFooterConfig;
+  context: { pageNumber?: number; totalPages?: number; title?: string };
+}> = ({ content, config, context }) => {
+  return (
+    <View>
+      {content.content.map((node, i) => {
+        if (node.type === 'paragraph') {
+          const para = node as RichTextParagraph;
+          return (
+            <Text key={i} style={{ textAlign: para.align, fontSize: config.fontSize, fontFamily: resolveFont(config.fontFamily) }}>
+              {para.children.map((child, j) => {
+                if ('variable' in child && child.type === 'variable') {
+                  const varChild = child as RichTextVariable;
+                  return (
+                    <Text key={j} style={{ fontWeight: varChild.bold ? 'bold' : 'normal', fontStyle: varChild.italic ? 'italic' : 'normal' }}>
+                      {resolveVariable(varChild.variable, context)}
+                    </Text>
+                  );
+                }
+                const span = child as RichTextSpan;
+                return (
+                  <Text key={j} style={{
+                    fontWeight: span.bold ? 'bold' : 'normal',
+                    fontStyle: span.italic ? 'italic' : 'normal',
+                    textDecoration: span.underline ? 'underline' : 'none',
+                    ...(span.color ? { color: span.color } : {}),
+                    ...(span.fontSize ? { fontSize: span.fontSize } : {}),
+                  }}>
+                    {span.text}
+                  </Text>
+                );
+              })}
+            </Text>
+          );
+        }
+        if (node.type === 'image') {
+          return <Image key={i} src={node.src} style={{ width: mm(node.width), height: mm(node.height), objectFit: 'contain' }} />;
+        }
+        return null;
+      })}
+    </View>
+  );
+};
+
 // ── Header/Footer Renderer ──
 const HeaderFooterView: React.FC<{
   config: HeaderFooterConfig;
   layout: LayoutConfig;
   isHeader: boolean;
-}> = ({ config, layout, isHeader }) => {
+  pageIndex: number;
+  totalPages: number;
+  title: string;
+}> = ({ config, layout, isHeader, pageIndex, totalPages, title }) => {
   if (!config.enabled) return null;
 
-  const plainText = stripHtml(config.content);
+  const context = { pageNumber: pageIndex + 1, totalPages, title };
 
   return (
     <View
@@ -278,12 +335,11 @@ const HeaderFooterView: React.FC<{
       {config.imageUrl ? (
         <Image
           src={config.imageUrl}
-          style={{
-            maxHeight: mm(config.height * 0.9),
-            objectFit: 'contain',
-          }}
+          style={{ maxHeight: mm(config.height * 0.9), objectFit: 'contain' }}
         />
-      ) : plainText ? (
+      ) : config.structuredContent ? (
+        <StructuredContentView content={config.structuredContent} config={config} context={context} />
+      ) : stripHtml(config.content) ? (
         <Text
           style={{
             fontSize: config.fontSize,
@@ -291,7 +347,7 @@ const HeaderFooterView: React.FC<{
             textAlign: config.alignment,
           }}
         >
-          {plainText}
+          {stripHtml(config.content)}
         </Text>
       ) : null}
     </View>
@@ -299,7 +355,7 @@ const HeaderFooterView: React.FC<{
 };
 
 // ── Main PDF Document Component ──
-const PdfDocument: React.FC<{ model: DocumentModel }> = ({ model }) => {
+const PdfDocument: React.FC<{ model: DocumentModel; title: string }> = ({ model, title }) => {
   const { layout, globalHeader, globalFooter } = model;
 
   return (
@@ -321,13 +377,13 @@ const PdfDocument: React.FC<{ model: DocumentModel }> = ({ model }) => {
               fontSize: 12,
             }}
           >
-            <HeaderFooterView config={header} layout={layout} isHeader={true} />
+            <HeaderFooterView config={header} layout={layout} isHeader={true} pageIndex={pi} totalPages={model.pages.length} title={title} />
 
             {page.blocks.map(block => (
               <BlockView key={block.id} block={block} />
             ))}
 
-            <HeaderFooterView config={footer} layout={layout} isHeader={false} />
+            <HeaderFooterView config={footer} layout={layout} isHeader={false} pageIndex={pi} totalPages={model.pages.length} title={title} />
 
             {/* Page number */}
             <Text
@@ -350,7 +406,7 @@ const PdfDocument: React.FC<{ model: DocumentModel }> = ({ model }) => {
 
 // ── Export function ──
 export const generatePdf = async (model: DocumentModel, title: string) => {
-  const blob = await pdf(<PdfDocument model={model} />).toBlob();
+  const blob = await pdf(<PdfDocument model={model} title={title} />).toBlob();
   const filename = `${title.replace(/[^a-zA-Z0-9À-ÿ\s-_]/g, '').trim() || 'documento'}.pdf`;
   saveAs(blob, filename);
 };

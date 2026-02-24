@@ -43,6 +43,7 @@ export const WysiwygEditor: React.FC<Props> = ({ documentId }) => {
               onDeselectBlock={() => doc.setActiveBlockId(null)}
               onUpdateGlobalHeader={doc.updateGlobalHeader}
               onUpdateGlobalFooter={doc.updateGlobalFooter}
+              documentTitle={doc.title}
             />
           </div>
 

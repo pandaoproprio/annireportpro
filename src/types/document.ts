@@ -61,7 +61,7 @@ export type DocumentBlock = TextBlock | ImageBlock | TableBlock | SpacerBlock;
 // ── Header / Footer ──
 export interface HeaderFooterConfig {
   enabled: boolean;
-  content: string;       // HTML rich text
+  content: string;       // HTML rich text (legacy)
   height: number;        // mm
   alignment: 'left' | 'center' | 'right';
   fontSize: number;
@@ -70,6 +70,7 @@ export interface HeaderFooterConfig {
   imageWidth?: number;
   imageHeight?: number;
   imagePosition?: 'left' | 'center' | 'right';
+  structuredContent?: import('./richText').StructuredRichContent; // structured rich text model
 }
 
 // ── Page ──
