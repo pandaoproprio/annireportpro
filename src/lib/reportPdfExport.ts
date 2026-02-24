@@ -86,14 +86,9 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   );
 
   const ctx = createPdfContext();
-  // Store header config in context so the post-pass renders it on every page
-  ctx.headerConfig = {
-    bannerImg,
-    logoImg,
-    logoSecondaryImg,
-    headerLeftText,
-    headerRightText,
-  };
+  // Store header config in context so the post-pass renders it on every page (except cover)
+  // NOTE: Do NOT set headerConfig yet — the cover page calculates its own Y position.
+  // We set it AFTER the cover page so addPage() uses correct content start Y.
   const { pdf } = ctx;
 
   // Helper to render HTML content from rich-text editor
@@ -200,11 +195,16 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   pdf.text(project.organizationName, (PAGE_W - orgw) / 2, ctx.currentY);
 
   // ══════════════════════════════════════════════════════════════
-  // CONTENT PAGES
+  // CONTENT PAGES — now set headerConfig so addPage() adjusts Y
   // ══════════════════════════════════════════════════════════════
+  ctx.headerConfig = {
+    bannerImg,
+    logoImg,
+    logoSecondaryImg,
+    headerLeftText,
+    headerRightText,
+  };
   addPage(ctx);
-
-  // Headers rendered in the post-pass
 
   for (const section of sections) {
     if (!section.isVisible) continue;
