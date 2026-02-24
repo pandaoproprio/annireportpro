@@ -74,7 +74,7 @@ export const useReportState = () => {
     }
   }, [project]);
 
-  const saveReportData = () => {
+  const saveReportData = (showToast = true) => {
     updateReportData({
       logo,
       logoSecondary,
@@ -99,7 +99,7 @@ export const useReportState = () => {
       },
       sections,
     });
-    alert('Relatório salvo com sucesso!');
+    if (showToast) toast.success('Rascunho salvo com sucesso!');
   };
 
   // Section management

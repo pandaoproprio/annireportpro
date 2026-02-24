@@ -48,7 +48,7 @@ const enumToDbType: Record<ActivityType, DbActivityType> = {
   [ActivityType.OUTROS]: 'Outras Ações'
 };
 
-const mapDbToActivity = (db: DbActivity): Activity => ({
+const mapDbToActivity = (db: DbActivity & { is_draft?: boolean }): Activity => ({
   id: db.id,
   projectId: db.project_id,
   goalId: db.goal_id || undefined,
@@ -63,7 +63,8 @@ const mapDbToActivity = (db: DbActivity): Activity => ({
   teamInvolved: db.team_involved || [],
   photos: db.photos || [],
   attachments: db.attachments || [],
-  costEvidence: db.cost_evidence || undefined
+  costEvidence: db.cost_evidence || undefined,
+  isDraft: db.is_draft ?? false,
 });
 
 const fetchActivitiesFromDb = async (
@@ -135,7 +136,8 @@ export const useActivities = (projectId: string | null) => {
           team_involved: activity.teamInvolved,
           photos: activity.photos,
           attachments: activity.attachments,
-          cost_evidence: activity.costEvidence || null
+          cost_evidence: activity.costEvidence || null,
+          is_draft: activity.isDraft ?? false,
         })
         .select()
         .single();
@@ -167,7 +169,8 @@ export const useActivities = (projectId: string | null) => {
           team_involved: activity.teamInvolved,
           photos: activity.photos,
           attachments: activity.attachments,
-          cost_evidence: activity.costEvidence || null
+          cost_evidence: activity.costEvidence || null,
+          is_draft: activity.isDraft ?? false,
         })
         .eq('id', activity.id);
       if (!isAdmin) query = query.eq('user_id', user.id);

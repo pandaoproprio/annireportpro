@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/select';
 import { 
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
-  FolderGit2, Search, Users, Loader2
+  FolderGit2, Search, Users, Loader2, FileEdit, Save
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -49,6 +49,7 @@ export const ActivityManager: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterGoal, setFilterGoal] = useState<string>('all');
+  const [filterDraft, setFilterDraft] = useState<string>('all');
 
   // Detect first activity creation
   useEffect(() => {
@@ -74,6 +75,8 @@ export const ActivityManager: React.FC = () => {
   });
 
   // Filtered Activities
+  const draftCount = useMemo(() => activities.filter(a => a.isDraft).length, [activities]);
+
   const filteredActivities = useMemo(() => {
     return activities.filter(act => {
       const matchesSearch = act.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -82,10 +85,13 @@ export const ActivityManager: React.FC = () => {
       
       const matchesType = filterType === 'all' || act.type === filterType;
       const matchesGoal = filterGoal === 'all' || act.goalId === filterGoal;
+      const matchesDraft = filterDraft === 'all' || 
+                           (filterDraft === 'draft' && act.isDraft) || 
+                           (filterDraft === 'final' && !act.isDraft);
 
-      return matchesSearch && matchesType && matchesGoal;
+      return matchesSearch && matchesType && matchesGoal && matchesDraft;
     });
-  }, [activities, searchTerm, filterType, filterGoal]);
+  }, [activities, searchTerm, filterType, filterGoal, filterDraft]);
 
   const resetForm = () => {
     setNewActivity({
@@ -128,7 +134,7 @@ export const ActivityManager: React.FC = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, asDraft = false) => {
     e.preventDefault();
     if (!project || !newActivity.description || !newActivity.date) return;
 
@@ -152,8 +158,10 @@ export const ActivityManager: React.FC = () => {
         attendeesCount: newActivity.attendeesCount || 0,
         location: newActivity.location || '',
         endDate: newActivity.endDate,
+        isDraft: asDraft,
       };
       await updateActivity(updatedActivity);
+      toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade atualizada!');
     } else {
       await addActivity({
         projectId: project.id,
@@ -169,8 +177,10 @@ export const ActivityManager: React.FC = () => {
         photos: newActivity.photos || [],
         attachments: [],
         goalId: newActivity.goalId,
-        costEvidence: newActivity.costEvidence
+        costEvidence: newActivity.costEvidence,
+        isDraft: asDraft,
       });
+      toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade registrada!');
     }
 
     setIsSaving(false);
@@ -378,8 +388,18 @@ export const ActivityManager: React.FC = () => {
 
               <div className="flex justify-end gap-2 pt-4 border-t">
                 <Button type="button" variant="outline" onClick={resetForm}>Cancelar</Button>
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  disabled={isSaving}
+                  onClick={(e) => handleSubmit(e as any, true)}
+                >
+                  {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  <FileEdit className="w-4 h-4 mr-2" /> Salvar Rascunho
+                </Button>
                 <Button type="submit" disabled={isSaving}>
                   {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                  <Save className="w-4 h-4 mr-2" />
                   {editingId ? 'Salvar Alterações' : 'Registrar Atividade'}
                 </Button>
               </div>
@@ -421,6 +441,16 @@ export const ActivityManager: React.FC = () => {
             ))}
           </SelectContent>
         </Select>
+        <Select value={filterDraft} onValueChange={setFilterDraft}>
+          <SelectTrigger className="w-full md:w-48">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os Status</SelectItem>
+            <SelectItem value="draft">Rascunhos {draftCount > 0 ? `(${draftCount})` : ''}</SelectItem>
+            <SelectItem value="final">Finalizadas</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Activities List */}
@@ -441,6 +471,11 @@ export const ActivityManager: React.FC = () => {
                 <div className="flex flex-col md:flex-row justify-between gap-4">
                   <div className="flex-1 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
+                      {act.isDraft && (
+                        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 animate-pulse">
+                          <FileEdit className="w-3 h-3 mr-1" /> Rascunho
+                        </Badge>
+                      )}
                       <Badge variant="outline" className={getTypeColor(act.type)}>
                         {act.type}
                       </Badge>

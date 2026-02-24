@@ -87,6 +87,7 @@ export interface Activity {
   photos: string[];
   attachments: string[];
   costEvidence?: string;
+  isDraft?: boolean;
 }
 
 export interface Project {
