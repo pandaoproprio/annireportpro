@@ -35,7 +35,7 @@ interface RichTextEditorProps {
           keepAttributes: false,
         },
       }),
-      Underline,
+      Underline.configure({}),
     ],
     content: value,
     editorProps: {
