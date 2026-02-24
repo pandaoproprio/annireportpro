@@ -2,7 +2,7 @@ import { Project } from '@/types';
 import { JustificationReport } from '@/types/justificationReport';
 import {
   createPdfContext, ensureSpace, addParagraph, addBulletItem,
-  addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock,
+  addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
   parseHtmlToBlocks, preloadHeaderImages,
   PAGE_W, CW, LINE_H,
 } from '@/lib/pdfHelpers';
@@ -93,7 +93,7 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
   addSignatureBlock(ctx, project.organizationName, dateText, 'Assinatura do responsável legal');
 
   // ── Footer + page numbers (skip page 1) ──
-  const footerInfo = {
+  const footerInfo: FooterInfo = {
     orgName: project.organizationName,
     address: (vc?.footerShowAddress !== false) ? project.organizationAddress : undefined,
     website: (vc?.footerShowContact !== false) ? project.organizationWebsite : undefined,
@@ -101,6 +101,15 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
     phone: (vc?.footerShowContact !== false) ? project.organizationPhone : undefined,
     customText: vc?.footerText || undefined,
     alignment: (vc?.footerAlignment || 'center') as 'left' | 'center' | 'right',
+    institutionalEnabled: vc?.footerInstitutionalEnabled,
+    line1Text: vc?.footerLine1Text,
+    line1FontSize: vc?.footerLine1FontSize,
+    line2Text: vc?.footerLine2Text,
+    line2FontSize: vc?.footerLine2FontSize,
+    line3Text: vc?.footerLine3Text,
+    line3FontSize: vc?.footerLine3FontSize,
+    lineSpacing: vc?.footerLineSpacing,
+    topSpacing: vc?.footerTopSpacing,
   };
   addFooterAndPageNumbers(ctx, project.organizationName, true, footerInfo);
 

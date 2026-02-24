@@ -449,6 +449,16 @@ export interface FooterInfo {
   phone?: string;
   customText?: string;
   alignment?: 'left' | 'center' | 'right';
+  // Institutional per-line footer
+  institutionalEnabled?: boolean;
+  line1Text?: string;
+  line1FontSize?: number; // pt
+  line2Text?: string;
+  line2FontSize?: number; // pt
+  line3Text?: string;
+  line3FontSize?: number; // pt
+  lineSpacing?: number; // mm
+  topSpacing?: number; // mm
 }
 
 // ── Preload header images for reuse on all pages ──
@@ -587,51 +597,53 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
     pdf.line(ML, footerLineY, PAGE_W - MR, footerLineY);
 
     pdf.setTextColor(80, 80, 80);
-    let footerY = footerLineY + 4;
+    const topSp = info.topSpacing ?? 4;
+    let footerY = footerLineY + topSp;
 
-    // Alignment helper
-    const align = info.alignment || 'center';
-    const getAlignedX = (textWidth: number): number => {
-      if (align === 'left') return ML;
-      if (align === 'right') return PAGE_W - MR - textWidth;
-      return (PAGE_W - textWidth) / 2;
-    };
+    // Center-align helper (institutional footer is always centered)
+    const getCenterX = (textWidth: number): number => (PAGE_W - textWidth) / 2;
 
-    // Org name (bold, 9pt)
-    pdf.setFont('times', 'bold');
-    pdf.setFontSize(9);
-    const orgText = info.orgName || orgName;
-    const orgTw = pdf.getTextWidth(orgText);
-    pdf.text(orgText, getAlignedX(orgTw), footerY);
-    footerY += 3.5;
+    const instEnabled = info.institutionalEnabled !== false;
 
-    pdf.setFont('times', 'normal');
-    pdf.setFontSize(7);
+    if (instEnabled) {
+      const ls = info.lineSpacing ?? 3;
 
-    // Address
-    if (info.address) {
-      const addrTw = pdf.getTextWidth(info.address);
-      pdf.text(info.address, getAlignedX(addrTw), footerY);
-      footerY += 3;
+      // Line 1 (bold)
+      const l1Text = info.line1Text || info.orgName || orgName;
+      const l1Size = info.line1FontSize ?? 9;
+      pdf.setFont('times', 'bold');
+      pdf.setFontSize(l1Size);
+      const l1Tw = pdf.getTextWidth(l1Text);
+      pdf.text(l1Text, getCenterX(l1Tw), footerY);
+      footerY += ls;
+
+      // Line 2 (normal)
+      if (info.line2Text) {
+        const l2Size = info.line2FontSize ?? 7;
+        pdf.setFont('times', 'normal');
+        pdf.setFontSize(l2Size);
+        const l2Tw = pdf.getTextWidth(info.line2Text);
+        pdf.text(info.line2Text, getCenterX(l2Tw), footerY);
+        footerY += ls;
+      }
+
+      // Line 3 (normal)
+      if (info.line3Text) {
+        const l3Size = info.line3FontSize ?? 7;
+        pdf.setFont('times', 'normal');
+        pdf.setFontSize(l3Size);
+        const l3Tw = pdf.getTextWidth(info.line3Text);
+        pdf.text(info.line3Text, getCenterX(l3Tw), footerY);
+        footerY += ls;
+      }
     }
 
-    // Contact line
-    const contactParts: string[] = [];
-    if (info.website) contactParts.push(info.website);
-    if (info.email) contactParts.push(info.email);
-    if (info.phone) contactParts.push(info.phone);
-    if (contactParts.length > 0) {
-      const contactLine = contactParts.join(' | ');
-      const contactTw = pdf.getTextWidth(contactLine);
-      pdf.text(contactLine, getAlignedX(contactTw), footerY);
-      footerY += 3;
-    }
-
-    // Custom text
+    // Custom text (italic, always after institutional)
     if (info.customText) {
       pdf.setFont('times', 'italic');
+      pdf.setFontSize(7);
       const customTw = pdf.getTextWidth(info.customText);
-      pdf.text(info.customText, getAlignedX(customTw), footerY);
+      pdf.text(info.customText, getCenterX(customTw), footerY);
     }
 
     pdf.setTextColor(0, 0, 0);

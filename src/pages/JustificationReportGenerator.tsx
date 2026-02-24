@@ -83,7 +83,7 @@ export const JustificationReportGenerator: React.FC = () => {
     setIsExporting(true);
     setExportType('docx');
     try {
-      await exportJustificationToDocx({ project, report: buildReportData(), sections, attachmentFiles });
+      await exportJustificationToDocx({ project, report: buildReportData(), sections, attachmentFiles, visualConfig: vc.config });
       toast.success('DOCX exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar DOCX:', error);

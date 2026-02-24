@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem,
-  addSectionTitle, addFooterAndPageNumbers, addSignatureBlock,
+  addSectionTitle, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
   loadImage, addPhotoGrid, addPhotoLayout, parseHtmlToBlocks, PdfContext,
   preloadHeaderImages,
   PAGE_W, PAGE_H, ML, MR, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION, MT,
@@ -468,7 +468,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   addSignatureBlock(ctx, project.organizationName, dateText, 'Assinatura do Responsável');
 
   // ── Footer + page numbers ──
-  const footerInfo = {
+  const footerInfo: FooterInfo = {
     orgName: project.organizationName,
     address: footerShowAddress ? project.organizationAddress : undefined,
     website: footerShowContact ? project.organizationWebsite : undefined,
@@ -476,6 +476,15 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     phone: footerShowContact ? project.organizationPhone : undefined,
     customText: footerText,
     alignment: footerAlignment,
+    institutionalEnabled: vc?.footerInstitutionalEnabled,
+    line1Text: vc?.footerLine1Text,
+    line1FontSize: vc?.footerLine1FontSize,
+    line2Text: vc?.footerLine2Text,
+    line2FontSize: vc?.footerLine2FontSize,
+    line3Text: vc?.footerLine3Text,
+    line3FontSize: vc?.footerLine3FontSize,
+    lineSpacing: vc?.footerLineSpacing,
+    topSpacing: vc?.footerTopSpacing,
   };
   addFooterAndPageNumbers(ctx, project.organizationName, true, footerInfo);
 

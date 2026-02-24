@@ -130,20 +130,31 @@ export const ReportGenerator: React.FC = () => {
   // Cover logo: dedicated coverLogo or fallback to primary header logo
   const coverLogoSrc = config.coverLogo || config.logo;
 
-  const ReportFooter = React.forwardRef<HTMLDivElement>((_, ref) => (
-    <div ref={ref} className="mt-8 pt-4 border-t text-xs text-muted-foreground print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2" style={{ textAlign: config.footerAlignment }}>
-      <p className="font-semibold">{project.organizationName}</p>
-      {config.footerShowAddress && project.organizationAddress && <p>{project.organizationAddress}</p>}
-      {config.footerShowContact && (
-        <p>
-          {project.organizationWebsite && <span>{project.organizationWebsite}</span>}
-          {project.organizationEmail && <span> | {project.organizationEmail}</span>}
-          {project.organizationPhone && <span> | {project.organizationPhone}</span>}
-        </p>
-      )}
-      {config.footerText && <p className="italic mt-1">{config.footerText}</p>}
-    </div>
-  ));
+  const ReportFooter = React.forwardRef<HTMLDivElement>((_, ref) => {
+    const instEnabled = config.footerInstitutionalEnabled !== false;
+    return (
+      <div ref={ref} className="mt-8 pt-4 border-t text-center print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2" style={{ paddingTop: `${config.footerTopSpacing || 4}px` }}>
+        {instEnabled && (
+          <div className="space-y-0">
+            <p className="font-bold" style={{ fontSize: `${config.footerLine1FontSize || 9}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
+              {config.footerLine1Text || project.organizationName}
+            </p>
+            {config.footerLine2Text && (
+              <p style={{ fontSize: `${config.footerLine2FontSize || 7}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
+                {config.footerLine2Text}
+              </p>
+            )}
+            {config.footerLine3Text && (
+              <p style={{ fontSize: `${config.footerLine3FontSize || 7}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
+                {config.footerLine3Text}
+              </p>
+            )}
+          </div>
+        )}
+        {config.footerText && <p className="italic mt-1 text-xs text-muted-foreground">{config.footerText}</p>}
+      </div>
+    );
+  });
   ReportFooter.displayName = 'ReportFooter';
 
   const editSectionProps = {

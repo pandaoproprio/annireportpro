@@ -11,6 +11,7 @@ import {
 import { saveAs } from 'file-saver';
 import { Project, ReportSection } from '@/types';
 import { JustificationReport, AttachmentFileData } from '@/types/justificationReport';
+import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
 
 const ABNT = {
   FONT_FAMILY: 'Times New Roman',
@@ -114,6 +115,7 @@ export interface JustificationExportData {
   report: JustificationReport;
   sections?: ReportSection[];
   attachmentFiles?: AttachmentFileData[];
+  visualConfig?: ReportVisualConfig;
 }
 
 const DEFAULT_SECTION_ORDER = [
@@ -256,21 +258,52 @@ export const exportJustificationToDocx = async (data: JustificationExportData) =
       },
       footers: {
         default: new Footer({
-          children: [
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [new TextRun({ text: project.organizationName, font: ABNT.FONT_FAMILY, size: 20 })],
-            }),
-            new Paragraph({
-              alignment: AlignmentType.CENTER,
-              children: [
-                new TextRun({ text: 'Página ', font: ABNT.FONT_FAMILY, size: 20 }),
-                new TextRun({ children: [PageNumber.CURRENT], font: ABNT.FONT_FAMILY, size: 20 }),
-                new TextRun({ text: ' de ', font: ABNT.FONT_FAMILY, size: 20 }),
-                new TextRun({ children: [PageNumber.TOTAL_PAGES], font: ABNT.FONT_FAMILY, size: 20 }),
-              ],
-            }),
-          ],
+          children: (() => {
+            const vc = data.visualConfig;
+            const children: Paragraph[] = [];
+            const instEnabled = vc ? vc.footerInstitutionalEnabled !== false : true;
+
+            if (instEnabled) {
+              const l1Text = vc?.footerLine1Text || project.organizationName;
+              const l1Size = Math.round((vc?.footerLine1FontSize ?? 9) * 2);
+              children.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 40 },
+                children: [new TextRun({ text: l1Text, size: l1Size, font: ABNT.FONT_FAMILY, bold: true })],
+              }));
+              if (vc?.footerLine2Text) {
+                const l2Size = Math.round((vc.footerLine2FontSize ?? 7) * 2);
+                children.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: vc.footerLine2Text, size: l2Size, font: ABNT.FONT_FAMILY })],
+                }));
+              }
+              if (vc?.footerLine3Text) {
+                const l3Size = Math.round((vc.footerLine3FontSize ?? 7) * 2);
+                children.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: vc.footerLine3Text, size: l3Size, font: ABNT.FONT_FAMILY })],
+                }));
+              }
+            } else {
+              children.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [new TextRun({ text: project.organizationName, font: ABNT.FONT_FAMILY, size: 20 })],
+              }));
+            }
+
+            if (vc?.footerText) {
+              children.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { after: 20 },
+                children: [new TextRun({ text: vc.footerText, size: 14, font: ABNT.FONT_FAMILY, italics: true })],
+              }));
+            }
+
+            return children;
+          })(),
         }),
       },
       children: docSections,
