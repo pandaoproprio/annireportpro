@@ -119,15 +119,44 @@ const ObjectSection: React.FC<Props> = ({ objectText, setObjectText }) => (
   </div>
 );
 
-const SummarySection: React.FC<Props> = ({ summary, setSummary, activities, projectName, projectObject }) => (
-  <div className="space-y-2">
-    <div className="flex items-center justify-between">
-      <Label>Resumo / Visão Geral</Label>
-      <AiNarrativeButton sectionType="summary" activities={activities} projectName={projectName} projectObject={projectObject} onGenerated={setSummary} />
+const SummarySection: React.FC<Props> = ({ summary, setSummary, activities, projectName, projectObject, handlePhotoUpload, handleDocumentUpload }) => {
+  const [summaryPhotos, setSummaryPhotos] = React.useState<string[]>([]);
+  const [summaryDocs, setSummaryDocs] = React.useState<{ name: string; url: string }[]>([]);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <Label>Resumo / Visão Geral</Label>
+        <AiNarrativeButton sectionType="summary" activities={activities} projectName={projectName} projectObject={projectObject} onGenerated={setSummary} />
+      </div>
+      <Textarea rows={8} value={summary} onChange={e => setSummary(e.target.value)} placeholder="Descreva a visão geral das atividades realizadas, contexto, e principais realizações..." />
+
+      <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos do Resumo</Label>
+      <Input type="file" accept="image/*" multiple onChange={e => handlePhotoUpload(e, setSummaryPhotos)} />
+      <PhotoList photos={summaryPhotos} setter={setSummaryPhotos} />
+
+      <Label className="flex items-center gap-2"><Upload className="w-4 h-4" /> Documentos Comprobatórios</Label>
+      <Input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" onChange={e => {
+        if (e.target.files?.[0]) {
+          handleDocumentUpload(e, 'attendance');
+        }
+      }} />
+      {summaryDocs.length > 0 && (
+        <div className="space-y-1">
+          {summaryDocs.map((doc, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm">
+              <FileText className="w-4 h-4 text-primary" />
+              <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">{doc.name}</a>
+              <button onClick={() => setSummaryDocs(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive/60 hover:text-destructive">
+                <Trash2 className="w-3 h-3" />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
-    <Textarea rows={8} value={summary} onChange={e => setSummary(e.target.value)} placeholder="Descreva a visão geral das atividades realizadas, contexto, e principais realizações..." />
-  </div>
-);
+  );
+};
 
 const GoalsSection: React.FC<Props> = ({
   goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject,
