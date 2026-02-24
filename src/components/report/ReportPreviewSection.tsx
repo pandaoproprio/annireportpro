@@ -2,6 +2,15 @@ import React from 'react';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta } from '@/types';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 
+// Renders rich-text HTML content safely (from Tiptap editor)
+const RichContent: React.FC<{ html: string; className?: string; style?: React.CSSProperties }> = ({ html, className, style }) => {
+  if (!html || (!html.includes('<') && !html.includes('&'))) {
+    // Plain text — render as-is
+    return <div className={className} style={style}>{html}</div>;
+  }
+  return <div className={className} style={style} dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
 interface Props {
   section: ReportSection;
   // Data
@@ -94,7 +103,7 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
       return (
         <section key={section.id} className="mb-8 page-break">
           <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
-          <div className="whitespace-pre-line text-justify">{section.content}</div>
+          <RichContent html={section.content || ''} className="text-justify" />
           {renderSectionPhotos()}
         </section>
       );
@@ -104,14 +113,14 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
 const ObjectPreview: React.FC<Props> = ({ section, objectText }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
-    <p className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>{objectText}</p>
+    <RichContent html={objectText} className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }} />
   </section>
 );
 
 const SummaryPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({ section, summary, renderPhotos }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
-    <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>{summary}</div>
+    <RichContent html={summary} className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }} />
     {renderPhotos?.()}
   </section>
 );
@@ -129,9 +138,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
       return (
         <div key={goal.id} className="mb-10">
           <h4 className="font-bold mb-3" style={{ textAlign: 'left', color: '#000' }}>{goal.title}</h4>
-          <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
-            {goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'}
-          </div>
+          <RichContent html={goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'} className="text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }} />
           {goalActs.length > 0 && (
             <div className="mt-4 text-sm">
               <p className="font-medium mb-2">Atividades realizadas:</p>
@@ -162,9 +169,7 @@ const OtherPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> =
     <React.Fragment>
       <section className="mb-8 page-break">
         <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
-        <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
-          {otherActionsNarrative || '[Descreva outras informações diversas sobre o projeto]'}
-        </div>
+        <RichContent html={otherActionsNarrative || '[Descreva outras informações diversas sobre o projeto]'} className="text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }} />
         {otherActs.length > 0 && (
           <div className="mt-4 text-sm">
             {otherActs.map(act => (
@@ -196,9 +201,7 @@ const CommunicationPreview: React.FC<Props & { renderPhotos?: () => React.ReactN
     <React.Fragment>
       <section className="mb-8 page-break">
         <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
-        <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
-          {communicationNarrative || '[Descreva as ações de divulgação]'}
-        </div>
+        <RichContent html={communicationNarrative || '[Descreva as ações de divulgação]'} className="text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }} />
         {commActs.length > 0 && (
           <div className="mt-4 text-sm">
             {commActs.map(act => (
@@ -222,9 +225,7 @@ const CommunicationPreview: React.FC<Props & { renderPhotos?: () => React.ReactN
 const SatisfactionPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({ section, satisfaction, renderPhotos }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
-    <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>
-      {satisfaction || '[Descreva a visão do público sobre o projeto e os principais feedbacks]'}
-    </div>
+    <RichContent html={satisfaction || '[Descreva a visão do público sobre o projeto e os principais feedbacks]'} className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }} />
     {renderPhotos?.()}
   </section>
 );
@@ -232,9 +233,7 @@ const SatisfactionPreview: React.FC<Props & { renderPhotos?: () => React.ReactNo
 const FuturePreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({ section, futureActions, renderPhotos }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
-    <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>
-      {futureActions || '[Descreva as ações futuras do projeto]'}
-    </div>
+    <RichContent html={futureActions || '[Descreva as ações futuras do projeto]'} className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }} />
     {renderPhotos?.()}
   </section>
 );
