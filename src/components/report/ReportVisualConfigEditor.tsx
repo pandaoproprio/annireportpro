@@ -232,11 +232,47 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
           <div className="space-y-2">
             <Label>Modo A — Imagem de Banner (largura total)</Label>
             {config.headerBannerUrl ? (
-              <div className="relative">
-                <img src={config.headerBannerUrl} alt="Banner do cabeçalho" className="w-full h-auto max-h-24 object-contain border rounded bg-muted" />
-                <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => updateConfig({ headerBannerUrl: '' })}>
-                  <X className="w-3 h-3" />
-                </Button>
+              <div className="space-y-3">
+                <div className="relative">
+                  <img
+                    src={config.headerBannerUrl}
+                    alt="Banner do cabeçalho"
+                    className="w-full h-auto border rounded bg-muted"
+                    style={{
+                      maxHeight: `${config.headerBannerHeightMm * 3}px`,
+                      objectFit: config.headerBannerFit,
+                      opacity: config.headerBannerVisible ? 1 : 0.3,
+                    }}
+                  />
+                  <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={() => updateConfig({ headerBannerUrl: '' })}>
+                    <X className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    variant="ghost" size="icon"
+                    className="absolute top-1 right-9 h-6 w-6 bg-background shadow rounded-full"
+                    onClick={() => updateConfig({ headerBannerVisible: !config.headerBannerVisible })}
+                    title={config.headerBannerVisible ? 'Ocultar' : 'Mostrar'}
+                  >
+                    {config.headerBannerVisible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                  </Button>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-muted/30 rounded-lg p-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Altura do banner ({config.headerBannerHeightMm}mm)</Label>
+                    <Slider value={[config.headerBannerHeightMm]} min={10} max={60} step={1} onValueChange={([v]) => updateConfig({ headerBannerHeightMm: v })} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Ajuste da imagem</Label>
+                    <Select value={config.headerBannerFit} onValueChange={v => updateConfig({ headerBannerFit: v as any })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="contain">Conter (sem corte)</SelectItem>
+                        <SelectItem value="cover">Cobrir (pode cortar)</SelectItem>
+                        <SelectItem value="fill">Esticar (preencher)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
             ) : (
               <Input type="file" accept="image/*" onChange={onBannerUpload} />

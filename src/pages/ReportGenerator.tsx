@@ -97,8 +97,8 @@ export const ReportGenerator: React.FC = () => {
 
   const ReportHeader = () => (
     <div className="mb-6 pb-4 border-b print:border-b-0" style={{ paddingTop: `${config.headerTopPadding}px`, minHeight: `${config.headerHeight * 2}px` }}>
-      {config.headerBannerUrl ? (
-        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full h-auto object-contain" style={{ maxHeight: `${config.headerHeight * 3}px` }} />
+      {config.headerBannerUrl && config.headerBannerVisible ? (
+        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ maxHeight: `${config.headerBannerHeightMm * 3}px`, objectFit: config.headerBannerFit }} />
       ) : (
         <div className="flex items-center" style={{ justifyContent: logoJustify, gap: `${config.headerLogoGap * 2}px` }}>
           <div className="flex items-center gap-3">
