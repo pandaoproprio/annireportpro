@@ -128,11 +128,16 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   }
 
   if (loadedPhotos.length > 0) {
-    ctx.currentY += LINE_H;
     const attTitle = report.attachmentsTitle || 'Registros Fotográficos';
+    const firstW = loadedPhotos.length === 1 ? CW : (CW - 10) / 2;
+    const firstH = firstW * 0.75;
+
+    // Ensure title + first photo row stay together (avoid orphan title)
+    ctx.currentY += LINE_H;
+    ensureSpace(ctx, LINE_H + 6 + firstH + 20);
+
     pdf.setFontSize(FONT_BODY);
     pdf.setFont('times', 'bold');
-    ensureSpace(ctx, LINE_H + 6);
     pdf.text(attTitle, ML, ctx.currentY);
     ctx.currentY += LINE_H + 4;
 
