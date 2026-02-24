@@ -27,7 +27,7 @@ export const TeamReportPdfContent: React.FC<TeamReportPdfContentProps> = ({ proj
       style={{
         width: '210mm',
         minHeight: '297mm',
-        padding: '30mm 20mm 25mm 30mm',
+        padding: '30mm 20mm 20mm 30mm',
         backgroundColor: '#fff',
         fontFamily: 'Times New Roman, serif',
         fontSize: '12pt',

@@ -11,7 +11,7 @@ const ABNT = {
   MARGIN_LEFT: 30,
   MARGIN_RIGHT: 20,
   MARGIN_TOP: 30,
-  MARGIN_BOTTOM: 25,
+  MARGIN_BOTTOM: 20,
   FONT: 'times',
   FONT_SIZE_BODY: 12,
   FONT_SIZE_HEADING: 14,
@@ -37,20 +37,27 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   let y = ABNT.MARGIN_TOP;
 
-  const addFooter = (pageNum: number) => {
+  const addFooter = (pageNum: number, totalPages: number) => {
+    // Footer line + org name
     pdf.setFont(ABNT.FONT, 'normal');
     pdf.setFontSize(10);
-    pdf.setTextColor(100);
-    const footerY = pageHeight - 10;
-    pdf.line(ABNT.MARGIN_LEFT, footerY - 3, pageWidth - ABNT.MARGIN_RIGHT, footerY - 3);
-    pdf.text(project.organizationName, pageWidth / 2, footerY, { align: 'center' });
-    pdf.text(`Página ${pageNum}`, pageWidth - ABNT.MARGIN_RIGHT, footerY, { align: 'right' });
-    pdf.setTextColor(0);
+    pdf.setDrawColor(180, 180, 180);
+    const footerY = pageHeight - 15;
+    pdf.line(ABNT.MARGIN_LEFT, footerY, pageWidth - ABNT.MARGIN_RIGHT, footerY);
+    pdf.setTextColor(80, 80, 80);
+    pdf.text(project.organizationName, pageWidth / 2, footerY + 5, { align: 'center' });
+    pdf.setTextColor(0, 0, 0);
+
+    // Page number – top right, 2 cm from edge (skip page 1)
+    if (pageNum > 1) {
+      pdf.setFontSize(ABNT.FONT_SIZE_BODY);
+      pdf.setFont(ABNT.FONT, 'normal');
+      pdf.text(String(pageNum), pageWidth - ABNT.MARGIN_RIGHT, 15, { align: 'right' });
+    }
   };
 
   const checkPageBreak = (needed: number) => {
     if (y + needed > pageHeight - ABNT.MARGIN_BOTTOM) {
-      addFooter(pdf.getNumberOfPages());
       pdf.addPage();
       y = ABNT.MARGIN_TOP;
     }
@@ -165,7 +172,7 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
   const totalPages = pdf.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     pdf.setPage(i);
-    addFooter(i);
+    addFooter(i, totalPages);
   }
 
   const filename = `Justificativa_Prorrogacao_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;

@@ -27,7 +27,7 @@ export const JustificationPreviewSection: React.FC<Props> = ({ section, index, s
 
   return (
     <section className="mb-8 page-break">
-      <h3 className="text-lg font-bold uppercase mb-4">
+      <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>
         {index + 1}. {section.title}
       </h3>
       {isEmpty && !hasFiles && photos.length === 0 ? (
@@ -36,7 +36,7 @@ export const JustificationPreviewSection: React.FC<Props> = ({ section, index, s
         <>
           {!isEmpty && (
             <div
-              className="prose prose-sm max-w-none text-justify leading-relaxed [&_p]:mb-3 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+              className="prose prose-sm max-w-none text-justify leading-relaxed [&_p]:mb-3 [&_p]:indent-[1.25cm] [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
               dangerouslySetInnerHTML={{ __html: content }}
             />
           )}
