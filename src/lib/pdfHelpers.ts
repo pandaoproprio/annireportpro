@@ -53,15 +53,36 @@ export const addParagraph = (ctx: PdfContext, text: string): void => {
   pdf.setFont('times', 'normal');
   const paragraphs = text.split('\n').filter(p => p.trim() !== '');
   for (const para of paragraphs) {
-    const lines: string[] = pdf.splitTextToSize(para, CW - INDENT);
-    for (let i = 0; i < lines.length; i++) {
-      ensureSpace(ctx, LINE_H);
-      const x = i === 0 ? ML + INDENT : ML;
-      const w = i === 0 ? CW - INDENT : CW;
-      pdf.text(lines[i], x, ctx.currentY, { maxWidth: w, align: 'justify' });
-      ctx.currentY += LINE_H;
+    // First line: indented, narrower width
+    const firstLineWords = para.split(/\s+/);
+    let firstLine = '';
+    let restText = '';
+
+    // Build the first line word by word to fit CW - INDENT
+    for (let w = 0; w < firstLineWords.length; w++) {
+      const candidate = firstLine ? firstLine + ' ' + firstLineWords[w] : firstLineWords[w];
+      if (pdf.getTextWidth(candidate) > CW - INDENT && firstLine) {
+        restText = firstLineWords.slice(w).join(' ');
+        break;
+      }
+      firstLine = candidate;
     }
-    ctx.currentY += 2; // small gap after paragraph
+
+    // Render first line with indent
+    ensureSpace(ctx, LINE_H);
+    pdf.text(firstLine, ML + INDENT, ctx.currentY, { maxWidth: CW - INDENT, align: 'justify' });
+    ctx.currentY += LINE_H;
+
+    // Render remaining lines at full width
+    if (restText) {
+      const lines: string[] = pdf.splitTextToSize(restText, CW);
+      for (let i = 0; i < lines.length; i++) {
+        ensureSpace(ctx, LINE_H);
+        pdf.text(lines[i], ML, ctx.currentY, { maxWidth: CW, align: 'justify' });
+        ctx.currentY += LINE_H;
+      }
+    }
+    ctx.currentY += 2;
   }
 };
 
