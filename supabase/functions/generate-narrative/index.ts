@@ -27,22 +27,45 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
-    const { activities, goalTitle, goalAudience, sectionType, projectName, projectObject } = await req.json();
+    const body = await req.json();
+    const { mode = "generate", activities, goalTitle, goalAudience, sectionType, projectName, projectObject, text } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY not configured");
     }
 
-    let systemPrompt = `Você é um redator especializado em relatórios de prestação de contas de projetos sociais no Brasil. 
+    let systemPrompt = "";
+    let userPrompt = "";
+
+    if (mode === "correct") {
+      systemPrompt = `Você é um revisor gramatical e ortográfico especializado em português brasileiro formal.
+Corrija erros de gramática, ortografia, concordância, pontuação e regência.
+Mantenha o conteúdo e significado original inalterados.
+Não adicione ou remova informações. Apenas corrija erros.
+Retorne o texto corrigido sem explicações adicionais.`;
+      userPrompt = `Corrija o seguinte texto:\n\n${text}`;
+    } else if (mode === "rewrite") {
+      systemPrompt = `Você é um redator especializado em documentos institucionais e relatórios de prestação de contas no Brasil.
+Reescreva o texto em tom formal, técnico e institucional, adequado para relatórios enviados a órgãos financiadores.
+Mantenha todas as informações e dados originais. Apenas melhore a redação, fluidez e formalidade.
+Retorne o texto reescrito sem explicações adicionais.`;
+      userPrompt = `Reescreva o seguinte texto em tom formal e institucional:\n\n${text}`;
+    } else if (mode === "expand") {
+      systemPrompt = `Você é um redator especializado em relatórios de prestação de contas de projetos sociais no Brasil.
+Expanda o texto fornecido, adicionando mais detalhes, contexto e profundidade.
+Mantenha o tom formal e institucional. Não invente dados que não estejam implícitos no texto original.
+Retorne o texto expandido sem explicações adicionais.`;
+      userPrompt = `Expanda e aprofunde o seguinte texto, mantendo o tom formal:\n\n${text}`;
+    } else {
+      // mode === "generate" (original behavior)
+      systemPrompt = `Você é um redator especializado em relatórios de prestação de contas de projetos sociais no Brasil. 
 Escreva textos em português brasileiro formal, objetivos e adequados para relatórios institucionais enviados a órgãos financiadores.
 Use linguagem técnica mas acessível. Não invente dados — baseie-se exclusivamente nas informações fornecidas.
 Não use markdown, bullet points ou formatação especial. Escreva em parágrafos corridos.`;
 
-    let userPrompt = "";
-
-    if (sectionType === "goal") {
-      userPrompt = `Gere um relato narrativo para a seguinte meta de um projeto social:
+      if (sectionType === "goal") {
+        userPrompt = `Gere um relato narrativo para a seguinte meta de um projeto social:
 
 Projeto: ${projectName}
 Objeto: ${projectObject}
@@ -50,40 +73,50 @@ Meta: ${goalTitle}
 Público-alvo: ${goalAudience}
 
 Atividades realizadas vinculadas a esta meta:
-${activities.map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}${a.attendeesCount ? ` | ${a.attendeesCount} participantes` : ""}`).join("\n")}
+${(activities || []).map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}${a.attendeesCount ? ` | ${a.attendeesCount} participantes` : ""}`).join("\n")}
 
 Escreva um relato narrativo de 2-4 parágrafos descrevendo as realizações, metodologia utilizada, resultados alcançados e impacto no público-alvo.`;
-    } else if (sectionType === "summary") {
-      userPrompt = `Gere um resumo executivo para o seguinte projeto social:
+      } else if (sectionType === "summary") {
+        userPrompt = `Gere um resumo executivo para o seguinte projeto social:
 
 Projeto: ${projectName}
 Objeto: ${projectObject}
 
-Total de atividades realizadas: ${activities.length}
-Total de participantes: ${activities.reduce((sum: number, a: any) => sum + (a.attendeesCount || 0), 0)}
+Total de atividades realizadas: ${(activities || []).length}
+Total de participantes: ${(activities || []).reduce((sum: number, a: any) => sum + (a.attendeesCount || 0), 0)}
 
 Tipos de atividades:
-${Object.entries(activities.reduce((acc: any, a: any) => { acc[a.type] = (acc[a.type] || 0) + 1; return acc; }, {})).map(([type, count]) => `- ${type}: ${count}`).join("\n")}
+${Object.entries((activities || []).reduce((acc: any, a: any) => { acc[a.type] = (acc[a.type] || 0) + 1; return acc; }, {})).map(([type, count]) => `- ${type}: ${count}`).join("\n")}
 
 Escreva um resumo executivo de 2-3 parágrafos com visão geral das atividades realizadas, contexto e principais realizações.`;
-    } else if (sectionType === "other") {
-      userPrompt = `Gere um texto narrativo sobre outras ações desenvolvidas no projeto:
+      } else if (sectionType === "other") {
+        userPrompt = `Gere um texto narrativo sobre outras ações desenvolvidas no projeto:
 
 Projeto: ${projectName}
 
 Atividades registradas (ocorrências, administrativo, outras):
-${activities.map((a: any) => `- ${a.date} (${a.type}): ${a.description}${a.challenges ? ` | Desafios: ${a.challenges}` : ""}`).join("\n")}
+${(activities || []).map((a: any) => `- ${a.date} (${a.type}): ${a.description}${a.challenges ? ` | Desafios: ${a.challenges}` : ""}`).join("\n")}
 
 Escreva 1-3 parágrafos descrevendo essas ações complementares, imprevistos enfrentados e soluções adotadas.`;
-    } else if (sectionType === "communication") {
-      userPrompt = `Gere um texto narrativo sobre as ações de divulgação e comunicação do projeto:
+      } else if (sectionType === "communication") {
+        userPrompt = `Gere um texto narrativo sobre as ações de divulgação e comunicação do projeto:
 
 Projeto: ${projectName}
 
 Atividades de divulgação registradas:
-${activities.map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}`).join("\n")}
+${(activities || []).map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}`).join("\n")}
 
 Escreva 1-2 parágrafos descrevendo as estratégias de comunicação utilizadas e seus resultados.`;
+      } else if (sectionType === "generic") {
+        // Generic generation from text context
+        userPrompt = `Com base no seguinte contexto, gere um texto formal e institucional adequado para um relatório de prestação de contas:
+
+${text || "Nenhum contexto fornecido."}
+
+Escreva 2-3 parágrafos em tom formal e institucional.`;
+      } else {
+        userPrompt = text || "Gere um texto formal para um relatório de prestação de contas de um projeto social.";
+      }
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -98,21 +131,33 @@ Escreva 1-2 parágrafos descrevendo as estratégias de comunicação utilizadas 
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.7,
-        max_tokens: 1500,
+        temperature: mode === "correct" ? 0.3 : 0.7,
+        max_tokens: mode === "correct" ? 2000 : 1500,
       }),
     });
 
     if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Limite de requisições excedido. Tente novamente em alguns segundos." }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Créditos de IA esgotados. Adicione créditos ao workspace." }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
       const error = await response.text();
       console.error("AI Gateway error:", error);
       throw new Error(`AI Gateway returned ${response.status}`);
     }
 
     const data = await response.json();
-    const text = data.choices?.[0]?.message?.content || "";
+    const resultText = data.choices?.[0]?.message?.content || "";
 
-    return new Response(JSON.stringify({ text }), {
+    return new Response(JSON.stringify({ text: resultText }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

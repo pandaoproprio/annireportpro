@@ -63,6 +63,7 @@ export const useJustificationReportState = () => {
   });
   const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([]);
   const [sectionPhotos, setSectionPhotos] = useState<Record<string, string[]>>({});
+  const [sectionDocs, setSectionDocs] = useState<Record<string, AttachmentFile[]>>({});
 
   // Fetch drafts
   const fetchDrafts = useCallback(async () => {
@@ -114,6 +115,7 @@ export const useJustificationReportState = () => {
     });
     setAttachmentFiles([]);
     setSectionPhotos({});
+    setSectionDocs({});
     setSections(DEFAULT_SECTIONS);
     setMode('edit');
   };
@@ -131,6 +133,7 @@ export const useJustificationReportState = () => {
     });
     setAttachmentFiles(draft.attachmentFiles || []);
     setSectionPhotos(draft.sectionPhotos || {});
+    setSectionDocs((draft as any).sectionDocs || {});
     setSections(DEFAULT_SECTIONS);
     setShowDraftsList(false);
   };
@@ -221,6 +224,7 @@ export const useJustificationReportState = () => {
         attachments_section: sectionContents.attachmentsSection,
         attachment_files: attachmentFiles as any,
         section_photos: sectionPhotos as any,
+        section_docs: sectionDocs as any,
         is_draft: true,
       };
 
@@ -349,6 +353,48 @@ export const useJustificationReportState = () => {
     setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  // Per-section document upload
+  const handleSectionDocUpload = async (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => {
+    if (!e.target.files || !e.target.files[0] || !project?.id) return;
+    const file = e.target.files[0];
+    const maxSize = 20 * 1024 * 1024;
+    if (file.size > maxSize) {
+      toast.error('Arquivo excede o tamanho máximo de 20MB.');
+      e.target.value = '';
+      return;
+    }
+    try {
+      const fileId = crypto.randomUUID();
+      const fileExt = file.name.split('.').pop() || 'pdf';
+      const filePath = `reports/${project.id}/justificativas/docs/${sectionKey}/${fileId}.${fileExt}`;
+      const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
+      if (error) { toast.error(`Erro ao enviar documento: ${file.name}`); return; }
+      const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
+      setSectionDocs(prev => ({
+        ...prev,
+        [sectionKey]: [...(prev[sectionKey] || []), { name: file.name, url: urlData.publicUrl }],
+      }));
+      toast.success(`Documento "${file.name}" enviado com sucesso`);
+    } catch { toast.error(`Erro ao processar documento: ${file.name}`); }
+    e.target.value = '';
+  };
+
+  const removeSectionDoc = async (sectionKey: string, index: number) => {
+    const docs = sectionDocs[sectionKey] || [];
+    const doc = docs[index];
+    if (doc?.url) {
+      try {
+        const urlParts = new URL(doc.url).pathname.split('/');
+        const filePath = urlParts.slice(-5).join('/');
+        await supabase.storage.from('team-report-photos').remove([filePath]);
+      } catch { /* still remove from UI */ }
+    }
+    setSectionDocs(prev => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || []).filter((_, i) => i !== index),
+    }));
+  };
+
   return {
     project,
     mode, setMode,
@@ -370,5 +416,7 @@ export const useJustificationReportState = () => {
     buildReportData,
     handleDocumentUpload, removeAttachmentFile,
     handleSectionPhotoUpload, removeSectionPhoto,
+    handleSectionDocUpload, removeSectionDoc,
+    sectionDocs,
   };
 };

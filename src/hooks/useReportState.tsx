@@ -4,6 +4,11 @@ import { Activity, ActivityType, ReportSection, ExpenseItem } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+export interface SectionDoc {
+  name: string;
+  url: string;
+}
+
 const DEFAULT_SECTIONS: ReportSection[] = [
   { id: 'object', type: 'fixed', key: 'object', title: 'OBJETO', isVisible: true },
   { id: 'summary', type: 'fixed', key: 'summary', title: 'RESUMO', isVisible: true },
@@ -39,6 +44,10 @@ export const useReportState = () => {
   const [linkFileNames, setLinkFileNames] = useState<{ attendance: string; registration: string; media: string }>({ attendance: '', registration: '', media: '' });
   const [sections, setSections] = useState<ReportSection[]>(DEFAULT_SECTIONS);
 
+  // Per-section photos and docs (persisted)
+  const [sectionPhotos, setSectionPhotos] = useState<Record<string, string[]>>({});
+  const [sectionDocs, setSectionDocs] = useState<Record<string, SectionDoc[]>>({});
+
   // Initialize from project data
   useEffect(() => {
     if (project) {
@@ -71,6 +80,8 @@ export const useReportState = () => {
       if (rd.sections && rd.sections.length > 0) {
         setSections(rd.sections);
       }
+      setSectionPhotos((rd as any).sectionPhotos || {});
+      setSectionDocs((rd as any).sectionDocs || {});
     }
   }, [project]);
 
@@ -98,7 +109,9 @@ export const useReportState = () => {
         mediaFileName: linkFileNames.media,
       },
       sections,
-    });
+      sectionPhotos,
+      sectionDocs,
+    } as any);
     if (showToast) toast.success('Rascunho salvo com sucesso!');
   };
 
@@ -256,6 +269,97 @@ export const useReportState = () => {
     }
   };
 
+  // Per-section photo upload
+  const handleSectionPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => {
+    if (!e.target.files || !e.target.files.length || !project?.id) return;
+    for (const file of Array.from(e.target.files)) {
+      try {
+        const photoId = crypto.randomUUID();
+        const fileExt = file.name.split('.').pop() || 'jpg';
+        const filePath = `reports/${project.id}/sections/${sectionKey}/${photoId}.${fileExt}`;
+        const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
+        if (error) { toast.error(`Erro ao enviar foto: ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
+        setSectionPhotos(prev => ({
+          ...prev,
+          [sectionKey]: [...(prev[sectionKey] || []), urlData.publicUrl],
+        }));
+      } catch { toast.error(`Erro ao processar foto: ${file.name}`); }
+    }
+    e.target.value = '';
+    toast.success('Foto(s) enviada(s) com sucesso!');
+  };
+
+  const removeSectionPhoto = async (sectionKey: string, index: number) => {
+    const photos = sectionPhotos[sectionKey] || [];
+    const photoUrl = photos[index];
+    if (photoUrl) {
+      try {
+        const urlParts = new URL(photoUrl).pathname.split('/');
+        const filePath = urlParts.slice(-5).join('/');
+        await supabase.storage.from('team-report-photos').remove([filePath]);
+      } catch { /* still remove from UI */ }
+    }
+    setSectionPhotos(prev => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || []).filter((_, i) => i !== index),
+    }));
+  };
+
+  // Per-section document upload
+  const handleSectionDocUpload = async (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => {
+    if (!e.target.files || !e.target.files[0] || !project?.id) return;
+    const file = e.target.files[0];
+    const maxSize = 20 * 1024 * 1024; // 20MB
+    if (file.size > maxSize) {
+      toast.error('Arquivo excede o tamanho máximo de 20MB.');
+      e.target.value = '';
+      return;
+    }
+    const allowedTypes = [
+      'application/pdf', 'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'image/jpeg', 'image/png', 'image/webp',
+    ];
+    if (!allowedTypes.includes(file.type) && !file.name.match(/\.(pdf|doc|docx|xls|xlsx|jpg|jpeg|png|webp)$/i)) {
+      toast.error('Tipo de arquivo não permitido.');
+      e.target.value = '';
+      return;
+    }
+    try {
+      const fileId = crypto.randomUUID();
+      const fileExt = file.name.split('.').pop() || 'pdf';
+      const filePath = `reports/${project.id}/sections/${sectionKey}/docs/${fileId}.${fileExt}`;
+      const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
+      if (error) { toast.error(`Erro ao enviar documento: ${file.name}`); return; }
+      const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
+      setSectionDocs(prev => ({
+        ...prev,
+        [sectionKey]: [...(prev[sectionKey] || []), { name: file.name, url: urlData.publicUrl }],
+      }));
+      toast.success(`Documento "${file.name}" enviado com sucesso`);
+    } catch { toast.error(`Erro ao processar documento: ${file.name}`); }
+    e.target.value = '';
+  };
+
+  const removeSectionDoc = async (sectionKey: string, index: number) => {
+    const docs = sectionDocs[sectionKey] || [];
+    const doc = docs[index];
+    if (doc?.url) {
+      try {
+        const urlParts = new URL(doc.url).pathname.split('/');
+        const filePath = urlParts.slice(-5).join('/');
+        await supabase.storage.from('team-report-photos').remove([filePath]);
+      } catch { /* still remove from UI */ }
+    }
+    setSectionDocs(prev => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || []).filter((_, i) => i !== index),
+    }));
+  };
+
   // Activity helpers
   const getActivitiesByGoal = (goalId: string) =>
     activities.filter(a => a.goalId === goalId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -303,12 +407,15 @@ export const useReportState = () => {
     communicationNarrative, setCommunicationNarrative, communicationPhotos, setCommunicationPhotos,
     satisfaction, setSatisfaction, futureActions, setFutureActions,
     expenses, links, setLinks, linkFileNames, setLinkFileNames, sections,
+    sectionPhotos, sectionDocs,
     saveReportData,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent, addCustomSection, removeSection,
     pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     addExpense, updateExpense, removeExpense,
     handleLogoUpload, handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
     handleDocumentUpload,
+    handleSectionPhotoUpload, removeSectionPhoto,
+    handleSectionDocUpload, removeSectionDoc,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   };
 };

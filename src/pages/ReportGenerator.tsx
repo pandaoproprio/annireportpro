@@ -24,11 +24,14 @@ export const ReportGenerator: React.FC = () => {
     communicationNarrative, setCommunicationNarrative, communicationPhotos, setCommunicationPhotos,
     satisfaction, setSatisfaction, futureActions, setFutureActions,
     expenses, links, setLinks, linkFileNames, setLinkFileNames, sections,
+    sectionPhotos, sectionDocs,
     saveReportData, moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection, pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     addExpense, updateExpense, removeExpense,
     handleLogoUpload, handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
     handleDocumentUpload,
+    handleSectionPhotoUpload, removeSectionPhoto,
+    handleSectionDocUpload, removeSectionDoc,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   } = state;
 
@@ -102,11 +105,14 @@ export const ReportGenerator: React.FC = () => {
     communicationNarrative, setCommunicationNarrative, communicationPhotos, setCommunicationPhotos,
     satisfaction, setSatisfaction, futureActions, setFutureActions,
     expenses, links, setLinks, linkFileNames, setLinkFileNames,
+    sectionPhotos, sectionDocs,
     goals: project.goals, projectName: project.name, projectObject: project.object, activities,
     updateSectionTitle, updateCustomContent, removeSection,
     addExpense, updateExpense, removeExpense,
     handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
     handleDocumentUpload,
+    handleSectionPhotoUpload, removeSectionPhoto,
+    handleSectionDocUpload, removeSectionDoc,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   };
 
