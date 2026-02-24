@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta } from '@/types';
+import { PageLayout } from '@/types/imageLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -57,6 +58,7 @@ export const useReportState = () => {
   const [sectionDocs, setSectionDocs] = useState<Record<string, SectionDoc[]>>({});
   // Photo metadata (captions + sizes) keyed by sectionKey or goalId, indexed by photo position
   const [photoMetadata, setPhotoMetadata] = useState<Record<string, ReportPhotoMeta[]>>({});
+  const [pageLayouts, setPageLayouts] = useState<Record<string, PageLayout>>({});
 
   // Initialize from project data
   useEffect(() => {
@@ -101,6 +103,7 @@ export const useReportState = () => {
       setSectionPhotos((rd as any).sectionPhotos || {});
       setSectionDocs((rd as any).sectionDocs || {});
       setPhotoMetadata((rd as any).photoMetadata || {});
+      setPageLayouts((rd as any).pageLayouts || {});
     }
   }, [project]);
 
@@ -139,6 +142,7 @@ export const useReportState = () => {
       sectionPhotos,
       sectionDocs,
       photoMetadata,
+      pageLayouts,
     } as any);
     if (showToast) toast.success('Rascunho salvo com sucesso!');
   };
@@ -486,6 +490,7 @@ export const useReportState = () => {
     expenses, links, setLinks, linkFileNames, setLinkFileNames, sections,
     sectionPhotos, sectionDocs,
     photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
+    pageLayouts, setPageLayouts,
     saveReportData,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent, addCustomSection, removeSection,
     pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
