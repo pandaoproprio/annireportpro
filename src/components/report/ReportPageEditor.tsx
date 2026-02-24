@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BookOpen, FileText, PanelBottom, Upload, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -25,6 +26,8 @@ interface Props {
   setFooterShowAddress: (v: boolean) => void;
   footerShowContact: boolean;
   setFooterShowContact: (v: boolean) => void;
+  footerAlignment: 'left' | 'center' | 'right';
+  setFooterAlignment: (v: 'left' | 'center' | 'right') => void;
   organizationName: string;
   organizationAddress?: string;
   organizationEmail?: string;
@@ -41,6 +44,7 @@ export const ReportPageEditor: React.FC<Props> = ({
   footerText, setFooterText,
   footerShowAddress, setFooterShowAddress,
   footerShowContact, setFooterShowContact,
+  footerAlignment, setFooterAlignment,
   organizationName, organizationAddress, organizationEmail, organizationPhone, organizationWebsite,
 }) => (
   <div className="space-y-4">
@@ -150,7 +154,18 @@ export const ReportPageEditor: React.FC<Props> = ({
               <Label htmlFor="footer-contact" className="text-sm cursor-pointer">Exibir contato</Label>
             </div>
           </div>
-          <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1">
+          <div className="space-y-2">
+            <Label>Alinhamento do Rodapé</Label>
+            <Select value={footerAlignment} onValueChange={(v) => setFooterAlignment(v as 'left' | 'center' | 'right')}>
+              <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="left">Esquerda</SelectItem>
+                <SelectItem value="center">Centralizado</SelectItem>
+                <SelectItem value="right">Direita</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-xs text-muted-foreground space-y-1" style={{ textAlign: footerAlignment }}>
             <p className="font-semibold">Pré-visualização do rodapé:</p>
             <p className="font-medium">{organizationName}</p>
             {footerShowAddress && organizationAddress && <p>{organizationAddress}</p>}
