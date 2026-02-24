@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Save } from 'lucide-react';
+import { FileEdit } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
 import { exportToDocx } from '@/lib/docxExport';
 import { useReportState } from '@/hooks/useReportState';
@@ -154,8 +154,8 @@ export const ReportGenerator: React.FC = () => {
             ))}
           </div>
           <div className="fixed bottom-4 right-4 md:right-8 z-20">
-            <Button onClick={saveReportData} className="shadow-xl bg-success hover:bg-success/90 text-success-foreground rounded-full px-6 py-3 h-auto text-base">
-              <Save className="w-5 h-5 mr-2" /> Salvar Alterações
+            <Button onClick={() => saveReportData()} className="shadow-xl bg-success hover:bg-success/90 text-success-foreground rounded-full px-6 py-3 h-auto text-base">
+              <FileEdit className="w-5 h-5 mr-2" /> Salvar Rascunho
             </Button>
           </div>
         </div>
