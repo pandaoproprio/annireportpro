@@ -241,6 +241,9 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // ══════════════════════════════════════════════════════════════
   ctx.headerConfig = {
     bannerImg,
+    bannerHeightMm: vc?.headerBannerHeightMm,
+    bannerFit: vc?.headerBannerFit,
+    bannerVisible: vc?.headerBannerVisible,
     logoImg,
     logoSecondaryImg,
     logoCenterImg,

@@ -13,6 +13,9 @@ export interface LogoConfig {
 export interface ReportVisualConfig {
   // Header
   headerBannerUrl: string;
+  headerBannerHeightMm: number; // banner height in mm (default 25)
+  headerBannerFit: 'contain' | 'cover' | 'fill'; // object-fit (default contain)
+  headerBannerVisible: boolean;
   headerLeftText: string;
   headerRightText: string;
   logo: string;
@@ -61,6 +64,9 @@ export interface ReportVisualConfig {
 
 const DEFAULT_CONFIG: ReportVisualConfig = {
   headerBannerUrl: '',
+  headerBannerHeightMm: 25,
+  headerBannerFit: 'contain',
+  headerBannerVisible: true,
   headerLeftText: '',
   headerRightText: '',
   logo: '',

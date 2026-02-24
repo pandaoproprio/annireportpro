@@ -34,6 +34,9 @@ export interface PreloadedImage {
 
 export interface HeaderConfig {
   bannerImg?: PreloadedImage | null;
+  bannerHeightMm?: number;
+  bannerFit?: 'contain' | 'cover' | 'fill';
+  bannerVisible?: boolean;
   logoImg?: PreloadedImage | null;
   logoSecondaryImg?: PreloadedImage | null;
   logoCenterImg?: PreloadedImage | null;
@@ -470,9 +473,10 @@ const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
   const topY = config.topPaddingMm ?? HEADER_TOP_Y;
   const maxH = config.headerHeightMm ?? HEADER_BANNER_H;
 
-  if (bannerImg) {
+  if (bannerImg && config.bannerVisible !== false) {
+    const bannerMaxH = config.bannerHeightMm ?? maxH;
     const bannerAspect = bannerImg.width / bannerImg.height;
-    const bannerH = Math.min(CW / bannerAspect, maxH);
+    const bannerH = Math.min(CW / bannerAspect, bannerMaxH);
     const drawW = bannerH * bannerAspect;
     const drawX = ML + (CW - drawW) / 2;
     try { pdf.addImage(bannerImg.data, 'JPEG', drawX, topY, drawW, bannerH); } catch (e) { console.warn('Banner error:', e); }

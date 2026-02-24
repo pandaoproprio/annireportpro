@@ -36,7 +36,8 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   // Set header config for post-pass rendering
   if (vc && (bannerImg || logoImg || logoCenterImg || logoSecondaryImg)) {
     ctx.headerConfig = {
-      bannerImg, logoImg, logoSecondaryImg, logoCenterImg,
+      bannerImg, bannerHeightMm: vc.headerBannerHeightMm, bannerFit: vc.headerBannerFit, bannerVisible: vc.headerBannerVisible,
+      logoImg, logoSecondaryImg, logoCenterImg,
       headerLeftText: vc.headerLeftText, headerRightText: vc.headerRightText,
       logoVisible: vc.logoConfig?.visible,
       logoCenterVisible: vc.logoCenterConfig?.visible,
