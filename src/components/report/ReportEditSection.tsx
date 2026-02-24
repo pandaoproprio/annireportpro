@@ -6,7 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Trash2, Plus, Image as ImageIcon, Upload, FileText } from 'lucide-react';
-import { AiNarrativeButton } from '@/components/report/AiNarrativeButton';
+import { AiTextToolbar } from '@/components/report/AiTextToolbar';
+import { SectionDoc } from '@/hooks/useReportState';
 
 interface Props {
   section: ReportSection;
@@ -36,6 +37,9 @@ interface Props {
   setLinks: (v: { attendance: string; registration: string; media: string }) => void;
   linkFileNames: { attendance: string; registration: string; media: string };
   setLinkFileNames: React.Dispatch<React.SetStateAction<{ attendance: string; registration: string; media: string }>>;
+  // Per-section uploads
+  sectionPhotos: Record<string, string[]>;
+  sectionDocs: Record<string, SectionDoc[]>;
   // Project data
   goals: Goal[];
   projectName: string;
@@ -57,6 +61,10 @@ interface Props {
   getOtherActivities: () => Activity[];
   formatActivityDate: (date: string, endDate?: string) => string;
   handleDocumentUpload: (e: React.ChangeEvent<HTMLInputElement>, linkField: 'attendance' | 'registration' | 'media') => void;
+  handleSectionPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => void;
+  removeSectionPhoto: (sectionKey: string, index: number) => void;
+  handleSectionDocUpload: (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => void;
+  removeSectionDoc: (sectionKey: string, index: number) => void;
 }
 
 export const ReportEditSection: React.FC<Props> = (props) => {
@@ -68,8 +76,70 @@ export const ReportEditSection: React.FC<Props> = (props) => {
       <CardContent className="pt-6">
         <SectionHeader {...props} />
         <SectionContent {...props} />
+        {/* Per-section uploads (except OBJETO) */}
+        {section.key !== 'object' && section.key !== 'expenses' && section.key !== 'links' && (
+          <SectionUploads {...props} />
+        )}
       </CardContent>
     </Card>
+  );
+};
+
+const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc }) => {
+  const sectionKey = section.type === 'custom' ? section.id : section.key;
+  const photos = sectionPhotos[sectionKey] || [];
+  const docs = sectionDocs[sectionKey] || [];
+
+  return (
+    <div className="mt-4 space-y-4 border-t pt-4">
+      {/* Photos */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2 text-sm font-semibold">
+          <ImageIcon className="w-4 h-4" /> Registro Fotográfico
+        </Label>
+        <Input type="file" accept="image/*" multiple onChange={e => handleSectionPhotoUpload(e, sectionKey)} className="text-sm" />
+        {photos.length > 0 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {photos.map((photo, pIdx) => (
+              <div key={pIdx} className="relative group">
+                <img src={photo} alt={`Foto ${pIdx + 1}`} className="h-20 w-20 object-contain rounded border bg-muted" />
+                <button type="button" onClick={() => removeSectionPhoto(sectionKey, pIdx)}
+                  className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Documents */}
+      <div className="space-y-2">
+        <Label className="flex items-center gap-2 text-sm font-semibold">
+          <Upload className="w-4 h-4" /> Documentos Comprobatórios
+        </Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor={`upload-doc-${sectionKey}`} className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors">
+            <Upload className="w-3.5 h-3.5" />
+            Enviar documento
+          </Label>
+          <input id={`upload-doc-${sectionKey}`} type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" className="hidden" onChange={e => handleSectionDocUpload(e, sectionKey)} />
+          <span className="text-xs text-muted-foreground">PDF, DOC, XLS, imagens (máx. 20MB)</span>
+        </div>
+        {docs.length > 0 && (
+          <div className="space-y-1 mt-2">
+            {docs.map((doc, dIdx) => (
+              <div key={dIdx} className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                <FileText className="w-4 h-4 text-primary shrink-0" />
+                <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1">{doc.name}</a>
+                <button onClick={() => removeSectionDoc(sectionKey, dIdx)} className="text-destructive/60 hover:text-destructive shrink-0">
+                  <Trash2 className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
   );
 };
 
@@ -112,6 +182,7 @@ const SectionContent: React.FC<Props> = (props) => {
   }
 };
 
+// OBJETO - NO uploads, NO AI
 const ObjectSection: React.FC<Props> = ({ objectText, setObjectText }) => (
   <div className="space-y-2">
     <Label>Texto do Objeto</Label>
@@ -119,44 +190,15 @@ const ObjectSection: React.FC<Props> = ({ objectText, setObjectText }) => (
   </div>
 );
 
-const SummarySection: React.FC<Props> = ({ summary, setSummary, activities, projectName, projectObject, handlePhotoUpload, handleDocumentUpload }) => {
-  const [summaryPhotos, setSummaryPhotos] = React.useState<string[]>([]);
-  const [summaryDocs, setSummaryDocs] = React.useState<{ name: string; url: string }[]>([]);
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Label>Resumo / Visão Geral</Label>
-        <AiNarrativeButton sectionType="summary" activities={activities} projectName={projectName} projectObject={projectObject} onGenerated={setSummary} />
-      </div>
-      <Textarea rows={8} value={summary} onChange={e => setSummary(e.target.value)} placeholder="Descreva a visão geral das atividades realizadas, contexto, e principais realizações..." />
-
-      <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos do Resumo</Label>
-      <Input type="file" accept="image/*" multiple onChange={e => handlePhotoUpload(e, setSummaryPhotos)} />
-      <PhotoList photos={summaryPhotos} setter={setSummaryPhotos} />
-
-      <Label className="flex items-center gap-2"><Upload className="w-4 h-4" /> Documentos Comprobatórios</Label>
-      <Input type="file" accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png" onChange={e => {
-        if (e.target.files?.[0]) {
-          handleDocumentUpload(e, 'attendance');
-        }
-      }} />
-      {summaryDocs.length > 0 && (
-        <div className="space-y-1">
-          {summaryDocs.map((doc, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm">
-              <FileText className="w-4 h-4 text-primary" />
-              <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline truncate">{doc.name}</a>
-              <button onClick={() => setSummaryDocs(prev => prev.filter((_, idx) => idx !== i))} className="text-destructive/60 hover:text-destructive">
-                <Trash2 className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+const SummarySection: React.FC<Props> = ({ summary, setSummary, activities, projectName, projectObject }) => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Label>Resumo / Visão Geral</Label>
+      <AiTextToolbar text={summary} onResult={setSummary} sectionType="summary" activities={activities} projectName={projectName} projectObject={projectObject} />
     </div>
-  );
-};
+    <Textarea rows={8} value={summary} onChange={e => setSummary(e.target.value)} placeholder="Descreva a visão geral das atividades realizadas, contexto, e principais realizações..." />
+  </div>
+);
 
 const GoalsSection: React.FC<Props> = ({
   goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject,
@@ -182,10 +224,11 @@ const GoalsSection: React.FC<Props> = ({
           )}
           <div className="flex items-center justify-between">
             <Label>Relato Narrativo da Meta</Label>
-            <AiNarrativeButton
+            <AiTextToolbar
+              text={goalNarratives[goal.id] || ''}
+              onResult={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: text })}
               sectionType="goal" activities={goalActs} projectName={projectName} projectObject={projectObject}
               goalTitle={goal.title} goalAudience={goal.targetAudience}
-              onGenerated={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: text })}
             />
           </div>
           <Textarea rows={5} placeholder="Descreva as realizações, metodologia, resultados alcançados..."
@@ -196,7 +239,7 @@ const GoalsSection: React.FC<Props> = ({
             <div className="flex flex-wrap gap-2">
               {photos.map((photo, pIdx) => (
                 <div key={pIdx} className="relative group">
-                  <img src={photo} alt="" className="h-20 w-20 object-cover rounded border" />
+                  <img src={photo} alt="" className="h-20 w-20 object-contain rounded border bg-muted" />
                   <button type="button" onClick={() => removeGoalPhoto(goal.id, pIdx)}
                     className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100">
                     <Trash2 className="w-3 h-3" />
@@ -211,25 +254,9 @@ const GoalsSection: React.FC<Props> = ({
   </div>
 );
 
-const PhotoList: React.FC<{ photos: string[]; setter: React.Dispatch<React.SetStateAction<string[]>> }> = ({ photos, setter }) => (
-  photos.length > 0 ? (
-    <div className="flex flex-wrap gap-2">
-      {photos.map((p, i) => (
-        <div key={i} className="relative group">
-          <img src={p} alt="" className="h-16 w-16 object-cover rounded border" />
-          <button onClick={() => setter(prev => prev.filter((_, idx) => idx !== i))}
-            className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 opacity-0 group-hover:opacity-100">
-            <Trash2 className="w-3 h-3" />
-          </button>
-        </div>
-      ))}
-    </div>
-  ) : null
-);
-
 const OtherSection: React.FC<Props> = ({
-  otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,
-  projectName, projectObject, handlePhotoUpload, getOtherActivities, formatActivityDate,
+  otherActionsNarrative, setOtherActionsNarrative,
+  projectName, projectObject, getOtherActivities, formatActivityDate,
 }) => {
   const otherActs = getOtherActivities();
   return (
@@ -244,19 +271,16 @@ const OtherSection: React.FC<Props> = ({
       )}
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
-        <AiNarrativeButton sectionType="other" activities={otherActs} projectName={projectName} projectObject={projectObject} onGenerated={setOtherActionsNarrative} />
+        <AiTextToolbar text={otherActionsNarrative} onResult={setOtherActionsNarrative} sectionType="other" activities={otherActs} projectName={projectName} projectObject={projectObject} />
       </div>
       <Textarea rows={5} value={otherActionsNarrative} onChange={e => setOtherActionsNarrative(e.target.value)} placeholder="Descreva outras informações, ações extras, imprevistos, acontecimentos relevantes..." />
-      <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos</Label>
-      <Input type="file" accept="image/*" multiple onChange={e => handlePhotoUpload(e, setOtherActionsPhotos)} />
-      <PhotoList photos={otherActionsPhotos} setter={setOtherActionsPhotos} />
     </div>
   );
 };
 
 const CommunicationSection: React.FC<Props> = ({
-  communicationNarrative, setCommunicationNarrative, communicationPhotos, setCommunicationPhotos,
-  projectName, projectObject, handlePhotoUpload, getCommunicationActivities, formatActivityDate,
+  communicationNarrative, setCommunicationNarrative,
+  projectName, projectObject, getCommunicationActivities, formatActivityDate,
 }) => {
   const commActs = getCommunicationActivities();
   return (
@@ -271,22 +295,31 @@ const CommunicationSection: React.FC<Props> = ({
       )}
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
-        <AiNarrativeButton sectionType="communication" activities={commActs} projectName={projectName} projectObject={projectObject} onGenerated={setCommunicationNarrative} />
+        <AiTextToolbar text={communicationNarrative} onResult={setCommunicationNarrative} sectionType="communication" activities={commActs} projectName={projectName} projectObject={projectObject} />
       </div>
       <Textarea rows={5} value={communicationNarrative} onChange={e => setCommunicationNarrative(e.target.value)} placeholder="Descreva as ações de divulgação, publicações, links de matérias..." />
-      <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos e Artes de Divulgação</Label>
-      <Input type="file" accept="image/*" multiple onChange={e => handlePhotoUpload(e, setCommunicationPhotos)} />
-      <PhotoList photos={communicationPhotos} setter={setCommunicationPhotos} />
     </div>
   );
 };
 
-const SatisfactionSection: React.FC<Props> = ({ satisfaction, setSatisfaction }) => (
-  <Textarea rows={5} value={satisfaction} onChange={e => setSatisfaction(e.target.value)} placeholder="Descreva a visão do público sobre o projeto, feedbacks recebidos, resultados de pesquisas de satisfação..." />
+const SatisfactionSection: React.FC<Props> = ({ satisfaction, setSatisfaction, projectName, projectObject }) => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Label>Grau de Satisfação</Label>
+      <AiTextToolbar text={satisfaction} onResult={setSatisfaction} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
+    </div>
+    <Textarea rows={5} value={satisfaction} onChange={e => setSatisfaction(e.target.value)} placeholder="Descreva a visão do público sobre o projeto, feedbacks recebidos, resultados de pesquisas de satisfação..." />
+  </div>
 );
 
-const FutureSection: React.FC<Props> = ({ futureActions, setFutureActions }) => (
-  <Textarea rows={4} value={futureActions} onChange={e => setFutureActions(e.target.value)} placeholder="Descreva as ações futuras do projeto, próximos passos, planejamento..." />
+const FutureSection: React.FC<Props> = ({ futureActions, setFutureActions, projectName, projectObject }) => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Label>Ações Futuras</Label>
+      <AiTextToolbar text={futureActions} onResult={setFutureActions} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
+    </div>
+    <Textarea rows={4} value={futureActions} onChange={e => setFutureActions(e.target.value)} placeholder="Descreva as ações futuras do projeto, próximos passos, planejamento..." />
+  </div>
 );
 
 const ExpensesSection: React.FC<Props> = ({ expenses, addExpense, updateExpense, removeExpense, handleExpenseImageUpload }) => (
@@ -307,7 +340,7 @@ const ExpensesSection: React.FC<Props> = ({ expenses, addExpense, updateExpense,
           <div className="space-y-2">
             <Label>Registro Fotográfico</Label>
             <Input type="file" accept="image/*" onChange={e => handleExpenseImageUpload(e, item.id)} />
-            {item.image && <img src={item.image} alt="" className="h-16 w-16 object-cover rounded border mt-1" />}
+            {item.image && <img src={item.image} alt="" className="h-16 w-16 object-contain rounded border bg-muted mt-1" />}
           </div>
         </div>
       </div>
@@ -341,11 +374,7 @@ const LinksSection: React.FC<Props> = ({ links, setLinks, linkFileNames, setLink
             </button>
           </div>
         ) : (
-          <Input
-            placeholder="https://..."
-            value={url}
-            onChange={e => setLinks({ ...links, [field]: e.target.value })}
-          />
+          <Input placeholder="https://..." value={url} onChange={e => setLinks({ ...links, [field]: e.target.value })} />
         )}
         {!hasFile && (
           <div className="flex items-center gap-2">
@@ -373,9 +402,12 @@ const LinksSection: React.FC<Props> = ({ links, setLinks, linkFileNames, setLink
   );
 };
 
-const CustomSection: React.FC<Props> = ({ section, index, updateCustomContent }) => (
-  <div className="space-y-2">
-    <Label>Conteúdo</Label>
+const CustomSection: React.FC<Props> = ({ section, index, updateCustomContent, projectName, projectObject }) => (
+  <div className="space-y-4">
+    <div className="flex items-center justify-between">
+      <Label>Conteúdo</Label>
+      <AiTextToolbar text={section.content || ''} onResult={(text) => updateCustomContent(index, text)} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
+    </div>
     <Textarea rows={5} value={section.content || ''} onChange={e => updateCustomContent(index, e.target.value)} placeholder="Escreva o conteúdo desta seção..." />
   </div>
 );

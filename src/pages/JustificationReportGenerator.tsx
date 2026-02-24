@@ -22,7 +22,7 @@ export const JustificationReportGenerator: React.FC = () => {
     project, mode, setMode, isExporting, setIsExporting, exportType, setExportType,
     showDraftsList, setShowDraftsList, currentDraftId,
     drafts, isLoading, isSaving,
-    sections, sectionContents, attachmentFiles, sectionPhotos, SECTION_PLACEHOLDERS, hasContent,
+    sections, sectionContents, attachmentFiles, sectionPhotos, sectionDocs, SECTION_PLACEHOLDERS, hasContent,
     resetForm, loadDraft, updateSectionContent,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection,
@@ -30,6 +30,7 @@ export const JustificationReportGenerator: React.FC = () => {
     saveDraft, deleteDraft, buildReportData,
     handleDocumentUpload, removeAttachmentFile,
     handleSectionPhotoUpload, removeSectionPhoto,
+    handleSectionDocUpload, removeSectionDoc,
   } = state;
 
   if (!project) {
@@ -81,7 +82,6 @@ export const JustificationReportGenerator: React.FC = () => {
         const text = `${i}`;
         pdf.text(text, pageWidth - 20, 20);
       }
-      pdf.save(filename);
       pdf.save(filename);
       toast.success('PDF exportado com sucesso!');
     } catch (error) {
@@ -183,6 +183,7 @@ export const JustificationReportGenerator: React.FC = () => {
                 placeholders={SECTION_PLACEHOLDERS}
                 attachmentFiles={attachmentFiles}
                 sectionPhotos={sectionPhotos}
+                sectionDocs={sectionDocs}
                 updateSectionContent={updateSectionContent}
                 updateSectionTitle={updateSectionTitle}
                 updateCustomContent={updateCustomContent}
@@ -191,6 +192,8 @@ export const JustificationReportGenerator: React.FC = () => {
                 removeAttachmentFile={removeAttachmentFile}
                 handleSectionPhotoUpload={handleSectionPhotoUpload}
                 removeSectionPhoto={removeSectionPhoto}
+                handleSectionDocUpload={handleSectionDocUpload}
+                removeSectionDoc={removeSectionDoc}
               />
             ))}
           </div>
