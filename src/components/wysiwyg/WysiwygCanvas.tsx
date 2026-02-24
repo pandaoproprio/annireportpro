@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { DocumentPage, DocumentBlock, LayoutConfig, HeaderFooterConfig } from '@/types/document';
+import { StructuredRichContent, structuredToHtml, htmlToStructured, createDefaultStructuredContent, VARIABLE_LABELS, RichTextVariable } from '@/types/richText';
 import { WysiwygBlockRenderer } from './WysiwygBlockRenderer';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
@@ -10,6 +11,10 @@ import { CSS } from '@dnd-kit/utilities';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Hash } from 'lucide-react';
 
 const MM_TO_PX = 3.78;
 
@@ -28,16 +33,59 @@ const SortableItem: React.FC<{ id: string; children: React.ReactNode }> = ({ id,
   );
 };
 
-// ── Inline Header/Footer editor ──
-const InlineHeaderFooter: React.FC<{
+// ── Variable insertion button ──
+const VariableInsertButton: React.FC<{
+  onInsert: (variable: RichTextVariable['variable']) => void;
+}> = ({ onInsert }) => (
+  <Popover>
+    <PopoverTrigger asChild>
+      <Button variant="ghost" size="icon" className="h-5 w-5 opacity-60 hover:opacity-100">
+        <Hash className="h-3 w-3" />
+      </Button>
+    </PopoverTrigger>
+    <PopoverContent className="w-48 p-1" align="start">
+      <div className="space-y-0.5">
+        {(Object.entries(VARIABLE_LABELS) as [RichTextVariable['variable'], string][]).map(([key, label]) => (
+          <Button
+            key={key}
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start h-7 text-xs"
+            onClick={() => onInsert(key)}
+          >
+            <Badge variant="secondary" className="text-[10px] mr-1.5">{`{{${key}}}`}</Badge>
+            {label}
+          </Button>
+        ))}
+      </div>
+    </PopoverContent>
+  </Popover>
+);
+
+// ── Inline Header/Footer editor with structured model ──
+const InlineStructuredEditor: React.FC<{
   config: HeaderFooterConfig;
   onUpdate: (updates: Partial<HeaderFooterConfig>) => void;
   placeholder: string;
-}> = ({ config, onUpdate, placeholder }) => {
+  pageIndex: number;
+  totalPages: number;
+  title: string;
+}> = ({ config, onUpdate, placeholder, pageIndex, totalPages, title }) => {
+  const structured = config.structuredContent ?? createDefaultStructuredContent(config.height);
+  const context = { pageNumber: pageIndex + 1, totalPages, title };
+  const initialHtml = structuredToHtml(structured, context);
+
   const editor = useEditor({
     extensions: [StarterKit.configure({ heading: false }), Underline],
-    content: config.content || `<p>${placeholder}</p>`,
-    onUpdate: ({ editor: e }) => onUpdate({ content: e.getHTML() }),
+    content: initialHtml || `<p>${placeholder}</p>`,
+    onUpdate: ({ editor: e }) => {
+      const html = e.getHTML();
+      const newStructured = htmlToStructured(html, structured.height);
+      onUpdate({
+        content: html,
+        structuredContent: newStructured,
+      });
+    },
     editorProps: {
       attributes: {
         class: 'outline-none min-h-[1em] w-full text-xs',
@@ -46,14 +94,26 @@ const InlineHeaderFooter: React.FC<{
     },
   });
 
+  const handleInsertVariable = useCallback((variable: RichTextVariable['variable']) => {
+    if (!editor) return;
+    const resolved = variable === 'pageNumber' ? `{{${variable}}}` :
+                     variable === 'totalPages' ? `{{${variable}}}` :
+                     variable === 'date' ? new Date().toLocaleDateString('pt-BR') :
+                     `{{${variable}}}`;
+    editor.chain().focus().insertContent(
+      `<span data-variable="${variable}" class="variable">${resolved}</span>`
+    ).run();
+  }, [editor]);
+
   return (
-    <div className="flex items-center w-full" style={{ justifyContent: config.alignment === 'left' ? 'flex-start' : config.alignment === 'right' ? 'flex-end' : 'center' }}>
+    <div className="flex items-center w-full gap-1" style={{ justifyContent: config.alignment === 'left' ? 'flex-start' : config.alignment === 'right' ? 'flex-end' : 'center' }}>
       {config.imageUrl && (
         <img src={config.imageUrl} alt="" style={{ maxHeight: config.height * MM_TO_PX * 0.8, objectFit: 'contain', marginRight: 8 }} />
       )}
       <div className="flex-1 min-w-0">
         <EditorContent editor={editor} />
       </div>
+      <VariableInsertButton onInsert={handleInsertVariable} />
     </div>
   );
 };
@@ -69,7 +129,7 @@ const PageBreakIndicator: React.FC<{ pageNumber: number }> = ({ pageNumber }) =>
 );
 
 interface WysiwygCanvasProps {
-  pages: import('@/types/document').DocumentPage[];
+  pages: DocumentPage[];
   layout: LayoutConfig;
   globalHeader: HeaderFooterConfig;
   globalFooter: HeaderFooterConfig;
@@ -81,6 +141,7 @@ interface WysiwygCanvasProps {
   onDeselectBlock: () => void;
   onUpdateGlobalHeader: (updates: Partial<HeaderFooterConfig>) => void;
   onUpdateGlobalFooter: (updates: Partial<HeaderFooterConfig>) => void;
+  documentTitle: string;
 }
 
 export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
@@ -88,6 +149,7 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
   activeBlockId, onSelectBlock, onUpdateBlock, onRemoveBlock,
   onReorderBlocks, onDeselectBlock,
   onUpdateGlobalHeader, onUpdateGlobalFooter,
+  documentTitle,
 }) => {
   const pageW = layout.pageWidth * MM_TO_PX;
   const pageH = layout.pageHeight * MM_TO_PX;
@@ -102,7 +164,6 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
     if (over && active.id !== over.id) onReorderBlocks(String(active.id), String(over.id));
   };
 
-  // Collect all block IDs across pages for DnD context
   const allBlockIds = pages.flatMap(p => p.blocks.map(b => b.id));
 
   return (
@@ -132,7 +193,7 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
                     }}
                   />
 
-                  {/* Header — editable inline */}
+                  {/* Header — editable inline with structured model */}
                   {header.enabled && (
                     <div
                       className="absolute left-0 right-0 border-b border-dashed border-muted-foreground/15 cursor-text"
@@ -146,10 +207,13 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
                         alignItems: 'center',
                       }}
                     >
-                      <InlineHeaderFooter
+                      <InlineStructuredEditor
                         config={header}
-                        onUpdate={pi === 0 ? onUpdateGlobalHeader : onUpdateGlobalHeader}
+                        onUpdate={onUpdateGlobalHeader}
                         placeholder="Cabeçalho — clique para editar"
+                        pageIndex={pi}
+                        totalPages={pages.length}
+                        title={documentTitle}
                       />
                     </div>
                   )}
@@ -186,7 +250,7 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
                     )}
                   </div>
 
-                  {/* Footer — editable inline */}
+                  {/* Footer — editable inline with structured model */}
                   {footer.enabled && (
                     <div
                       className="absolute left-0 right-0 bottom-0 border-t border-dashed border-muted-foreground/15 cursor-text"
@@ -198,10 +262,13 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
                         alignItems: 'center',
                       }}
                     >
-                      <InlineHeaderFooter
+                      <InlineStructuredEditor
                         config={footer}
                         onUpdate={onUpdateGlobalFooter}
                         placeholder="Rodapé — clique para editar"
+                        pageIndex={pi}
+                        totalPages={pages.length}
+                        title={documentTitle}
                       />
                     </div>
                   )}

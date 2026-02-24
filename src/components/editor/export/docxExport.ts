@@ -28,6 +28,13 @@ import {
   HeaderFooterConfig,
   LayoutConfig,
 } from '@/types/document';
+import {
+  StructuredRichContent,
+  RichTextParagraph,
+  RichTextSpan,
+  RichTextVariable,
+  resolveVariable,
+} from '@/types/richText';
 
 // ── mm → twips (1mm = 56.693 twips) ──
 const mmToTwips = (v: number) => Math.round(v * 56.693);
@@ -224,8 +231,73 @@ const spacerBlockToParagraph = (block: SpacerBlock): Paragraph => {
 const stripHtml = (html: string): string =>
   (html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').trim();
 
-const buildHeader = (config: HeaderFooterConfig): Header | undefined => {
+// ── Build structured content paragraphs for DOCX ──
+const buildStructuredParagraphs = (
+  content: StructuredRichContent,
+  config: HeaderFooterConfig,
+  title: string,
+): Paragraph[] => {
+  return content.content
+    .filter((n): n is RichTextParagraph => n.type === 'paragraph')
+    .map(para => {
+      const runs: TextRun[] = para.children.map(child => {
+        if ('variable' in child && child.type === 'variable') {
+          const varChild = child as RichTextVariable;
+          if (varChild.variable === 'pageNumber') {
+            return new TextRun({
+              children: [PageNumber.CURRENT],
+              bold: varChild.bold,
+              italics: varChild.italic,
+              size: ptToHalfPt(varChild.fontSize ?? config.fontSize),
+              font: varChild.fontFamily ?? config.fontFamily,
+            });
+          }
+          if (varChild.variable === 'totalPages') {
+            return new TextRun({
+              children: [PageNumber.TOTAL_PAGES],
+              bold: varChild.bold,
+              italics: varChild.italic,
+              size: ptToHalfPt(varChild.fontSize ?? config.fontSize),
+              font: varChild.fontFamily ?? config.fontFamily,
+            });
+          }
+          const resolved = resolveVariable(varChild.variable, { title });
+          return new TextRun({
+            text: resolved,
+            bold: varChild.bold,
+            italics: varChild.italic,
+            size: ptToHalfPt(varChild.fontSize ?? config.fontSize),
+            font: varChild.fontFamily ?? config.fontFamily,
+          });
+        }
+        const span = child as RichTextSpan;
+        return new TextRun({
+          text: span.text,
+          bold: span.bold,
+          italics: span.italic,
+          underline: span.underline ? { type: 'single' as any } : undefined,
+          size: ptToHalfPt(span.fontSize ?? config.fontSize),
+          font: span.fontFamily ?? config.fontFamily,
+          ...(span.color ? { color: span.color.replace('#', '') } : {}),
+        });
+      });
+
+      return new Paragraph({
+        alignment: alignmentMap[para.align] || AlignmentType.CENTER,
+        children: runs,
+      });
+    });
+};
+
+const buildHeader = (config: HeaderFooterConfig, title: string): Header | undefined => {
   if (!config.enabled) return undefined;
+
+  if (config.structuredContent) {
+    return new Header({
+      children: buildStructuredParagraphs(config.structuredContent, config, title),
+    });
+  }
+
   const text = stripHtml(config.content);
   return new Header({
     children: [
@@ -243,8 +315,15 @@ const buildHeader = (config: HeaderFooterConfig): Header | undefined => {
   });
 };
 
-const buildFooter = (config: HeaderFooterConfig): Footer | undefined => {
+const buildFooter = (config: HeaderFooterConfig, title: string): Footer | undefined => {
   if (!config.enabled) return undefined;
+
+  if (config.structuredContent) {
+    return new Footer({
+      children: buildStructuredParagraphs(config.structuredContent, config, title),
+    });
+  }
+
   const text = stripHtml(config.content);
   return new Footer({
     children: [
@@ -319,10 +398,10 @@ export const generateDocx = async (model: DocumentModel, title: string) => {
         
       },
       headers: {
-        default: buildHeader(headerConfig),
+        default: buildHeader(headerConfig, title),
       },
       footers: {
-        default: buildFooter(footerConfig),
+        default: buildFooter(footerConfig, title),
       },
       children: allChildren,
     }],
