@@ -112,47 +112,51 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   }
 
   // ── Photos ──
-  const photosToExport = report.photoCaptions && report.photoCaptions.length > 0
+  const photosRaw = report.photoCaptions && report.photoCaptions.length > 0
     ? report.photoCaptions
     : report.photos?.map((url, i) => ({ url, caption: 'Registro fotográfico das atividades realizadas', id: `photo-${i}` })) || [];
 
-  if (photosToExport.length > 0) {
-    const isSingle = photosToExport.length === 1;
-    const photoW = isSingle ? CW : (CW - 10) / 2;
-    const photoH = photoW * 0.75;
+  // Pre-load all images and filter out failures
+  const loadedPhotos: { url: string; caption: string; imgData: { data: string; width: number; height: number } }[] = [];
+  for (const photo of photosRaw) {
+    const imgData = await loadImage(photo.url);
+    if (imgData) {
+      loadedPhotos.push({ url: photo.url, caption: photo.caption || '', imgData });
+    } else {
+      console.warn('Skipping photo that failed to load:', photo.url);
+    }
+  }
 
+  if (loadedPhotos.length > 0) {
     ctx.currentY += LINE_H;
-    ensureSpace(ctx, LINE_H + 6 + photoH + 20);
     const attTitle = report.attachmentsTitle || 'Registros Fotográficos';
     pdf.setFontSize(FONT_BODY);
     pdf.setFont('times', 'bold');
+    ensureSpace(ctx, LINE_H + 6);
     pdf.text(attTitle, ML, ctx.currentY);
     ctx.currentY += LINE_H + 4;
 
     const COL_GAP = 10;
+    const colW = (CW - COL_GAP) / 2;
     const col1X = ML;
-    const col2X = ML + photoW + COL_GAP;
+    const col2X = ML + colW + COL_GAP;
 
     let idx = 0;
-    while (idx < photosToExport.length) {
-      const rowW = isSingle ? CW : photoW;
-      const rowH = rowW * 0.75;
+    while (idx < loadedPhotos.length) {
+      const remaining = loadedPhotos.length - idx;
+      // Last photo alone or single photo total → full width
+      const isFullWidth = remaining === 1;
+      const w = isFullWidth ? CW : colW;
+      const h = w * 0.75;
 
-      if (ctx.currentY + rowH + 20 > MAX_Y) addPage(ctx);
+      if (ctx.currentY + h + 20 > MAX_Y) addPage(ctx);
       const rowY = ctx.currentY;
-      const photosInRow = isSingle ? 1 : 2;
 
-      for (let col = 0; col < photosInRow && idx < photosToExport.length; col++) {
-        const photo = photosToExport[idx];
-        const x = col === 0 ? col1X : col2X;
-        const w = isSingle ? CW : photoW;
-        const h = w * 0.75;
-
-        const imgData = await loadImage(photo.url);
-        if (imgData) {
-          try { pdf.addImage(imgData.data, 'JPEG', x, rowY, w, h); }
-          catch (e) { console.warn('Image error:', e); }
-        }
+      if (isFullWidth) {
+        // Single photo (full width)
+        const photo = loadedPhotos[idx];
+        try { pdf.addImage(photo.imgData.data, 'JPEG', col1X, rowY, w, h); }
+        catch (e) { console.warn('Image error:', e); }
 
         pdf.setFontSize(FONT_CAPTION);
         pdf.setFont('times', 'italic');
@@ -160,13 +164,31 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         const capLines: string[] = pdf.splitTextToSize(caption, w);
         const capY = rowY + h + 4;
         for (let j = 0; j < Math.min(capLines.length, 3); j++) {
-          pdf.text(capLines[j], x, capY + j * 4.5);
+          pdf.text(capLines[j], col1X, capY + j * 4.5);
         }
-
         idx++;
+      } else {
+        // Two photos side by side
+        for (let col = 0; col < 2 && idx < loadedPhotos.length; col++) {
+          const photo = loadedPhotos[idx];
+          const x = col === 0 ? col1X : col2X;
+
+          try { pdf.addImage(photo.imgData.data, 'JPEG', x, rowY, w, h); }
+          catch (e) { console.warn('Image error:', e); }
+
+          pdf.setFontSize(FONT_CAPTION);
+          pdf.setFont('times', 'italic');
+          const caption = photo.caption || `Foto ${idx + 1}`;
+          const capLines: string[] = pdf.splitTextToSize(caption, w);
+          const capY = rowY + h + 4;
+          for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+            pdf.text(capLines[j], x, capY + j * 4.5);
+          }
+          idx++;
+        }
       }
 
-      ctx.currentY = rowY + rowH + 22;
+      ctx.currentY = rowY + h + 22;
     }
   }
 
