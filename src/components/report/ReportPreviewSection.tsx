@@ -81,7 +81,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
 
       return (
         <div key={goal.id} className="mb-10">
-          <h4 className="font-bold text-primary mb-3">META {idx + 1} – {goal.title}</h4>
+          <h4 className="font-bold text-primary mb-3">{goal.title}</h4>
           <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
             {goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'}
           </div>

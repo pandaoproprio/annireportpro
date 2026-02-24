@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileEdit } from 'lucide-react';
 import html2pdf from 'html2pdf.js';
@@ -9,6 +9,8 @@ import { ReportStructureEditor } from '@/components/report/ReportStructureEditor
 import { ReportLogoEditor } from '@/components/report/ReportLogoEditor';
 import { ReportEditSection } from '@/components/report/ReportEditSection';
 import { ReportPreviewSection } from '@/components/report/ReportPreviewSection';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { toast } from 'sonner';
 
 export const ReportGenerator: React.FC = () => {
   const state = useReportState();
@@ -23,7 +25,8 @@ export const ReportGenerator: React.FC = () => {
     satisfaction, setSatisfaction, futureActions, setFutureActions,
     expenses, links, setLinks, linkFileNames, setLinkFileNames, sections,
     saveReportData, moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
-    addCustomSection, removeSection, addExpense, updateExpense, removeExpense,
+    addCustomSection, removeSection, pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
+    addExpense, updateExpense, removeExpense,
     handleLogoUpload, handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
     handleDocumentUpload,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
@@ -38,7 +41,7 @@ export const ReportGenerator: React.FC = () => {
     try {
       const filename = `Relatorio_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
       const opt = {
-        margin: [30, 20, 25, 30],
+        margin: [30, 20, 20, 30],
         filename,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
@@ -48,19 +51,18 @@ export const ReportGenerator: React.FC = () => {
       const worker = html2pdf().set(opt).from(reportRef.current);
       const pdf = await worker.toPdf().get('pdf');
       const totalPages = pdf.internal.getNumberOfPages();
-      for (let i = 1; i <= totalPages; i++) {
+      for (let i = 2; i <= totalPages; i++) {
         pdf.setPage(i);
-        pdf.setFontSize(9);
-        pdf.setTextColor(128, 128, 128);
+        pdf.setFontSize(10);
+        pdf.setTextColor(0, 0, 0);
         const pageWidth = pdf.internal.pageSize.getWidth();
-        const pageHeight = pdf.internal.pageSize.getHeight();
-        const text = `Página ${i} de ${totalPages}`;
-        pdf.text(text, pageWidth - 20 - pdf.getTextWidth(text), 20);
+        const text = `${i}`;
+        pdf.text(text, pageWidth - 20, 20);
       }
       pdf.save(filename);
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
-      alert('Erro ao exportar PDF. Tente novamente.');
+      toast.error('Erro ao exportar PDF. Tente novamente.');
     } finally {
       setIsExporting(false);
       setExportType(null);
@@ -78,7 +80,7 @@ export const ReportGenerator: React.FC = () => {
       });
     } catch (error) {
       console.error('Erro ao exportar DOCX:', error);
-      alert('Erro ao exportar DOCX. Tente novamente.');
+      toast.error('Erro ao exportar DOCX. Tente novamente.');
     } finally {
       setIsExporting(false);
       setExportType(null);
@@ -88,10 +90,10 @@ export const ReportGenerator: React.FC = () => {
   const ReportHeader = () => (
     <div className="flex justify-between items-center mb-6 pb-4 border-b print:border-b-0">
       <div className="flex items-center gap-4">
-        {logo ? <img src={logo} alt="Logo" className="h-12 object-contain" /> : <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-xs">LOGO</div>}
+        {logo ? <img src={logo} alt="Logo" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
       </div>
       <div className="flex items-center gap-4">
-        {logoSecondary ? <img src={logoSecondary} alt="Logo Secundário" className="h-12 object-contain" /> : <div className="w-12 h-12 bg-muted rounded flex items-center justify-center text-xs">LOGO</div>}
+        {logoSecondary ? <img src={logoSecondary} alt="Logo Secundário" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
       </div>
     </div>
   );
@@ -163,7 +165,7 @@ export const ReportGenerator: React.FC = () => {
 
       {mode === 'preview' && (
         <div className="bg-muted p-4 md:p-8 rounded-lg overflow-auto no-print animate-fadeIn">
-          <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 25mm 30mm' }}>
+          <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
             <div className="flex flex-col items-center justify-center min-h-[800px] pb-10 mb-10 page-break">
               <ReportHeader />
               <div className="flex-1 flex flex-col items-center justify-center text-center">
@@ -188,6 +190,16 @@ export const ReportGenerator: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingRemoveIndex !== null}
+        onOpenChange={(open) => { if (!open) cancelRemoveSection(); }}
+        title="Remover seção"
+        description="Tem certeza que deseja remover esta seção?"
+        confirmLabel="Remover"
+        variant="destructive"
+        onConfirm={confirmRemoveSection}
+      />
     </div>
   );
 };

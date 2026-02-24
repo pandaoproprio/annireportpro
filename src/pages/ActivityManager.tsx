@@ -139,7 +139,7 @@ export const ActivityManager: React.FC = () => {
     if (!project || !newActivity.description || !newActivity.date) return;
 
     if (newActivity.endDate && newActivity.endDate < newActivity.date) {
-      alert("A data de término não pode ser anterior à data de início.");
+      toast.error("A data de término não pode ser anterior à data de início.");
       return;
     }
 

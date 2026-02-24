@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 
 interface BatchDeleteProjectsProps {
   onClose: () => void;
@@ -14,6 +15,7 @@ export const BatchDeleteProjects: React.FC<BatchDeleteProjectsProps> = ({ onClos
   const { projects, removeMultipleProjects } = useAppData();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const toggleProject = (id: string) => {
     setSelectedIds(prev => {
@@ -32,11 +34,14 @@ export const BatchDeleteProjects: React.FC<BatchDeleteProjectsProps> = ({ onClos
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (selectedIds.size === 0) return;
-    const count = selectedIds.size;
-    if (!window.confirm(`Tem certeza que deseja excluir ${count} projeto(s)? Esta ação não pode ser desfeita.`)) return;
+    setShowConfirm(true);
+  };
 
+  const confirmDelete = async () => {
+    setShowConfirm(false);
+    const count = selectedIds.size;
     setIsDeleting(true);
     try {
       await removeMultipleProjects(Array.from(selectedIds));
@@ -102,6 +107,16 @@ export const BatchDeleteProjects: React.FC<BatchDeleteProjectsProps> = ({ onClos
             Excluir {selectedIds.size > 0 ? `(${selectedIds.size})` : ''}
           </Button>
         </div>
+
+        <ConfirmDialog
+          open={showConfirm}
+          onOpenChange={setShowConfirm}
+          title="Excluir projetos"
+          description={`Tem certeza que deseja excluir ${selectedIds.size} projeto(s)? Esta ação não pode ser desfeita.`}
+          confirmLabel="Excluir"
+          variant="destructive"
+          onConfirm={confirmDelete}
+        />
       </CardContent>
     </Card>
   );

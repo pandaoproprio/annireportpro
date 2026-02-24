@@ -188,10 +188,21 @@ export const useJustificationReportState = () => {
     }
   };
 
+  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
+
   const removeSection = (index: number) => {
-    if (confirm('Tem certeza que deseja remover esta seção?')) {
-      setSections(sections.filter((_, i) => i !== index));
+    setPendingRemoveIndex(index);
+  };
+
+  const confirmRemoveSection = () => {
+    if (pendingRemoveIndex !== null) {
+      setSections(sections.filter((_, i) => i !== pendingRemoveIndex));
+      setPendingRemoveIndex(null);
     }
+  };
+
+  const cancelRemoveSection = () => {
+    setPendingRemoveIndex(null);
   };
 
   // Save draft
@@ -354,6 +365,7 @@ export const useJustificationReportState = () => {
     updateSectionContent,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection,
+    pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     saveDraft, deleteDraft,
     buildReportData,
     handleDocumentUpload, removeAttachmentFile,
