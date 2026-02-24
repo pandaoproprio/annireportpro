@@ -72,6 +72,7 @@ export const EditorLayout: React.FC<EditorLayoutProps> = ({ documentId }) => {
                 onUpdateBlock={doc.updateBlock}
                 onRemoveBlock={doc.removeBlock}
                 onMoveBlock={doc.moveBlock}
+                onReorderBlocks={doc.reorderBlocks}
                 onSelectPage={() => doc.setActiveBlockId(null)}
               />
             </div>

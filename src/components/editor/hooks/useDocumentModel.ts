@@ -127,6 +127,21 @@ export const useDocumentModel = (documentId?: string) => {
     });
   }, [updateModel]);
 
+  const reorderBlocks = useCallback((activeId: string, overId: string) => {
+    updateModel(prev => {
+      const pages = prev.pages.map(page => {
+        const oldIndex = page.blocks.findIndex(b => b.id === activeId);
+        const newIndex = page.blocks.findIndex(b => b.id === overId);
+        if (oldIndex === -1 || newIndex === -1) return page;
+        const blocks = [...page.blocks];
+        const [moved] = blocks.splice(oldIndex, 1);
+        blocks.splice(newIndex, 0, moved);
+        return { ...page, blocks };
+      });
+      return { ...prev, pages };
+    });
+  }, [updateModel]);
+
   // ── Page operations ──
   const addPage = useCallback(() => {
     updateModel(prev => ({
@@ -196,6 +211,7 @@ export const useDocumentModel = (documentId?: string) => {
     updateBlock,
     removeBlock,
     moveBlock,
+    reorderBlocks,
     addPage,
     removePage,
     updateLayout,
