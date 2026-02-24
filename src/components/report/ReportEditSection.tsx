@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, PhotoSize } from '@/types';
+import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, PhotoSize, PhotoLayout } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal } from 'lucide-react';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
 import { ImageEditorDialog } from '@/components/report/ImageEditorDialog';
 import { SectionDoc } from '@/hooks/useReportState';
@@ -46,7 +47,7 @@ interface Props {
   // Photo metadata
   photoMetadata: Record<string, ReportPhotoMeta[]>;
   updatePhotoCaption: (key: string, index: number, caption: string) => void;
-  updatePhotoSize: (key: string, index: number, size: PhotoSize) => void;
+  updatePhotoSize: (key: string, index: number, size: PhotoSize, widthPercent?: number) => void;
   replacePhotoUrl: (key: string, index: number, newUrl: string, setter: React.Dispatch<React.SetStateAction<string[]>> | null, goalId?: string) => void;
   // Project data
   goals: Goal[];
@@ -76,7 +77,7 @@ interface Props {
   removeSectionDoc: (sectionKey: string, index: number) => void;
 }
 
-// ── Photo card with caption, size selector, and edit button ──
+// ── Photo card with caption, width slider, and edit button ──
 const PhotoCard: React.FC<{
   photo: string;
   index: number;
@@ -90,12 +91,12 @@ const PhotoCard: React.FC<{
 }> = ({ photo, index, metaKey, meta, projectId, updatePhotoCaption, updatePhotoSize, onReplace, onRemove }) => {
   const [editOpen, setEditOpen] = useState(false);
   const caption = meta?.caption || '';
-  const size = meta?.size || 'medium';
+  const widthPercent = meta?.widthPercent || 100;
 
   return (
     <div className="border rounded-lg p-2 bg-card space-y-2">
       <div className="relative group">
-        <img src={photo} alt={caption || `Foto ${index + 1}`} className="w-full h-32 object-contain rounded bg-muted" />
+        <img src={photo} alt={caption || `Foto ${index + 1}`} className="w-full h-40 object-contain rounded bg-muted" />
         <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button type="button" onClick={() => setEditOpen(true)}
             className="bg-primary text-primary-foreground rounded-full p-1.5 shadow-md" title="Editar imagem">
@@ -113,17 +114,17 @@ const PhotoCard: React.FC<{
         placeholder={`Legenda da foto ${index + 1}...`}
         className="text-xs h-8"
       />
-      <Select value={size} onValueChange={(v) => updatePhotoSize(metaKey, index, v as PhotoSize)}>
-        <SelectTrigger className="h-7 text-xs">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="small">Pequena</SelectItem>
-          <SelectItem value="medium">Média</SelectItem>
-          <SelectItem value="large">Grande</SelectItem>
-          <SelectItem value="full">Largura total</SelectItem>
-        </SelectContent>
-      </Select>
+      <div className="space-y-1">
+        <Label className="text-[10px] text-muted-foreground">Largura: {widthPercent}%</Label>
+        <Slider
+          value={[widthPercent]}
+          onValueChange={([v]) => updatePhotoSize(metaKey, index, 'medium', v)}
+          min={20}
+          max={100}
+          step={5}
+          className="h-4"
+        />
+      </div>
       <ImageEditorDialog
         open={editOpen}
         onOpenChange={setEditOpen}

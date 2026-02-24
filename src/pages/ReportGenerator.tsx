@@ -125,6 +125,7 @@ export const ReportGenerator: React.FC = () => {
     objectText, summary, goalNarratives, goalPhotos,
     otherActionsNarrative, otherActionsPhotos, communicationNarrative, communicationPhotos,
     satisfaction, futureActions, expenses, links,
+    sectionPhotos, photoMetadata,
     goals: project.goals,
     organizationName: project.organizationName,
     organizationAddress: project.organizationAddress,

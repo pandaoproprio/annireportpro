@@ -391,11 +391,11 @@ export const useReportState = () => {
     });
   };
 
-  const updatePhotoSize = (key: string, index: number, size: ReportPhotoMeta['size']) => {
+  const updatePhotoSize = (key: string, index: number, size: ReportPhotoMeta['size'], widthPercent?: number) => {
     setPhotoMetadata(prev => {
       const metas = [...(prev[key] || [])];
       while (metas.length <= index) metas.push({ caption: '', size: 'medium' });
-      metas[index] = { ...metas[index], size };
+      metas[index] = { ...metas[index], size, ...(widthPercent !== undefined ? { widthPercent } : {}) };
       return { ...prev, [key]: metas };
     });
   };
