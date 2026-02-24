@@ -17,6 +17,7 @@ import {
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Project, Activity, ActivityType, ExpenseItem, ReportSection } from '@/types';
+import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
 
 interface ExportData {
   project: Project;
@@ -31,6 +32,7 @@ interface ExportData {
   futureActions: string;
   expenses: ExpenseItem[];
   links: { attendance: string; registration: string; media: string };
+  visualConfig?: ReportVisualConfig;
 }
 
 const formatActivityDate = (date: string, endDate?: string) => {
@@ -413,14 +415,58 @@ export const exportToDocx = async (data: ExportData) => {
         },
         footers: {
           default: new Footer({
-            children: [
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  new TextRun({ text: project.organizationName, size: 18, font: 'Times New Roman' }),
-                ],
-              }),
-            ],
+            children: (() => {
+              const vc = data.visualConfig;
+              const footerAlign = vc?.footerAlignment === 'left' ? AlignmentType.LEFT
+                : vc?.footerAlignment === 'right' ? AlignmentType.RIGHT
+                : AlignmentType.CENTER;
+              const children: Paragraph[] = [];
+
+              // Org name (bold)
+              children.push(new Paragraph({
+                alignment: footerAlign,
+                spacing: { after: 40 },
+                children: [new TextRun({ text: project.organizationName, size: 18, font: 'Times New Roman', bold: true })],
+              }));
+
+              // Address
+              const showAddress = vc ? vc.footerShowAddress : true;
+              if (showAddress && project.organizationAddress) {
+                children.push(new Paragraph({
+                  alignment: footerAlign,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: project.organizationAddress, size: 14, font: 'Times New Roman' })],
+                }));
+              }
+
+              // Contact line
+              const showContact = vc ? vc.footerShowContact : true;
+              if (showContact) {
+                const parts: string[] = [];
+                if (project.organizationWebsite) parts.push(project.organizationWebsite);
+                if (project.organizationEmail) parts.push(project.organizationEmail);
+                if (project.organizationPhone) parts.push(project.organizationPhone);
+                if (parts.length > 0) {
+                  children.push(new Paragraph({
+                    alignment: footerAlign,
+                    spacing: { after: 20 },
+                    children: [new TextRun({ text: parts.join(' | '), size: 14, font: 'Times New Roman' })],
+                  }));
+                }
+              }
+
+              // Custom text
+              const customText = vc?.footerText;
+              if (customText) {
+                children.push(new Paragraph({
+                  alignment: footerAlign,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: customText, size: 14, font: 'Times New Roman', italics: true })],
+                }));
+              }
+
+              return children;
+            })(),
           }),
         },
         children: docSections as Paragraph[],

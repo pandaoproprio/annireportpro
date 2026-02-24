@@ -87,6 +87,7 @@ export const ReportGenerator: React.FC = () => {
         project, activities, sections, objectText, summary,
         goalNarratives, otherActionsNarrative,
         communicationNarrative, satisfaction, futureActions, expenses, links,
+        visualConfig: vc.config,
       });
     } catch (error) {
       console.error('Erro ao exportar DOCX:', error);

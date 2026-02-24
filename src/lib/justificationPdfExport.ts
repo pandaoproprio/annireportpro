@@ -79,15 +79,15 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
   addSignatureBlock(ctx, project.organizationName, dateText, 'Assinatura do responsável legal');
 
   // ── Footer + page numbers (skip page 1) ──
-  const footerInfo = vc ? {
+  const footerInfo = {
     orgName: project.organizationName,
-    address: vc.footerShowAddress ? project.organizationAddress : undefined,
-    website: vc.footerShowContact ? project.organizationWebsite : undefined,
-    email: vc.footerShowContact ? project.organizationEmail : undefined,
-    phone: vc.footerShowContact ? project.organizationPhone : undefined,
-    customText: vc.footerText,
-    alignment: vc.footerAlignment,
-  } : { orgName: project.organizationName };
+    address: (vc?.footerShowAddress !== false) ? project.organizationAddress : undefined,
+    website: (vc?.footerShowContact !== false) ? project.organizationWebsite : undefined,
+    email: (vc?.footerShowContact !== false) ? project.organizationEmail : undefined,
+    phone: (vc?.footerShowContact !== false) ? project.organizationPhone : undefined,
+    customText: vc?.footerText || undefined,
+    alignment: (vc?.footerAlignment || 'center') as 'left' | 'center' | 'right',
+  };
   addFooterAndPageNumbers(ctx, project.organizationName, true, footerInfo);
 
   // Save
