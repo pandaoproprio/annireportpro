@@ -33,6 +33,7 @@ export interface ReportVisualConfig {
   headerLogoGap: number; // gap between logos in mm (default 0)
   headerTopPadding: number; // distance from top in mm (default 5)
   headerHeight: number; // total header height in mm (default 20)
+  headerContentSpacing: number; // gap between header and content in mm (default 8)
   // Cover
   coverTitle: string;
   coverSubtitle: string;
@@ -91,6 +92,7 @@ const DEFAULT_CONFIG: ReportVisualConfig = {
   headerLogoGap: 0,
   headerTopPadding: 5,
   headerHeight: 20,
+  headerContentSpacing: 8,
   coverTitle: '',
   coverSubtitle: '',
   coverLogoWidthMm: 40,

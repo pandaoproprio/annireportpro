@@ -272,6 +272,10 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Espaço cabeçalho → conteúdo ({config.headerContentSpacing}mm)</Label>
+                    <Slider value={[config.headerContentSpacing]} min={0} max={30} step={1} onValueChange={([v]) => updateConfig({ headerContentSpacing: v })} />
+                  </div>
                 </div>
               </div>
             ) : (
@@ -333,6 +337,10 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
                 <div className="space-y-1">
                   <Label className="text-xs">Altura total cabeçalho ({config.headerHeight}mm)</Label>
                   <Slider value={[config.headerHeight]} min={10} max={50} step={1} onValueChange={([v]) => updateConfig({ headerHeight: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Espaço cabeçalho → conteúdo ({config.headerContentSpacing}mm)</Label>
+                  <Slider value={[config.headerContentSpacing]} min={0} max={30} step={1} onValueChange={([v]) => updateConfig({ headerContentSpacing: v })} />
                 </div>
               </div>
             </div>

@@ -49,6 +49,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
       logoGapMm: vc.headerLogoGap,
       topPaddingMm: vc.headerTopPadding,
       headerHeightMm: vc.headerHeight,
+      contentSpacingMm: vc.headerContentSpacing,
     };
   }
 
