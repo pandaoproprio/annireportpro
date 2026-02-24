@@ -26,12 +26,89 @@ export interface ReportPdfExportData {
   links: { attendance: string; registration: string; media: string };
   sectionPhotos?: Record<string, string[]>;
   photoMetadata?: Record<string, ReportPhotoMeta[]>;
+  // Page editor settings
+  coverTitle?: string;
+  coverSubtitle?: string;
+  headerBannerUrl?: string;
+  headerLeftText?: string;
+  headerRightText?: string;
+  logo?: string;
+  logoSecondary?: string;
+  footerText?: string;
+  footerShowAddress?: boolean;
+  footerShowContact?: boolean;
 }
 
 const formatActivityDate = (date: string, endDate?: string) => {
   const start = new Date(date).toLocaleDateString('pt-BR');
   if (endDate) return `${start} a ${new Date(endDate).toLocaleDateString('pt-BR')}`;
   return start;
+};
+
+// ── Render header (banner or logos+text) at the top of a page ──
+const addHeader = async (ctx: PdfContext, data: ReportPdfExportData): Promise<void> => {
+  const { pdf } = ctx;
+  const { headerBannerUrl, logo, logoSecondary, headerLeftText, headerRightText } = data;
+
+  if (headerBannerUrl) {
+    const bannerImg = await loadImage(headerBannerUrl);
+    if (bannerImg) {
+      const bannerW = CW;
+      const bannerAspect = bannerImg.width / bannerImg.height;
+      const bannerH = Math.min(bannerW / bannerAspect, 25); // max ~25mm height
+      const drawW = bannerH * bannerAspect;
+      const drawX = ML + (CW - drawW) / 2;
+      try { pdf.addImage(bannerImg.data, 'JPEG', drawX, MT - 15, drawW, bannerH); } catch (e) { console.warn('Banner error:', e); }
+      ctx.currentY = MT - 15 + bannerH + 4;
+      return;
+    }
+  }
+
+  // Fallback: logos + text
+  let hasHeader = false;
+  const headerY = MT - 12;
+
+  if (logo) {
+    const logoImg = await loadImage(logo);
+    if (logoImg) {
+      const logoH = 12;
+      const logoW = logoH * (logoImg.width / logoImg.height);
+      try { pdf.addImage(logoImg.data, 'JPEG', ML, headerY, logoW, logoH); } catch (e) { /* skip */ }
+      hasHeader = true;
+    }
+  }
+
+  if (headerLeftText) {
+    pdf.setFontSize(8);
+    pdf.setFont('times', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(headerLeftText, ML + 15, headerY + 8);
+    pdf.setTextColor(0);
+    hasHeader = true;
+  }
+
+  if (logoSecondary) {
+    const logoImg = await loadImage(logoSecondary);
+    if (logoImg) {
+      const logoH = 12;
+      const logoW = logoH * (logoImg.width / logoImg.height);
+      try { pdf.addImage(logoImg.data, 'JPEG', PAGE_W - MR - logoW, headerY, logoW, logoH); } catch (e) { /* skip */ }
+      hasHeader = true;
+    }
+  }
+
+  if (headerRightText) {
+    pdf.setFontSize(8);
+    pdf.setFont('times', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(headerRightText, PAGE_W - MR, headerY + 8, { align: 'right' });
+    pdf.setTextColor(0);
+    hasHeader = true;
+  }
+
+  if (hasHeader) {
+    ctx.currentY = headerY + 16;
+  }
 };
 
 export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void> => {
@@ -43,6 +120,11 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     satisfaction, futureActions, expenses, links,
     sectionPhotos = {},
     photoMetadata = {},
+    coverTitle: customCoverTitle,
+    coverSubtitle,
+    footerText,
+    footerShowAddress,
+    footerShowContact,
   } = data;
 
   const ctx = createPdfContext();
@@ -101,14 +183,34 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // ══════════════════════════════════════════════════════════════
   // COVER PAGE
   // ══════════════════════════════════════════════════════════════
+
+  // Header on cover page
+  await addHeader(ctx, data);
+
   ctx.currentY = PAGE_H / 2 - 40;
 
+  const coverTitle = customCoverTitle || 'RELATÓRIO PARCIAL DE CUMPRIMENTO DO OBJETO';
   pdf.setFontSize(16);
   pdf.setFont('times', 'bold');
-  const coverTitle = 'RELATÓRIO PARCIAL DE CUMPRIMENTO DO OBJETO';
-  const ctw = pdf.getTextWidth(coverTitle);
-  pdf.text(coverTitle, (PAGE_W - ctw) / 2, ctx.currentY);
-  ctx.currentY += LINE_H * 2;
+  const titleLines: string[] = pdf.splitTextToSize(coverTitle.toUpperCase(), CW);
+  for (const line of titleLines) {
+    const tw = pdf.getTextWidth(line);
+    pdf.text(line, (PAGE_W - tw) / 2, ctx.currentY);
+    ctx.currentY += LINE_H + 2;
+  }
+  ctx.currentY += LINE_H;
+
+  if (coverSubtitle) {
+    pdf.setFontSize(12);
+    pdf.setFont('times', 'normal');
+    const subLines: string[] = pdf.splitTextToSize(coverSubtitle, CW);
+    for (const line of subLines) {
+      const sw = pdf.getTextWidth(line);
+      pdf.text(line, (PAGE_W - sw) / 2, ctx.currentY);
+      ctx.currentY += LINE_H;
+    }
+    ctx.currentY += LINE_H;
+  }
 
   pdf.setFontSize(14);
   pdf.setFont('times', 'bold');
@@ -137,10 +239,12 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // ══════════════════════════════════════════════════════════════
   addPage(ctx);
 
+  // Header on first content page
+  await addHeader(ctx, data);
+
   for (const section of sections) {
     if (!section.isVisible) continue;
 
-    // No .toUpperCase() — title comes pre-formatted from section structure
     addSectionTitle(ctx, section.title);
 
     switch (section.key) {
@@ -329,7 +433,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         }
     }
 
-    // Render per-section photos (uploaded via "Registro Fotográfico")
+    // Render per-section photos
     const secPhotos = sectionPhotos[section.key] || sectionPhotos[section.id] || [];
     if (secPhotos.length > 0) {
       const secKey = sectionPhotos[section.key] ? section.key : section.id;
@@ -343,8 +447,16 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   const dateText = `Rio de Janeiro, ${format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.`;
   addSignatureBlock(ctx, project.organizationName, dateText, 'Assinatura do Responsável');
 
-  // ── Footer + page numbers (skip cover page) ──
-  addFooterAndPageNumbers(ctx, project.organizationName, true);
+  // ── Footer + page numbers ──
+  const footerInfo = {
+    orgName: project.organizationName,
+    address: footerShowAddress ? project.organizationAddress : undefined,
+    website: footerShowContact ? project.organizationWebsite : undefined,
+    email: footerShowContact ? project.organizationEmail : undefined,
+    phone: footerShowContact ? project.organizationPhone : undefined,
+    customText: footerText,
+  };
+  addFooterAndPageNumbers(ctx, project.organizationName, true, footerInfo);
 
   // Save
   const filename = `Relatorio_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;

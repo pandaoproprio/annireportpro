@@ -243,7 +243,7 @@ export const loadImage = async (url: string): Promise<{ data: string; width: num
   }
 };
 
-// ── Photo grid (2 columns, larger photos, individual captions) ──
+// ── Photo grid (adaptive: 1 photo = full width, 2+ = 2 columns) ──
 export const addPhotoGrid = async (
   ctx: PdfContext,
   photoUrls: string[],
@@ -254,7 +254,7 @@ export const addPhotoGrid = async (
 
   const { pdf } = ctx;
 
-  // Section title — no forced page break, just ensure space
+  // Section title
   ensureSpace(ctx, LINE_H * 3);
   ctx.currentY += 4;
   pdf.setFontSize(FONT_BODY);
@@ -263,10 +263,12 @@ export const addPhotoGrid = async (
   pdf.text(titleText, ML, ctx.currentY);
   ctx.currentY += LINE_H + 4;
 
+  const useSingleColumn = photoUrls.length === 1;
   const COL_GAP = 8;
-  const photoW = (CW - COL_GAP) / 2;   // ~76mm each
-  const photoH = photoW * 0.85;          // taller aspect ratio ~65mm
+  const photoW = useSingleColumn ? CW : (CW - COL_GAP) / 2;
+  const photoH = useSingleColumn ? photoW * 0.65 : photoW * 0.85;
   const CAPTION_H = 6;
+  const cols = useSingleColumn ? 1 : 2;
 
   let idx = 0;
   while (idx < photoUrls.length) {
@@ -274,11 +276,10 @@ export const addPhotoGrid = async (
     if (ctx.currentY + rowNeeded > MAX_Y) addPage(ctx);
     const rowY = ctx.currentY;
 
-    for (let col = 0; col < 2 && idx < photoUrls.length; col++) {
-      const x = col === 0 ? ML : ML + photoW + COL_GAP;
+    for (let col = 0; col < cols && idx < photoUrls.length; col++) {
+      const x = useSingleColumn ? ML : (col === 0 ? ML : ML + photoW + COL_GAP);
       const imgData = await loadImage(photoUrls[idx]);
       if (imgData) {
-        // Fit image proportionally inside the cell (object-contain style)
         const imgAspect = imgData.width / imgData.height;
         const cellAspect = photoW / photoH;
         let drawW: number, drawH: number, drawX: number, drawY: number;
@@ -314,9 +315,20 @@ export const addPhotoGrid = async (
   }
 };
 
+// ── Footer info for rich footer ──
+export interface FooterInfo {
+  orgName: string;
+  address?: string;
+  website?: string;
+  email?: string;
+  phone?: string;
+  customText?: string;
+}
+
 // ── Footer + page numbers (top-right per ABNT) ──
-export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPage1 = false): void => {
+export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPage1 = false, footerInfo?: FooterInfo): void => {
   const { pdf, pageCount } = ctx;
+  const info = footerInfo || { orgName };
 
   for (let p = 1; p <= pageCount; p++) {
     pdf.setPage(p);
@@ -329,13 +341,49 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
       pdf.text(String(p), PAGE_W - MR, 15, { align: 'right' });
     }
 
-    // Footer line + org name
+    // Footer line
     pdf.setDrawColor(180, 180, 180);
-    pdf.line(ML, PAGE_H - 15, PAGE_W - MR, PAGE_H - 15);
+    const footerLineY = PAGE_H - 18;
+    pdf.line(ML, footerLineY, PAGE_W - MR, footerLineY);
+
     pdf.setFontSize(FONT_CAPTION);
     pdf.setTextColor(80, 80, 80);
-    const fw = pdf.getTextWidth(orgName);
-    pdf.text(orgName, (PAGE_W - fw) / 2, PAGE_H - 10);
+    let footerY = footerLineY + 4;
+
+    // Org name (bold)
+    pdf.setFont('times', 'bold');
+    const orgText = info.orgName || orgName;
+    pdf.text(orgText, (PAGE_W - pdf.getTextWidth(orgText)) / 2, footerY);
+    footerY += 3.5;
+
+    pdf.setFont('times', 'normal');
+
+    // Address
+    if (info.address) {
+      pdf.setFontSize(7);
+      pdf.text(info.address, (PAGE_W - pdf.getTextWidth(info.address)) / 2, footerY);
+      footerY += 3;
+    }
+
+    // Contact line
+    const contactParts: string[] = [];
+    if (info.website) contactParts.push(info.website);
+    if (info.email) contactParts.push(info.email);
+    if (info.phone) contactParts.push(info.phone);
+    if (contactParts.length > 0) {
+      pdf.setFontSize(7);
+      const contactLine = contactParts.join(' | ');
+      pdf.text(contactLine, (PAGE_W - pdf.getTextWidth(contactLine)) / 2, footerY);
+      footerY += 3;
+    }
+
+    // Custom text
+    if (info.customText) {
+      pdf.setFontSize(7);
+      pdf.setFont('times', 'italic');
+      pdf.text(info.customText, (PAGE_W - pdf.getTextWidth(info.customText)) / 2, footerY);
+    }
+
     pdf.setTextColor(0, 0, 0);
   }
 };
