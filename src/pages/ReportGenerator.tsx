@@ -95,10 +95,15 @@ export const ReportGenerator: React.FC = () => {
     : config.headerLogoAlignment === 'center' ? 'center'
     : config.headerLogoAlignment; // space-between, space-around
 
+  // Dynamic header height: use banner height when banner is active, else headerHeight
+  const effectiveHeaderHeightPx = config.headerBannerUrl && config.headerBannerVisible
+    ? config.headerBannerHeightMm * 3
+    : config.headerHeight * 2;
+
   const ReportHeader = () => (
-    <div className="mb-6 pb-4 border-b print:border-b-0" style={{ paddingTop: `${config.headerTopPadding}px`, minHeight: `${config.headerHeight * 2}px` }}>
+    <div className="mb-6 pb-4 border-b print:border-b-0" style={{ paddingTop: `${config.headerTopPadding}px`, minHeight: `${effectiveHeaderHeightPx}px` }}>
       {config.headerBannerUrl && config.headerBannerVisible ? (
-        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ maxHeight: `${config.headerBannerHeightMm * 3}px`, objectFit: config.headerBannerFit }} />
+        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ height: `${config.headerBannerHeightMm * 3}px`, objectFit: config.headerBannerFit }} />
       ) : (
         <div className="flex items-center" style={{ justifyContent: logoJustify, gap: `${config.headerLogoGap * 2}px` }}>
           <div className="flex items-center gap-3">
@@ -222,7 +227,7 @@ export const ReportGenerator: React.FC = () => {
             ))}
           </div>
           <div className="fixed bottom-4 right-4 md:right-8 z-20">
-            <Button onClick={() => saveReportData()} className="shadow-xl bg-success hover:bg-success/90 text-success-foreground rounded-full px-6 py-3 h-auto text-base">
+            <Button onClick={() => { saveReportData(); vc.saveConfig(false); }} className="shadow-xl bg-success hover:bg-success/90 text-success-foreground rounded-full px-6 py-3 h-auto text-base">
               <FileEdit className="w-5 h-5 mr-2" /> Salvar Rascunho
             </Button>
           </div>
@@ -231,8 +236,9 @@ export const ReportGenerator: React.FC = () => {
 
       {mode === 'preview' && (
         <div className="bg-muted p-4 md:p-8 rounded-lg overflow-auto no-print animate-fadeIn">
-          <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
-            <div className="flex flex-col items-center min-h-[800px] pb-10 mb-10 page-break" style={{ justifyContent: config.coverLogoCenterV ? 'center' : 'flex-start' }}>
+          {/* ── Cover Page (separate A4 container) ── */}
+          <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
+            <div className="flex flex-col items-center min-h-[800px] pb-10 page-break" style={{ justifyContent: config.coverLogoCenterV ? 'center' : 'flex-start' }}>
               {/* Cover-specific logo */}
               {coverLogoSrc && config.coverLogoVisible !== false && (
                 <div style={{ marginTop: config.coverLogoCenterV ? 0 : `${config.coverLogoTopMm * 2.5}px` }}>
@@ -270,6 +276,10 @@ export const ReportGenerator: React.FC = () => {
                 <ReportFooter />
               </div>
             </div>
+          </div>
+
+          {/* ── Content Pages (separate A4 container) ── */}
+          <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
             <ReportHeader />
             {sections.map(section => (
               <ReportPreviewSection key={section.id} section={section} {...previewSectionProps} />
