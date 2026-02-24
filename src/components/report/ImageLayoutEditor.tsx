@@ -10,8 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import {
-  Grid3X3, LayoutGrid, Move, RotateCcw, Trash2, Copy, Undo2, Redo2, Maximize2, ZoomIn, ZoomOut,
+  Grid3X3, LayoutGrid, RotateCcw, Trash2, Copy, Undo2, Redo2, ZoomIn, ZoomOut,
+  Sun, Contrast, Square, Layers,
 } from 'lucide-react';
 
 interface Props {
@@ -340,7 +342,132 @@ export const ImageLayoutEditor: React.FC<Props> = ({ photos, layout, onLayoutCha
                   className="h-8 text-xs"
                 />
               </div>
-              <div className="flex gap-2">
+
+              {/* Brightness & Contrast */}
+              <div className="space-y-3 border-t pt-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  <Sun className="w-3 h-3" /> Ajustes de Imagem
+                </Label>
+                <div className="space-y-1">
+                  <Label className="text-xs">Brilho ({selectedImage.brightness}%)</Label>
+                  <Slider
+                    value={[selectedImage.brightness]}
+                    onValueChange={([v]) => updateImage(selectedImage.id, { brightness: v })}
+                    min={0} max={200} step={1}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Contraste ({selectedImage.contrast}%)</Label>
+                  <Slider
+                    value={[selectedImage.contrast]}
+                    onValueChange={([v]) => updateImage(selectedImage.id, { contrast: v })}
+                    min={0} max={200} step={1}
+                  />
+                </div>
+                <Button variant="ghost" size="sm" className="w-full text-xs" onClick={() => updateImage(selectedImage.id, { brightness: 100, contrast: 100 })}>
+                  Resetar Ajustes
+                </Button>
+              </div>
+
+              {/* Border */}
+              <div className="space-y-3 border-t pt-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  <Square className="w-3 h-3" /> Borda
+                </Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Espessura (mm)</Label>
+                    <Slider
+                      value={[selectedImage.borderWidth]}
+                      onValueChange={([v]) => updateImage(selectedImage.id, { borderWidth: v })}
+                      min={0} max={10} step={0.5}
+                    />
+                    <span className="text-xs text-muted-foreground">{selectedImage.borderWidth}mm</span>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Raio (mm)</Label>
+                    <Slider
+                      value={[selectedImage.borderRadius]}
+                      onValueChange={([v]) => updateImage(selectedImage.id, { borderRadius: v })}
+                      min={0} max={20} step={0.5}
+                    />
+                    <span className="text-xs text-muted-foreground">{selectedImage.borderRadius}mm</span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Cor da Borda</Label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="color"
+                      value={selectedImage.borderColor}
+                      onChange={e => updateImage(selectedImage.id, { borderColor: e.target.value })}
+                      className="w-8 h-8 rounded border cursor-pointer"
+                    />
+                    <Input
+                      value={selectedImage.borderColor}
+                      onChange={e => updateImage(selectedImage.id, { borderColor: e.target.value })}
+                      className="h-8 text-xs flex-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Shadow */}
+              <div className="space-y-3 border-t pt-3">
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                  <Layers className="w-3 h-3" /> Sombra
+                </Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Ativar Sombra</Label>
+                  <Switch
+                    checked={selectedImage.shadowEnabled}
+                    onCheckedChange={v => updateImage(selectedImage.id, { shadowEnabled: v })}
+                  />
+                </div>
+                {selectedImage.shadowEnabled && (
+                  <>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Desfoque ({selectedImage.shadowBlur}px)</Label>
+                      <Slider
+                        value={[selectedImage.shadowBlur]}
+                        onValueChange={([v]) => updateImage(selectedImage.id, { shadowBlur: v })}
+                        min={0} max={30} step={1}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Offset X (mm)</Label>
+                        <Slider
+                          value={[selectedImage.shadowOffsetX]}
+                          onValueChange={([v]) => updateImage(selectedImage.id, { shadowOffsetX: v })}
+                          min={-10} max={10} step={0.5}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Offset Y (mm)</Label>
+                        <Slider
+                          value={[selectedImage.shadowOffsetY]}
+                          onValueChange={([v]) => updateImage(selectedImage.id, { shadowOffsetY: v })}
+                          min={-10} max={10} step={0.5}
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Cor da Sombra</Label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={selectedImage.shadowColor.startsWith('rgba') ? '#000000' : selectedImage.shadowColor}
+                          onChange={e => updateImage(selectedImage.id, { shadowColor: e.target.value })}
+                          className="w-8 h-8 rounded border cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="flex gap-2 border-t pt-3">
                 <Button variant="outline" size="sm" className="flex-1" onClick={() => duplicateImage(selectedImage.id)}>
                   <Copy className="w-3 h-3 mr-1" /> Duplicar
                 </Button>
@@ -430,22 +557,59 @@ export const ImageLayoutEditor: React.FC<Props> = ({ photos, layout, onLayoutCha
                 {images.map(img => {
                   const htmlImg = loadedImages[img.src];
                   if (!htmlImg) return null;
+                  const filters: any[] = [];
+                  if (img.brightness !== 100) filters.push(Konva.Filters.Brighten);
+                  if (img.contrast !== 100) filters.push(Konva.Filters.Contrast);
                   return (
-                    <KonvaImage
-                      key={img.id}
-                      id={img.id}
-                      image={htmlImg}
-                      x={mmToPx(img.x, scale)}
-                      y={mmToPx(img.y, scale)}
-                      width={mmToPx(img.width, scale)}
-                      height={mmToPx(img.height, scale)}
-                      rotation={img.rotation}
-                      draggable
-                      onClick={() => setSelectedId(img.id)}
-                      onTap={() => setSelectedId(img.id)}
-                      onDragEnd={(e) => handleDragEnd(img.id, e)}
-                      onTransformEnd={(e) => handleTransformEnd(img.id, e)}
-                    />
+                    <React.Fragment key={img.id}>
+                      {/* Border rect behind image */}
+                      {img.borderWidth > 0 && (
+                        <Rect
+                          x={mmToPx(img.x - img.borderWidth, scale)}
+                          y={mmToPx(img.y - img.borderWidth, scale)}
+                          width={mmToPx(img.width + img.borderWidth * 2, scale)}
+                          height={mmToPx(img.height + img.borderWidth * 2, scale)}
+                          fill={img.borderColor}
+                          cornerRadius={mmToPx(img.borderRadius + img.borderWidth, scale)}
+                          rotation={img.rotation}
+                          shadowEnabled={img.shadowEnabled}
+                          shadowBlur={img.shadowBlur}
+                          shadowColor={img.shadowColor}
+                          shadowOffsetX={mmToPx(img.shadowOffsetX, scale)}
+                          shadowOffsetY={mmToPx(img.shadowOffsetY, scale)}
+                          listening={false}
+                        />
+                      )}
+                      {/* Shadow on image if no border */}
+                      <KonvaImage
+                        id={img.id}
+                        image={htmlImg}
+                        x={mmToPx(img.x, scale)}
+                        y={mmToPx(img.y, scale)}
+                        width={mmToPx(img.width, scale)}
+                        height={mmToPx(img.height, scale)}
+                        rotation={img.rotation}
+                        cornerRadius={mmToPx(img.borderRadius, scale)}
+                        draggable
+                        onClick={() => setSelectedId(img.id)}
+                        onTap={() => setSelectedId(img.id)}
+                        onDragEnd={(e) => handleDragEnd(img.id, e)}
+                        onTransformEnd={(e) => handleTransformEnd(img.id, e)}
+                        filters={filters.length > 0 ? filters : undefined}
+                        brightness={(img.brightness - 100) / 100}
+                        contrast={img.contrast - 100}
+                        shadowEnabled={img.borderWidth === 0 && img.shadowEnabled}
+                        shadowBlur={img.shadowBlur}
+                        shadowColor={img.shadowColor}
+                        shadowOffsetX={mmToPx(img.shadowOffsetX, scale)}
+                        shadowOffsetY={mmToPx(img.shadowOffsetY, scale)}
+                        ref={(node) => {
+                          if (node && filters.length > 0) {
+                            try { node.cache(); } catch(e) {}
+                          }
+                        }}
+                      />
+                    </React.Fragment>
                   );
                 })}
 
