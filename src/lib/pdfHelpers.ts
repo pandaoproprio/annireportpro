@@ -11,8 +11,11 @@ export const MR = 20;       // margin right 2 cm
 export const MT = 30;       // margin top   3 cm
 export const MB = 20;       // margin bottom 2 cm
 export const CW = PAGE_W - ML - MR;   // content width = 160 mm
-export const MAX_Y = PAGE_H - MB;
+export const MAX_Y = PAGE_H - MB - 4;  // leave room for footer (footer line at PAGE_H-18)
 export const LINE_H = 7.2;  // ~1.5 × 12pt ≈ 7.2 mm
+export const HEADER_BANNER_H = 20;  // max banner height in mm
+export const HEADER_LOGO_H = 12;    // logo height in mm
+export const HEADER_TOP_Y = 5;      // where header starts from top
 export const INDENT = 12.5; // 1.25 cm paragraph indent
 export const FONT_BODY = 12;
 export const FONT_CAPTION = 10;
@@ -54,7 +57,22 @@ export const createPdfContext = (): PdfContext => {
 export const addPage = (ctx: PdfContext): void => {
   ctx.pdf.addPage();
   ctx.pageCount++;
-  ctx.currentY = MT;
+  // Set currentY based on whether there's a header that needs space
+  ctx.currentY = getContentStartY(ctx);
+};
+
+// Calculate where content should start based on header config
+export const getContentStartY = (ctx: PdfContext): number => {
+  if (!ctx.headerConfig) return MT;
+  if (ctx.headerConfig.bannerImg) {
+    // Banner at y=5, max height=20 → bottom at ~25, content starts at 28
+    return HEADER_TOP_Y + HEADER_BANNER_H + 8;
+  }
+  if (ctx.headerConfig.logoImg || ctx.headerConfig.logoSecondaryImg) {
+    // Logos at y=8, height=12 → bottom at ~20, content starts at 24
+    return HEADER_TOP_Y + 3 + HEADER_LOGO_H + 4;
+  }
+  return MT;
 };
 
 export const ensureSpace = (ctx: PdfContext, h: number): void => {
@@ -433,22 +451,20 @@ const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
   const { bannerImg, logoImg, logoSecondaryImg, headerLeftText, headerRightText } = config;
 
   if (bannerImg) {
-    const bannerW = CW;
     const bannerAspect = bannerImg.width / bannerImg.height;
-    const bannerH = Math.min(bannerW / bannerAspect, 25);
+    const bannerH = Math.min(CW / bannerAspect, HEADER_BANNER_H);
     const drawW = bannerH * bannerAspect;
     const drawX = ML + (CW - drawW) / 2;
-    try { pdf.addImage(bannerImg.data, 'JPEG', drawX, MT - 15, drawW, bannerH); } catch (e) { console.warn('Banner error:', e); }
+    try { pdf.addImage(bannerImg.data, 'JPEG', drawX, HEADER_TOP_Y, drawW, bannerH); } catch (e) { console.warn('Banner error:', e); }
     return;
   }
 
   // Fallback: logos + text
-  const headerY = MT - 12;
+  const headerY = HEADER_TOP_Y + 3;
 
   if (logoImg) {
-    const logoH = 12;
-    const logoW = logoH * (logoImg.width / logoImg.height);
-    try { pdf.addImage(logoImg.data, 'JPEG', ML, headerY, logoW, logoH); } catch (e) { /* skip */ }
+    const logoW = HEADER_LOGO_H * (logoImg.width / logoImg.height);
+    try { pdf.addImage(logoImg.data, 'JPEG', ML, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
   }
 
   if (headerLeftText) {
@@ -460,9 +476,8 @@ const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
   }
 
   if (logoSecondaryImg) {
-    const logoH = 12;
-    const logoW = logoH * (logoSecondaryImg.width / logoSecondaryImg.height);
-    try { pdf.addImage(logoSecondaryImg.data, 'JPEG', PAGE_W - MR - logoW, headerY, logoW, logoH); } catch (e) { /* skip */ }
+    const logoW = HEADER_LOGO_H * (logoSecondaryImg.width / logoSecondaryImg.height);
+    try { pdf.addImage(logoSecondaryImg.data, 'JPEG', PAGE_W - MR - logoW, headerY, logoW, HEADER_LOGO_H); } catch (e) { /* skip */ }
   }
 
   if (headerRightText) {
@@ -481,14 +496,15 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
 
   for (let p = 1; p <= pageCount; p++) {
     pdf.setPage(p);
+    const isCoverPage = skipPage1 && p === 1;
 
-    // ── Header on every page ──
-    if (headerConfig) {
+    // ── Header on every page EXCEPT cover ──
+    if (headerConfig && !isCoverPage) {
       renderHeaderOnPage(pdf, headerConfig);
     }
 
-    // Page number – top right, 2 cm from edge
-    if (!(skipPage1 && p === 1)) {
+    // Page number – top right, 2 cm from edge (skip cover)
+    if (!isCoverPage) {
       pdf.setFontSize(FONT_BODY);
       pdf.setFont('times', 'normal');
       pdf.setTextColor(0);
