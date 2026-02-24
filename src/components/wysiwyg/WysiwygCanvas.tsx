@@ -273,9 +273,17 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
                     </div>
                   )}
 
-                  {/* Page number */}
-                  <div className="absolute bottom-1 right-3 text-[10px] text-muted-foreground pointer-events-none">
-                    {pi + 1} / {pages.length}
+                  {/* ABNT page number — top-right, 2cm from edges */}
+                  <div
+                    className="absolute pointer-events-none text-muted-foreground"
+                    style={{
+                      top: 20 * MM_TO_PX * 0.5,
+                      right: 20 * MM_TO_PX,
+                      fontSize: '10pt',
+                      fontFamily: 'Times New Roman',
+                    }}
+                  >
+                    {pi + 1}
                   </div>
                 </div>
               </React.Fragment>
