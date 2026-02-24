@@ -178,7 +178,7 @@ export const TeamReportPdfContent: React.FC<TeamReportPdfContentProps> = ({ proj
                 fontFamily: 'Times New Roman, serif',
                 textAlign: 'center',
               }}>
-                Foto {idx + 1}: {photo.caption}
+                {photo.caption}
               </p>
             </div>
           ))}

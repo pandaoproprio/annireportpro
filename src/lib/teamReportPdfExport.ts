@@ -156,7 +156,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
 
         pdf.setFontSize(FONT_CAPTION);
         pdf.setFont('times', 'italic');
-        const caption = `Foto ${idx + 1}: ${photo.caption}`;
+        const caption = photo.caption || `Foto ${idx + 1}`;
         const capLines: string[] = pdf.splitTextToSize(caption, w);
         const capY = rowY + h + 4;
         for (let j = 0; j < Math.min(capLines.length, 3); j++) {
