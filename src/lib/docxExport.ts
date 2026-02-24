@@ -364,15 +364,29 @@ export const exportToDocx = async (data: ExportData) => {
 
   // Create the document
   const doc = new Document({
+    styles: {
+      default: {
+        document: {
+          run: {
+            font: 'Times New Roman',
+            size: 24, // 12pt
+          },
+          paragraph: {
+            spacing: { line: 360 }, // 1.5 line spacing
+            indent: { firstLine: 709 }, // 1.25cm
+          },
+        },
+      },
+    },
     sections: [
       {
         properties: {
           page: {
             margin: {
-              top: 1440, // 1 inch
-              right: 1440,
-              bottom: 1440,
-              left: 1440,
+              top: 1701,   // 3cm
+              right: 1134, // 2cm
+              bottom: 1134, // 2cm
+              left: 1701,  // 3cm
             },
           },
         },
