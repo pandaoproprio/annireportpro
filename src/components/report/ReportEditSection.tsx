@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, PhotoSize, PhotoLayout } from '@/types';
+import { PageLayout } from '@/types/imageLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +9,8 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid } from 'lucide-react';
+import { ImageLayoutEditor } from '@/components/report/ImageLayoutEditor';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
 import { ImageEditorDialog } from '@/components/report/ImageEditorDialog';
 import { SectionDoc } from '@/hooks/useReportState';
@@ -49,6 +51,8 @@ interface Props {
   updatePhotoCaption: (key: string, index: number, caption: string) => void;
   updatePhotoSize: (key: string, index: number, size: PhotoSize, widthPercent?: number) => void;
   replacePhotoUrl: (key: string, index: number, newUrl: string, setter: React.Dispatch<React.SetStateAction<string[]>> | null, goalId?: string) => void;
+  pageLayouts: Record<string, PageLayout>;
+  setPageLayouts: React.Dispatch<React.SetStateAction<Record<string, PageLayout>>>;
   // Project data
   goals: Goal[];
   projectName: string;
@@ -153,11 +157,12 @@ export const ReportEditSection: React.FC<Props> = (props) => {
   );
 };
 
-const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc }) => {
+const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts }) => {
   const sectionKey = section.type === 'custom' ? section.id : section.key;
   const photos = sectionPhotos[sectionKey] || [];
   const docs = sectionDocs[sectionKey] || [];
   const metas = photoMetadata[sectionKey] || [];
+  const [showLayoutEditor, setShowLayoutEditor] = useState(false);
 
   return (
     <div className="mt-4 space-y-4 border-t pt-4">
@@ -167,22 +172,39 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
         </Label>
         <Input type="file" accept="image/*" multiple onChange={e => handleSectionPhotoUpload(e, sectionKey)} className="text-sm" />
         {photos.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
-            {photos.map((photo, pIdx) => (
-              <PhotoCard
-                key={pIdx}
-                photo={photo}
-                index={pIdx}
-                metaKey={sectionKey}
-                meta={metas[pIdx]}
-                projectId={projectId}
-                updatePhotoCaption={updatePhotoCaption}
-                updatePhotoSize={updatePhotoSize}
-                onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
-                onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
-              />
-            ))}
-          </div>
+          <>
+            <Button
+              variant="outline" size="sm"
+              className="mt-1"
+              onClick={() => setShowLayoutEditor(true)}
+            >
+              <LayoutGrid className="w-4 h-4 mr-2" /> Editor de Layout
+            </Button>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
+              {photos.map((photo, pIdx) => (
+                <PhotoCard
+                  key={pIdx}
+                  photo={photo}
+                  index={pIdx}
+                  metaKey={sectionKey}
+                  meta={metas[pIdx]}
+                  projectId={projectId}
+                  updatePhotoCaption={updatePhotoCaption}
+                  updatePhotoSize={updatePhotoSize}
+                  onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
+                  onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+        {showLayoutEditor && (
+          <ImageLayoutEditor
+            photos={photos}
+            layout={pageLayouts[sectionKey] || null}
+            onLayoutChange={(layout) => setPageLayouts(prev => ({ ...prev, [sectionKey]: layout }))}
+            onClose={() => setShowLayoutEditor(false)}
+          />
         )}
       </div>
       {/* Documents */}
