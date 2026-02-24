@@ -17,9 +17,9 @@ interface ImageEditorDialogProps {
   onSave: (newUrl: string) => void;
 }
 
-export const ImageEditorDialog: React.FC<ImageEditorDialogProps> = ({
+export const ImageEditorDialog = React.forwardRef<HTMLDivElement, ImageEditorDialogProps>(({
   open, onOpenChange, imageUrl, projectId, onSave,
-}) => {
+}, ref) => {
   const cropperRef = useRef<CropperRef>(null);
   const [brightness, setBrightness] = useState(100);
   const [contrast, setContrast] = useState(100);
@@ -106,7 +106,7 @@ export const ImageEditorDialog: React.FC<ImageEditorDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] overflow-y-auto">
+      <DialogContent ref={ref} className="max-w-6xl w-[95vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editor de Imagem</DialogTitle>
         </DialogHeader>
@@ -188,4 +188,5 @@ export const ImageEditorDialog: React.FC<ImageEditorDialogProps> = ({
       </DialogContent>
     </Dialog>
   );
-};
+});
+ImageEditorDialog.displayName = 'ImageEditorDialog';

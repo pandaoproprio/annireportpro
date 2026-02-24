@@ -846,9 +846,85 @@ export const TeamReportGenerator: React.FC = () => {
     );
   }
 
+  // Build header/footer for preview (reuse visual config)
+  const { config } = vc;
+  const logoJustify = config.headerLogoAlignment === 'left' ? 'flex-start'
+    : config.headerLogoAlignment === 'right' ? 'flex-end'
+    : config.headerLogoAlignment === 'center' ? 'center'
+    : config.headerLogoAlignment;
+
+  const effectiveHeaderHeightPx = config.headerBannerUrl && config.headerBannerVisible
+    ? config.headerBannerHeightMm * 3
+    : config.headerHeight * 2;
+
+  const headerContentGapPx = (config.headerContentSpacing ?? 8) * 3;
+
+  const PreviewHeader = () => (
+    <div className="pb-4 border-b print:border-b-0" style={{ paddingTop: `${config.headerTopPadding}px`, minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px` }}>
+      {config.headerBannerUrl && config.headerBannerVisible ? (
+        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ height: `${config.headerBannerHeightMm * 3}px`, objectFit: config.headerBannerFit }} />
+      ) : (
+        <div className="flex items-center" style={{ justifyContent: logoJustify, gap: `${config.headerLogoGap * 2}px` }}>
+          <div className="flex items-center gap-3">
+            {config.logo && config.logoConfig.visible && (
+              <img src={config.logo} alt="Logo" className="object-contain" style={{ width: `${config.logoConfig.widthMm * 2.5}px` }} />
+            )}
+            {config.headerLeftText && <span className="text-xs text-muted-foreground">{config.headerLeftText}</span>}
+          </div>
+          <div className="flex items-center justify-center">
+            {config.logoCenter && config.logoCenterConfig.visible && (
+              <img src={config.logoCenter} alt="Logo Centro" className="object-contain" style={{ width: `${config.logoCenterConfig.widthMm * 2.5}px` }} />
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {config.headerRightText && <span className="text-xs text-muted-foreground">{config.headerRightText}</span>}
+            {config.logoSecondary && config.logoSecondaryConfig.visible && (
+              <img src={config.logoSecondary} alt="Logo Secundário" className="object-contain" style={{ width: `${config.logoSecondaryConfig.widthMm * 2.5}px` }} />
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
+  const instEnabled = config.footerInstitutionalEnabled !== false;
+  const footerAlign = config.footerAlignment || 'center';
+
+  const PreviewFooter = () => (
+    <div className="mt-8 pt-4 border-t" style={{ paddingTop: `${config.footerTopSpacing || 4}px`, textAlign: footerAlign }}>
+      {instEnabled && (
+        <div className="space-y-0">
+          <p className="font-bold" style={{ fontSize: `${config.footerLine1FontSize || 9}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
+            {config.footerLine1Text || project.organizationName}
+          </p>
+          {config.footerLine2Text && (
+            <p style={{ fontSize: `${config.footerLine2FontSize || 7}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
+              {config.footerLine2Text}
+            </p>
+          )}
+          {config.footerLine3Text && (
+            <p style={{ fontSize: `${config.footerLine3FontSize || 7}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
+              {config.footerLine3Text}
+            </p>
+          )}
+        </div>
+      )}
+      {config.footerText && <p className="italic mt-1 text-xs text-muted-foreground">{config.footerText}</p>}
+    </div>
+  );
+
+  // A4 page style
+  const a4Style: React.CSSProperties = {
+    fontFamily: 'Times New Roman, serif',
+    fontSize: '12pt',
+    lineHeight: '1.5',
+    padding: '30mm 20mm 20mm 30mm',
+    textAlign: 'justify' as const,
+  };
+
   // Preview View
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex items-center justify-between mb-6">
         <Button variant="ghost" onClick={() => setIsPreview(false)}>
           <ArrowLeft className="w-4 h-4 mr-2" />
@@ -866,19 +942,20 @@ export const TeamReportGenerator: React.FC = () => {
         </div>
       </div>
 
-      {/* Preview Content */}
-      <Card className="p-8 bg-white text-black print:shadow-none">
-        <div className="space-y-6">
+      <div className="bg-muted p-4 md:p-8 rounded-lg overflow-auto animate-fadeIn">
+        {/* ── Page 1: Title + Identification ── */}
+        <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 text-foreground animate-slideUp relative" style={a4Style}>
+          <PreviewHeader />
           <h1 className="text-2xl font-bold text-center mb-8">{reportTitle}</h1>
-          
+
           <div className="space-y-1">
             <p><strong>Termo de Fomento nº:</strong> {project.fomentoNumber}</p>
             <p><strong>Projeto:</strong> {project.name}</p>
             <p><strong>Período de Referência:</strong> [{periodStart ? format(periodStart, 'MM/yyyy') : '--'} à {periodEnd ? format(periodEnd, 'MM/yyyy') : '--'}]</p>
           </div>
 
-          <div>
-            <h2 className="text-lg font-bold mt-6 mb-3">1. Dados de Identificação</h2>
+          <div className="mt-6">
+            <h2 className="text-lg font-bold mb-3">1. Dados de Identificação</h2>
             <ul className="list-disc list-inside space-y-1">
               <li><strong>Prestador:</strong> {providerName || '[Não informado]'}</li>
               <li><strong>Responsável Técnico:</strong> {responsibleName}</li>
@@ -886,60 +963,89 @@ export const TeamReportGenerator: React.FC = () => {
             </ul>
           </div>
 
-          <div>
-            <h2 className="text-lg font-bold mt-6 mb-3">{executionReportTitle}</h2>
-            <div 
-              className="text-justify prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
-              dangerouslySetInnerHTML={{ __html: executionReport || '<p>[Nenhum relato informado]</p>' }}
-            />
+          <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
+            <PreviewFooter />
           </div>
-
-          {/* Additional Sections in Preview */}
-          {additionalSections.map((section) => (
-            <div key={section.id}>
-              <h2 className="text-lg font-bold mt-6 mb-3">{section.title}</h2>
-              <div 
-                className="text-justify prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
-                dangerouslySetInnerHTML={{ __html: section.content || '<p>[Nenhum conteúdo]</p>' }}
-              />
-            </div>
-          ))}
-
-          {photosWithCaptions.length > 0 && (
-            <div>
-              <h2 className="text-lg font-bold mt-6 mb-3">{attachmentsTitle}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {photosWithCaptions.map((photo, idx) => (
-                  <div key={photo.id} className="space-y-2">
-                    <div className="w-full bg-muted rounded-lg border overflow-hidden flex items-center justify-center" style={{ minHeight: '180px' }}>
-                      <img
-                        src={photo.url}
-                        alt={`Registro ${idx + 1}`}
-                        className="max-w-full max-h-[400px] object-contain"
-                      />
-                    </div>
-                    <p className="text-xs text-center italic text-muted-foreground">
-                      Foto {idx + 1}: {photo.caption}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="mt-12 pt-8">
-            <p>Rio de Janeiro, {format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.</p>
-            
-            <div className="mt-12 text-center">
-              <p className="border-t border-black inline-block pt-2 px-16">
-                Assinatura do responsável legal
-              </p>
-              <p className="mt-4"><strong>Nome e cargo:</strong> {responsibleName} - {functionRole}</p>
-              <p><strong>CNPJ:</strong> {providerDocument || '[Não informado]'}</p>
-            </div>
-          </div>
+          <span className="absolute bottom-[10mm] right-[20mm] text-xs text-muted-foreground">1</span>
         </div>
-      </Card>
+
+        {/* ── Page 2: Execution Report ── */}
+        <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 text-foreground animate-slideUp relative" style={a4Style}>
+          <PreviewHeader />
+          <h2 className="text-lg font-bold mb-3">{executionReportTitle}</h2>
+          <div
+            className="text-justify prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
+            dangerouslySetInnerHTML={{ __html: executionReport || '<p>[Nenhum relato informado]</p>' }}
+          />
+
+          <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
+            <PreviewFooter />
+          </div>
+          <span className="absolute bottom-[10mm] right-[20mm] text-xs text-muted-foreground">2</span>
+        </div>
+
+        {/* ── Additional Sections (each on its own page) ── */}
+        {additionalSections.map((section, idx) => (
+          <div key={section.id} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 text-foreground animate-slideUp relative" style={a4Style}>
+            <PreviewHeader />
+            <h2 className="text-lg font-bold mb-3">{section.title}</h2>
+            <div
+              className="text-justify prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
+              dangerouslySetInnerHTML={{ __html: section.content || '<p>[Nenhum conteúdo]</p>' }}
+            />
+            <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
+              <PreviewFooter />
+            </div>
+            <span className="absolute bottom-[10mm] right-[20mm] text-xs text-muted-foreground">{3 + idx}</span>
+          </div>
+        ))}
+
+        {/* ── Photos Page ── */}
+        {photosWithCaptions.length > 0 && (
+          <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 text-foreground animate-slideUp relative" style={a4Style}>
+            <PreviewHeader />
+            <h2 className="text-lg font-bold mb-3">{attachmentsTitle}</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {photosWithCaptions.map((photo, idx) => (
+                <div key={photo.id} className="space-y-2">
+                  <div className="w-full bg-muted rounded-lg border overflow-hidden flex items-center justify-center" style={{ minHeight: '180px' }}>
+                    <img
+                      src={photo.url}
+                      alt={`Registro ${idx + 1}`}
+                      className="max-w-full max-h-[400px] object-contain"
+                    />
+                  </div>
+                  <p className="text-xs text-center italic text-muted-foreground">
+                    Foto {idx + 1}: {photo.caption}
+                  </p>
+                </div>
+              ))}
+            </div>
+            <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
+              <PreviewFooter />
+            </div>
+            <span className="absolute bottom-[10mm] right-[20mm] text-xs text-muted-foreground">{3 + additionalSections.length}</span>
+          </div>
+        )}
+
+        {/* ── Signature Page ── */}
+        <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 text-foreground animate-slideUp relative" style={a4Style}>
+          <PreviewHeader />
+          <div className="mt-16 pt-10 flex flex-col items-center">
+            <p className="mb-8">Rio de Janeiro, {format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.</p>
+            <div className="w-80 border-t border-foreground mb-2 mt-16"></div>
+            <p className="font-bold uppercase">Assinatura do responsável legal</p>
+            <p className="mt-4"><strong>Nome e cargo:</strong> {responsibleName} - {functionRole}</p>
+            <p><strong>CNPJ:</strong> {providerDocument || '[Não informado]'}</p>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
+            <PreviewFooter />
+          </div>
+          <span className="absolute bottom-[10mm] right-[20mm] text-xs text-muted-foreground">
+            {3 + additionalSections.length + (photosWithCaptions.length > 0 ? 1 : 0)}
+          </span>
+        </div>
+      </div>
     </div>
   );
 };
