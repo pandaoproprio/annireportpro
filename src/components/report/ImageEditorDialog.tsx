@@ -106,7 +106,7 @@ export const ImageEditorDialog: React.FC<ImageEditorDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-6xl w-[95vw] max-h-[95vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editor de Imagem</DialogTitle>
         </DialogHeader>
@@ -139,11 +139,11 @@ export const ImageEditorDialog: React.FC<ImageEditorDialogProps> = ({
         </div>
 
         {/* Cropper */}
-        <div className="relative bg-muted rounded-lg overflow-hidden" style={{ height: '400px', ...filterStyle }}>
+        <div className="relative bg-muted rounded-lg overflow-hidden" style={{ height: 'min(65vh, 700px)', ...filterStyle }}>
           <Cropper
             ref={cropperRef}
             src={imageUrl}
-            className="h-full"
+            className="h-full w-full"
             stencilProps={{ aspectRatio: undefined }}
           />
         </div>

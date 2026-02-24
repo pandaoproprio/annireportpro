@@ -1,5 +1,5 @@
 import React from 'react';
-import { ReportSection, Activity, Goal, ExpenseItem } from '@/types';
+import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta } from '@/types';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 
 interface Props {
@@ -17,6 +17,9 @@ interface Props {
   futureActions: string;
   expenses: ExpenseItem[];
   links: { attendance: string; registration: string; media: string };
+  // Per-section photos + metadata
+  sectionPhotos?: Record<string, string[]>;
+  photoMetadata?: Record<string, ReportPhotoMeta[]>;
   // Project
   goals: Goal[];
   organizationName: string;
@@ -31,18 +34,59 @@ interface Props {
   formatActivityDate: (date: string, endDate?: string) => string;
 }
 
+// Renders a single photo with caption and width
+const PreviewPhoto: React.FC<{ photo: string; meta?: ReportPhotoMeta; index: number }> = ({ photo, meta, index }) => {
+  const widthPercent = meta?.widthPercent || 100;
+  const caption = meta?.caption || '';
+  return (
+    <div className="break-inside-avoid mb-4" style={{ width: `${widthPercent}%` }}>
+      <div className="overflow-hidden rounded-lg border shadow-sm">
+        <img src={photo} alt={caption || `Registro ${index + 1}`} className="w-full object-contain bg-muted" />
+      </div>
+      {caption && (
+        <p className="text-xs text-muted-foreground text-center mt-1 italic">{caption}</p>
+      )}
+    </div>
+  );
+};
+
+// Renders a list of photos with their metadata
+const PreviewPhotoGrid: React.FC<{ photos: string[]; metas?: ReportPhotoMeta[]; title?: string }> = ({ photos, metas, title }) => {
+  if (!photos || photos.length === 0) return null;
+  return (
+    <div className="mt-6 mb-4">
+      {title && <p className="font-semibold text-sm mb-3 uppercase">{title}</p>}
+      <div className="flex flex-wrap gap-4 justify-center">
+        {photos.map((photo, idx) => (
+          <PreviewPhoto key={idx} photo={photo} meta={metas?.[idx]} index={idx} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const ReportPreviewSection: React.FC<Props> = (props) => {
   const { section } = props;
   if (!section.isVisible) return null;
 
+  // Get section-level photos
+  const sectionKey = section.type === 'custom' ? section.id : section.key;
+  const secPhotos = props.sectionPhotos?.[sectionKey] || [];
+  const secMetas = props.photoMetadata?.[sectionKey] || [];
+
+  const renderSectionPhotos = () => {
+    if (secPhotos.length === 0) return null;
+    return <PreviewPhotoGrid photos={secPhotos} metas={secMetas} title="Registros Fotográficos" />;
+  };
+
   switch (section.key) {
     case 'object': return <ObjectPreview {...props} />;
-    case 'summary': return <SummaryPreview {...props} />;
+    case 'summary': return <SummaryPreview {...props} renderPhotos={renderSectionPhotos} />;
     case 'goals': return <GoalsPreview {...props} />;
-    case 'other': return <OtherPreview {...props} />;
-    case 'communication': return <CommunicationPreview {...props} />;
-    case 'satisfaction': return <SatisfactionPreview {...props} />;
-    case 'future': return <FuturePreview {...props} />;
+    case 'other': return <OtherPreview {...props} renderPhotos={renderSectionPhotos} />;
+    case 'communication': return <CommunicationPreview {...props} renderPhotos={renderSectionPhotos} />;
+    case 'satisfaction': return <SatisfactionPreview {...props} renderPhotos={renderSectionPhotos} />;
+    case 'future': return <FuturePreview {...props} renderPhotos={renderSectionPhotos} />;
     case 'expenses': return <ExpensesPreview {...props} />;
     case 'links': return <LinksPreview {...props} />;
     case 'custom':
@@ -51,6 +95,7 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
         <section key={section.id} className="mb-8 page-break">
           <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
           <div className="whitespace-pre-line text-justify">{section.content}</div>
+          {renderSectionPhotos()}
         </section>
       );
   }
@@ -63,14 +108,15 @@ const ObjectPreview: React.FC<Props> = ({ section, objectText }) => (
   </section>
 );
 
-const SummaryPreview: React.FC<Props> = ({ section, summary }) => (
+const SummaryPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({ section, summary, renderPhotos }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>{summary}</div>
+    {renderPhotos?.()}
   </section>
 );
 
-const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, getActivitiesByGoal, formatActivityDate }) => (
+const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, getActivitiesByGoal, formatActivityDate }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-6" style={{ textAlign: 'left' }}>{section.title}</h3>
     {goals.map((goal, idx) => {
@@ -78,6 +124,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
       const manualPhotos = goalPhotos[goal.id] || [];
       const activityPhotos = goalActs.flatMap(a => a.photos || []);
       const allGoalPhotos = [...manualPhotos, ...activityPhotos];
+      const goalMetas = photoMetadata?.[goal.id] || [];
 
       return (
         <div key={goal.id} className="mb-10">
@@ -97,27 +144,17 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
               ))}
             </div>
           )}
-          {allGoalPhotos.length > 0 && (
-            <div className="mt-6 mb-4">
-              <p className="font-semibold text-sm mb-3 uppercase">Registros Fotográficos – Meta {idx + 1}</p>
-              <div className="grid grid-cols-2 gap-4">
-                {allGoalPhotos.map((photo, photoIdx) => (
-                  <div key={photoIdx} className="aspect-[4/3] overflow-hidden rounded-lg border shadow-sm">
-                    <img src={photo} alt={`Meta ${idx + 1} - Registro ${photoIdx + 1}`} className="w-full h-full object-cover" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+          <PreviewPhotoGrid photos={allGoalPhotos} metas={goalMetas} title={`Registros Fotográficos – Meta ${idx + 1}`} />
         </div>
       );
     })}
   </section>
 );
 
-const OtherPreview: React.FC<Props> = ({
+const OtherPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({
   section, otherActionsNarrative, otherActionsPhotos, getOtherActivities, formatActivityDate,
   organizationName, organizationAddress, organizationWebsite, organizationEmail, organizationPhone,
+  renderPhotos,
 }) => {
   const otherActs = getOtherActivities();
   const hasPhotos = otherActionsPhotos.length > 0 || otherActs.some(a => a.photos && a.photos.length > 0);
@@ -137,6 +174,7 @@ const OtherPreview: React.FC<Props> = ({
             ))}
           </div>
         )}
+        {renderPhotos?.()}
       </section>
       {hasPhotos && (
         <PhotoGallerySection title="OUTRAS AÇÕES" photos={otherActionsPhotos} activities={otherActs}
@@ -147,9 +185,10 @@ const OtherPreview: React.FC<Props> = ({
   );
 };
 
-const CommunicationPreview: React.FC<Props> = ({
+const CommunicationPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({
   section, communicationNarrative, communicationPhotos, getCommunicationActivities, formatActivityDate,
   organizationName, organizationAddress, organizationWebsite, organizationEmail, organizationPhone,
+  renderPhotos,
 }) => {
   const commActs = getCommunicationActivities();
   const hasPhotos = communicationPhotos.length > 0 || commActs.some(a => a.photos && a.photos.length > 0);
@@ -169,6 +208,7 @@ const CommunicationPreview: React.FC<Props> = ({
             ))}
           </div>
         )}
+        {renderPhotos?.()}
       </section>
       {hasPhotos && (
         <PhotoGallerySection title="PUBLICAÇÕES E DIVULGAÇÃO" photos={communicationPhotos} activities={commActs}
@@ -179,21 +219,23 @@ const CommunicationPreview: React.FC<Props> = ({
   );
 };
 
-const SatisfactionPreview: React.FC<Props> = ({ section, satisfaction }) => (
+const SatisfactionPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({ section, satisfaction, renderPhotos }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>
       {satisfaction || '[Descreva a visão do público sobre o projeto e os principais feedbacks]'}
     </div>
+    {renderPhotos?.()}
   </section>
 );
 
-const FuturePreview: React.FC<Props> = ({ section, futureActions }) => (
+const FuturePreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({ section, futureActions, renderPhotos }) => (
   <section className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>
       {futureActions || '[Descreva as ações futuras do projeto]'}
     </div>
+    {renderPhotos?.()}
   </section>
 );
 

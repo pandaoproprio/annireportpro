@@ -55,9 +55,13 @@ export interface ReportSection {
 
 export type PhotoSize = 'small' | 'medium' | 'large' | 'full';
 
+export type PhotoLayout = 'grid-1' | 'grid-2' | 'grid-3' | 'carousel';
+
 export interface ReportPhotoMeta {
   caption: string;
   size: PhotoSize;
+  /** Custom width percentage (10-100) for granular control */
+  widthPercent?: number;
 }
 
 export interface ReportData {
