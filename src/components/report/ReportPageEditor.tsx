@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { BookOpen, FileText, PanelBottom } from 'lucide-react';
+import { BookOpen, FileText, PanelBottom, Upload, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface Props {
   coverTitle: string;
@@ -15,6 +16,9 @@ interface Props {
   setHeaderLeftText: (v: string) => void;
   headerRightText: string;
   setHeaderRightText: (v: string) => void;
+  headerBannerUrl: string;
+  onHeaderBannerUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onHeaderBannerRemove: () => void;
   footerText: string;
   setFooterText: (v: string) => void;
   footerShowAddress: boolean;
@@ -33,6 +37,7 @@ export const ReportPageEditor: React.FC<Props> = ({
   coverSubtitle, setCoverSubtitle,
   headerLeftText, setHeaderLeftText,
   headerRightText, setHeaderRightText,
+  headerBannerUrl, onHeaderBannerUpload, onHeaderBannerRemove,
   footerText, setFooterText,
   footerShowAddress, setFooterShowAddress,
   footerShowContact, setFooterShowContact,
@@ -78,24 +83,41 @@ export const ReportPageEditor: React.FC<Props> = ({
           <h3 className="text-lg font-semibold">Cabeçalho</h3>
         </div>
         <p className="text-xs text-muted-foreground mb-4">
-          Texto opcional exibido junto aos logos em todas as páginas. Os logos são configurados na seção "Capa e Logos".
+          Envie uma imagem de banner para ocupar toda a largura do cabeçalho, ou use texto + logos.
         </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Texto Esquerda</Label>
-            <Input
-              value={headerLeftText}
-              onChange={e => setHeaderLeftText(e.target.value)}
-              placeholder="Ex: Nome da Instituição"
-            />
+            <Label>Imagem de Banner (largura total)</Label>
+            {headerBannerUrl ? (
+              <div className="relative">
+                <img src={headerBannerUrl} alt="Banner do cabeçalho" className="w-full h-auto max-h-24 object-contain border rounded bg-muted" />
+                <Button variant="destructive" size="icon" className="absolute top-1 right-1 h-6 w-6" onClick={onHeaderBannerRemove}>
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            ) : (
+              <div>
+                <Input type="file" accept="image/*" onChange={onHeaderBannerUpload} />
+              </div>
+            )}
           </div>
-          <div className="space-y-2">
-            <Label>Texto Direita</Label>
-            <Input
-              value={headerRightText}
-              onChange={e => setHeaderRightText(e.target.value)}
-              placeholder="Ex: Nº do Convênio"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Texto Esquerda (opcional)</Label>
+              <Input
+                value={headerLeftText}
+                onChange={e => setHeaderLeftText(e.target.value)}
+                placeholder="Ex: Nome da Instituição"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Texto Direita (opcional)</Label>
+              <Input
+                value={headerRightText}
+                onChange={e => setHeaderRightText(e.target.value)}
+                placeholder="Ex: Nº do Convênio"
+              />
+            </div>
           </div>
         </div>
       </CardContent>

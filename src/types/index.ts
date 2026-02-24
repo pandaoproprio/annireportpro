@@ -67,6 +67,7 @@ export interface ReportPhotoMeta {
 export interface ReportData {
   logo?: string;
   logoSecondary?: string;
+  headerBannerUrl?: string;
   coverTitle?: string;
   coverSubtitle?: string;
   headerLeftText?: string;
