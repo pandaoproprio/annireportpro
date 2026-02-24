@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FileEdit } from 'lucide-react';
-import html2pdf from 'html2pdf.js';
+import { exportReportToPdf } from '@/lib/reportPdfExport';
 import { exportToDocx } from '@/lib/docxExport';
 import { useReportState } from '@/hooks/useReportState';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
@@ -35,43 +35,16 @@ export const ReportGenerator: React.FC = () => {
   if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
 
   const exportToPdf = async () => {
-    if (!reportRef.current) return;
     setIsExporting(true);
     setExportType('pdf');
     try {
-      const filename = `Relatorio_${project.name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-      const opt = {
-        margin: [30, 20, 20, 30],
-        filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, letterRendering: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-      };
-      const worker = html2pdf().set(opt).from(reportRef.current);
-      const pdf = await worker.toPdf().get('pdf') as any;
-      const totalPages = pdf.internal.getNumberOfPages();
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      for (let i = 1; i <= totalPages; i++) {
-        pdf.setPage(i);
-        // Page number – top right (skip cover page)
-        if (i >= 2) {
-          pdf.setFontSize(10);
-          pdf.setTextColor(0, 0, 0);
-          pdf.text(`${i}`, pageWidth - 20, 20);
-        }
-        // Footer – line + org name centered
-        pdf.setDrawColor(180, 180, 180);
-        pdf.line(30, pageHeight - 15, pageWidth - 20, pageHeight - 15);
-        pdf.setFontSize(10);
-        pdf.setTextColor(80, 80, 80);
-        const footerText = project.organizationName;
-        const fw = pdf.getTextWidth(footerText);
-        pdf.text(footerText, (pageWidth - fw) / 2, pageHeight - 10);
-        pdf.setTextColor(0, 0, 0);
-      }
-      pdf.save(filename);
+      await exportReportToPdf({
+        project, activities, sections, objectText, summary,
+        goalNarratives, goalPhotos,
+        otherActionsNarrative, otherActionsPhotos,
+        communicationNarrative, communicationPhotos,
+        satisfaction, futureActions, expenses, links,
+      });
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
       toast.error('Erro ao exportar PDF. Tente novamente.');
