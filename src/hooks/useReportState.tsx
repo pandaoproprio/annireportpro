@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAppData } from '@/contexts/AppDataContext';
-import { Activity, ActivityType, ReportSection, ExpenseItem } from '@/types';
+import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -47,6 +47,8 @@ export const useReportState = () => {
   // Per-section photos and docs (persisted)
   const [sectionPhotos, setSectionPhotos] = useState<Record<string, string[]>>({});
   const [sectionDocs, setSectionDocs] = useState<Record<string, SectionDoc[]>>({});
+  // Photo metadata (captions + sizes) keyed by sectionKey or goalId, indexed by photo position
+  const [photoMetadata, setPhotoMetadata] = useState<Record<string, ReportPhotoMeta[]>>({});
 
   // Initialize from project data
   useEffect(() => {
@@ -82,6 +84,7 @@ export const useReportState = () => {
       }
       setSectionPhotos((rd as any).sectionPhotos || {});
       setSectionDocs((rd as any).sectionDocs || {});
+      setPhotoMetadata((rd as any).photoMetadata || {});
     }
   }, [project]);
 
@@ -111,6 +114,7 @@ export const useReportState = () => {
       sections,
       sectionPhotos,
       sectionDocs,
+      photoMetadata,
     } as any);
     if (showToast) toast.success('Rascunho salvo com sucesso!');
   };
@@ -377,6 +381,51 @@ export const useReportState = () => {
     return start;
   };
 
+  // Photo metadata helpers
+  const updatePhotoCaption = (key: string, index: number, caption: string) => {
+    setPhotoMetadata(prev => {
+      const metas = [...(prev[key] || [])];
+      while (metas.length <= index) metas.push({ caption: '', size: 'medium' });
+      metas[index] = { ...metas[index], caption };
+      return { ...prev, [key]: metas };
+    });
+  };
+
+  const updatePhotoSize = (key: string, index: number, size: ReportPhotoMeta['size']) => {
+    setPhotoMetadata(prev => {
+      const metas = [...(prev[key] || [])];
+      while (metas.length <= index) metas.push({ caption: '', size: 'medium' });
+      metas[index] = { ...metas[index], size };
+      return { ...prev, [key]: metas };
+    });
+  };
+
+  const replacePhotoUrl = (key: string, index: number, newUrl: string,
+    photosSetter: React.Dispatch<React.SetStateAction<string[]>> | null,
+    goalId?: string
+  ) => {
+    if (goalId) {
+      setGoalPhotos(prev => {
+        const photos = [...(prev[goalId] || [])];
+        photos[index] = newUrl;
+        return { ...prev, [goalId]: photos };
+      });
+    } else if (photosSetter) {
+      photosSetter(prev => {
+        const photos = [...prev];
+        photos[index] = newUrl;
+        return photos;
+      });
+    } else {
+      // section photos
+      setSectionPhotos(prev => {
+        const photos = [...(prev[key] || [])];
+        photos[index] = newUrl;
+        return { ...prev, [key]: photos };
+      });
+    }
+  };
+
   // Document upload for links section
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>, linkField: 'attendance' | 'registration' | 'media') => {
     if (e.target.files && e.target.files[0]) {
@@ -408,6 +457,7 @@ export const useReportState = () => {
     satisfaction, setSatisfaction, futureActions, setFutureActions,
     expenses, links, setLinks, linkFileNames, setLinkFileNames, sections,
     sectionPhotos, sectionDocs,
+    photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     saveReportData,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent, addCustomSection, removeSection,
     pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,

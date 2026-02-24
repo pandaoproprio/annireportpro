@@ -1,4 +1,4 @@
-import { Project, Activity, ActivityType, ExpenseItem, ReportSection } from '@/types';
+import { Project, Activity, ActivityType, ExpenseItem, ReportSection, ReportPhotoMeta } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -25,6 +25,7 @@ export interface ReportPdfExportData {
   expenses: ExpenseItem[];
   links: { attendance: string; registration: string; media: string };
   sectionPhotos?: Record<string, string[]>;
+  photoMetadata?: Record<string, ReportPhotoMeta[]>;
 }
 
 const formatActivityDate = (date: string, endDate?: string) => {
@@ -41,6 +42,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     communicationNarrative, communicationPhotos,
     satisfaction, futureActions, expenses, links,
     sectionPhotos = {},
+    photoMetadata = {},
   } = data;
 
   const ctx = createPdfContext();
@@ -174,7 +176,9 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
           const actPhotos = goalActs.flatMap(a => a.photos || []);
           const allGoalPhotos = [...gPhotos, ...actPhotos];
           if (allGoalPhotos.length > 0) {
-            await addPhotoGrid(ctx, allGoalPhotos, goal.title);
+            const goalMetas = photoMetadata[goal.id] || [];
+            const captions = allGoalPhotos.map((_, i) => goalMetas[i]?.caption || `Foto ${i + 1}`);
+            await addPhotoGrid(ctx, allGoalPhotos, goal.title, captions);
           }
         }
         break;
@@ -199,7 +203,9 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
 
         const otherPhotosAll = [...otherActionsPhotos, ...otherActs.flatMap(a => a.photos || [])];
         if (otherPhotosAll.length > 0) {
-          await addPhotoGrid(ctx, otherPhotosAll, 'OUTRAS AÇÕES');
+          const otherMetas = photoMetadata['other'] || [];
+          const captions = otherPhotosAll.map((_, i) => otherMetas[i]?.caption || `Foto ${i + 1}`);
+          await addPhotoGrid(ctx, otherPhotosAll, 'OUTRAS AÇÕES', captions);
         }
         break;
       }
@@ -224,7 +230,9 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
 
         const commPhotosAll = [...communicationPhotos, ...commActs.flatMap(a => a.photos || [])];
         if (commPhotosAll.length > 0) {
-          await addPhotoGrid(ctx, commPhotosAll, 'PUBLICAÇÕES E DIVULGAÇÃO');
+          const commMetas = photoMetadata['communication'] || [];
+          const captions = commPhotosAll.map((_, i) => commMetas[i]?.caption || `Foto ${i + 1}`);
+          await addPhotoGrid(ctx, commPhotosAll, 'PUBLICAÇÕES E DIVULGAÇÃO', captions);
         }
         break;
       }
@@ -324,7 +332,10 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     // Render per-section photos (uploaded via "Registro Fotográfico")
     const secPhotos = sectionPhotos[section.key] || sectionPhotos[section.id] || [];
     if (secPhotos.length > 0) {
-      await addPhotoGrid(ctx, secPhotos, section.title);
+      const secKey = sectionPhotos[section.key] ? section.key : section.id;
+      const secMetas = photoMetadata[secKey] || [];
+      const captions = secPhotos.map((_, i) => secMetas[i]?.caption || `Foto ${i + 1}`);
+      await addPhotoGrid(ctx, secPhotos, section.title, captions);
     }
   }
 

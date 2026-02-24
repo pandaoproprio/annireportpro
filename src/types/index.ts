@@ -53,6 +53,13 @@ export interface ReportSection {
   isVisible: boolean;
 }
 
+export type PhotoSize = 'small' | 'medium' | 'large' | 'full';
+
+export interface ReportPhotoMeta {
+  caption: string;
+  size: PhotoSize;
+}
+
 export interface ReportData {
   logo?: string;
   logoSecondary?: string;
@@ -69,6 +76,7 @@ export interface ReportData {
   expenses?: ExpenseItem[];
   links?: ReportLinks;
   sections?: ReportSection[];
+  photoMetadata?: Record<string, ReportPhotoMeta[]>;
 }
 
 export interface Activity {
