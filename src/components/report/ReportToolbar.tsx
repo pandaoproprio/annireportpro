@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Edit, Eye, Printer, Download, Loader2, FileText } from 'lucide-react';
+import { Edit, Eye, Printer, Download, Loader2, FileText, PenTool } from 'lucide-react';
 
 interface Props {
   mode: 'edit' | 'preview';
@@ -9,15 +9,21 @@ interface Props {
   exportType: 'pdf' | 'docx' | null;
   onExportPdf: () => void;
   onExportDocx: () => void;
+  onOpenWysiwyg?: () => void;
 }
 
-export const ReportToolbar: React.FC<Props> = ({ mode, setMode, isExporting, exportType, onExportPdf, onExportDocx }) => (
+export const ReportToolbar: React.FC<Props> = ({ mode, setMode, isExporting, exportType, onExportPdf, onExportDocx, onOpenWysiwyg }) => (
   <div className="flex justify-between items-center no-print bg-card p-4 shadow-sm rounded-lg sticky top-0 z-10 border-b">
     <div>
       <h2 className="text-2xl font-bold text-foreground">Gerador de Relatório</h2>
       <p className="text-muted-foreground text-sm">Configure e preencha o relatório de prestação de contas.</p>
     </div>
     <div className="flex space-x-2">
+      {onOpenWysiwyg && (
+        <Button variant="outline" onClick={onOpenWysiwyg} className="border-primary/30 text-primary hover:bg-primary/5">
+          <PenTool className="w-4 h-4 mr-2" /> Editor WYSIWYG
+        </Button>
+      )}
       <Button variant={mode === 'edit' ? 'default' : 'outline'} onClick={() => setMode('edit')}>
         <Edit className="w-4 h-4 mr-2" /> Editar
       </Button>

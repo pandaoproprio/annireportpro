@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileEdit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +18,7 @@ import { toast } from 'sonner';
 export const ReportGenerator: React.FC = () => {
   const state = useReportState();
   const reportRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const {
     project, activities, mode, setMode, isExporting, setIsExporting, exportType, setExportType,
@@ -179,7 +181,7 @@ export const ReportGenerator: React.FC = () => {
 
   return (
     <div className="space-y-6 pb-20 animate-fadeIn">
-      <ReportToolbar mode={mode} setMode={setMode} isExporting={isExporting} exportType={exportType} onExportPdf={exportToPdf} onExportDocx={handleExportDocx} />
+      <ReportToolbar mode={mode} setMode={setMode} isExporting={isExporting} exportType={exportType} onExportPdf={exportToPdf} onExportDocx={handleExportDocx} onOpenWysiwyg={() => navigate('/wysiwyg')} />
 
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
