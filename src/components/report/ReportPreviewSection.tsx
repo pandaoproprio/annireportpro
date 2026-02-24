@@ -226,8 +226,8 @@ const ExpensesPreview: React.FC<Props> = ({ section, expenses }) => (
   </section>
 );
 
-const LinksPreview: React.FC<Props> = ({ section, links }) => (
-  <section className="mb-8 page-break">
+const LinksPreview = React.forwardRef<HTMLElement, Props>(({ section, links }, ref) => (
+  <section ref={ref} className="mb-8 page-break">
     <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <ul className="space-y-3 text-sm">
       <li><strong>Listas de Presença:</strong>{' '}{links.attendance ? <a href={links.attendance} className="text-primary underline break-all">{links.attendance}</a> : '[Insira o link]'}</li>
@@ -235,4 +235,5 @@ const LinksPreview: React.FC<Props> = ({ section, links }) => (
       <li><strong>Mídias (Fotos, Vídeos):</strong>{' '}{links.media ? <a href={links.media} className="text-primary underline break-all">{links.media}</a> : '[Insira o link]'}</li>
     </ul>
   </section>
-);
+));
+LinksPreview.displayName = 'LinksPreview';
