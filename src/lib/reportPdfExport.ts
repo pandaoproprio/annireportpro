@@ -4,7 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import {
   createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem,
   addSectionTitle, addFooterAndPageNumbers, addSignatureBlock,
-  loadImage, addPhotoGrid,
+  loadImage, addPhotoGrid, parseHtmlToBlocks, PdfContext,
   PAGE_W, PAGE_H, ML, MR, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION, MT,
 } from '@/lib/pdfHelpers';
 
@@ -43,6 +43,15 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
 
   const ctx = createPdfContext();
   const { pdf } = ctx;
+
+  // Helper to render HTML content from rich-text editor
+  const writeHtmlContent = (html: string, fallback: string) => {
+    const blocks = parseHtmlToBlocks(html || fallback);
+    for (const block of blocks) {
+      if (block.type === 'bullet') addBulletItem(ctx, block.content);
+      else addParagraph(ctx, block.content);
+    }
+  };
 
   // Sub-section title (bold, normal case) — specific to this report
   const addSubSectionTitle = (title: string) => {
@@ -136,14 +145,14 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         break;
 
       case 'summary':
-        addParagraph(ctx, summary || '[Resumo das atividades]');
+        writeHtmlContent(summary, '[Resumo das atividades]');
         break;
 
       case 'goals':
         for (const goal of project.goals) {
           const goalActs = getActivitiesByGoal(goal.id);
           addSubSectionTitle(goal.title);
-          addParagraph(ctx, goalNarratives[goal.id] || '[Descreva as realizações da meta]');
+          writeHtmlContent(goalNarratives[goal.id], '[Descreva as realizações da meta]');
 
           if (goalActs.length > 0) {
             ctx.currentY += 2;
@@ -170,7 +179,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
 
       case 'other': {
         const otherActs = getOtherActivities();
-        addParagraph(ctx, otherActionsNarrative || '[Outras informações sobre as ações desenvolvidas]');
+        writeHtmlContent(otherActionsNarrative, '[Outras informações sobre as ações desenvolvidas]');
 
         if (otherActs.length > 0) {
           ctx.currentY += 2;
@@ -195,7 +204,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
 
       case 'communication': {
         const commActs = getCommunicationActivities();
-        addParagraph(ctx, communicationNarrative || '[Publicações e ações de divulgação]');
+        writeHtmlContent(communicationNarrative, '[Publicações e ações de divulgação]');
 
         if (commActs.length > 0) {
           ctx.currentY += 2;
@@ -219,11 +228,11 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
       }
 
       case 'satisfaction':
-        addParagraph(ctx, satisfaction || '[Grau de satisfação do público-alvo]');
+        writeHtmlContent(satisfaction, '[Grau de satisfação do público-alvo]');
         break;
 
       case 'future':
-        addParagraph(ctx, futureActions || '[Sobre as ações futuras]');
+        writeHtmlContent(futureActions, '[Sobre as ações futuras]');
         break;
 
       case 'expenses':

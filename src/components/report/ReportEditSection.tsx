@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Trash2, Plus, Image as ImageIcon, Upload, FileText } from 'lucide-react';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
@@ -196,7 +197,7 @@ const SummarySection: React.FC<Props> = ({ summary, setSummary, activities, proj
       <Label>Resumo / Visão Geral</Label>
       <AiTextToolbar text={summary} onResult={setSummary} sectionType="summary" activities={activities} projectName={projectName} projectObject={projectObject} />
     </div>
-    <Textarea rows={8} value={summary} onChange={e => setSummary(e.target.value)} placeholder="Descreva a visão geral das atividades realizadas, contexto, e principais realizações..." />
+    <RichTextEditor value={summary} onChange={setSummary} placeholder="Descreva a visão geral das atividades realizadas, contexto, e principais realizações..." />
   </div>
 );
 
@@ -231,8 +232,8 @@ const GoalsSection: React.FC<Props> = ({
               goalTitle={goal.title} goalAudience={goal.targetAudience}
             />
           </div>
-          <Textarea rows={5} placeholder="Descreva as realizações, metodologia, resultados alcançados..."
-            value={goalNarratives[goal.id] || ''} onChange={e => setGoalNarratives({ ...goalNarratives, [goal.id]: e.target.value })} className="mb-3" />
+          <RichTextEditor value={goalNarratives[goal.id] || ''} onChange={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: text })}
+            placeholder="Descreva as realizações, metodologia, resultados alcançados..." />
           <Label className="flex items-center gap-2 mt-4"><ImageIcon className="w-4 h-4" /> Fotos da Meta</Label>
           <Input type="file" accept="image/*" multiple onChange={e => handleGoalPhotoUpload(e, goal.id)} className="mb-2" />
           {photos.length > 0 && (
@@ -273,7 +274,7 @@ const OtherSection: React.FC<Props> = ({
         <Label>Narrativa</Label>
         <AiTextToolbar text={otherActionsNarrative} onResult={setOtherActionsNarrative} sectionType="other" activities={otherActs} projectName={projectName} projectObject={projectObject} />
       </div>
-      <Textarea rows={5} value={otherActionsNarrative} onChange={e => setOtherActionsNarrative(e.target.value)} placeholder="Descreva outras informações, ações extras, imprevistos, acontecimentos relevantes..." />
+      <RichTextEditor value={otherActionsNarrative} onChange={setOtherActionsNarrative} placeholder="Descreva outras informações, ações extras, imprevistos, acontecimentos relevantes..." />
     </div>
   );
 };
@@ -297,7 +298,7 @@ const CommunicationSection: React.FC<Props> = ({
         <Label>Narrativa</Label>
         <AiTextToolbar text={communicationNarrative} onResult={setCommunicationNarrative} sectionType="communication" activities={commActs} projectName={projectName} projectObject={projectObject} />
       </div>
-      <Textarea rows={5} value={communicationNarrative} onChange={e => setCommunicationNarrative(e.target.value)} placeholder="Descreva as ações de divulgação, publicações, links de matérias..." />
+      <RichTextEditor value={communicationNarrative} onChange={setCommunicationNarrative} placeholder="Descreva as ações de divulgação, publicações, links de matérias..." />
     </div>
   );
 };
@@ -308,7 +309,7 @@ const SatisfactionSection: React.FC<Props> = ({ satisfaction, setSatisfaction, p
       <Label>Grau de Satisfação</Label>
       <AiTextToolbar text={satisfaction} onResult={setSatisfaction} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
     </div>
-    <Textarea rows={5} value={satisfaction} onChange={e => setSatisfaction(e.target.value)} placeholder="Descreva a visão do público sobre o projeto, feedbacks recebidos, resultados de pesquisas de satisfação..." />
+    <RichTextEditor value={satisfaction} onChange={setSatisfaction} placeholder="Descreva a visão do público sobre o projeto, feedbacks recebidos, resultados de pesquisas de satisfação..." />
   </div>
 );
 
@@ -318,7 +319,7 @@ const FutureSection: React.FC<Props> = ({ futureActions, setFutureActions, proje
       <Label>Ações Futuras</Label>
       <AiTextToolbar text={futureActions} onResult={setFutureActions} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
     </div>
-    <Textarea rows={4} value={futureActions} onChange={e => setFutureActions(e.target.value)} placeholder="Descreva as ações futuras do projeto, próximos passos, planejamento..." />
+    <RichTextEditor value={futureActions} onChange={setFutureActions} placeholder="Descreva as ações futuras do projeto, próximos passos, planejamento..." />
   </div>
 );
 
