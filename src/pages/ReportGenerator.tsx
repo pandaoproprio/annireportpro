@@ -22,7 +22,7 @@ export const ReportGenerator: React.FC = () => {
 
   const {
     project, activities, mode, setMode, isExporting, setIsExporting, exportType, setExportType,
-    logo, logoSecondary, objectText, setObjectText, summary, setSummary,
+    logo, logoSecondary, logoCenter, objectText, setObjectText, summary, setSummary,
     coverTitle, setCoverTitle, coverSubtitle, setCoverSubtitle,
     headerLeftText, setHeaderLeftText, headerRightText, setHeaderRightText,
     headerBannerUrl, setHeaderBannerUrl,
@@ -78,8 +78,8 @@ export const ReportGenerator: React.FC = () => {
         sectionPhotos, photoMetadata,
         coverTitle, coverSubtitle,
         headerBannerUrl, headerLeftText, headerRightText,
-        logo, logoSecondary,
-        footerText, footerShowAddress, footerShowContact,
+        logo, logoSecondary, logoCenter,
+        footerText, footerShowAddress, footerShowContact, footerAlignment,
         pageLayouts,
       });
     } catch (error) {
@@ -118,6 +118,9 @@ export const ReportGenerator: React.FC = () => {
           <div className="flex items-center gap-3">
             {logo ? <img src={logo} alt="Logo" className="h-12 object-contain" /> : <div className="w-12 h-12" />}
             {headerLeftText && <span className="text-xs text-muted-foreground">{headerLeftText}</span>}
+          </div>
+          <div className="flex items-center justify-center">
+            {logoCenter ? <img src={logoCenter} alt="Logo Centro" className="h-12 object-contain" /> : null}
           </div>
           <div className="flex items-center gap-3">
             {headerRightText && <span className="text-xs text-muted-foreground">{headerRightText}</span>}
@@ -207,7 +210,7 @@ export const ReportGenerator: React.FC = () => {
             organizationPhone={project.organizationPhone}
             organizationWebsite={project.organizationWebsite}
           />
-          <ReportLogoEditor logo={logo} logoSecondary={logoSecondary} onLogoUpload={handleLogoUpload} />
+          <ReportLogoEditor logo={logo} logoCenter={logoCenter} logoSecondary={logoSecondary} onLogoUpload={handleLogoUpload} />
           <div className="space-y-6">
             <h3 className="font-bold text-muted-foreground uppercase text-sm tracking-wide ml-1">Preenchimento do Conteúdo</h3>
             {sections.map((section, index) => (
