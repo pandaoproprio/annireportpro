@@ -35,7 +35,20 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   
   // Set header config for post-pass rendering
   if (vc && (bannerImg || logoImg || logoCenterImg || logoSecondaryImg)) {
-    ctx.headerConfig = { bannerImg, logoImg, logoSecondaryImg, logoCenterImg, headerLeftText: vc.headerLeftText, headerRightText: vc.headerRightText };
+    ctx.headerConfig = {
+      bannerImg, logoImg, logoSecondaryImg, logoCenterImg,
+      headerLeftText: vc.headerLeftText, headerRightText: vc.headerRightText,
+      logoVisible: vc.logoConfig?.visible,
+      logoCenterVisible: vc.logoCenterConfig?.visible,
+      logoSecondaryVisible: vc.logoSecondaryConfig?.visible,
+      logoWidthMm: vc.logoConfig?.widthMm,
+      logoCenterWidthMm: vc.logoCenterConfig?.widthMm,
+      logoSecondaryWidthMm: vc.logoSecondaryConfig?.widthMm,
+      logoAlignment: vc.headerLogoAlignment,
+      logoGapMm: vc.headerLogoGap,
+      topPaddingMm: vc.headerTopPadding,
+      headerHeightMm: vc.headerHeight,
+    };
   }
 
   const { pdf } = ctx;

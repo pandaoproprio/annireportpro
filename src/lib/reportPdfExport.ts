@@ -1,5 +1,6 @@
 import { Project, Activity, ActivityType, ExpenseItem, ReportSection, ReportPhotoMeta } from '@/types';
 import { PageLayout } from '@/types/imageLayout';
+import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
@@ -28,19 +29,7 @@ export interface ReportPdfExportData {
   links: { attendance: string; registration: string; media: string };
   sectionPhotos?: Record<string, string[]>;
   photoMetadata?: Record<string, ReportPhotoMeta[]>;
-  // Page editor settings
-  coverTitle?: string;
-  coverSubtitle?: string;
-  headerBannerUrl?: string;
-  headerLeftText?: string;
-  headerRightText?: string;
-  logo?: string;
-  logoSecondary?: string;
-  logoCenter?: string;
-  footerText?: string;
-  footerShowAddress?: boolean;
-  footerShowContact?: boolean;
-  footerAlignment?: 'left' | 'center' | 'right';
+  visualConfig?: ReportVisualConfig;
   pageLayouts?: Record<string, PageLayout>;
 }
 
@@ -61,16 +50,23 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     satisfaction, futureActions, expenses, links,
     sectionPhotos = {},
     photoMetadata = {},
-    coverTitle: customCoverTitle,
-    coverSubtitle,
-    headerBannerUrl, headerLeftText, headerRightText,
-    logo, logoSecondary, logoCenter,
-    footerText,
-    footerShowAddress,
-    footerShowContact,
-    footerAlignment,
+    visualConfig: vc,
     pageLayouts = {},
   } = data;
+
+  // Extract visual config values with defaults
+  const customCoverTitle = vc?.coverTitle;
+  const coverSubtitle = vc?.coverHideSubtitle ? undefined : vc?.coverSubtitle;
+  const headerBannerUrl = vc?.headerBannerUrl;
+  const headerLeftText = vc?.headerLeftText;
+  const headerRightText = vc?.headerRightText;
+  const logo = vc?.logo;
+  const logoSecondary = vc?.logoSecondary;
+  const logoCenter = vc?.logoCenter;
+  const footerText = vc?.footerText;
+  const footerShowAddress = vc?.footerShowAddress ?? true;
+  const footerShowContact = vc?.footerShowContact ?? true;
+  const footerAlignment = vc?.footerAlignment;
 
   // Helper: render photos using layout if available, otherwise fallback to grid
   const renderPhotos = async (photos: string[], sectionKey: string, label: string, captions?: string[]) => {
@@ -148,31 +144,48 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // COVER PAGE
   // ══════════════════════════════════════════════════════════════
 
-  // Headers are rendered in the post-pass (addFooterAndPageNumbers) on ALL pages
+  const coverTitleFontSize = vc?.coverTitleFontSize ?? 16;
+  const coverTitleBold = vc?.coverTitleBold ?? true;
+  const coverTitleItalic = vc?.coverTitleItalic ?? false;
+  const coverTitleAlign = vc?.coverTitleAlignment ?? 'center';
+  const coverSubFontSize = vc?.coverSubtitleFontSize ?? 12;
+  const coverSubAlign = vc?.coverSubtitleAlignment ?? 'center';
+  const coverOrgAlign = vc?.coverOrgAlignment ?? 'center';
+  const coverFomentoAlign = vc?.coverFomentoAlignment ?? 'center';
+  const coverSpacingLT = vc?.coverSpacingLogoTitle ?? 10;
+  const coverSpacingTS = vc?.coverSpacingTitleSubtitle ?? 8;
+  const coverSpacingSB = vc?.coverSpacingSubtitleBottom ?? 20;
+  const coverLineH = (vc?.coverLineSpacing ?? 1.5) * 4.8; // approximate mm per line
 
   ctx.currentY = PAGE_H / 2 - 40;
 
   const coverTitle = customCoverTitle || 'RELATÓRIO PARCIAL DE CUMPRIMENTO DO OBJETO';
-  pdf.setFontSize(16);
-  pdf.setFont('times', 'bold');
+  pdf.setFontSize(coverTitleFontSize);
+  pdf.setFont('times', coverTitleBold ? 'bold' : 'normal');
+  if (coverTitleItalic) pdf.setFont('times', 'bolditalic');
   const titleLines: string[] = pdf.splitTextToSize(coverTitle.toUpperCase(), CW);
+  const getAlignX = (tw: number, align: string) => {
+    if (align === 'left') return ML;
+    if (align === 'right') return PAGE_W - MR - tw;
+    return (PAGE_W - tw) / 2;
+  };
   for (const line of titleLines) {
     const tw = pdf.getTextWidth(line);
-    pdf.text(line, (PAGE_W - tw) / 2, ctx.currentY);
-    ctx.currentY += LINE_H + 2;
+    pdf.text(line, getAlignX(tw, coverTitleAlign), ctx.currentY);
+    ctx.currentY += coverLineH + 2;
   }
-  ctx.currentY += LINE_H;
+  ctx.currentY += coverSpacingLT;
 
   if (coverSubtitle) {
-    pdf.setFontSize(12);
+    pdf.setFontSize(coverSubFontSize);
     pdf.setFont('times', 'normal');
     const subLines: string[] = pdf.splitTextToSize(coverSubtitle, CW);
     for (const line of subLines) {
       const sw = pdf.getTextWidth(line);
-      pdf.text(line, (PAGE_W - sw) / 2, ctx.currentY);
-      ctx.currentY += LINE_H;
+      pdf.text(line, getAlignX(sw, coverSubAlign), ctx.currentY);
+      ctx.currentY += coverLineH;
     }
-    ctx.currentY += LINE_H;
+    ctx.currentY += coverSpacingTS;
   }
 
   pdf.setFontSize(14);
@@ -180,22 +193,26 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   const nameLines: string[] = pdf.splitTextToSize(project.name.toUpperCase(), CW);
   for (const line of nameLines) {
     const lw = pdf.getTextWidth(line);
-    pdf.text(line, (PAGE_W - lw) / 2, ctx.currentY);
-    ctx.currentY += LINE_H + 2;
+    pdf.text(line, getAlignX(lw, coverTitleAlign), ctx.currentY);
+    ctx.currentY += coverLineH + 2;
   }
-  ctx.currentY += LINE_H;
+  ctx.currentY += coverSpacingTS;
 
-  pdf.setFontSize(FONT_BODY);
-  pdf.setFont('times', 'normal');
-  const fomentoText = `Termo de Fomento nº ${project.fomentoNumber}`;
-  const ftw = pdf.getTextWidth(fomentoText);
-  pdf.text(fomentoText, (PAGE_W - ftw) / 2, ctx.currentY);
-  ctx.currentY += LINE_H * 3;
+  if (!vc?.coverHideFomento) {
+    pdf.setFontSize(FONT_BODY);
+    pdf.setFont('times', 'normal');
+    const fomentoText = `Termo de Fomento nº ${project.fomentoNumber}`;
+    const ftw = pdf.getTextWidth(fomentoText);
+    pdf.text(fomentoText, getAlignX(ftw, coverFomentoAlign), ctx.currentY);
+    ctx.currentY += coverSpacingSB;
+  }
 
-  pdf.setFontSize(14);
-  pdf.setFont('times', 'bold');
-  const orgw = pdf.getTextWidth(project.organizationName);
-  pdf.text(project.organizationName, (PAGE_W - orgw) / 2, ctx.currentY);
+  if (!vc?.coverHideOrg) {
+    pdf.setFontSize(14);
+    pdf.setFont('times', 'bold');
+    const orgw = pdf.getTextWidth(project.organizationName);
+    pdf.text(project.organizationName, getAlignX(orgw, coverOrgAlign), ctx.currentY);
+  }
 
   // ══════════════════════════════════════════════════════════════
   // CONTENT PAGES — now set headerConfig so addPage() adjusts Y
@@ -207,6 +224,16 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     logoCenterImg,
     headerLeftText,
     headerRightText,
+    logoVisible: vc?.logoConfig?.visible,
+    logoCenterVisible: vc?.logoCenterConfig?.visible,
+    logoSecondaryVisible: vc?.logoSecondaryConfig?.visible,
+    logoWidthMm: vc?.logoConfig?.widthMm,
+    logoCenterWidthMm: vc?.logoCenterConfig?.widthMm,
+    logoSecondaryWidthMm: vc?.logoSecondaryConfig?.widthMm,
+    logoAlignment: vc?.headerLogoAlignment,
+    logoGapMm: vc?.headerLogoGap,
+    topPaddingMm: vc?.headerTopPadding,
+    headerHeightMm: vc?.headerHeight,
   };
   addPage(ctx);
 

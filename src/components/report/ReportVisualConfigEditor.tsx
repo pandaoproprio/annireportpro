@@ -5,9 +5,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { BookOpen, FileText, PanelBottom, Image, X, Save } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { BookOpen, FileText, PanelBottom, X, Save, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
+import { ReportVisualConfig, LogoConfig } from '@/hooks/useReportVisualConfig';
 
 interface Props {
   config: ReportVisualConfig;
@@ -22,6 +23,44 @@ interface Props {
   organizationWebsite?: string;
   showCoverConfig?: boolean;
 }
+
+const LogoSlot: React.FC<{
+  label: string;
+  src: string;
+  logoConfig: LogoConfig;
+  onConfigChange: (c: Partial<LogoConfig>) => void;
+  onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}> = ({ label, src, logoConfig, onConfigChange, onUpload }) => (
+  <div className="flex flex-col items-center gap-1 p-2 border rounded-lg bg-muted/30">
+    <span className="text-[10px] font-medium text-muted-foreground uppercase">{label}</span>
+    {src ? (
+      <div className="relative">
+        <img src={src} className="h-12 w-12 object-contain border rounded" style={{ opacity: logoConfig.visible ? 1 : 0.3 }} />
+        <Button
+          variant="ghost" size="icon"
+          className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-background shadow"
+          onClick={() => onConfigChange({ visible: !logoConfig.visible })}
+          title={logoConfig.visible ? 'Ocultar' : 'Mostrar'}
+        >
+          {logoConfig.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+        </Button>
+      </div>
+    ) : (
+      <div className="h-12 w-12 bg-muted rounded flex items-center justify-center text-[10px] text-muted-foreground">{label.substring(0, 3)}</div>
+    )}
+    <Input type="file" accept="image/*" className="text-xs" onChange={onUpload} />
+    {src && (
+      <div className="w-full space-y-1">
+        <Label className="text-[10px]">Largura (mm): {logoConfig.widthMm}</Label>
+        <Slider
+          value={[logoConfig.widthMm]}
+          min={5} max={60} step={1}
+          onValueChange={([v]) => onConfigChange({ widthMm: v })}
+        />
+      </div>
+    )}
+  </div>
+);
 
 export const ReportVisualConfigEditor: React.FC<Props> = ({
   config, updateConfig, onSave, onLogoUpload, onBannerUpload,
@@ -38,15 +77,111 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
             <h3 className="text-lg font-semibold">Página de Rosto</h3>
           </div>
           <div className="space-y-4">
+            {/* Title */}
             <div className="space-y-2">
               <Label>Título Principal</Label>
               <Input value={config.coverTitle} onChange={e => updateConfig({ coverTitle: e.target.value })} placeholder="Relatório Parcial de Cumprimento do Objeto" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                <div className="space-y-1">
+                  <Label className="text-xs">Tamanho (pt)</Label>
+                  <Input type="number" min={8} max={30} value={config.coverTitleFontSize} onChange={e => updateConfig({ coverTitleFontSize: Number(e.target.value) })} />
+                </div>
+                <div className="flex items-center gap-2 pt-5">
+                  <Switch checked={config.coverTitleBold} onCheckedChange={v => updateConfig({ coverTitleBold: v })} id="cover-bold" />
+                  <Label htmlFor="cover-bold" className="text-xs cursor-pointer">Negrito</Label>
+                </div>
+                <div className="flex items-center gap-2 pt-5">
+                  <Switch checked={config.coverTitleItalic} onCheckedChange={v => updateConfig({ coverTitleItalic: v })} id="cover-italic" />
+                  <Label htmlFor="cover-italic" className="text-xs cursor-pointer">Itálico</Label>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Alinhamento</Label>
+                  <Select value={config.coverTitleAlignment} onValueChange={v => updateConfig({ coverTitleAlignment: v as any })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="left">Esquerda</SelectItem>
+                      <SelectItem value="center">Centro</SelectItem>
+                      <SelectItem value="right">Direita</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
+
+            {/* Subtitle */}
             <div className="space-y-2">
-              <Label>Subtítulo (opcional)</Label>
-              <Input value={config.coverSubtitle} onChange={e => updateConfig({ coverSubtitle: e.target.value })} placeholder="Ex: Período de Referência, Convênio nº..." />
+              <div className="flex items-center gap-2">
+                <Label>Subtítulo</Label>
+                <Switch checked={!config.coverHideSubtitle} onCheckedChange={v => updateConfig({ coverHideSubtitle: !v })} />
+              </div>
+              {!config.coverHideSubtitle && (
+                <>
+                  <Input value={config.coverSubtitle} onChange={e => updateConfig({ coverSubtitle: e.target.value })} placeholder="Ex: Período de Referência, Convênio nº..." />
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tamanho (pt)</Label>
+                      <Input type="number" min={8} max={24} value={config.coverSubtitleFontSize} onChange={e => updateConfig({ coverSubtitleFontSize: Number(e.target.value) })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Alinhamento</Label>
+                      <Select value={config.coverSubtitleAlignment} onValueChange={v => updateConfig({ coverSubtitleAlignment: v as any })}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="left">Esquerda</SelectItem>
+                          <SelectItem value="center">Centro</SelectItem>
+                          <SelectItem value="right">Direita</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground">O nome do projeto, Termo de Fomento e nome da organização são exibidos automaticamente.</p>
+
+            {/* Fomento / Org visibility */}
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <Switch checked={!config.coverHideFomento} onCheckedChange={v => updateConfig({ coverHideFomento: !v })} id="cover-fomento" />
+                <Label htmlFor="cover-fomento" className="text-xs cursor-pointer">Exibir Termo de Fomento</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch checked={!config.coverHideOrg} onCheckedChange={v => updateConfig({ coverHideOrg: !v })} id="cover-org" />
+                <Label htmlFor="cover-org" className="text-xs cursor-pointer">Exibir Organização</Label>
+              </div>
+            </div>
+
+            {/* Spacings */}
+            <div className="space-y-3 bg-muted/30 rounded-lg p-3">
+              <Label className="text-xs font-medium text-muted-foreground uppercase">Espaçamentos</Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Logo ↔ Título ({config.coverSpacingLogoTitle}mm)</Label>
+                  <Slider value={[config.coverSpacingLogoTitle]} min={0} max={60} step={1} onValueChange={([v]) => updateConfig({ coverSpacingLogoTitle: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Título ↔ Subtítulo ({config.coverSpacingTitleSubtitle}mm)</Label>
+                  <Slider value={[config.coverSpacingTitleSubtitle]} min={0} max={40} step={1} onValueChange={([v]) => updateConfig({ coverSpacingTitleSubtitle: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Subtítulo ↔ Rodapé ({config.coverSpacingSubtitleBottom}mm)</Label>
+                  <Slider value={[config.coverSpacingSubtitleBottom]} min={0} max={60} step={1} onValueChange={([v]) => updateConfig({ coverSpacingSubtitleBottom: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Entrelinha ({config.coverLineSpacing}x)</Label>
+                  <Slider value={[config.coverLineSpacing * 10]} min={10} max={30} step={1} onValueChange={([v]) => updateConfig({ coverLineSpacing: v / 10 })} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Logo da capa — Largura ({config.coverLogoWidthMm}mm)</Label>
+                <Slider value={[config.coverLogoWidthMm]} min={10} max={120} step={1} onValueChange={([v]) => updateConfig({ coverLogoWidthMm: v })} />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Logo da capa — Dist. do topo ({config.coverLogoTopMm}mm)</Label>
+                <Slider value={[config.coverLogoTopMm]} min={5} max={100} step={1} onValueChange={([v]) => updateConfig({ coverLogoTopMm: v })} />
+              </div>
+            </div>
+
+            <p className="text-xs text-muted-foreground">O nome do projeto é exibido automaticamente.</p>
           </div>
         </CardContent>
       </Card>
@@ -80,20 +215,58 @@ export const ReportVisualConfigEditor: React.FC<Props> = ({
 
           {/* 3 Logos */}
           {!config.headerBannerUrl && (
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Modo B — Três Logos Separados</Label>
               <div className="grid grid-cols-3 gap-3">
-                <div className="flex flex-col items-center gap-1">
-                  {config.logo ? <img src={config.logo} className="h-12 w-12 object-contain border rounded" /> : <div className="h-12 w-12 bg-muted rounded flex items-center justify-center text-[10px] text-muted-foreground">ESQ</div>}
-                  <Input type="file" accept="image/*" className="text-xs" onChange={e => onLogoUpload(e, 'primary')} />
+                <LogoSlot
+                  label="Esquerda"
+                  src={config.logo}
+                  logoConfig={config.logoConfig}
+                  onConfigChange={c => updateConfig({ logoConfig: { ...config.logoConfig, ...c } })}
+                  onUpload={e => onLogoUpload(e, 'primary')}
+                />
+                <LogoSlot
+                  label="Centro"
+                  src={config.logoCenter}
+                  logoConfig={config.logoCenterConfig}
+                  onConfigChange={c => updateConfig({ logoCenterConfig: { ...config.logoCenterConfig, ...c } })}
+                  onUpload={e => onLogoUpload(e, 'center')}
+                />
+                <LogoSlot
+                  label="Direita"
+                  src={config.logoSecondary}
+                  logoConfig={config.logoSecondaryConfig}
+                  onConfigChange={c => updateConfig({ logoSecondaryConfig: { ...config.logoSecondaryConfig, ...c } })}
+                  onUpload={e => onLogoUpload(e, 'secondary')}
+                />
+              </div>
+
+              {/* Header layout controls */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-muted/30 rounded-lg p-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Distribuição dos logos</Label>
+                  <Select value={config.headerLogoAlignment} onValueChange={v => updateConfig({ headerLogoAlignment: v as any })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="space-between">Distribuído (extremidades)</SelectItem>
+                      <SelectItem value="space-around">Distribuído (uniforme)</SelectItem>
+                      <SelectItem value="center">Centralizado</SelectItem>
+                      <SelectItem value="left">Esquerda</SelectItem>
+                      <SelectItem value="right">Direita</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-                <div className="flex flex-col items-center gap-1">
-                  {config.logoCenter ? <img src={config.logoCenter} className="h-12 w-12 object-contain border rounded" /> : <div className="h-12 w-12 bg-muted rounded flex items-center justify-center text-[10px] text-muted-foreground">CEN</div>}
-                  <Input type="file" accept="image/*" className="text-xs" onChange={e => onLogoUpload(e, 'center')} />
+                <div className="space-y-1">
+                  <Label className="text-xs">Espaço entre logos ({config.headerLogoGap}mm)</Label>
+                  <Slider value={[config.headerLogoGap]} min={0} max={40} step={1} onValueChange={([v]) => updateConfig({ headerLogoGap: v })} />
                 </div>
-                <div className="flex flex-col items-center gap-1">
-                  {config.logoSecondary ? <img src={config.logoSecondary} className="h-12 w-12 object-contain border rounded" /> : <div className="h-12 w-12 bg-muted rounded flex items-center justify-center text-[10px] text-muted-foreground">DIR</div>}
-                  <Input type="file" accept="image/*" className="text-xs" onChange={e => onLogoUpload(e, 'secondary')} />
+                <div className="space-y-1">
+                  <Label className="text-xs">Dist. do topo ({config.headerTopPadding}mm)</Label>
+                  <Slider value={[config.headerTopPadding]} min={2} max={20} step={1} onValueChange={([v]) => updateConfig({ headerTopPadding: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Altura total cabeçalho ({config.headerHeight}mm)</Label>
+                  <Slider value={[config.headerHeight]} min={10} max={50} step={1} onValueChange={([v]) => updateConfig({ headerHeight: v })} />
                 </div>
               </div>
             </div>

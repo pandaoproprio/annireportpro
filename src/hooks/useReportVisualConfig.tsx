@@ -5,6 +5,11 @@ import { toast } from 'sonner';
 
 export type ReportType = 'report_object' | 'report_team' | 'justification';
 
+export interface LogoConfig {
+  visible: boolean;
+  widthMm: number; // width in mm for PDF (default 12)
+}
+
 export interface ReportVisualConfig {
   // Header
   headerBannerUrl: string;
@@ -13,9 +18,37 @@ export interface ReportVisualConfig {
   logo: string;
   logoCenter: string;
   logoSecondary: string;
+  // Logo controls
+  logoConfig: LogoConfig;
+  logoCenterConfig: LogoConfig;
+  logoSecondaryConfig: LogoConfig;
+  // Header layout
+  headerLogoAlignment: 'left' | 'center' | 'right' | 'space-between' | 'space-around';
+  headerLogoGap: number; // gap between logos in mm (default 0)
+  headerTopPadding: number; // distance from top in mm (default 5)
+  headerHeight: number; // total header height in mm (default 20)
   // Cover
   coverTitle: string;
   coverSubtitle: string;
+  // Cover layout
+  coverLogoWidthMm: number; // logo width on cover (default 40)
+  coverLogoTopMm: number; // distance from top (default 30)
+  coverLogoCenterV: boolean; // vertical center toggle
+  coverTitleFontSize: number; // pt (default 16)
+  coverTitleBold: boolean;
+  coverTitleItalic: boolean;
+  coverTitleAlignment: 'left' | 'center' | 'right';
+  coverSubtitleFontSize: number; // pt (default 12)
+  coverSubtitleAlignment: 'left' | 'center' | 'right';
+  coverOrgAlignment: 'left' | 'center' | 'right';
+  coverFomentoAlignment: 'left' | 'center' | 'right';
+  coverSpacingLogoTitle: number; // mm (default 10)
+  coverSpacingTitleSubtitle: number; // mm (default 8)
+  coverSpacingSubtitleBottom: number; // mm (default 20)
+  coverLineSpacing: number; // multiplier (default 1.5)
+  coverHideSubtitle: boolean;
+  coverHideFomento: boolean;
+  coverHideOrg: boolean;
   // Footer
   footerText: string;
   footerShowAddress: boolean;
@@ -30,8 +63,33 @@ const DEFAULT_CONFIG: ReportVisualConfig = {
   logo: '',
   logoCenter: '',
   logoSecondary: '',
+  logoConfig: { visible: true, widthMm: 12 },
+  logoCenterConfig: { visible: true, widthMm: 12 },
+  logoSecondaryConfig: { visible: true, widthMm: 12 },
+  headerLogoAlignment: 'space-between',
+  headerLogoGap: 0,
+  headerTopPadding: 5,
+  headerHeight: 20,
   coverTitle: '',
   coverSubtitle: '',
+  coverLogoWidthMm: 40,
+  coverLogoTopMm: 30,
+  coverLogoCenterV: false,
+  coverTitleFontSize: 16,
+  coverTitleBold: true,
+  coverTitleItalic: false,
+  coverTitleAlignment: 'center',
+  coverSubtitleFontSize: 12,
+  coverSubtitleAlignment: 'center',
+  coverOrgAlignment: 'center',
+  coverFomentoAlignment: 'center',
+  coverSpacingLogoTitle: 10,
+  coverSpacingTitleSubtitle: 8,
+  coverSpacingSubtitleBottom: 20,
+  coverLineSpacing: 1.5,
+  coverHideSubtitle: false,
+  coverHideFomento: false,
+  coverHideOrg: false,
   footerText: '',
   footerShowAddress: true,
   footerShowContact: true,
@@ -64,18 +122,13 @@ export const useReportVisualConfig = (projectId: string | undefined, reportType:
           setRowId(data.id);
           const rd = (data.report_data || {}) as Record<string, any>;
           setConfig({
-            headerBannerUrl: rd.headerBannerUrl || '',
-            headerLeftText: rd.headerLeftText || '',
-            headerRightText: rd.headerRightText || '',
-            logo: rd.logo || '',
-            logoCenter: rd.logoCenter || '',
-            logoSecondary: rd.logoSecondary || '',
-            coverTitle: rd.coverTitle || '',
-            coverSubtitle: rd.coverSubtitle || '',
-            footerText: rd.footerText || '',
+            ...DEFAULT_CONFIG,
+            ...rd,
+            logoConfig: { ...DEFAULT_CONFIG.logoConfig, ...(rd.logoConfig || {}) },
+            logoCenterConfig: { ...DEFAULT_CONFIG.logoCenterConfig, ...(rd.logoCenterConfig || {}) },
+            logoSecondaryConfig: { ...DEFAULT_CONFIG.logoSecondaryConfig, ...(rd.logoSecondaryConfig || {}) },
             footerShowAddress: rd.footerShowAddress !== false,
             footerShowContact: rd.footerShowContact !== false,
-            footerAlignment: rd.footerAlignment || 'center',
           });
         }
       } catch (e) {
