@@ -169,10 +169,10 @@ export const ReportGenerator: React.FC = () => {
             <div className="flex flex-col items-center justify-center min-h-[800px] pb-10 mb-10 page-break">
               <ReportHeader />
               <div className="flex-1 flex flex-col items-center justify-center text-center">
-                <h2 className="text-xl font-bold uppercase mb-4">Relatório Parcial de Cumprimento do Objeto</h2>
-                <h1 className="text-2xl font-bold uppercase mb-4">{project.name}</h1>
-                <h3 className="text-lg mb-8">Termo de Fomento nº {project.fomentoNumber}</h3>
-                <p className="text-lg font-semibold">{project.organizationName}</p>
+                <h2 className="text-xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>Relatório Parcial de Cumprimento do Objeto</h2>
+                <h1 className="text-2xl font-bold uppercase mb-4" style={{ textAlign: 'center' }}>{project.name}</h1>
+                <h3 className="text-lg mb-8" style={{ textAlign: 'center' }}>Termo de Fomento nº {project.fomentoNumber}</h3>
+                <p className="text-lg font-semibold" style={{ textAlign: 'center' }}>{project.organizationName}</p>
               </div>
               <ReportFooter />
             </div>

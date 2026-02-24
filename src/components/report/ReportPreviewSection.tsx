@@ -49,7 +49,7 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
     default:
       return (
         <section key={section.id} className="mb-8 page-break">
-          <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+          <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
           <div className="whitespace-pre-line text-justify">{section.content}</div>
         </section>
       );
@@ -58,21 +58,21 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
 
 const ObjectPreview: React.FC<Props> = ({ section, objectText }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+    <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <p className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>{objectText}</p>
   </section>
 );
 
 const SummaryPreview: React.FC<Props> = ({ section, summary }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+    <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>{summary}</div>
   </section>
 );
 
 const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, getActivitiesByGoal, formatActivityDate }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-6">{section.title}</h3>
+    <h3 className="text-lg font-bold uppercase mb-6" style={{ textAlign: 'left' }}>{section.title}</h3>
     {goals.map((goal, idx) => {
       const goalActs = getActivitiesByGoal(goal.id);
       const manualPhotos = goalPhotos[goal.id] || [];
@@ -81,7 +81,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
 
       return (
         <div key={goal.id} className="mb-10">
-          <h4 className="font-bold text-primary mb-3">{goal.title}</h4>
+          <h4 className="font-bold text-primary mb-3" style={{ textAlign: 'left' }}>{goal.title}</h4>
           <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
             {goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'}
           </div>
@@ -124,7 +124,7 @@ const OtherPreview: React.FC<Props> = ({
   return (
     <React.Fragment>
       <section className="mb-8 page-break">
-        <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+        <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
         <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
           {otherActionsNarrative || '[Descreva outras informações diversas sobre o projeto]'}
         </div>
@@ -156,7 +156,7 @@ const CommunicationPreview: React.FC<Props> = ({
   return (
     <React.Fragment>
       <section className="mb-8 page-break">
-        <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+        <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
         <div className="whitespace-pre-line text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }}>
           {communicationNarrative || '[Descreva as ações de divulgação]'}
         </div>
@@ -181,7 +181,7 @@ const CommunicationPreview: React.FC<Props> = ({
 
 const SatisfactionPreview: React.FC<Props> = ({ section, satisfaction }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+    <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>
       {satisfaction || '[Descreva a visão do público sobre o projeto e os principais feedbacks]'}
     </div>
@@ -190,7 +190,7 @@ const SatisfactionPreview: React.FC<Props> = ({ section, satisfaction }) => (
 
 const FuturePreview: React.FC<Props> = ({ section, futureActions }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+    <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <div className="whitespace-pre-line text-justify leading-relaxed" style={{ textIndent: '1.25cm' }}>
       {futureActions || '[Descreva as ações futuras do projeto]'}
     </div>
@@ -199,7 +199,7 @@ const FuturePreview: React.FC<Props> = ({ section, futureActions }) => (
 
 const ExpensesPreview: React.FC<Props> = ({ section, expenses }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+    <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <p className="text-sm text-muted-foreground mb-4">Insira fotos e descreva sobre o uso e aplicação de cada item de despesa previsto no plano de trabalho.</p>
     {expenses.length === 0 ? (
       <p className="text-muted-foreground italic">[Nenhum item de despesa registrado]</p>
@@ -228,7 +228,7 @@ const ExpensesPreview: React.FC<Props> = ({ section, expenses }) => (
 
 const LinksPreview: React.FC<Props> = ({ section, links }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4">{section.title}</h3>
+    <h3 className="text-lg font-bold uppercase mb-4" style={{ textAlign: 'left' }}>{section.title}</h3>
     <ul className="space-y-3 text-sm">
       <li><strong>Listas de Presença:</strong>{' '}{links.attendance ? <a href={links.attendance} className="text-primary underline break-all">{links.attendance}</a> : '[Insira o link]'}</li>
       <li><strong>Listas de Inscrição:</strong>{' '}{links.registration ? <a href={links.registration} className="text-primary underline break-all">{links.registration}</a> : '[Insira o link]'}</li>
