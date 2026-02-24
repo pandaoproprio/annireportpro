@@ -86,8 +86,8 @@ export const ReportGenerator: React.FC = () => {
     </div>
   );
 
-  const ReportFooter = () => (
-    <div className="mt-8 pt-4 border-t text-center text-xs text-muted-foreground print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2">
+  const ReportFooter = React.forwardRef<HTMLDivElement>((_, ref) => (
+    <div ref={ref} className="mt-8 pt-4 border-t text-center text-xs text-muted-foreground print:fixed print:bottom-0 print:left-0 print:right-0 print:bg-card print:py-2">
       <p className="font-semibold">{project.organizationName}</p>
       {project.organizationAddress && <p>{project.organizationAddress}</p>}
       <p>
@@ -96,7 +96,8 @@ export const ReportGenerator: React.FC = () => {
         {project.organizationPhone && <span> | {project.organizationPhone}</span>}
       </p>
     </div>
-  );
+  ));
+  ReportFooter.displayName = 'ReportFooter';
 
   const editSectionProps = {
     objectText, setObjectText, summary, setSummary,

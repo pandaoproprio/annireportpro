@@ -349,7 +349,7 @@ const ExpensesSection: React.FC<Props> = ({ expenses, addExpense, updateExpense,
   </div>
 );
 
-const LinksSection: React.FC<Props> = ({ links, setLinks, linkFileNames, setLinkFileNames, handleDocumentUpload }) => {
+const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, handleDocumentUpload }, ref) => {
   const clearLink = (field: 'attendance' | 'registration' | 'media') => {
     setLinks({ ...links, [field]: '' });
     setLinkFileNames(prev => ({ ...prev, [field]: '' }));
@@ -391,7 +391,7 @@ const LinksSection: React.FC<Props> = ({ links, setLinks, linkFileNames, setLink
   };
 
   return (
-    <div className="space-y-4">
+    <div ref={ref} className="space-y-4">
       <p className="text-sm text-muted-foreground mb-4">Envie os documentos de comprovação ou insira os links manualmente. Ao enviar um arquivo, o link será gerado automaticamente.</p>
       <div className="grid grid-cols-1 gap-4">
         {renderLinkField('Listas de Presença', 'attendance', '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png')}
@@ -400,7 +400,8 @@ const LinksSection: React.FC<Props> = ({ links, setLinks, linkFileNames, setLink
       </div>
     </div>
   );
-};
+});
+LinksSection.displayName = 'LinksSection';
 
 const CustomSection: React.FC<Props> = ({ section, index, updateCustomContent, projectName, projectObject }) => (
   <div className="space-y-4">
