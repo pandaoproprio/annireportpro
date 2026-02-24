@@ -21,9 +21,17 @@ export const FONT_BODY = 12;
 export const FONT_CAPTION = 10;
 
 // ── Types ──
+export interface StyledSegment {
+  text: string;
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+}
+
 export interface TextBlock {
   type: 'paragraph' | 'bullet';
   content: string;
+  segments?: StyledSegment[];
 }
 
 export interface PreloadedImage {
@@ -250,7 +258,29 @@ export const addHeaderLine = (ctx: PdfContext, label: string, value: string): vo
   }
 };
 
-// ── HTML parser ──
+// ── Extract styled segments from an element ──
+const extractSegments = (el: Node, parentBold = false, parentItalic = false, parentUnderline = false): StyledSegment[] => {
+  const segments: StyledSegment[] = [];
+
+  el.childNodes.forEach(child => {
+    if (child.nodeType === Node.TEXT_NODE) {
+      const text = child.textContent || '';
+      if (text) {
+        segments.push({ text, bold: parentBold, italic: parentItalic, underline: parentUnderline });
+      }
+    } else if (child.nodeType === Node.ELEMENT_NODE) {
+      const tag = (child as Element).tagName.toLowerCase();
+      const b = parentBold || tag === 'strong' || tag === 'b';
+      const i = parentItalic || tag === 'em' || tag === 'i';
+      const u = parentUnderline || tag === 'u';
+      segments.push(...extractSegments(child, b, i, u));
+    }
+  });
+
+  return segments;
+};
+
+// ── HTML parser (preserves bold/italic/underline) ──
 export const parseHtmlToBlocks = (html: string): TextBlock[] => {
   if (!html) return [];
   const temp = document.createElement('div');
@@ -260,16 +290,18 @@ export const parseHtmlToBlocks = (html: string): TextBlock[] => {
   const processNode = (node: Node) => {
     if (node.nodeType === Node.TEXT_NODE) {
       const text = node.textContent?.trim();
-      if (text) blocks.push({ type: 'paragraph', content: text });
+      if (text) blocks.push({ type: 'paragraph', content: text, segments: [{ text, bold: false, italic: false, underline: false }] });
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as Element;
       const tag = el.tagName.toLowerCase();
       if (tag === 'li') {
         const t = el.textContent?.trim() || '';
-        if (t) blocks.push({ type: 'bullet', content: t });
+        const segs = extractSegments(el);
+        if (t) blocks.push({ type: 'bullet', content: t, segments: segs });
       } else if (tag === 'p') {
         const t = el.textContent?.trim() || '';
-        if (t) blocks.push({ type: 'paragraph', content: t });
+        const segs = extractSegments(el);
+        if (t) blocks.push({ type: 'paragraph', content: t, segments: segs });
       } else {
         el.childNodes.forEach(c => processNode(c));
       }
@@ -278,6 +310,105 @@ export const parseHtmlToBlocks = (html: string): TextBlock[] => {
 
   temp.childNodes.forEach(c => processNode(c));
   return blocks;
+};
+
+// ── Rich paragraph renderer: justified with bold/italic segments ──
+export const addRichParagraph = (ctx: PdfContext, segments: StyledSegment[]): void => {
+  if (!segments || segments.length === 0) return;
+  const { pdf } = ctx;
+  pdf.setFontSize(FONT_BODY);
+
+  // Flatten segments into words with their style
+  interface StyledWord { text: string; bold: boolean; italic: boolean; }
+  const words: StyledWord[] = [];
+
+  for (const seg of segments) {
+    const parts = seg.text.split(/(\s+)/);
+    for (const part of parts) {
+      if (part.trim()) {
+        words.push({ text: part, bold: seg.bold, italic: seg.italic });
+      }
+    }
+  }
+
+  if (words.length === 0) return;
+
+  // Build lines with word-wrapping
+  interface WordLine { words: StyledWord[]; isFirst: boolean; availW: number; }
+  const lines: WordLine[] = [];
+  let lineWords: StyledWord[] = [];
+  let lineW = 0;
+  let isFirst = true;
+
+  const getWordWidth = (w: StyledWord) => {
+    const style = w.bold && w.italic ? 'bolditalic' : w.bold ? 'bold' : w.italic ? 'italic' : 'normal';
+    pdf.setFont('times', style);
+    return pdf.getTextWidth(w.text);
+  };
+
+  const getSpaceWidth = () => {
+    pdf.setFont('times', 'normal');
+    return pdf.getTextWidth(' ');
+  };
+
+  const spaceW = getSpaceWidth();
+
+  for (const word of words) {
+    const wordW = getWordWidth(word);
+    const availW = isFirst ? CW - INDENT : CW;
+
+    if (lineWords.length > 0 && lineW + spaceW + wordW > availW) {
+      lines.push({ words: lineWords, isFirst, availW });
+      lineWords = [word];
+      lineW = wordW;
+      isFirst = false;
+    } else {
+      lineW += (lineWords.length > 0 ? spaceW : 0) + wordW;
+      lineWords.push(word);
+    }
+  }
+  if (lineWords.length > 0) {
+    lines.push({ words: lineWords, isFirst, availW: isFirst ? CW - INDENT : CW });
+  }
+
+  // Render lines
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const x = line.isFirst ? ML + INDENT : ML;
+    ensureSpace(ctx, LINE_H);
+    const isLastLine = i === lines.length - 1;
+
+    if (isLastLine || line.words.length <= 1) {
+      // Left-aligned: render words sequentially
+      let cx = x;
+      for (let wi = 0; wi < line.words.length; wi++) {
+        const w = line.words[wi];
+        const style = w.bold && w.italic ? 'bolditalic' : w.bold ? 'bold' : w.italic ? 'italic' : 'normal';
+        pdf.setFont('times', style);
+        if (wi > 0) cx += spaceW;
+        pdf.text(w.text, cx, ctx.currentY);
+        cx += pdf.getTextWidth(w.text);
+      }
+    } else {
+      // Justified: distribute space
+      let totalTextW = 0;
+      for (const w of line.words) {
+        const style = w.bold && w.italic ? 'bolditalic' : w.bold ? 'bold' : w.italic ? 'italic' : 'normal';
+        pdf.setFont('times', style);
+        totalTextW += pdf.getTextWidth(w.text);
+      }
+      const gap = (line.availW - totalTextW) / (line.words.length - 1);
+      let cx = x;
+      for (const w of line.words) {
+        const style = w.bold && w.italic ? 'bolditalic' : w.bold ? 'bold' : w.italic ? 'italic' : 'normal';
+        pdf.setFont('times', style);
+        pdf.text(w.text, cx, ctx.currentY);
+        cx += pdf.getTextWidth(w.text) + gap;
+      }
+    }
+    ctx.currentY += LINE_H;
+  }
+  ctx.currentY += 2;
 };
 
 // ── Image loader ──
