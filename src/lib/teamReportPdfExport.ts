@@ -155,24 +155,23 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
 
   // ── Signature ──
   const dateText = `Rio de Janeiro, ${format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.`;
-  const footerContent = report.footerText?.trim() || project.organizationName;
 
   addSignatureBlock(ctx, project.organizationName, dateText, 'Assinatura do responsável legal', [
     { label: 'Nome e cargo: ', value: `${report.responsibleName} - ${report.functionRole}` },
     { label: 'CNPJ: ', value: report.providerDocument || '[Não informado]' },
   ]);
 
-  // ── Footer + page numbers ──
-  const footerInfo = vc ? {
+  // ── Footer + page numbers (uses visual config only, no legacy footerText) ──
+  const footerInfo = {
     orgName: project.organizationName,
-    address: vc.footerShowAddress ? project.organizationAddress : undefined,
-    website: vc.footerShowContact ? project.organizationWebsite : undefined,
-    email: vc.footerShowContact ? project.organizationEmail : undefined,
-    phone: vc.footerShowContact ? project.organizationPhone : undefined,
-    customText: vc.footerText,
-    alignment: vc.footerAlignment,
-  } : { orgName: footerContent };
-  addFooterAndPageNumbers(ctx, footerContent, false, footerInfo);
+    address: (vc?.footerShowAddress !== false) ? project.organizationAddress : undefined,
+    website: (vc?.footerShowContact !== false) ? project.organizationWebsite : undefined,
+    email: (vc?.footerShowContact !== false) ? project.organizationEmail : undefined,
+    phone: (vc?.footerShowContact !== false) ? project.organizationPhone : undefined,
+    customText: vc?.footerText || undefined,
+    alignment: (vc?.footerAlignment || 'center') as 'left' | 'center' | 'right',
+  };
+  addFooterAndPageNumbers(ctx, project.organizationName, false, footerInfo);
 
   // Save
   const memberName = report.responsibleName.replace(/\s+/g, '_');
