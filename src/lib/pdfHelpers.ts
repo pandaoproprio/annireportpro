@@ -313,42 +313,66 @@ export const addRichParagraph = (ctx: PdfContext, segments: StyledSegment[]): vo
   const { pdf } = ctx;
   pdf.setFontSize(FONT_BODY);
 
-  // Flatten segments into words with their style
-  interface StyledWord { text: string; bold: boolean; italic: boolean; }
-  const words: StyledWord[] = [];
+  // A composite word groups styled parts that belong to the same word (no whitespace between them)
+  interface WordPart { text: string; bold: boolean; italic: boolean; }
+  interface CompositeWord { parts: WordPart[]; }
+
+  // Build composite words by tracking whitespace boundaries across segments
+  const compositeWords: CompositeWord[] = [];
+  let currentWord: CompositeWord = { parts: [] };
 
   for (const seg of segments) {
-    const parts = seg.text.split(/(\s+)/);
-    for (const part of parts) {
-      if (part.trim()) {
-        words.push({ text: part, bold: seg.bold, italic: seg.italic });
+    const rawParts = seg.text.split(/(\s+)/);
+    for (const part of rawParts) {
+      if (/^\s+$/.test(part)) {
+        // Whitespace → finalize current word
+        if (currentWord.parts.length > 0) {
+          compositeWords.push(currentWord);
+          currentWord = { parts: [] };
+        }
+      } else if (part) {
+        currentWord.parts.push({ text: part, bold: seg.bold, italic: seg.italic });
       }
     }
   }
+  if (currentWord.parts.length > 0) {
+    compositeWords.push(currentWord);
+  }
 
-  if (words.length === 0) return;
+  if (compositeWords.length === 0) return;
+
+  // Measure a composite word width
+  const getWordWidth = (word: CompositeWord): number => {
+    let w = 0;
+    for (const p of word.parts) {
+      const style = p.bold && p.italic ? 'bolditalic' : p.bold ? 'bold' : p.italic ? 'italic' : 'normal';
+      pdf.setFont('times', style);
+      w += pdf.getTextWidth(p.text);
+    }
+    return w;
+  };
+
+  // Render a composite word at position (x, y)
+  const renderWord = (word: CompositeWord, x: number, y: number) => {
+    let cx = x;
+    for (const p of word.parts) {
+      const style = p.bold && p.italic ? 'bolditalic' : p.bold ? 'bold' : p.italic ? 'italic' : 'normal';
+      pdf.setFont('times', style);
+      pdf.text(p.text, cx, y);
+      cx += pdf.getTextWidth(p.text);
+    }
+  };
+
+  const spaceW = (() => { pdf.setFont('times', 'normal'); return pdf.getTextWidth(' '); })();
 
   // Build lines with word-wrapping
-  interface WordLine { words: StyledWord[]; isFirst: boolean; availW: number; }
+  interface WordLine { words: CompositeWord[]; isFirst: boolean; availW: number; }
   const lines: WordLine[] = [];
-  let lineWords: StyledWord[] = [];
+  let lineWords: CompositeWord[] = [];
   let lineW = 0;
   let isFirst = true;
 
-  const getWordWidth = (w: StyledWord) => {
-    const style = w.bold && w.italic ? 'bolditalic' : w.bold ? 'bold' : w.italic ? 'italic' : 'normal';
-    pdf.setFont('times', style);
-    return pdf.getTextWidth(w.text);
-  };
-
-  const getSpaceWidth = () => {
-    pdf.setFont('times', 'normal');
-    return pdf.getTextWidth(' ');
-  };
-
-  const spaceW = getSpaceWidth();
-
-  for (const word of words) {
+  for (const word of compositeWords) {
     const wordW = getWordWidth(word);
     const availW = isFirst ? CW - INDENT : CW;
 
@@ -374,31 +398,22 @@ export const addRichParagraph = (ctx: PdfContext, segments: StyledSegment[]): vo
     const isLastLine = i === lines.length - 1;
 
     if (isLastLine || line.words.length <= 1) {
-      // Left-aligned: render words sequentially
+      // Left-aligned
       let cx = x;
       for (let wi = 0; wi < line.words.length; wi++) {
-        const w = line.words[wi];
-        const style = w.bold && w.italic ? 'bolditalic' : w.bold ? 'bold' : w.italic ? 'italic' : 'normal';
-        pdf.setFont('times', style);
         if (wi > 0) cx += spaceW;
-        pdf.text(w.text, cx, ctx.currentY);
-        cx += pdf.getTextWidth(w.text);
+        renderWord(line.words[wi], cx, ctx.currentY);
+        cx += getWordWidth(line.words[wi]);
       }
     } else {
-      // Justified: distribute space
+      // Justified: distribute space between composite words only
       let totalTextW = 0;
-      for (const w of line.words) {
-        const style = w.bold && w.italic ? 'bolditalic' : w.bold ? 'bold' : w.italic ? 'italic' : 'normal';
-        pdf.setFont('times', style);
-        totalTextW += pdf.getTextWidth(w.text);
-      }
+      for (const w of line.words) totalTextW += getWordWidth(w);
       const gap = (line.availW - totalTextW) / (line.words.length - 1);
       let cx = x;
-      for (const w of line.words) {
-        const style = w.bold && w.italic ? 'bolditalic' : w.bold ? 'bold' : w.italic ? 'italic' : 'normal';
-        pdf.setFont('times', style);
-        pdf.text(w.text, cx, ctx.currentY);
-        cx += pdf.getTextWidth(w.text) + gap;
+      for (let wi = 0; wi < line.words.length; wi++) {
+        renderWord(line.words[wi], cx, ctx.currentY);
+        cx += getWordWidth(line.words[wi]) + (wi < line.words.length - 1 ? gap : 0);
       }
     }
     ctx.currentY += LINE_H;
