@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTeamReports, TeamReportDraft } from '@/hooks/useTeamReports';
@@ -19,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save, Trash2, FileEdit, Loader2 } from 'lucide-react';
+import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save, Trash2, FileEdit, Loader2, PenTool } from 'lucide-react';
 import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
 import { exportTeamReportToPdf } from '@/lib/teamReportPdfExport';
 import { toast } from 'sonner';
@@ -56,6 +57,7 @@ import {
 export const TeamReportGenerator: React.FC = () => {
   const { activeProject: project } = useAppData();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const { drafts, isLoading: isDraftsLoading, isSaving, saveDraft, deleteDraft } = useTeamReports(project?.id);
   
   const [currentDraftId, setCurrentDraftId] = useState<string | undefined>();
@@ -462,18 +464,23 @@ export const TeamReportGenerator: React.FC = () => {
               </p>
             </div>
           </div>
-          <Button 
-            variant="outline" 
-            onClick={handleSaveDraft} 
-            disabled={isSaving}
-          >
-            {isSaving ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4 mr-2" />
-            )}
-            Salvar Rascunho
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => navigate('/wysiwyg')} className="border-primary/30 text-primary hover:bg-primary/5">
+              <PenTool className="w-4 h-4 mr-2" /> Editor WYSIWYG
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleSaveDraft} 
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4 mr-2" />
+              )}
+              Salvar Rascunho
+            </Button>
+          </div>
         </div>
 
         {/* Project Info Card */}

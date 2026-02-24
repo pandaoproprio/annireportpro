@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +18,7 @@ import { JustificationDraftsList } from '@/components/justification/Justificatio
 export const JustificationReportGenerator: React.FC = () => {
   const state = useJustificationReportState();
   const reportRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   const {
     project, mode, setMode, isExporting, setIsExporting, exportType, setExportType,
@@ -112,6 +114,7 @@ export const JustificationReportGenerator: React.FC = () => {
         exportType={exportType}
         onExportPdf={handleExportPdf}
         onExportDocx={handleExportDocx}
+        onOpenWysiwyg={() => navigate('/wysiwyg')}
       />
 
       {mode === 'edit' && (
