@@ -25,7 +25,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 
@@ -45,6 +45,7 @@ const SystemLogs = lazy(() => import('@/pages/SystemLogs').then(m => ({ default:
 const JustificationReportGenerator = lazy(() => import('@/pages/JustificationReportGenerator').then(m => ({ default: m.JustificationReportGenerator })));
 const ReportTemplates = lazy(() => import('@/pages/ReportTemplates').then(m => ({ default: m.ReportTemplates })));
 const ReportTemplateEditor = lazy(() => import('@/pages/ReportTemplateEditor').then(m => ({ default: m.ReportTemplateEditor })));
+const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -176,6 +177,7 @@ const Layout: React.FC = () => {
                 <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Templates</p>
                 <div className="space-y-0.5">
                   <SidebarLink to="/templates" icon={<Layers className="w-5 h-5" />} label="Templates de Relatórios" onClick={closeSidebar} />
+                  <SidebarLink to="/editor" icon={<FileCode2 className="w-5 h-5" />} label="Editor de Documentos" onClick={closeSidebar} />
                 </div>
               </div>
             )}
@@ -252,6 +254,8 @@ const Layout: React.FC = () => {
                 <Route path="/templates" element={<ReportTemplates />} />
                 <Route path="/templates/:id" element={<ReportTemplateEditor />} />
                 <Route path="/logs" element={<PermissionGuard permission="system_logs"><SystemLogs /></PermissionGuard>} />
+                <Route path="/editor/:id" element={<DocumentEditorPage />} />
+                <Route path="/editor" element={<DocumentEditorPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>

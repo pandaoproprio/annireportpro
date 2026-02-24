@@ -124,6 +124,79 @@ export type Database = {
         }
         Relationships: []
       }
+      document_versions: {
+        Row: {
+          content_snapshot: Json
+          created_at: string
+          document_id: string
+          id: string
+          version_number: number
+        }
+        Insert: {
+          content_snapshot: Json
+          created_at?: string
+          document_id: string
+          id?: string
+          version_number?: number
+        }
+        Update: {
+          content_snapshot?: Json
+          created_at?: string
+          document_id?: string
+          id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          content: Json
+          created_at: string
+          created_by: string
+          id: string
+          layout_config: Json
+          project_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: Json
+          created_at?: string
+          created_by: string
+          id?: string
+          layout_config?: Json
+          project_id: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          created_by?: string
+          id?: string
+          layout_config?: Json
+          project_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       justification_reports: {
         Row: {
           attachment_files: Json
