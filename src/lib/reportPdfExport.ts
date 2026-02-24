@@ -24,6 +24,7 @@ export interface ReportPdfExportData {
   futureActions: string;
   expenses: ExpenseItem[];
   links: { attendance: string; registration: string; media: string };
+  sectionPhotos?: Record<string, string[]>;
 }
 
 const formatActivityDate = (date: string, endDate?: string) => {
@@ -39,6 +40,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     otherActionsNarrative, otherActionsPhotos,
     communicationNarrative, communicationPhotos,
     satisfaction, futureActions, expenses, links,
+    sectionPhotos = {},
   } = data;
 
   const ctx = createPdfContext();
@@ -317,6 +319,12 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         if (section.type === 'custom' && section.content) {
           addParagraph(ctx, section.content);
         }
+    }
+
+    // Render per-section photos (uploaded via "Registro Fotográfico")
+    const secPhotos = sectionPhotos[section.key] || sectionPhotos[section.id] || [];
+    if (secPhotos.length > 0) {
+      await addPhotoGrid(ctx, secPhotos, section.title);
     }
   }
 

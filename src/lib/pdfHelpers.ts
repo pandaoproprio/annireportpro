@@ -45,6 +45,21 @@ export const ensureSpace = (ctx: PdfContext, h: number): void => {
   if (ctx.currentY + h > MAX_Y) addPage(ctx);
 };
 
+// ── Manual justification: distributes words evenly across the line width ──
+const justifyLine = (pdf: jsPDF, words: string[], x: number, maxWidth: number, y: number) => {
+  if (words.length <= 1) {
+    pdf.text(words.join(''), x, y);
+    return;
+  }
+  const totalTextW = words.reduce((sum, w) => sum + pdf.getTextWidth(w), 0);
+  const gap = (maxWidth - totalTextW) / (words.length - 1);
+  let cx = x;
+  for (const word of words) {
+    pdf.text(word, cx, y);
+    cx += pdf.getTextWidth(word) + gap;
+  }
+};
+
 // ── Justified paragraph with 1.25 cm first-line indent and 1.5 line spacing ──
 export const addParagraph = (ctx: PdfContext, text: string): void => {
   if (!text || text.trim() === '') return;
@@ -53,34 +68,45 @@ export const addParagraph = (ctx: PdfContext, text: string): void => {
   pdf.setFont('times', 'normal');
   const paragraphs = text.split('\n').filter(p => p.trim() !== '');
   for (const para of paragraphs) {
-    // First line: indented, narrower width
-    const firstLineWords = para.split(/\s+/);
-    let firstLine = '';
-    let restText = '';
+    const words = para.split(/\s+/).filter(w => w);
+    if (words.length === 0) continue;
 
-    // Build the first line word by word to fit CW - INDENT
-    for (let w = 0; w < firstLineWords.length; w++) {
-      const candidate = firstLine ? firstLine + ' ' + firstLineWords[w] : firstLineWords[w];
-      if (pdf.getTextWidth(candidate) > CW - INDENT && firstLine) {
-        restText = firstLineWords.slice(w).join(' ');
-        break;
+    const allLines: { words: string[]; width: number; isFirst: boolean }[] = [];
+    let lineWords: string[] = [];
+    let lineW = 0;
+    let isFirst = true;
+
+    for (const word of words) {
+      const wordW = pdf.getTextWidth(word);
+      const spaceW = lineWords.length > 0 ? pdf.getTextWidth(' ') : 0;
+      const availW = isFirst ? CW - INDENT : CW;
+
+      if (lineWords.length > 0 && lineW + spaceW + wordW > availW) {
+        allLines.push({ words: lineWords, width: availW, isFirst });
+        lineWords = [word];
+        lineW = wordW;
+        isFirst = false;
+      } else {
+        lineWords.push(word);
+        lineW += spaceW + wordW;
       }
-      firstLine = candidate;
+    }
+    if (lineWords.length > 0) {
+      allLines.push({ words: lineWords, width: isFirst ? CW - INDENT : CW, isFirst });
     }
 
-    // Render first line with indent
-    ensureSpace(ctx, LINE_H);
-    pdf.text(firstLine, ML + INDENT, ctx.currentY, { maxWidth: CW - INDENT, align: 'justify' });
-    ctx.currentY += LINE_H;
-
-    // Render remaining lines at full width
-    if (restText) {
-      const lines: string[] = pdf.splitTextToSize(restText, CW);
-      for (let i = 0; i < lines.length; i++) {
-        ensureSpace(ctx, LINE_H);
-        pdf.text(lines[i], ML, ctx.currentY, { maxWidth: CW, align: 'justify' });
-        ctx.currentY += LINE_H;
+    for (let i = 0; i < allLines.length; i++) {
+      const line = allLines[i];
+      const x = line.isFirst ? ML + INDENT : ML;
+      ensureSpace(ctx, LINE_H);
+      const isLastLine = i === allLines.length - 1;
+      if (isLastLine || line.words.length <= 1) {
+        // Last line or single word: left-aligned
+        pdf.text(line.words.join(' '), x, ctx.currentY);
+      } else {
+        justifyLine(pdf, line.words, x, line.width, ctx.currentY);
       }
+      ctx.currentY += LINE_H;
     }
     ctx.currentY += 2;
   }
