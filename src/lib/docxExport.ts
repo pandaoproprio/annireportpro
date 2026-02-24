@@ -39,6 +39,31 @@ const formatActivityDate = (date: string, endDate?: string) => {
   return start;
 };
 
+// Helper: split text by \n into multiple ABNT-formatted paragraphs
+const textToParagraphs = (
+  text: string,
+  options?: { alignment?: (typeof AlignmentType)[keyof typeof AlignmentType]; bold?: boolean }
+): Paragraph[] => {
+  const lines = text.split('\n').filter(line => line.trim() !== '');
+  if (lines.length === 0) return [new Paragraph({ text: '', spacing: { after: 200 } })];
+  return lines.map(
+    line =>
+      new Paragraph({
+        alignment: options?.alignment ?? AlignmentType.JUSTIFIED,
+        spacing: { after: 200, line: 360 },
+        indent: { firstLine: 709 },
+        children: [
+          new TextRun({
+            text: line,
+            font: 'Times New Roman',
+            size: 24,
+            bold: options?.bold,
+          }),
+        ],
+      })
+  );
+};
+
 export const exportToDocx = async (data: ExportData) => {
   const {
     project,
@@ -66,7 +91,7 @@ export const exportToDocx = async (data: ExportData) => {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // Build document sections
-  const docSections: Paragraph[] = [];
+  const docSections: (Paragraph | Table)[] = [];
 
   // Cover Page
   docSections.push(
@@ -89,10 +114,10 @@ export const exportToDocx = async (data: ExportData) => {
       spacing: { after: 600 },
     }),
     new Paragraph({
-      text: project.organizationName,
+      text: '',
       alignment: AlignmentType.CENTER,
       spacing: { after: 200 },
-      children: [new TextRun({ text: project.organizationName, bold: true, size: 28 })],
+      children: [new TextRun({ text: project.organizationName, bold: true, size: 28, font: 'Times New Roman' })],
     }),
     new Paragraph({ children: [new PageBreak()] })
   );
@@ -112,23 +137,11 @@ export const exportToDocx = async (data: ExportData) => {
 
     switch (section.key) {
       case 'object':
-        docSections.push(
-          new Paragraph({
-            text: objectText || '[Descrição do objeto]',
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 200 },
-          })
-        );
+        docSections.push(...textToParagraphs(objectText || '[Descrição do objeto]'));
         break;
 
       case 'summary':
-        docSections.push(
-          new Paragraph({
-            text: summary || '[Resumo das atividades]',
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 200 },
-          })
-        );
+        docSections.push(...textToParagraphs(summary || '[Resumo das atividades]'));
         break;
 
       case 'goals':
@@ -138,23 +151,19 @@ export const exportToDocx = async (data: ExportData) => {
 
           docSections.push(
             new Paragraph({
-              text: `META ${idx + 1} – ${goal.title}`,
+              text: goal.title,
               heading: HeadingLevel.HEADING_3,
               spacing: { before: 300, after: 200 },
-            }),
-            new Paragraph({
-              text: goalNarratives[goal.id] || '[Descreva as realizações da meta]',
-              alignment: AlignmentType.JUSTIFIED,
-              spacing: { after: 200 },
             })
           );
+
+          docSections.push(...textToParagraphs(goalNarratives[goal.id] || '[Descreva as realizações da meta]'));
 
           if (goalActs.length > 0) {
             docSections.push(
               new Paragraph({
-                text: 'Atividades realizadas:',
                 spacing: { before: 200, after: 100 },
-                children: [new TextRun({ text: 'Atividades realizadas:', bold: true })],
+                children: [new TextRun({ text: 'Atividades realizadas:', bold: true, font: 'Times New Roman', size: 24 })],
               })
             );
 
@@ -178,20 +187,13 @@ export const exportToDocx = async (data: ExportData) => {
 
       case 'other':
         const otherActs = getOtherActivities();
-        docSections.push(
-          new Paragraph({
-            text: otherActionsNarrative || '[Outras informações sobre as ações desenvolvidas]',
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 200 },
-          })
-        );
+        docSections.push(...textToParagraphs(otherActionsNarrative || '[Outras informações sobre as ações desenvolvidas]'));
 
         if (otherActs.length > 0) {
           docSections.push(
             new Paragraph({
-              text: 'Atividades relacionadas:',
               spacing: { before: 200, after: 100 },
-              children: [new TextRun({ text: 'Atividades relacionadas:', bold: true })],
+              children: [new TextRun({ text: 'Atividades relacionadas:', bold: true, font: 'Times New Roman', size: 24 })],
             })
           );
 
@@ -209,20 +211,13 @@ export const exportToDocx = async (data: ExportData) => {
 
       case 'communication':
         const commActs = getCommunicationActivities();
-        docSections.push(
-          new Paragraph({
-            text: communicationNarrative || '[Publicações e ações de divulgação]',
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 200 },
-          })
-        );
+        docSections.push(...textToParagraphs(communicationNarrative || '[Publicações e ações de divulgação]'));
 
         if (commActs.length > 0) {
           docSections.push(
             new Paragraph({
-              text: 'Atividades de divulgação:',
               spacing: { before: 200, after: 100 },
-              children: [new TextRun({ text: 'Atividades de divulgação:', bold: true })],
+              children: [new TextRun({ text: 'Atividades de divulgação:', bold: true, font: 'Times New Roman', size: 24 })],
             })
           );
 
@@ -239,23 +234,11 @@ export const exportToDocx = async (data: ExportData) => {
         break;
 
       case 'satisfaction':
-        docSections.push(
-          new Paragraph({
-            text: satisfaction || '[Grau de satisfação do público-alvo]',
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 200 },
-          })
-        );
+        docSections.push(...textToParagraphs(satisfaction || '[Grau de satisfação do público-alvo]'));
         break;
 
       case 'future':
-        docSections.push(
-          new Paragraph({
-            text: futureActions || '[Sobre as ações futuras]',
-            alignment: AlignmentType.JUSTIFIED,
-            spacing: { after: 200 },
-          })
-        );
+        docSections.push(...textToParagraphs(futureActions || '[Sobre as ações futuras]'));
         break;
 
       case 'expenses':
@@ -290,7 +273,7 @@ export const exportToDocx = async (data: ExportData) => {
               ),
             ],
           });
-          docSections.push(expenseTable as unknown as Paragraph);
+          docSections.push(expenseTable);
         } else {
           docSections.push(
             new Paragraph({
@@ -320,13 +303,7 @@ export const exportToDocx = async (data: ExportData) => {
 
       default:
         if (section.type === 'custom' && section.content) {
-          docSections.push(
-            new Paragraph({
-              text: section.content,
-              alignment: AlignmentType.JUSTIFIED,
-              spacing: { after: 200 },
-            })
-          );
+          docSections.push(...textToParagraphs(section.content));
         }
     }
   }
@@ -351,10 +328,10 @@ export const exportToDocx = async (data: ExportData) => {
       spacing: { after: 100 },
     }),
     new Paragraph({
-      text: 'Assinatura do Responsável',
+      text: '',
       alignment: AlignmentType.CENTER,
       spacing: { after: 50 },
-      children: [new TextRun({ text: 'Assinatura do Responsável', bold: true })],
+      children: [new TextRun({ text: 'Assinatura do Responsável', bold: true, font: 'Times New Roman', size: 24 })],
     }),
     new Paragraph({
       text: project.organizationName,
@@ -377,6 +354,50 @@ export const exportToDocx = async (data: ExportData) => {
           },
         },
       },
+      paragraphStyles: [
+        {
+          id: 'Heading1',
+          name: 'Heading 1',
+          basedOn: 'Normal',
+          next: 'Normal',
+          run: {
+            font: 'Times New Roman',
+            size: 28,
+            bold: true,
+          },
+          paragraph: {
+            spacing: { before: 240, after: 120 },
+          },
+        },
+        {
+          id: 'Heading2',
+          name: 'Heading 2',
+          basedOn: 'Normal',
+          next: 'Normal',
+          run: {
+            font: 'Times New Roman',
+            size: 26,
+            bold: true,
+          },
+          paragraph: {
+            spacing: { before: 240, after: 120 },
+          },
+        },
+        {
+          id: 'Heading3',
+          name: 'Heading 3',
+          basedOn: 'Normal',
+          next: 'Normal',
+          run: {
+            font: 'Times New Roman',
+            size: 24,
+            bold: true,
+          },
+          paragraph: {
+            spacing: { before: 240, after: 120 },
+          },
+        },
+      ],
     },
     sections: [
       {
@@ -396,28 +417,13 @@ export const exportToDocx = async (data: ExportData) => {
               new Paragraph({
                 alignment: AlignmentType.CENTER,
                 children: [
-                  new TextRun({ text: project.organizationName, size: 18 }),
-                ],
-              }),
-              new Paragraph({
-                alignment: AlignmentType.CENTER,
-                children: [
-                  new TextRun({ text: 'Página ', size: 18 }),
-                  new TextRun({
-                    children: [PageNumber.CURRENT],
-                    size: 18,
-                  }),
-                  new TextRun({ text: ' de ', size: 18 }),
-                  new TextRun({
-                    children: [PageNumber.TOTAL_PAGES],
-                    size: 18,
-                  }),
+                  new TextRun({ text: project.organizationName, size: 18, font: 'Times New Roman' }),
                 ],
               }),
             ],
           }),
         },
-        children: docSections,
+        children: docSections as Paragraph[],
       },
     ],
   });

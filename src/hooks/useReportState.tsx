@@ -150,10 +150,21 @@ export const useReportState = () => {
     }
   };
 
+  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
+
   const removeSection = (index: number) => {
-    if (confirm('Tem certeza que deseja remover esta seção?')) {
-      setSections(sections.filter((_, i) => i !== index));
+    setPendingRemoveIndex(index);
+  };
+
+  const confirmRemoveSection = () => {
+    if (pendingRemoveIndex !== null) {
+      setSections(sections.filter((_, i) => i !== pendingRemoveIndex));
+      setPendingRemoveIndex(null);
     }
+  };
+
+  const cancelRemoveSection = () => {
+    setPendingRemoveIndex(null);
   };
 
   // Expense management
@@ -294,6 +305,7 @@ export const useReportState = () => {
     expenses, links, setLinks, linkFileNames, setLinkFileNames, sections,
     saveReportData,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent, addCustomSection, removeSection,
+    pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     addExpense, updateExpense, removeExpense,
     handleLogoUpload, handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
     handleDocumentUpload,

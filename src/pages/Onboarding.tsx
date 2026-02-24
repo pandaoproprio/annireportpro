@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, ArrowRight, Save, ArrowLeft, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 export const Onboarding: React.FC = () => {
   const { addProject, projects, isLoadingProjects: isLoading } = useAppData();
@@ -101,10 +102,10 @@ export const Onboarding: React.FC = () => {
       if (newProject) {
         navigate('/');
       } else {
-        alert("Erro ao criar projeto. Tente novamente.");
+        toast.error("Erro ao criar projeto. Tente novamente.");
       }
     } else {
-      alert("Por favor, preencha as informações obrigatórias.");
+      toast.error("Por favor, preencha as informações obrigatórias.");
     }
   };
 

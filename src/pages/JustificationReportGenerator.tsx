@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -25,6 +26,7 @@ export const JustificationReportGenerator: React.FC = () => {
     resetForm, loadDraft, updateSectionContent,
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection,
+    pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     saveDraft, deleteDraft, buildReportData,
     handleDocumentUpload, removeAttachmentFile,
     handleSectionPhotoUpload, removeSectionPhoto,
@@ -245,6 +247,16 @@ export const JustificationReportGenerator: React.FC = () => {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingRemoveIndex !== null}
+        onOpenChange={(open) => { if (!open) cancelRemoveSection(); }}
+        title="Remover seção"
+        description="Tem certeza que deseja remover esta seção?"
+        confirmLabel="Remover"
+        variant="destructive"
+        onConfirm={confirmRemoveSection}
+      />
     </div>
   );
 };
