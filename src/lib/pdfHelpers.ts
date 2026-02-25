@@ -34,13 +34,20 @@ export interface StyledSegment {
   underline: boolean;
 }
 
+export interface GalleryImage {
+  src: string;
+  caption: string;
+}
+
 export interface TextBlock {
-  type: 'paragraph' | 'bullet' | 'image';
+  type: 'paragraph' | 'bullet' | 'image' | 'gallery';
   content: string;
   segments?: StyledSegment[];
   imageSrc?: string;
   imageCaption?: string;
   imageWidthPct?: number;
+  galleryImages?: GalleryImage[];
+  galleryColumns?: number;
 }
 
 export interface PreloadedImage {
@@ -337,7 +344,30 @@ export const parseHtmlToBlocks = (html: string): TextBlock[] => {
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as Element;
       const tag = el.tagName.toLowerCase();
-      if (tag === 'img') {
+      if (tag === 'div' && el.hasAttribute('data-gallery')) {
+        // Gallery node — parse images from data attributes or nested imgs
+        try {
+          const imagesAttr = el.getAttribute('images');
+          if (imagesAttr) {
+            const imgs = JSON.parse(imagesAttr) as GalleryImage[];
+            const cols = parseInt(el.getAttribute('columns') || '2', 10);
+            blocks.push({ type: 'gallery', content: '', galleryImages: imgs, galleryColumns: cols });
+          }
+        } catch { /* skip malformed gallery */ }
+        // Also check for nested img tags as fallback
+        const nestedImgs = el.querySelectorAll('img');
+        if (nestedImgs.length > 0 && !el.getAttribute('images')) {
+          const imgs: GalleryImage[] = [];
+          nestedImgs.forEach(img => {
+            const src = img.getAttribute('src') || '';
+            const caption = img.getAttribute('data-caption') || img.getAttribute('alt') || '';
+            if (src) imgs.push({ src, caption });
+          });
+          if (imgs.length > 0) {
+            blocks.push({ type: 'gallery', content: '', galleryImages: imgs, galleryColumns: 2 });
+          }
+        }
+      } else if (tag === 'img') {
         const src = el.getAttribute('src') || '';
         const caption = el.getAttribute('data-caption') || el.getAttribute('alt') || '';
         const widthPct = parseInt(el.getAttribute('data-width') || '100', 10);
@@ -541,6 +571,59 @@ export const addInlineImage = async (ctx: PdfContext, src: string, caption?: str
     }
   }
   ctx.currentY += 4;
+};
+
+// ── Gallery grid (from rich-text inline gallery) ──
+export const addGalleryGrid = async (ctx: PdfContext, images: GalleryImage[], columns: number = 2): Promise<void> => {
+  if (!images || images.length === 0) return;
+  const { pdf } = ctx;
+  const cols = Math.max(1, Math.min(4, columns));
+  const COL_GAP = 6;
+  const photoW = (CW - COL_GAP * (cols - 1)) / cols;
+  const photoH = photoW * 0.75;
+  const CAPTION_H = 6;
+
+  let idx = 0;
+  while (idx < images.length) {
+    const rowNeeded = photoH + CAPTION_H + 8;
+    ensureSpace(ctx, rowNeeded);
+    const rowY = ctx.currentY;
+
+    for (let col = 0; col < cols && idx < images.length; col++) {
+      const x = ML + col * (photoW + COL_GAP);
+      const imgData = await loadImage(images[idx].src);
+      if (imgData) {
+        const imgAspect = imgData.width / imgData.height;
+        const cellAspect = photoW / photoH;
+        let drawW: number, drawH: number, drawX: number, drawY: number;
+        if (imgAspect > cellAspect) {
+          drawW = photoW;
+          drawH = photoW / imgAspect;
+          drawX = x;
+          drawY = rowY + (photoH - drawH) / 2;
+        } else {
+          drawH = photoH;
+          drawW = photoH * imgAspect;
+          drawX = x + (photoW - drawW) / 2;
+          drawY = rowY;
+        }
+        try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Gallery img error:', e); }
+      }
+      // Caption
+      const cap = images[idx].caption;
+      if (cap) {
+        pdf.setFontSize(8);
+        pdf.setFont('times', 'italic');
+        const capLines: string[] = pdf.splitTextToSize(cap, photoW);
+        for (let j = 0; j < Math.min(capLines.length, 2); j++) {
+          pdf.text(capLines[j], x + (photoW - pdf.getTextWidth(capLines[j])) / 2, rowY + photoH + 3 + j * 3.5);
+        }
+      }
+      idx++;
+    }
+    ctx.currentY = rowY + photoH + CAPTION_H + 6;
+  }
+  ctx.currentY += 2;
 };
 
 // ── Photo grid (adaptive: 1 photo = full width, 2+ = 2 columns) ──
