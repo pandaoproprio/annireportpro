@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
-import { Activity, ActivityType } from '@/types';
+import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
 import { logAuditEvent } from '@/lib/auditLog';
 import { logAction } from '@/lib/systemLog';
 import { Database } from '@/integrations/supabase/types';
@@ -48,7 +48,7 @@ const enumToDbType: Record<ActivityType, DbActivityType> = {
   [ActivityType.OUTROS]: 'Outras Ações'
 };
 
-const mapDbToActivity = (db: DbActivity & { is_draft?: boolean }): Activity => ({
+const mapDbToActivity = (db: DbActivity & { is_draft?: boolean; photo_captions?: Record<string, string>; attendance_files?: AttendanceFile[]; expense_records?: ExpenseRecord[] }): Activity => ({
   id: db.id,
   projectId: db.project_id,
   goalId: db.goal_id || undefined,
@@ -65,6 +65,9 @@ const mapDbToActivity = (db: DbActivity & { is_draft?: boolean }): Activity => (
   attachments: db.attachments || [],
   costEvidence: db.cost_evidence || undefined,
   isDraft: db.is_draft ?? false,
+  photoCaptions: (db.photo_captions as Record<string, string>) || {},
+  attendanceFiles: (db.attendance_files as AttendanceFile[]) || [],
+  expenseRecords: (db.expense_records as ExpenseRecord[]) || [],
 });
 
 const fetchActivitiesFromDb = async (
@@ -138,7 +141,10 @@ export const useActivities = (projectId: string | null) => {
           attachments: activity.attachments,
           cost_evidence: activity.costEvidence || null,
           is_draft: activity.isDraft ?? false,
-        })
+          photo_captions: activity.photoCaptions || {},
+          attendance_files: activity.attendanceFiles || [],
+          expense_records: activity.expenseRecords || [],
+        } as any)
         .select()
         .single();
       if (error) throw error;
@@ -171,7 +177,10 @@ export const useActivities = (projectId: string | null) => {
           attachments: activity.attachments,
           cost_evidence: activity.costEvidence || null,
           is_draft: activity.isDraft ?? false,
-        })
+          photo_captions: activity.photoCaptions || {},
+          attendance_files: activity.attendanceFiles || [],
+          expense_records: activity.expenseRecords || [],
+        } as any)
         .eq('id', activity.id);
       if (!isAdmin) query = query.eq('user_id', user.id);
       const { error } = await query;

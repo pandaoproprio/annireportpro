@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { FirstActivityCelebration } from '@/components/FirstActivityCelebration';
 import { useAppData } from '@/contexts/AppDataContext';
-import { Activity, ActivityType } from '@/types';
+import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -28,7 +28,8 @@ import {
 } from '@/components/ui/select';
 import { 
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
-  FolderGit2, Search, Users, Loader2, FileEdit, Save, Eye, ChevronDown, ChevronUp
+  FolderGit2, Search, Users, Loader2, FileEdit, Save, Eye, ChevronDown, ChevronUp,
+  FileText, DollarSign, Upload, Paperclip
 } from 'lucide-react';
 import {
   Dialog,
@@ -80,6 +81,9 @@ export const ActivityManager: React.FC = () => {
     results: '',
     challenges: '',
     attendeesCount: 0,
+    photoCaptions: {},
+    attendanceFiles: [],
+    expenseRecords: [],
   });
 
   // Filtered Activities
@@ -114,6 +118,9 @@ export const ActivityManager: React.FC = () => {
       results: '',
       challenges: '',
       attendeesCount: 0,
+      photoCaptions: {},
+      attendanceFiles: [],
+      expenseRecords: [],
     });
     setEditingId(null);
     setIsFormOpen(false);
@@ -167,6 +174,9 @@ export const ActivityManager: React.FC = () => {
         location: newActivity.location || '',
         endDate: newActivity.endDate,
         isDraft: asDraft,
+        photoCaptions: newActivity.photoCaptions || {},
+        attendanceFiles: newActivity.attendanceFiles || [],
+        expenseRecords: newActivity.expenseRecords || [],
       };
       await updateActivity(updatedActivity);
       toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade atualizada!');
@@ -187,6 +197,9 @@ export const ActivityManager: React.FC = () => {
         goalId: newActivity.goalId,
         costEvidence: newActivity.costEvidence,
         isDraft: asDraft,
+        photoCaptions: newActivity.photoCaptions || {},
+        attendanceFiles: newActivity.attendanceFiles || [],
+        expenseRecords: newActivity.expenseRecords || [],
       });
       toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade registrada!');
     }
@@ -372,22 +385,158 @@ export const ActivityManager: React.FC = () => {
                 </div>
               </div>
 
-              {/* Photo Upload */}
+              {/* Photo Upload with Captions */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos</Label>
                 <Input type="file" accept="image/*" multiple onChange={handlePhotoUpload} />
                 {newActivity.photos && newActivity.photos.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
+                  <div className="space-y-3 mt-2">
                     {newActivity.photos.map((photo, idx) => (
-                      <div key={idx} className="relative group">
-                        <img src={photo} alt={`Foto ${idx + 1}`} className="h-20 w-20 object-cover rounded border" />
-                        <button 
-                          type="button" 
-                          onClick={() => removePhoto(idx)} 
-                          className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                        >
-                          <X className="w-3 h-3" />
+                      <div key={idx} className="flex items-start gap-3 p-2 border rounded-md bg-muted/30">
+                        <div className="relative group shrink-0">
+                          <img src={photo} alt={`Foto ${idx + 1}`} className="h-20 w-20 object-cover rounded border" />
+                          <button 
+                            type="button" 
+                            onClick={() => removePhoto(idx)} 
+                            className="absolute -top-2 -right-2 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                        <div className="flex-1">
+                          <Input
+                            placeholder={`Legenda da foto ${idx + 1}`}
+                            value={newActivity.photoCaptions?.[String(idx)] || ''}
+                            onChange={(e) => {
+                              const captions = { ...(newActivity.photoCaptions || {}) };
+                              captions[String(idx)] = e.target.value;
+                              setNewActivity({ ...newActivity, photoCaptions: captions });
+                            }}
+                            className="text-sm"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Attendance List Upload */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><FileText className="w-4 h-4" /> Lista de Presença</Label>
+                <Input 
+                  type="file" 
+                  accept="image/*,.pdf" 
+                  onChange={async (e) => {
+                    if (!e.target.files?.[0] || !project) return;
+                    const file = e.target.files[0];
+                    if (file.size > 20 * 1024 * 1024) { toast.error('Arquivo muito grande (máx. 20MB)'); e.target.value = ''; return; }
+                    try {
+                      const fileId = crypto.randomUUID();
+                      const ext = file.name.split('.').pop() || 'pdf';
+                      const path = `activities/${project.id}/attendance/${fileId}.${ext}`;
+                      const { error } = await supabase.storage.from('team-report-photos').upload(path, file, { cacheControl: '3600', upsert: false });
+                      if (error) throw error;
+                      const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(path);
+                      setNewActivity(prev => ({
+                        ...prev,
+                        attendanceFiles: [...(prev.attendanceFiles || []), { name: file.name, url: urlData.publicUrl }]
+                      }));
+                      toast.success(`"${file.name}" enviado com sucesso`);
+                    } catch { toast.error('Erro ao enviar arquivo'); }
+                    e.target.value = '';
+                  }} 
+                />
+                {newActivity.attendanceFiles && newActivity.attendanceFiles.length > 0 && (
+                  <div className="space-y-1 mt-2">
+                    {newActivity.attendanceFiles.map((file, idx) => (
+                      <div key={idx} className="flex items-center gap-2 p-2 border rounded-md bg-muted/30">
+                        <Paperclip className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1">{file.name}</a>
+                        <button type="button" onClick={() => {
+                          setNewActivity(prev => ({ ...prev, attendanceFiles: (prev.attendanceFiles || []).filter((_, i) => i !== idx) }));
+                        }}>
+                          <X className="w-4 h-4 text-destructive" />
                         </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Expense Records */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2"><DollarSign className="w-4 h-4" /> Despesas</Label>
+                <Button type="button" variant="outline" size="sm" onClick={() => {
+                  setNewActivity(prev => ({
+                    ...prev,
+                    expenseRecords: [...(prev.expenseRecords || []), { id: crypto.randomUUID(), description: '' }]
+                  }));
+                }}>
+                  <Plus className="w-4 h-4 mr-1" /> Adicionar Despesa
+                </Button>
+                {newActivity.expenseRecords && newActivity.expenseRecords.length > 0 && (
+                  <div className="space-y-3 mt-2">
+                    {newActivity.expenseRecords.map((expense, idx) => (
+                      <div key={expense.id} className="p-3 border rounded-md bg-muted/30 space-y-2">
+                        <div className="flex items-start gap-2">
+                          <Textarea
+                            rows={2}
+                            placeholder="Descreva a despesa (ex: Material de escritório, transporte...)"
+                            value={expense.description}
+                            onChange={(e) => {
+                              const records = [...(newActivity.expenseRecords || [])];
+                              records[idx] = { ...records[idx], description: e.target.value };
+                              setNewActivity({ ...newActivity, expenseRecords: records });
+                            }}
+                            className="flex-1 text-sm"
+                          />
+                          <button type="button" onClick={() => {
+                            setNewActivity(prev => ({ ...prev, expenseRecords: (prev.expenseRecords || []).filter((_, i) => i !== idx) }));
+                          }}>
+                            <X className="w-4 h-4 text-destructive" />
+                          </button>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Comprovante (foto ou PDF)</Label>
+                          {expense.fileUrl ? (
+                            <div className="flex items-center gap-2 mt-1">
+                              <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
+                              <a href={expense.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate">{expense.fileName || 'Comprovante'}</a>
+                              <button type="button" onClick={() => {
+                                const records = [...(newActivity.expenseRecords || [])];
+                                records[idx] = { ...records[idx], fileUrl: undefined, fileName: undefined };
+                                setNewActivity({ ...newActivity, expenseRecords: records });
+                              }}>
+                                <X className="w-3.5 h-3.5 text-destructive" />
+                              </button>
+                            </div>
+                          ) : (
+                            <Input
+                              type="file"
+                              accept="image/*,.pdf"
+                              className="mt-1"
+                              onChange={async (e) => {
+                                if (!e.target.files?.[0] || !project) return;
+                                const file = e.target.files[0];
+                                if (file.size > 20 * 1024 * 1024) { toast.error('Arquivo muito grande (máx. 20MB)'); e.target.value = ''; return; }
+                                try {
+                                  const fileId = crypto.randomUUID();
+                                  const ext = file.name.split('.').pop() || 'pdf';
+                                  const path = `activities/${project.id}/expenses/${fileId}.${ext}`;
+                                  const { error } = await supabase.storage.from('team-report-photos').upload(path, file, { cacheControl: '3600', upsert: false });
+                                  if (error) throw error;
+                                  const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(path);
+                                  const records = [...(newActivity.expenseRecords || [])];
+                                  records[idx] = { ...records[idx], fileUrl: urlData.publicUrl, fileName: file.name };
+                                  setNewActivity({ ...newActivity, expenseRecords: records });
+                                  toast.success('Comprovante enviado');
+                                } catch { toast.error('Erro ao enviar comprovante'); }
+                                e.target.value = '';
+                              }}
+                            />
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -656,13 +805,57 @@ export const ActivityManager: React.FC = () => {
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {viewingActivity.photos.map((photo, idx) => (
-                      <a key={idx} href={photo} target="_blank" rel="noopener noreferrer">
-                        <img
-                          src={photo}
-                          alt={`Foto ${idx + 1}`}
-                          className="w-full h-32 object-cover rounded-md border hover:opacity-90 transition-opacity cursor-pointer"
-                        />
+                      <div key={idx} className="space-y-1">
+                        <a href={photo} target="_blank" rel="noopener noreferrer">
+                          <img
+                            src={photo}
+                            alt={viewingActivity.photoCaptions?.[String(idx)] || `Foto ${idx + 1}`}
+                            className="w-full h-32 object-cover rounded-md border hover:opacity-90 transition-opacity cursor-pointer"
+                          />
+                        </a>
+                        {viewingActivity.photoCaptions?.[String(idx)] && (
+                          <p className="text-xs text-muted-foreground italic text-center">{viewingActivity.photoCaptions[String(idx)]}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {viewingActivity.attendanceFiles && viewingActivity.attendanceFiles.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">
+                    <FileText className="w-3.5 h-3.5 inline mr-1" />
+                    Lista de Presença
+                  </p>
+                  <div className="space-y-1">
+                    {viewingActivity.attendanceFiles.map((file, idx) => (
+                      <a key={idx} href={file.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-primary hover:underline p-2 border rounded-md bg-muted/30">
+                        <Paperclip className="w-3.5 h-3.5" />
+                        {file.name}
                       </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {viewingActivity.expenseRecords && viewingActivity.expenseRecords.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">
+                    <DollarSign className="w-3.5 h-3.5 inline mr-1" />
+                    Despesas
+                  </p>
+                  <div className="space-y-2">
+                    {viewingActivity.expenseRecords.map((expense, idx) => (
+                      <div key={idx} className="p-2 border rounded-md bg-muted/30">
+                        <p className="text-sm text-foreground">{expense.description || 'Sem descrição'}</p>
+                        {expense.fileUrl && (
+                          <a href={expense.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline mt-1">
+                            <Paperclip className="w-3 h-3" />
+                            {expense.fileName || 'Comprovante'}
+                          </a>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
