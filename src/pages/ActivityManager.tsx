@@ -50,6 +50,7 @@ export const ActivityManager: React.FC = () => {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [viewingActivity, setViewingActivity] = useState<Activity | null>(null);
+  const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const prevActivityCount = useRef(activities.length);
   
   // Search and Filter State
@@ -511,7 +512,7 @@ export const ActivityManager: React.FC = () => {
                     {act.photos && act.photos.length > 0 && (
                       <div className="flex gap-2 mt-2">
                         {act.photos.slice(0, 4).map((photo, idx) => (
-                          <img key={idx} src={photo} alt="" className="h-16 w-16 object-cover rounded border" />
+                          <img key={idx} src={photo} alt="" className="h-16 w-16 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); setLightboxPhoto(photo); }} />
                         ))}
                         {act.photos.length > 4 && (
                           <div className="h-16 w-16 rounded border bg-muted flex items-center justify-center text-sm text-muted-foreground">
@@ -667,6 +668,15 @@ export const ActivityManager: React.FC = () => {
                 </div>
               )}
             </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Photo Lightbox */}
+      <Dialog open={!!lightboxPhoto} onOpenChange={(open) => !open && setLightboxPhoto(null)}>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-2 flex items-center justify-center bg-black/90 border-none">
+          {lightboxPhoto && (
+            <img src={lightboxPhoto} alt="Foto ampliada" className="max-w-full max-h-[90vh] object-contain rounded" />
           )}
         </DialogContent>
       </Dialog>
