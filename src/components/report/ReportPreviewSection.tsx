@@ -23,11 +23,11 @@ const RichContent: React.FC<{ html: string; className?: string; style?: React.CS
           const columns = parseInt(node.getAttribute('data-columns') || '2', 10);
           if (images.length > 0) {
             parts.push(
-              <div key={`gallery-${idx}`} className="my-4 grid gap-3" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+              <div key={`gallery-${idx}`} className="my-6" style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: '24px' }}>
                 {images.map((img, i) => (
-                  <div key={i}>
-                    <img src={img.src} alt={img.caption || `Imagem ${i + 1}`} className="rounded-md w-full h-auto object-contain" />
-                    {img.caption && <p className="text-xs text-muted-foreground italic mt-1 text-center">{img.caption}</p>}
+                  <div key={i} className="break-inside-avoid">
+                    <img src={img.src} alt={img.caption || `Imagem ${i + 1}`} style={{ width: '100%', height: 'auto', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e5e7eb' }} />
+                    {img.caption && <p style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic', marginTop: '6px', textAlign: 'center' }}>{img.caption}</p>}
                   </div>
                 ))}
               </div>
