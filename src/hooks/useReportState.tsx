@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta } from '@/types';
 import { PageLayout } from '@/types/imageLayout';
@@ -52,9 +52,11 @@ export const useReportState = () => {
     basePath: `reports/${project?.id}/sections`,
   });
 
-  // Initialize from project data (content only)
+  // Initialize from project data only when project ID changes (not on every reference change)
+  const initializedProjectId = useRef<string | null>(null);
   useEffect(() => {
-    if (project) {
+    if (project && project.id !== initializedProjectId.current) {
+      initializedProjectId.current = project.id;
       const rd = project.reportData || {};
       setObjectText(rd.objectOverride || project.object || '');
       setSummary(rd.executiveSummary || project.summary || '');
