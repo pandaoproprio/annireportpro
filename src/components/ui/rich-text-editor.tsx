@@ -248,8 +248,18 @@ const GalleryNode = Node.create({
 
   addAttributes() {
     return {
-      images: { default: [] },
-      columns: { default: 2 },
+      images: {
+        default: [],
+        parseHTML: (el: HTMLElement) => {
+          try { return JSON.parse(el.getAttribute('data-images') || '[]'); } catch { return []; }
+        },
+        renderHTML: (attrs: Record<string, any>) => ({ 'data-images': JSON.stringify(attrs.images || []) }),
+      },
+      columns: {
+        default: 2,
+        parseHTML: (el: HTMLElement) => parseInt(el.getAttribute('data-columns') || '2', 10),
+        renderHTML: (attrs: Record<string, any>) => ({ 'data-columns': String(attrs.columns || 2) }),
+      },
     };
   },
 
@@ -258,7 +268,7 @@ const GalleryNode = Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', mergeAttributes(HTMLAttributes, { 'data-gallery': '' }), 0];
+    return ['div', mergeAttributes(HTMLAttributes, { 'data-gallery': '' })];
   },
 
   addNodeView() {
@@ -345,8 +355,13 @@ interface RichTextEditorProps {
       const urls: Array<{ src: string; caption: string }> = [];
       for (let i = 0; i < files.length; i++) {
         setUploadProgress(`Enviando ${i + 1}/${files.length}...`);
-        const url = await uploadFile(files[i]);
-        if (url) urls.push({ src: url, caption: '' });
+        try {
+          const url = await uploadFile(files[i]);
+          if (url) urls.push({ src: url, caption: '' });
+        } catch (err) {
+          console.error(`Erro ao enviar ${files[i].name}:`, err);
+          toast.error(`Erro ao enviar "${files[i].name}"`);
+        }
       }
       if (urls.length > 0) {
         const cols = urls.length === 1 ? 1 : urls.length <= 4 ? 2 : 3;
@@ -356,7 +371,8 @@ interface RichTextEditorProps {
         }).run();
         toast.success(`${urls.length} imagem(ns) inserida(s) em galeria`);
       }
-    } catch {
+    } catch (err) {
+      console.error('Erro na galeria:', err);
       toast.error('Erro ao enviar imagens');
     } finally {
       setUploading(false);

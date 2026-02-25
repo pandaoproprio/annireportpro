@@ -345,18 +345,18 @@ export const parseHtmlToBlocks = (html: string): TextBlock[] => {
       const el = node as Element;
       const tag = el.tagName.toLowerCase();
       if (tag === 'div' && el.hasAttribute('data-gallery')) {
-        // Gallery node — parse images from data attributes or nested imgs
+        // Gallery node — parse images from data-images attribute
         try {
-          const imagesAttr = el.getAttribute('images');
+          const imagesAttr = el.getAttribute('data-images') || el.getAttribute('images');
           if (imagesAttr) {
             const imgs = JSON.parse(imagesAttr) as GalleryImage[];
-            const cols = parseInt(el.getAttribute('columns') || '2', 10);
+            const cols = parseInt(el.getAttribute('data-columns') || el.getAttribute('columns') || '2', 10);
             blocks.push({ type: 'gallery', content: '', galleryImages: imgs, galleryColumns: cols });
           }
         } catch { /* skip malformed gallery */ }
         // Also check for nested img tags as fallback
         const nestedImgs = el.querySelectorAll('img');
-        if (nestedImgs.length > 0 && !el.getAttribute('images')) {
+        if (nestedImgs.length > 0 && !el.getAttribute('data-images') && !el.getAttribute('images')) {
           const imgs: GalleryImage[] = [];
           nestedImgs.forEach(img => {
             const src = img.getAttribute('src') || '';
