@@ -6,7 +6,7 @@ import { ptBR } from 'date-fns/locale';
 import {
   createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem, addRichParagraph,
   addSectionTitle, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
-  loadImage, addPhotoGrid, addPhotoLayout, parseHtmlToBlocks, addInlineImage, PdfContext,
+  loadImage, addPhotoGrid, addPhotoLayout, parseHtmlToBlocks, addInlineImage, addGalleryGrid, PdfContext,
   preloadHeaderImages,
   PAGE_W, PAGE_H, ML, MR, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION, MT,
 } from '@/lib/pdfHelpers';
@@ -95,6 +95,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     const blocks = parseHtmlToBlocks(html || fallback);
     for (const block of blocks) {
       if (block.type === 'image' && block.imageSrc) await addInlineImage(ctx, block.imageSrc, block.imageCaption, block.imageWidthPct);
+      else if (block.type === 'gallery' && block.galleryImages) await addGalleryGrid(ctx, block.galleryImages, block.galleryColumns);
       else if (block.type === 'bullet') addBulletItem(ctx, block.content);
       else if (block.segments && block.segments.some(s => s.bold || s.italic || s.underline)) {
         addRichParagraph(ctx, block.segments);

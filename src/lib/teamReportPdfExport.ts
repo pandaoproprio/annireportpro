@@ -4,7 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import {
   createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem, addRichParagraph,
   addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
-  parseHtmlToBlocks, loadImage, preloadHeaderImages, addInlineImage,
+  parseHtmlToBlocks, loadImage, preloadHeaderImages, addInlineImage, addGalleryGrid,
   PAGE_W, ML, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION,
 } from '@/lib/pdfHelpers';
 import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
@@ -96,6 +96,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   const blocks = parseHtmlToBlocks(report.executionReport || '<p>[Nenhum relato informado]</p>');
   for (const block of blocks) {
     if (block.type === 'image' && block.imageSrc) await addInlineImage(ctx, block.imageSrc, block.imageCaption, block.imageWidthPct);
+    else if (block.type === 'gallery' && block.galleryImages) await addGalleryGrid(ctx, block.galleryImages, block.galleryColumns);
     else if (block.type === 'bullet') addBulletItem(ctx, block.content);
     else if (block.segments && block.segments.some(s => s.bold || s.italic || s.underline)) addRichParagraph(ctx, block.segments);
     else addParagraph(ctx, block.content);
@@ -107,6 +108,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     const sBlocks = parseHtmlToBlocks(section.content || '<p>[Nenhum conteúdo]</p>');
     for (const b of sBlocks) {
       if (b.type === 'image' && b.imageSrc) await addInlineImage(ctx, b.imageSrc, b.imageCaption, b.imageWidthPct);
+      else if (b.type === 'gallery' && b.galleryImages) await addGalleryGrid(ctx, b.galleryImages, b.galleryColumns);
       else if (b.type === 'bullet') addBulletItem(ctx, b.content);
       else if (b.segments && b.segments.some(s => s.bold || s.italic || s.underline)) addRichParagraph(ctx, b.segments);
       else addParagraph(ctx, b.content);
