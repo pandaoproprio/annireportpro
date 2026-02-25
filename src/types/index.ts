@@ -93,6 +93,18 @@ export interface ReportData {
   photoMetadata?: Record<string, ReportPhotoMeta[]>;
 }
 
+export interface AttendanceFile {
+  name: string;
+  url: string;
+}
+
+export interface ExpenseRecord {
+  id: string;
+  description: string;
+  fileName?: string;
+  fileUrl?: string;
+}
+
 export interface Activity {
   id: string;
   projectId: string;
@@ -110,6 +122,9 @@ export interface Activity {
   attachments: string[];
   costEvidence?: string;
   isDraft?: boolean;
+  photoCaptions?: Record<string, string>;
+  attendanceFiles?: AttendanceFile[];
+  expenseRecords?: ExpenseRecord[];
 }
 
 export interface Project {

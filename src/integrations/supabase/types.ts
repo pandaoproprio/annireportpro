@@ -17,6 +17,7 @@ export type Database = {
       activities: {
         Row: {
           attachments: string[]
+          attendance_files: Json
           attendees_count: number
           challenges: string
           cost_evidence: string | null
@@ -25,10 +26,12 @@ export type Database = {
           deleted_at: string | null
           description: string
           end_date: string | null
+          expense_records: Json
           goal_id: string | null
           id: string
           is_draft: boolean
           location: string
+          photo_captions: Json
           photos: string[]
           project_id: string
           results: string
@@ -39,6 +42,7 @@ export type Database = {
         }
         Insert: {
           attachments?: string[]
+          attendance_files?: Json
           attendees_count?: number
           challenges: string
           cost_evidence?: string | null
@@ -47,10 +51,12 @@ export type Database = {
           deleted_at?: string | null
           description: string
           end_date?: string | null
+          expense_records?: Json
           goal_id?: string | null
           id?: string
           is_draft?: boolean
           location: string
+          photo_captions?: Json
           photos?: string[]
           project_id: string
           results: string
@@ -61,6 +67,7 @@ export type Database = {
         }
         Update: {
           attachments?: string[]
+          attendance_files?: Json
           attendees_count?: number
           challenges?: string
           cost_evidence?: string | null
@@ -69,10 +76,12 @@ export type Database = {
           deleted_at?: string | null
           description?: string
           end_date?: string | null
+          expense_records?: Json
           goal_id?: string | null
           id?: string
           is_draft?: boolean
           location?: string
+          photo_captions?: Json
           photos?: string[]
           project_id?: string
           results?: string
