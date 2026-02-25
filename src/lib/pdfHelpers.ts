@@ -35,9 +35,11 @@ export interface StyledSegment {
 }
 
 export interface TextBlock {
-  type: 'paragraph' | 'bullet';
+  type: 'paragraph' | 'bullet' | 'image';
   content: string;
   segments?: StyledSegment[];
+  imageSrc?: string;
+  imageCaption?: string;
 }
 
 export interface PreloadedImage {
@@ -334,14 +336,32 @@ export const parseHtmlToBlocks = (html: string): TextBlock[] => {
     } else if (node.nodeType === Node.ELEMENT_NODE) {
       const el = node as Element;
       const tag = el.tagName.toLowerCase();
-      if (tag === 'li') {
+      if (tag === 'img') {
+        const src = el.getAttribute('src') || '';
+        const alt = el.getAttribute('alt') || '';
+        if (src) blocks.push({ type: 'image', content: alt, imageSrc: src, imageCaption: alt });
+      } else if (tag === 'li') {
         const t = el.textContent?.trim() || '';
         const segs = extractSegments(el);
         if (t) blocks.push({ type: 'bullet', content: t, segments: segs });
       } else if (tag === 'p') {
-        const t = el.textContent?.trim() || '';
-        const segs = extractSegments(el);
-        if (t) blocks.push({ type: 'paragraph', content: t, segments: segs });
+        // Check if paragraph contains an img
+        const imgEl = el.querySelector('img');
+        if (imgEl) {
+          const src = imgEl.getAttribute('src') || '';
+          const alt = imgEl.getAttribute('alt') || '';
+          if (src) blocks.push({ type: 'image', content: alt, imageSrc: src, imageCaption: alt });
+          // Also process non-img text in the paragraph
+          const textContent = el.textContent?.trim() || '';
+          if (textContent) {
+            const segs = extractSegments(el);
+            blocks.push({ type: 'paragraph', content: textContent, segments: segs });
+          }
+        } else {
+          const t = el.textContent?.trim() || '';
+          const segs = extractSegments(el);
+          if (t) blocks.push({ type: 'paragraph', content: t, segments: segs });
+        }
       } else {
         el.childNodes.forEach(c => processNode(c));
       }
@@ -489,6 +509,34 @@ export const loadImage = async (url: string): Promise<{ data: string; width: num
   } catch {
     return null;
   }
+};
+
+// ── Inline image (from rich-text editor) ──
+export const addInlineImage = async (ctx: PdfContext, src: string, caption?: string): Promise<void> => {
+  const imgData = await loadImage(src);
+  if (!imgData) return;
+  const { pdf } = ctx;
+  const maxW = CW;
+  const maxH = 90; // max height in mm
+  const aspect = imgData.width / imgData.height;
+  let drawW = maxW;
+  let drawH = drawW / aspect;
+  if (drawH > maxH) { drawH = maxH; drawW = drawH * aspect; }
+  const totalH = drawH + (caption ? 10 : 4);
+  ensureSpace(ctx, totalH);
+  const x = ML + (CW - drawW) / 2; // center
+  try { pdf.addImage(imgData.data, 'JPEG', x, ctx.currentY, drawW, drawH); } catch (e) { console.warn('Inline img error:', e); }
+  ctx.currentY += drawH + 2;
+  if (caption) {
+    pdf.setFontSize(FONT_CAPTION);
+    pdf.setFont('times', 'italic');
+    const capLines: string[] = pdf.splitTextToSize(caption, CW);
+    for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+      pdf.text(capLines[j], ML + (CW - pdf.getTextWidth(capLines[j])) / 2, ctx.currentY);
+      ctx.currentY += 4.5;
+    }
+  }
+  ctx.currentY += 4;
 };
 
 // ── Photo grid (adaptive: 1 photo = full width, 2+ = 2 columns) ──

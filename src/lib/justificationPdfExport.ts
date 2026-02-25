@@ -3,7 +3,7 @@ import { JustificationReport } from '@/types/justificationReport';
 import {
   createPdfContext, ensureSpace, addParagraph, addBulletItem, addRichParagraph,
   addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
-  parseHtmlToBlocks, preloadHeaderImages,
+  parseHtmlToBlocks, preloadHeaderImages, addInlineImage,
   PAGE_W, CW, LINE_H,
 } from '@/lib/pdfHelpers';
 import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
@@ -80,7 +80,8 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
     addSectionTitle(ctx, section.title);
     const blocks = parseHtmlToBlocks(report[section.key]);
     for (const block of blocks) {
-      if (block.type === 'bullet') addBulletItem(ctx, block.content);
+      if (block.type === 'image' && block.imageSrc) await addInlineImage(ctx, block.imageSrc, block.imageCaption);
+      else if (block.type === 'bullet') addBulletItem(ctx, block.content);
       else if (block.segments && block.segments.some(s => s.bold || s.italic || s.underline)) addRichParagraph(ctx, block.segments);
       else addParagraph(ctx, block.content);
     }

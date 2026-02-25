@@ -719,6 +719,7 @@ export const TeamReportGenerator: React.FC = () => {
             <RichTextEditor
               value={executionReport}
               onChange={setExecutionReport}
+              enableImages
               placeholder="No exercício da função de [função], o prestador atuou na viabilização..."
             />
           </CardContent>
@@ -757,6 +758,7 @@ export const TeamReportGenerator: React.FC = () => {
                   updated[idx].content = value;
                   setAdditionalSections(updated);
                 }}
+                enableImages
                 placeholder="Conteúdo da seção adicional..."
               />
             </CardContent>
