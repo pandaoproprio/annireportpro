@@ -290,7 +290,7 @@ const SummarySection: React.FC<Props> = ({ summary, setSummary, activities, proj
       <Label>Resumo / Visão Geral</Label>
       <AiTextToolbar text={summary} onResult={setSummary} sectionType="summary" activities={activities} projectName={projectName} projectObject={projectObject} />
     </div>
-    <RichTextEditor value={summary} onChange={setSummary} placeholder="Descreva a visão geral das atividades realizadas, contexto, e principais realizações..." />
+    <RichTextEditor value={summary} onChange={setSummary} enableImages placeholder="Descreva a visão geral das atividades realizadas, contexto, e principais realizações..." />
   </div>
 );
 
@@ -328,7 +328,7 @@ const GoalsSection: React.FC<Props> = ({
             />
           </div>
           <RichTextEditor value={goalNarratives[goal.id] || ''} onChange={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: text })}
-            placeholder="Descreva as realizações, metodologia, resultados alcançados..." />
+            enableImages placeholder="Descreva as realizações, metodologia, resultados alcançados..." />
           <Label className="flex items-center gap-2 mt-4"><ImageIcon className="w-4 h-4" /> Fotos da Meta</Label>
           <Input type="file" accept="image/*" multiple onChange={e => handleGoalPhotoUpload(e, goal.id)} className="mb-2" />
           {photos.length > 0 && (
@@ -374,7 +374,7 @@ const OtherSection: React.FC<Props> = ({
         <Label>Narrativa</Label>
         <AiTextToolbar text={otherActionsNarrative} onResult={setOtherActionsNarrative} sectionType="other" activities={otherActs} projectName={projectName} projectObject={projectObject} />
       </div>
-      <RichTextEditor value={otherActionsNarrative} onChange={setOtherActionsNarrative} placeholder="Descreva outras informações, ações extras, imprevistos, acontecimentos relevantes..." />
+      <RichTextEditor value={otherActionsNarrative} onChange={setOtherActionsNarrative} enableImages placeholder="Descreva outras informações, ações extras, imprevistos, acontecimentos relevantes..." />
     </div>
   );
 };
@@ -398,7 +398,7 @@ const CommunicationSection: React.FC<Props> = ({
         <Label>Narrativa</Label>
         <AiTextToolbar text={communicationNarrative} onResult={setCommunicationNarrative} sectionType="communication" activities={commActs} projectName={projectName} projectObject={projectObject} />
       </div>
-      <RichTextEditor value={communicationNarrative} onChange={setCommunicationNarrative} placeholder="Descreva as ações de divulgação, publicações, links de matérias..." />
+      <RichTextEditor value={communicationNarrative} onChange={setCommunicationNarrative} enableImages placeholder="Descreva as ações de divulgação, publicações, links de matérias..." />
     </div>
   );
 };
@@ -409,7 +409,7 @@ const SatisfactionSection: React.FC<Props> = ({ satisfaction, setSatisfaction, p
       <Label>Grau de Satisfação</Label>
       <AiTextToolbar text={satisfaction} onResult={setSatisfaction} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
     </div>
-    <RichTextEditor value={satisfaction} onChange={setSatisfaction} placeholder="Descreva a visão do público sobre o projeto, feedbacks recebidos, resultados de pesquisas de satisfação..." />
+    <RichTextEditor value={satisfaction} onChange={setSatisfaction} enableImages placeholder="Descreva a visão do público sobre o projeto, feedbacks recebidos, resultados de pesquisas de satisfação..." />
   </div>
 );
 
@@ -419,7 +419,7 @@ const FutureSection: React.FC<Props> = ({ futureActions, setFutureActions, proje
       <Label>Ações Futuras</Label>
       <AiTextToolbar text={futureActions} onResult={setFutureActions} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
     </div>
-    <RichTextEditor value={futureActions} onChange={setFutureActions} placeholder="Descreva as ações futuras do projeto, próximos passos, planejamento..." />
+    <RichTextEditor value={futureActions} onChange={setFutureActions} enableImages placeholder="Descreva as ações futuras do projeto, próximos passos, planejamento..." />
   </div>
 );
 
