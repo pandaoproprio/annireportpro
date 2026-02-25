@@ -142,12 +142,14 @@ export const Dashboard: React.FC = () => {
                 <div className="text-center py-6">
                   <Target className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
                   <p className="text-muted-foreground text-sm mb-3">Nenhuma meta cadastrada.</p>
-                  <Link to="/settings">
-                    <Button variant="outline" size="sm">
-                      <PlusCircle className="w-4 h-4 mr-1" />
-                      Cadastrar Meta
-                    </Button>
-                  </Link>
+                  {role !== 'OFICINEIRO' && (
+                    <Link to="/settings">
+                      <Button variant="outline" size="sm">
+                        <PlusCircle className="w-4 h-4 mr-1" />
+                        Cadastrar Meta
+                      </Button>
+                    </Link>
+                  )}
                 </div>
               ) : (
                 project.goals.map(goal => {
