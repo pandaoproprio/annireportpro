@@ -107,12 +107,13 @@ const InlineImageView: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
 // ── Custom Gallery NodeView ──
 const GalleryView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected, deleteNode }) => {
   const [editing, setEditing] = useState(false);
-  const images: Array<{ src: string; caption: string }> = node.attrs.images || [];
+  const images: Array<{ src: string; caption: string; widthPct?: number; heightPx?: number }> = node.attrs.images || [];
   const columns = node.attrs.columns || 2;
+  const groupCaption = node.attrs.groupCaption || '';
 
-  const updateImage = (index: number, caption: string) => {
+  const updateImage = (index: number, updates: Partial<{ caption: string; widthPct: number; heightPx: number }>) => {
     const updated = [...images];
-    updated[index] = { ...updated[index], caption };
+    updated[index] = { ...updated[index], ...updates };
     updateAttributes({ images: updated });
   };
 
@@ -135,7 +136,7 @@ const GalleryView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected
         onClick={() => setEditing(true)}
       >
         <div
-          className="grid gap-3"
+          className="grid gap-4"
           style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
         >
           {images.map((img, i) => (
@@ -143,7 +144,8 @@ const GalleryView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected
               <img
                 src={img.src}
                 alt={img.caption || `Imagem ${i + 1}`}
-                className="rounded-md w-full h-auto object-contain"
+                className="rounded-md w-full object-contain"
+                style={{ height: img.heightPx ? `${img.heightPx}px` : 'auto' }}
                 draggable={false}
               />
               {img.caption && !editing && (
@@ -161,6 +163,11 @@ const GalleryView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected
             </div>
           ))}
         </div>
+
+        {/* Group caption below the grid */}
+        {groupCaption && !editing && (
+          <p className="text-xs text-muted-foreground italic mt-2 text-center">{groupCaption}</p>
+        )}
 
         {!editing && (
           <p className="text-xs text-muted-foreground/50 italic mt-1 text-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -197,17 +204,44 @@ const GalleryView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected
             />
           </div>
 
+          {/* Group caption */}
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Legenda única da galeria</label>
+            <Input
+              value={groupCaption}
+              onChange={(e) => updateAttributes({ groupCaption: e.target.value })}
+              placeholder="Ex: Figura 1 e 2: Artes de divulgação das oficinas"
+              className="text-sm h-8"
+            />
+          </div>
+
+          {/* Per-image settings */}
           <div className="space-y-2">
-            <label className="text-xs font-medium text-muted-foreground">Legendas</label>
+            <label className="text-xs font-medium text-muted-foreground">Imagens</label>
             {images.map((img, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <img src={img.src} className="h-10 w-10 object-cover rounded" alt="" />
-                <Input
-                  value={img.caption}
-                  onChange={(e) => updateImage(i, e.target.value)}
-                  placeholder={`Legenda da imagem ${i + 1}`}
-                  className="text-sm h-8 flex-1"
-                />
+              <div key={i} className="space-y-1.5 p-2 border rounded bg-background">
+                <div className="flex items-center gap-2">
+                  <img src={img.src} className="h-10 w-10 object-cover rounded flex-shrink-0" alt="" />
+                  <Input
+                    value={img.caption}
+                    onChange={(e) => updateImage(i, { caption: e.target.value })}
+                    placeholder={`Legenda individual (opcional)`}
+                    className="text-sm h-8 flex-1"
+                  />
+                </div>
+                <div className="flex items-center gap-4 pl-12">
+                  <div className="flex-1 space-y-0.5">
+                    <label className="text-[10px] text-muted-foreground">Altura: {img.heightPx || 'auto'}px</label>
+                    <Slider
+                      value={[img.heightPx || 300]}
+                      onValueChange={([v]) => updateImage(i, { heightPx: v })}
+                      min={100}
+                      max={800}
+                      step={10}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -259,6 +293,11 @@ const GalleryNode = Node.create({
         default: 2,
         parseHTML: (el: HTMLElement) => parseInt(el.getAttribute('data-columns') || '2', 10),
         renderHTML: (attrs: Record<string, any>) => ({ 'data-columns': String(attrs.columns || 2) }),
+      },
+      groupCaption: {
+        default: '',
+        parseHTML: (el: HTMLElement) => el.getAttribute('data-group-caption') || '',
+        renderHTML: (attrs: Record<string, any>) => ({ 'data-group-caption': attrs.groupCaption || '' }),
       },
     };
   },

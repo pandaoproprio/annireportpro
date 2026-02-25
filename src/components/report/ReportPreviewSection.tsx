@@ -19,17 +19,21 @@ const RichContent: React.FC<{ html: string; className?: string; style?: React.CS
       // Gallery node
       if (node.hasAttribute('data-gallery') || node.getAttribute('data-gallery') !== null) {
         try {
-          const images: Array<{ src: string; caption: string }> = JSON.parse(node.getAttribute('data-images') || '[]');
+          const images: Array<{ src: string; caption: string; heightPx?: number }> = JSON.parse(node.getAttribute('data-images') || '[]');
           const columns = parseInt(node.getAttribute('data-columns') || '2', 10);
+          const groupCaption = node.getAttribute('data-group-caption') || '';
           if (images.length > 0) {
             parts.push(
-              <div key={`gallery-${idx}`} className="my-6" style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: '24px' }}>
-                {images.map((img, i) => (
-                  <div key={i} className="break-inside-avoid">
-                    <img src={img.src} alt={img.caption || `Imagem ${i + 1}`} style={{ width: '100%', height: 'auto', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e5e7eb' }} />
-                    {img.caption && <p style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic', marginTop: '6px', textAlign: 'center' }}>{img.caption}</p>}
-                  </div>
-                ))}
+              <div key={`gallery-${idx}`} className="my-6">
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: '24px' }}>
+                  {images.map((img, i) => (
+                    <div key={i} className="break-inside-avoid">
+                      <img src={img.src} alt={img.caption || `Imagem ${i + 1}`} style={{ width: '100%', height: img.heightPx ? `${img.heightPx}px` : 'auto', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e5e7eb' }} />
+                      {img.caption && <p style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic', marginTop: '6px', textAlign: 'center' }}>{img.caption}</p>}
+                    </div>
+                  ))}
+                </div>
+                {groupCaption && <p style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic', marginTop: '8px', textAlign: 'center' }}>{groupCaption}</p>}
               </div>
             );
             return;
