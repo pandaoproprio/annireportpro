@@ -28,8 +28,14 @@ import {
 } from '@/components/ui/select';
 import { 
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
-  FolderGit2, Search, Users, Loader2, FileEdit, Save
+  FolderGit2, Search, Users, Loader2, FileEdit, Save, Eye, ChevronDown, ChevronUp
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -43,6 +49,7 @@ export const ActivityManager: React.FC = () => {
   const [showCelebration, setShowCelebration] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [viewingActivity, setViewingActivity] = useState<Activity | null>(null);
   const prevActivityCount = useRef(activities.length);
   
   // Search and Filter State
@@ -515,6 +522,9 @@ export const ActivityManager: React.FC = () => {
                     )}
                   </div>
                   <div className="flex md:flex-col gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setViewingActivity(act)} title="Ver detalhes">
+                      <Eye className="w-4 h-4" />
+                    </Button>
                     <Button variant="outline" size="sm" onClick={() => handleEdit(act)}>
                       <Edit className="w-4 h-4" />
                     </Button>
@@ -552,6 +562,114 @@ export const ActivityManager: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Activity Detail Dialog */}
+      <Dialog open={!!viewingActivity} onOpenChange={(open) => !open && setViewingActivity(null)}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="w-5 h-5 text-primary" />
+              Detalhes da Atividade
+            </DialogTitle>
+          </DialogHeader>
+          {viewingActivity && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 flex-wrap">
+                {viewingActivity.isDraft && (
+                  <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
+                    <FileEdit className="w-3 h-3 mr-1" /> Rascunho
+                  </Badge>
+                )}
+                <Badge variant="outline" className={getTypeColor(viewingActivity.type)}>
+                  {viewingActivity.type}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Data</p>
+                  <p className="text-sm flex items-center gap-1">
+                    <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                    {new Date(viewingActivity.date).toLocaleDateString('pt-BR')}
+                    {viewingActivity.endDate && ` a ${new Date(viewingActivity.endDate).toLocaleDateString('pt-BR')}`}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Local</p>
+                  <p className="text-sm flex items-center gap-1">
+                    <MapPin className="w-3.5 h-3.5 text-muted-foreground" />
+                    {viewingActivity.location || '—'}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Participantes</p>
+                  <p className="text-sm flex items-center gap-1">
+                    <Users className="w-3.5 h-3.5 text-muted-foreground" />
+                    {viewingActivity.attendeesCount || 0}
+                  </p>
+                </div>
+                {viewingActivity.goalId && project?.goals && (
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase">Meta</p>
+                    <p className="text-sm">
+                      {project.goals.find(g => g.id === viewingActivity.goalId)?.title || '—'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase">Descrição</p>
+                <p className="text-sm text-foreground whitespace-pre-wrap">{viewingActivity.description}</p>
+              </div>
+
+              {viewingActivity.results && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Resultados</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{viewingActivity.results}</p>
+                </div>
+              )}
+
+              {viewingActivity.challenges && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Desafios / Observações</p>
+                  <p className="text-sm text-foreground whitespace-pre-wrap">{viewingActivity.challenges}</p>
+                </div>
+              )}
+
+              {viewingActivity.teamInvolved && viewingActivity.teamInvolved.length > 0 && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Equipe Envolvida</p>
+                  <div className="flex flex-wrap gap-1">
+                    {viewingActivity.teamInvolved.map((member, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">{member}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {viewingActivity.photos && viewingActivity.photos.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">
+                    Fotos ({viewingActivity.photos.length})
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {viewingActivity.photos.map((photo, idx) => (
+                      <a key={idx} href={photo} target="_blank" rel="noopener noreferrer">
+                        <img
+                          src={photo}
+                          alt={`Foto ${idx + 1}`}
+                          className="w-full h-32 object-cover rounded-md border hover:opacity-90 transition-opacity cursor-pointer"
+                        />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

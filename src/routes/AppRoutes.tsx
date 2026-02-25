@@ -188,7 +188,9 @@ const Layout: React.FC = () => {
             <div>
               <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Administração</p>
               <div className="space-y-0.5">
-                <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" onClick={closeSidebar} />
+                {hasPermission('settings_edit') && (
+                  <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" onClick={closeSidebar} />
+                )}
                 {hasPermission('user_management') && (
                   <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
                 )}
@@ -250,7 +252,7 @@ const Layout: React.FC = () => {
                 <Route path="/report" element={<PermissionGuard permission="report_object"><ReportGenerator /></PermissionGuard>} />
                 <Route path="/team-report" element={<PermissionGuard permission="report_team"><TeamReportGenerator /></PermissionGuard>} />
                 <Route path="/justificativa" element={<PermissionGuard permission="report_team"><JustificationReportGenerator /></PermissionGuard>} />
-                <Route path="/settings" element={<Settings />} />
+                <Route path="/settings" element={<PermissionGuard permission="settings_edit"><Settings /></PermissionGuard>} />
                 <Route path="/users" element={<PermissionGuard permission="user_management"><UserManagement /></PermissionGuard>} />
                 <Route path="/team" element={<PermissionGuard permission="team_management"><TeamManagement /></PermissionGuard>} />
                 <Route path="/templates" element={<ReportTemplates />} />
