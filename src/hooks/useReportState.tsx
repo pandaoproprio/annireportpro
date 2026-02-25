@@ -97,34 +97,39 @@ export const useReportState = () => {
     }
   }, [project]);
 
-  const saveReportData = (showToast = true) => {
-    updateReportData({
-      objectOverride: objectText,
-      executiveSummary: summary,
-      goalNarratives,
-      goalPhotos,
-      otherActionsText: otherActionsNarrative,
-      otherActionsPhotos,
-      communicationText: communicationNarrative,
-      communicationPhotos,
-      satisfactionText: satisfaction,
-      futureActionsText: futureActions,
-      expenses,
-      links: {
-        attendanceList: links.attendance,
-        registrationList: links.registration,
-        mediaFolder: links.media,
-        attendanceFileName: linkFileNames.attendance,
-        registrationFileName: linkFileNames.registration,
-        mediaFileName: linkFileNames.media,
-      },
-      sections: sectionManager.sections,
-      sectionPhotos: fileUploader.sectionPhotos,
-      sectionDocs: fileUploader.sectionDocs,
-      photoMetadata,
-      pageLayouts,
-    } as any);
-    if (showToast) toast.success('Rascunho salvo com sucesso!');
+  const saveReportData = async (showToast = true) => {
+    try {
+      await updateReportData({
+        objectOverride: objectText,
+        executiveSummary: summary,
+        goalNarratives,
+        goalPhotos,
+        otherActionsText: otherActionsNarrative,
+        otherActionsPhotos,
+        communicationText: communicationNarrative,
+        communicationPhotos,
+        satisfactionText: satisfaction,
+        futureActionsText: futureActions,
+        expenses,
+        links: {
+          attendanceList: links.attendance,
+          registrationList: links.registration,
+          mediaFolder: links.media,
+          attendanceFileName: linkFileNames.attendance,
+          registrationFileName: linkFileNames.registration,
+          mediaFileName: linkFileNames.media,
+        },
+        sections: sectionManager.sections,
+        sectionPhotos: fileUploader.sectionPhotos,
+        sectionDocs: fileUploader.sectionDocs,
+        photoMetadata,
+        pageLayouts,
+      } as any);
+      if (showToast) toast.success('Rascunho salvo com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar rascunho do relatório:', error);
+      toast.error('Erro ao salvar rascunho. Tente novamente.');
+    }
   };
 
   // Expense management
