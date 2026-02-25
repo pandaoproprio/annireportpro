@@ -137,7 +137,7 @@ export const useJustificationReportState = () => {
     });
     setAttachmentFiles(draft.attachmentFiles || []);
     fileUploader.setSectionPhotos(draft.sectionPhotos || {});
-    fileUploader.setSectionDocs((draft as any).sectionDocs || {});
+    fileUploader.setSectionDocs((draft as any).section_docs || (draft as any).sectionDocs || {});
     sectionManager.setSections(DEFAULT_SECTIONS);
     setShowDraftsList(false);
   };
@@ -163,6 +163,7 @@ export const useJustificationReportState = () => {
         attachments_section: sectionContents.attachmentsSection,
         attachment_files: attachmentFiles as any,
         section_photos: fileUploader.sectionPhotos as any,
+        section_docs: fileUploader.sectionDocs as any,
         is_draft: true,
       };
 
