@@ -1,166 +1,291 @@
 
 
-# Padronizacao Definitiva dos Exportadores PDF
-
-## Resumo
-
-Criar `src/lib/pdfHelpers.ts` como modulo central unico, extraindo as funcoes de renderizacao do `teamReportPdfExport.ts` (modelo correto). Refatorar os 3 exportadores para importar desse modulo. Eliminar `html2pdf.js` da Justificativa.
+# AUDITORIA ESTRUTURAL COMPLETA — GIRA Relatorios
 
 ---
 
-## Estrutura Final de Dependencia
+## FASE 1 — MAPA DO SISTEMA
+
+### 1.1 Paginas Relacionadas a Relatorios
+
+| Arquivo | Responsabilidade | Tipo de Relatorio |
+|---|---|---|
+| `src/pages/ReportGenerator.tsx` | Relatorio Parcial de Cumprimento do Objeto | report_object |
+| `src/pages/TeamReportGenerator.tsx` | Relatorio da Equipe de Trabalho | report_team |
+| `src/pages/JustificationReportGenerator.tsx` | Justificativa de Prorrogacao | justification |
+| `src/pages/ReportTemplates.tsx` | Listagem/gestao de templates | Todos |
+| `src/pages/ReportTemplateEditor.tsx` | Edicao de templates | Todos |
+| `src/pages/WysiwygEditorPage.tsx` | Editor visual WYSIWYG | Documentos avulsos |
+| `src/pages/DocumentEditorPage.tsx` | Editor de documentos estruturado | Documentos avulsos |
+
+### 1.2 Componentes Envolvidos
+
+| Componente | Responsabilidade |
+|---|---|
+| `ReportToolbar` | Barra com botoes de modo (edit/preview), exportacao PDF/DOCX, link para WYSIWYG |
+| `ReportStructureEditor` | Drag-and-drop de secoes (ordem, visibilidade, titulo, adicionar/remover) |
+| `ReportVisualConfigEditor` | Editor visual de cabecalho (banner, logos), capa e rodape |
+| `ReportEditSection` | Formulario de preenchimento de cada secao do Relatorio do Objeto |
+| `ReportPreviewSection` | Renderizacao de preview de cada secao do Relatorio do Objeto |
+| `ReportLogoEditor` | Upload e gestao de logos |
+| `ReportPageEditor` | Editor de pagina individual |
+| `PhotoGallerySection` | Grid de fotos com legendas |
+| `ImageLayoutEditor` | Layout avancado Konva para posicionar fotos |
+| `ImageEditorDialog` | Edicao/crop de imagens |
+| `AiTextToolbar` / `AiNarrativeButton` | Geracao de texto via IA |
+| `JustificationEditSection` | Editor de secoes da Justificativa |
+| `JustificationPreviewSection` | Preview de secoes da Justificativa |
+| `JustificationDraftsList` | Lista de rascunhos da Justificativa |
+| `RichTextEditor` (Tiptap) | Editor rich-text compartilhado por TODOS os relatorios |
+| `TeamReportPdfContent` | Componente React-PDF (nao utilizado no fluxo principal) |
+
+### 1.3 Hooks Utilizados
+
+| Hook | Busca dados de | Responsabilidade |
+|---|---|---|
+| `useReportState` | `projects.report_data` (via AppDataContext) | Estado do Relatorio do Objeto (conteudo, secoes, fotos, uploads). Salva em `projects.report_data` (JSONB) |
+| `useReportVisualConfig` | `project_report_templates` (filtro: project_id + report_type) | Config visual (cabecalho, rodape, capa). Independente por tipo |
+| `useJustificationReportState` | `justification_reports` (Supabase direto) | Estado da Justificativa. Salva em tabela dedicada |
+| `useTeamReports` | `team_reports` (Supabase direto) | CRUD de rascunhos do Relatorio da Equipe |
+| `useReportTemplates` | `report_templates` | CRUD de templates globais |
+| `useJustificationReports` | `justification_reports` | Listagem de justificativas (redundante com useJustificationReportState) |
+
+### 1.4 Duplicacao de Logica Identificada
+
+1. **CRITICA: `useReportState` guarda campos visuais legados (logo, footerText, headerBannerUrl) no state local E esses campos tambem existem em `useReportVisualConfig`**. O `useReportState` inicializa a partir de `projects.report_data` e o `useReportVisualConfig` inicializa a partir de `project_report_templates.report_data`. Sao DUAS fontes de verdade para os mesmos dados visuais.
+
+2. **Upload de logos duplicado**: `useReportState.handleLogoUpload` faz upload e seta state local. `useReportVisualConfig.handleLogoUpload` faz upload e seta + persiste. O `ReportGenerator` usa APENAS `useReportVisualConfig` para exibicao, mas `useReportState` ainda carrega e salva campos visuais no `projects.report_data`.
+
+3. **Funcoes de filtro de atividades duplicadas**: `getActivitiesByGoal`, `getCommunicationActivities`, `getOtherActivities` e `formatActivityDate` existem em 3 locais: `useReportState`, `reportPdfExport.ts` e `docxExport.ts`.
+
+4. **Gestao de secoes duplicada**: `moveSection`, `toggleVisibility`, `updateSectionTitle`, `addCustomSection`, `removeSection` sao implementadas identicamente em `useReportState` e `useJustificationReportState`.
+
+5. **Logica de upload de fotos/docs duplicada**: Upload para Storage, geracao de URL publica e gestao de state sao copy-paste entre `useReportState`, `useJustificationReportState` e `TeamReportGenerator` (inline).
+
+---
+
+## FASE 2 — ESTRUTURA DE BANCO
+
+### 2.1 Tabelas Relacionadas
+
+| Tabela | Funcao | Campos-chave |
+|---|---|---|
+| `projects` | Armazena dados do projeto + `report_data` (JSONB legado) | `id`, `report_data`, `goals`, `team` |
+| `project_report_templates` | Config visual POR projeto + tipo | `project_id`, `report_type`, `report_data` (JSONB), `template_id` (nullable) |
+| `report_templates` | Templates globais reutilizaveis | `structure` (JSONB), `type`, `is_active` |
+| `team_reports` | Rascunhos do Relatorio da Equipe | `project_id`, `team_member_id`, `execution_report`, `photos`, `photo_captions` |
+| `justification_reports` | Rascunhos da Justificativa | `project_id`, `object_section`, `section_photos` (JSONB) |
+| `documents` | Documentos do editor WYSIWYG | `project_id`, `content` (JSONB - DocumentModel) |
+| `document_versions` | Historico de versoes do editor | `document_id`, `content_snapshot` |
+| `audit_logs` / `system_logs` | Auditoria | `entity_type`, `action`, `old_data`, `new_data` |
+
+### 2.2 Inconsistencias Encontradas
+
+1. **Duplicacao de responsabilidade entre `projects.report_data` e `project_report_templates.report_data`**:
+   - `projects.report_data` armazena: conteudo textual (narrativas, resumo), fotos por secao, metadata de fotos, layouts de pagina, E campos visuais legados (logo, headerBannerUrl, footerText).
+   - `project_report_templates.report_data` armazena: configuracao visual (logo, banner, rodape, capa).
+   - **Risco ALTO**: Os campos visuais existem em ambos os locais. O `useReportState` salva logo/banner em `projects.report_data`, enquanto `useReportVisualConfig` salva em `project_report_templates`. O exportador PDF le APENAS de `visualConfig` (correto), mas dados orfaos podem causar confusao.
+
+2. **`project_report_templates.template_id` sempre NULL**: O campo `template_id` referencia `report_templates.id` mas na pratica nenhum relatorio cria esse vinculo. A coluna e inutil.
+
+3. **`projects.report_data` e um "God Field"**: Contem narrativas, fotos, metadata, layouts, secoes customizadas, links de documentos, despesas — tudo em um unico campo JSONB sem schema. Qualquer mudanca pode corromper dados sem validacao.
+
+4. **Nao existe `section_docs` na tabela `justification_reports`**: O hook `useJustificationReportState` salva `section_docs` como campo extra no payload, mas a tabela nao possui essa coluna. Os dados sao silenciosamente ignorados no INSERT/UPDATE.
+
+5. **Scope de config visual**: `project_report_templates` usa `project_id + report_type` como chave logica mas NAO possui UNIQUE constraint. Pode haver registros duplicados.
+
+---
+
+## FASE 3 — PIPELINE DE EXPORTACAO
+
+### 3.1 Fluxo Completo
 
 ```text
-src/lib/pdfHelpers.ts  (UNICA FONTE DE VERDADE)
-    |
-    +-- src/lib/teamReportPdfExport.ts   (importa de pdfHelpers)
-    |
-    +-- src/lib/reportPdfExport.ts       (importa de pdfHelpers)
-    |
-    +-- src/lib/justificationPdfExport.ts (importa de pdfHelpers)
-
-src/pages/JustificationReportGenerator.tsx
-    -> remove html2pdf.js
-    -> chama exportJustificationToPdf()
+                    +-----------------------+
+                    |   Preview (React)     |
+                    |  (componentes inline  |
+                    |   em cada Generator)  |
+                    +-----------+-----------+
+                                |
+                    NÃO COMPARTILHA LÓGICA
+                                |
+                    +-----------v-----------+
+                    |   Export Engine        |
+                    |   (chamada direta)     |
+                    +-----------+-----------+
+                                |
+               +----------------+----------------+
+               |                                 |
+    +----------v----------+           +----------v----------+
+    |   PDF (jsPDF)       |           |   DOCX (docx lib)   |
+    |   pdfHelpers.ts     |           |   docxExport.ts     |
+    |   reportPdfExport   |           |   teamReportDocx    |
+    |   teamReportPdf     |           |   justificationDocx |
+    |   justificationPdf  |           +---------------------+
+    +---------------------+
 ```
 
----
+### 3.2 Biblioteca Utilizada
 
-## ETAPA 1 -- Criar `src/lib/pdfHelpers.ts`
+| Formato | Biblioteca | Motor |
+|---|---|---|
+| PDF (Relatorios) | **jsPDF** (nativo, client-side) | Motor manual com calculo de posicao Y, justificacao manual de texto, grid de fotos |
+| PDF (Editor WYSIWYG) | **@react-pdf/renderer** | Motor declarativo React |
+| DOCX | **docx** (lib) | Gerador estruturado |
 
-Novo arquivo contendo todas as constantes e funcoes extraidas do `teamReportPdfExport.ts`:
+### 3.3 Logica Duplicada entre Preview e Export
 
-**Constantes ABNT exportadas:**
-- `PAGE_W = 210`, `PAGE_H = 297`
-- `ML = 30`, `MR = 20`, `MT = 30`, `MB = 20`
-- `CW = 160` (PAGE_W - ML - MR)
-- `MAX_Y = 277` (PAGE_H - MB)
-- `LINE_H = 7.2`
-- `INDENT = 12.5`
-- `FONT_BODY = 12`, `FONT_CAPTION = 10`
+**Preview e Export sao engines COMPLETAMENTE DIFERENTES**.
 
-**Tipo auxiliar exportado:**
-- `TextBlock = { type: 'paragraph' | 'bullet'; content: string }`
+- **Preview**: Renderizado via React/CSS com `style={{ fontFamily: 'Times New Roman', fontSize: '12pt', padding: '30mm 20mm 20mm 30mm' }}`. Utiliza CSS inline, flexbox e containers A4 (`min-h-[297mm]`).
+- **PDF**: Renderizado via jsPDF com calculo manual de posicao Y (`ctx.currentY += LINE_H`), word-wrapping manual e justificacao manual.
+- **DOCX**: Renderizado via lib `docx` com paragrafos estruturados.
 
-**Interface de contexto (para evitar passar pdf + currentY como globals):**
-- `PdfContext = { pdf: jsPDF; currentY: number; pageCount: number }`
+**Implicacao**: NAO existe paridade garantida. O preview e uma aproximacao visual, nao uma representacao fiel do PDF. Divergencias sao inevitaveis.
 
-**Funcoes exportadas (todas recebem/retornam PdfContext):**
+### 3.4 Pontos Frageis
 
-| Funcao | Descricao |
-|---|---|
-| `createPdfContext()` | Cria jsPDF A4 portrait e retorna PdfContext |
-| `addPage(ctx)` | Adiciona pagina, reseta currentY |
-| `ensureSpace(ctx, h)` | Verifica espaco, chama addPage se necessario |
-| `addParagraph(ctx, text)` | Paragrafo justificado com recuo 12.5mm, 1.5 spacing |
-| `addSectionTitle(ctx, title)` | Titulo de secao em negrito, Times 12pt |
-| `addBulletItem(ctx, text)` | Item com bullet, deteccao de label em negrito |
-| `addHeaderLine(ctx, label, value)` | Par label:valor no cabecalho |
-| `parseHtmlToBlocks(html)` | Converte HTML em TextBlock[] |
-| `loadImage(url)` | Carrega imagem como dataURL |
-| `addPhotoGrid(ctx, photos, label)` | Grade 2 colunas com legendas |
-| `addFooterAndPageNumbers(ctx, orgName, skipPage1)` | Loop final: rodape + paginacao |
-| `addSignatureBlock(ctx, orgName, date, sigLabel, extra?)` | Bloco de assinatura padrao |
+1. **Calculo de quebra de pagina no PDF e manual**: `ensureSpace(ctx, h)` verifica se `currentY + h > MAX_Y`. Se o bloco excede, cria nova pagina. Mas a altura estimada pode ser imprecisa (especialmente para texto rico com formatacao mista).
+
+2. **O DOCX do Relatorio do Objeto NAO renderiza fotos nem galerias**: `docxExport.ts` apenas processa texto. Fotos sao completamente ignoradas.
+
+3. **O DOCX nao processa rich-text HTML**: A funcao `textToParagraphs` faz split por `\n` e gera paragrafos planos. Tags `<strong>`, `<em>`, `<img>` sao descartadas.
+
+4. **O headerConfig e copiado manualmente 3 vezes**: Os 3 exportadores PDF (`reportPdfExport`, `teamReportPdfExport`, `justificationPdfExport`) constroem `ctx.headerConfig` com o mesmo bloco de 20+ linhas de mapeamento de propriedades. Qualquer correcao precisa ser replicada em 3 arquivos.
+
+5. **O post-pass de footer/header funciona de forma global**: `addFooterAndPageNumbers` itera por TODAS as paginas do PDF e carimba header/footer. Nao ha mecanismo para excluir paginas intermediarias.
 
 ---
 
-## ETAPA 2 -- Refatorar `teamReportPdfExport.ts`
+## FASE 4 — PAGINACAO E LAYOUT
 
-**Remover:** Todas as constantes duplicadas (PAGE_W, ML, LINE_H, etc.), funcoes `addParagraph`, `addBulletText`, `addSectionTitle`, `addHeaderLine`, `ensureSpace`, `loadImage`, `parseHtmlToBlocks`.
+### 4.1 Calculo de Alturas
 
-**Adicionar:** `import { ... } from '@/lib/pdfHelpers'`
+| Variavel | Valor | Definido em |
+|---|---|---|
+| `MT` (margin top) | 30mm | `pdfHelpers.ts` |
+| `MB` (margin bottom) | 20mm | `pdfHelpers.ts` |
+| `MAX_Y` | 273mm (`PAGE_H - MB - 4`) | `pdfHelpers.ts` |
+| `LINE_H` | 7.2mm | `pdfHelpers.ts` |
+| `HEADER_BANNER_H` | 20mm | `pdfHelpers.ts` |
+| `HEADER_LOGO_H` | 12mm | `pdfHelpers.ts` |
+| `headerContentSpacing` | Configuravel (default 8mm) | `ReportVisualConfig` |
 
-**Manter:** Logica especifica do relatorio da equipe (dados de identificacao, relato de execucao, secoes adicionais, fotos com legendas customizadas, bloco de assinatura com Nome/Cargo/CNPJ).
+### 4.2 Calculo de `contentStartY`
 
-Nenhuma alteracao visual -- o PDF gerado sera identico ao atual.
-
----
-
-## ETAPA 3 -- Refatorar `reportPdfExport.ts`
-
-**Remover:** Todas as constantes duplicadas e funcoes locais (`addParagraph`, `addSectionTitle`, `addSubSectionTitle`, `addBulletItem`, `addPhotoGrid`, `loadImage`, `ensureSpace`).
-
-**Adicionar:** `import { ... } from '@/lib/pdfHelpers'`
-
-**Correcoes aplicadas:**
-- Remover `.toUpperCase()` do `addSectionTitle` (linha 111) -- o titulo ja vem formatado corretamente da estrutura de secoes
-- Assinatura: usar `addSignatureBlock()` do pdfHelpers para alinhar com o modelo da Equipe
-- Rodape: usar `addFooterAndPageNumbers()` unificado
-
-**Manter:** Logica especifica (capa, tabela de despesas, links, atividades por meta).
-
----
-
-## ETAPA 4 -- Reescrever `justificationPdfExport.ts`
-
-**Remover:** Todo o conteudo atual (constantes `ABNT`, funcoes `writeWrappedText`, `parseHtmlAndWrite`, `checkPageBreak`, `addFooter`).
-
-**Reescrever usando pdfHelpers:**
-- `import { createPdfContext, addParagraph, addSectionTitle, addHeaderLine, parseHtmlToBlocks, addBulletItem, addFooterAndPageNumbers, addSignatureBlock, ensureSpace, LINE_H, ML, PAGE_W, CW } from '@/lib/pdfHelpers'`
-- Titulo centralizado (Times 16pt bold)
-- Header: 3x `addHeaderLine()` (Projeto, Termo, Organizacao)
-- Destinatario: paragrafo "Ao [funder],"
-- Secoes: loop usando `addSectionTitle()` + `parseHtmlToBlocks()` + `addParagraph()`/`addBulletItem()`
-- Assinatura: `addSignatureBlock()`
-- Rodape: `addFooterAndPageNumbers(ctx, orgName, true)` (pular pag 1)
-
-**Bugs corrigidos:**
-- LINE_HEIGHT de 7 para 7.2
-- Adicionar `align: 'justify'` nos paragrafos
-- Adicionar recuo 12.5mm na primeira linha
-- Assinatura com linha horizontal (nao underscores)
-
----
-
-## ETAPA 5 -- Corrigir `JustificationReportGenerator.tsx`
-
-**Remover:**
-- `import html2pdf from 'html2pdf.js'` (linha 8)
-- `const reportRef = useRef<HTMLDivElement>(null)` (linha 19) -- nao mais necessario para PDF
-- Todo o bloco `handleExportPdf` (linhas 59-93) que usa html2pdf
-
-**Adicionar:**
-- `import { exportJustificationToPdf } from '@/lib/justificationPdfExport'`
-
-**Novo `handleExportPdf`:**
-```typescript
-const handleExportPdf = async () => {
-  if (!hasContent) { toast.error('Preencha ao menos uma secao'); return; }
-  setIsExporting(true);
-  setExportType('pdf');
-  try {
-    await exportJustificationToPdf({ project, report: buildReportData() });
-    toast.success('PDF exportado com sucesso!');
-  } catch (error) {
-    console.error('Erro ao exportar PDF:', error);
-    toast.error('Erro ao exportar PDF');
-  } finally {
-    setIsExporting(false);
-    setExportType(null);
-  }
-};
+```text
+getContentStartY(ctx):
+  Se tem banner: topPadding + bannerHeight + contentSpacing
+  Se tem logos:  topPadding + 3 + headerHeight + contentSpacing
+  Senao:         MT (30mm)
 ```
 
-**Nota:** O `reportRef` ainda e necessario para o preview HTML, entao ele permanece, mas nao e mais usado pelo exportador PDF.
+### 4.3 Calculo de `footerY`
+
+```text
+footerLineY = PAGE_H - 18 = 279mm
+pageNumber = PAGE_H - 10 = 287mm
+```
+
+### 4.4 Duplicacao de Margem
+
+**SIM, existe duplicacao**. O preview aplica `padding: '30mm 20mm 20mm 30mm'` via CSS, enquanto o PDF usa constantes `ML=30, MR=20, MT=30, MB=20`. Os valores coincidem, mas sao definidos em locais independentes sem vinculo.
+
+### 4.5 Preview = PDF?
+
+**NAO. Sao engines completamente diferentes.**
+
+- Preview: CSS containers com `min-h-[297mm]`, sem quebra de pagina real (cada secao visivel gera um container A4 separado, mas o conteudo pode exceder).
+- PDF: Calculo manual de posicao com `ensureSpace` e `addPage`.
+- O preview cria 1 pagina A4 por secao. O PDF pode quebrar uma secao em multiplas paginas ou consolidar multiplas secoes em uma pagina.
 
 ---
 
-## Arquivos Modificados (resumo)
+## FASE 5 — IDENTIFICACAO DE REGRESSOES
 
-| Arquivo | Acao |
-|---|---|
-| `src/lib/pdfHelpers.ts` | **NOVO** -- modulo central |
-| `src/lib/teamReportPdfExport.ts` | Refatorado -- importa de pdfHelpers |
-| `src/lib/reportPdfExport.ts` | Refatorado -- importa de pdfHelpers, remove .toUpperCase() |
-| `src/lib/justificationPdfExport.ts` | Reescrito -- usa pdfHelpers, corrige LINE_H/justify/indent |
-| `src/pages/JustificationReportGenerator.tsx` | Remove html2pdf, chama exportJustificationToPdf nativo |
+### Risco CRITICO
+
+| # | Problema | Arquivo(s) | Risco |
+|---|---|---|---|
+| 1 | **Duas fontes de verdade para config visual** (projects.report_data vs project_report_templates) | `useReportState`, `useReportVisualConfig` | CRITICO |
+| 2 | **Preview e PDF sao engines diferentes** — divergencia inevitavel | `ReportGenerator.tsx` vs `reportPdfExport.ts` | CRITICO |
+| 3 | **DOCX nao exporta fotos, rich-text nem galerias** | `docxExport.ts` | CRITICO |
+
+### Risco ALTO
+
+| # | Problema | Arquivo(s) |
+|---|---|---|
+| 4 | `headerConfig` copiado em 3 exportadores PDF (20+ linhas identicas) | `reportPdfExport`, `teamReportPdfExport`, `justificationPdfExport` |
+| 5 | `section_docs` salvo pela Justificativa mas coluna NAO existe na tabela | `useJustificationReportState` |
+| 6 | Sem UNIQUE constraint em `project_report_templates(project_id, report_type)` | Schema DB |
+| 7 | `projects.report_data` e um God Field sem schema — nenhuma validacao | `useReportState`, `projects` table |
+
+### Risco MEDIO
+
+| # | Problema | Arquivo(s) |
+|---|---|---|
+| 8 | Funcoes de filtro de atividades duplicadas em 3 locais | `useReportState`, `reportPdfExport.ts`, `docxExport.ts` |
+| 9 | Logica de gestao de secoes copy-paste entre 2 hooks | `useReportState`, `useJustificationReportState` |
+| 10 | Upload de fotos/docs duplicado em 3 modulos (sem utilitario compartilhado) | Hooks de estado |
+| 11 | `useJustificationReports` e redundante com `useJustificationReportState` | Hooks |
+| 12 | Preview renderiza rodape com `<ReportFooter>` inline (JSX), PDF renderiza com `addFooterAndPageNumbers` (jsPDF) — logica desacoplada | `ReportGenerator.tsx` vs `pdfHelpers.ts` |
+
+### Risco BAIXO
+
+| # | Problema | Arquivo(s) |
+|---|---|---|
+| 13 | Valor magico `* 3` e `* 2.5` para conversao mm→px no preview | `ReportGenerator.tsx` (linhas 100-103, 113, 248-249) |
+| 14 | `project_report_templates.template_id` sempre NULL | Schema DB |
+| 15 | `TeamReportGenerator` nao utiliza hook de estado dedicado — state todo inline (~500 linhas) | `TeamReportGenerator.tsx` |
 
 ---
 
-## Riscos de Regressao
+## FASE 6 — AVALIACAO DE MATURIDADE
 
-1. **Equipe:** Risco minimo -- apenas extraindo funcoes para modulo externo, sem alterar logica
-2. **Objeto:** Risco baixo -- remocao do .toUpperCase() pode alterar visualmente titulos de secao (intencional)
-3. **Justificativa:** Risco medio -- reescrita completa do exportador; o PDF tera aparencia diferente da versao html2pdf (intencional, pois agora seguira ABNT corretamente)
-4. **html2pdf.js removido:** O pacote ainda ficara no package.json mas nao sera mais importado em nenhum lugar; pode ser removido do package.json separadamente se desejado
+### Classificacao: **Nivel 3 — Funcional com Inconsistencias**
+
+### Justificativa Tecnica
+
+**Pontos positivos (justificam acima de Nivel 2):**
+- O motor PDF centralizado em `pdfHelpers.ts` e bem estruturado com constantes ABNT, funcoes reutilizaveis e post-pass de header/footer
+- Config visual por projeto + tipo (`useReportVisualConfig`) e um padrao solido
+- Suporte a rich-text (bold/italic/underline) no PDF com composite words
+- Sistema de galeria inline funcional
+- Persistencia de rascunhos com soft-delete
+
+**Pontos negativos (impedem Nivel 4):**
+- Duas fontes de verdade para dados visuais (regressao estrutural)
+- Preview e PDF sao engines independentes sem paridade garantida
+- DOCX ignora fotos, rich-text e galerias (exportacao parcial)
+- God Field `projects.report_data` sem schema
+- Duplicacao massiva de logica entre modulos (uploads, secoes, filtros)
+- Sem testes automatizados para exportacao
+- `TeamReportGenerator` com 1000+ linhas de state inline (nao modularizado)
+- Coluna inexistente sendo gravada silenciosamente (`section_docs` na Justificativa)
+
+---
+
+## RECOMENDACAO ESTRATEGICA (sem implementar)
+
+### Prioridade 1 — Eliminar fontes de verdade duplicadas
+- Remover campos visuais legados de `projects.report_data` (logo, headerBannerUrl, footerText, etc.)
+- Consolidar TODA config visual em `project_report_templates.report_data` via `useReportVisualConfig`
+- Limpar `useReportState` para conter APENAS dados de conteudo
+
+### Prioridade 2 — Unificar motor de exportacao
+- Extrair `buildHeaderConfig(vc)` como funcao utilitaria em `pdfHelpers.ts` para eliminar as 3 copias
+- Criar `writeHtmlContent(ctx, html)` como funcao publica em `pdfHelpers.ts` (ja existe localmente em `reportPdfExport`)
+- Atualizar `docxExport.ts` para processar HTML via parser (usar `parseHtmlToBlocks`)
+
+### Prioridade 3 — Modularizar codigo duplicado
+- Extrair hooks utilitarios: `useSectionManager`, `useFileUploader`, `useActivityFilters`
+- Refatorar `TeamReportGenerator` para usar hook de estado dedicado (similar a `useJustificationReportState`)
+
+### Prioridade 4 — Corrigir integridade de dados
+- Adicionar UNIQUE constraint em `project_report_templates(project_id, report_type)`
+- Adicionar coluna `section_docs` na tabela `justification_reports`
+- Considerar migrar `projects.report_data` conteudo para tabela dedicada `report_object_drafts`
+
+### Prioridade 5 — Aproximar preview do PDF
+- Substituir o preview CSS por um renderizador que use as mesmas constantes de layout do `pdfHelpers.ts` (ou usar `@react-pdf/renderer` como camada de preview unificada)
 
