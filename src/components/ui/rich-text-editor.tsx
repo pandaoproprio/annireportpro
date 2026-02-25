@@ -347,7 +347,7 @@ interface RichTextEditorProps {
   }, [editor, uploadFile]);
 
   // Multiple images upload → gallery grid
-  const handleGalleryUpload = useCallback(async (files: FileList) => {
+  const handleGalleryUpload = useCallback(async (files: File[] | FileList) => {
     if (!editor || files.length === 0) return;
     setUploading(true);
     setUploadProgress(`Enviando 0/${files.length}...`);
@@ -493,7 +493,7 @@ interface RichTextEditorProps {
               accept="image/*"
               multiple
               className="hidden"
-              onChange={(e) => { if (e.target.files && e.target.files.length > 0) handleGalleryUpload(e.target.files); e.target.value = ''; }}
+              onChange={(e) => { if (e.target.files && e.target.files.length > 0) { const fileArray = Array.from(e.target.files); handleGalleryUpload(fileArray); } e.target.value = ''; }}
             />
             <Toggle
               size="sm"
