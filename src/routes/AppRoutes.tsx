@@ -47,6 +47,7 @@ const ReportTemplates = lazy(() => import('@/pages/ReportTemplates').then(m => (
 const ReportTemplateEditor = lazy(() => import('@/pages/ReportTemplateEditor').then(m => ({ default: m.ReportTemplateEditor })));
 const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'));
 const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'));
+const ReportV2Page = lazy(() => import('@/modules/reports-v2/ReportV2Page'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -170,6 +171,7 @@ const Layout: React.FC = () => {
                 {hasPermission('report_object') && <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" onClick={closeSidebar} />}
                 {hasPermission('report_team') && <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" onClick={closeSidebar} />}
                 {hasPermission('report_team') && <SidebarLink to="/justificativa" icon={<FileText className="w-5 h-5" />} label="Justificativa Prorrogação" onClick={closeSidebar} />}
+                {hasPermission('report_object') && <SidebarLink to="/report-v2" icon={<BarChart3 className="w-5 h-5" />} label="Relatório V2" onClick={closeSidebar} />}
                 {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />}
               </div>
             </div>
@@ -266,6 +268,7 @@ const Layout: React.FC = () => {
                 <Route path="/editor" element={<DocumentEditorPage />} />
                 <Route path="/wysiwyg/:id" element={<WysiwygEditorPage />} />
                 <Route path="/wysiwyg" element={<WysiwygEditorPage />} />
+                <Route path="/report-v2" element={<PermissionGuard permission="report_object"><ReportV2Page /></PermissionGuard>} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
