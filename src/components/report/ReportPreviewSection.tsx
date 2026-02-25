@@ -14,26 +14,26 @@ const RichContent: React.FC<{ html: string; className?: string; style?: React.CS
   const temp = document.createElement('div');
   temp.innerHTML = html;
 
-  temp.childNodes.forEach((node, idx) => {
+  const processNode = (node: ChildNode, idx: number) => {
     if (node instanceof HTMLElement) {
       // Gallery node
-      if (node.hasAttribute('data-gallery') || node.getAttribute('data-gallery') !== null) {
+      if (node.hasAttribute('data-gallery')) {
         try {
           const images: Array<{ src: string; caption: string; heightPx?: number }> = JSON.parse(node.getAttribute('data-images') || '[]');
           const columns = parseInt(node.getAttribute('data-columns') || '2', 10);
           const groupCaption = node.getAttribute('data-group-caption') || '';
           if (images.length > 0) {
             parts.push(
-              <div key={`gallery-${idx}`} className="my-6">
-                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: '24px' }}>
+              <div key={`gallery-${idx}`} style={{ margin: '16px 0' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: '12px' }}>
                   {images.map((img, i) => (
-                    <div key={i} className="break-inside-avoid">
-                      <img src={img.src} alt={img.caption || `Imagem ${i + 1}`} style={{ width: '100%', height: img.heightPx ? `${img.heightPx}px` : 'auto', objectFit: 'contain', borderRadius: '6px', border: '1px solid #e5e7eb' }} />
-                      {img.caption && <p style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic', marginTop: '6px', textAlign: 'center' }}>{img.caption}</p>}
+                    <div key={i}>
+                      <img src={img.src} alt={img.caption || `Imagem ${i + 1}`} style={{ width: '100%', height: img.heightPx ? `${img.heightPx}px` : 'auto', objectFit: 'contain', borderRadius: '4px' }} />
+                      {img.caption && <p style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic', marginTop: '4px', textAlign: 'center' }}>{img.caption}</p>}
                     </div>
                   ))}
                 </div>
-                {groupCaption && <p style={{ fontSize: '11px', color: '#6b7280', fontStyle: 'italic', marginTop: '8px', textAlign: 'center' }}>{groupCaption}</p>}
+                {groupCaption && <p style={{ fontSize: '12px', color: '#374151', fontStyle: 'italic', marginTop: '8px', textAlign: 'center' }}>{groupCaption}</p>}
               </div>
             );
             return;
@@ -41,18 +41,21 @@ const RichContent: React.FC<{ html: string; className?: string; style?: React.CS
         } catch { /* fall through */ }
       }
 
-      // Inline image with custom caption/width
-      if (node.tagName === 'IMG') {
-        const src = node.getAttribute('src') || '';
-        const caption = node.getAttribute('data-caption') || '';
-        const widthPct = parseInt(node.getAttribute('data-width') || '100', 10);
-        parts.push(
-          <div key={`img-${idx}`} className="my-3 text-center">
-            <img src={src} alt={caption || 'Imagem'} style={{ width: `${widthPct}%`, margin: '0 auto' }} className="rounded-md max-w-full block mx-auto" />
-            {caption && <p className="text-xs text-muted-foreground italic mt-1">{caption}</p>}
-          </div>
-        );
-        return;
+      // Inline image (direct <img> or <img> inside a <p>)
+      const imgEl = node.tagName === 'IMG' ? node : node.querySelector('img[data-caption], img[data-width]');
+      if (imgEl) {
+        const src = imgEl.getAttribute('src') || '';
+        const caption = imgEl.getAttribute('data-caption') || '';
+        const widthPct = parseInt(imgEl.getAttribute('data-width') || '100', 10);
+        if (src) {
+          parts.push(
+            <div key={`img-${idx}`} style={{ margin: '12px 0', textAlign: 'center' }}>
+              <img src={src} alt={caption || 'Imagem'} style={{ width: `${widthPct}%`, maxWidth: '100%', display: 'block', margin: '0 auto', borderRadius: '4px' }} />
+              {caption && <p style={{ fontSize: '12px', color: '#374151', fontStyle: 'italic', marginTop: '6px', textAlign: 'center' }}>{caption}</p>}
+            </div>
+          );
+          return;
+        }
       }
     }
 
@@ -60,7 +63,9 @@ const RichContent: React.FC<{ html: string; className?: string; style?: React.CS
     const wrapper = document.createElement('div');
     wrapper.appendChild(node.cloneNode(true));
     parts.push(<div key={`html-${idx}`} dangerouslySetInnerHTML={{ __html: wrapper.innerHTML }} />);
-  });
+  };
+
+  temp.childNodes.forEach((node, idx) => processNode(node, idx));
 
   return <div className={className} style={style}>{parts}</div>;
 };
