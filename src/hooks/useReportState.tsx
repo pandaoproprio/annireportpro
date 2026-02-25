@@ -54,6 +54,12 @@ export const useReportState = () => {
 
   // Initialize from project data only when project ID changes (not on every reference change)
   const initializedProjectId = useRef<string | null>(null);
+
+  // Reset ref on unmount so data reloads when navigating back
+  useEffect(() => {
+    return () => { initializedProjectId.current = null; };
+  }, []);
+
   useEffect(() => {
     if (project && project.id !== initializedProjectId.current) {
       initializedProjectId.current = project.id;
