@@ -74,6 +74,8 @@ const InlineImageView: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
             <Input
               value={caption}
               onChange={(e) => updateAttributes({ 'data-caption': e.target.value })}
+              onKeyDown={(e) => e.stopPropagation()}
+              onKeyUp={(e) => e.stopPropagation()}
               placeholder="Ex: Imagem 1: Reunião Geral - Praça Floriano, nº 55"
               className="text-sm h-8"
               autoFocus
@@ -210,6 +212,8 @@ const GalleryView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected
             <Input
               value={groupCaption}
               onChange={(e) => updateAttributes({ groupCaption: e.target.value })}
+              onKeyDown={(e) => e.stopPropagation()}
+              onKeyUp={(e) => e.stopPropagation()}
               placeholder="Ex: Figura 1 e 2: Artes de divulgação das oficinas"
               className="text-sm h-8"
             />
@@ -225,6 +229,8 @@ const GalleryView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected
                   <Input
                     value={img.caption}
                     onChange={(e) => updateImage(i, { caption: e.target.value })}
+                    onKeyDown={(e) => e.stopPropagation()}
+                    onKeyUp={(e) => e.stopPropagation()}
                     placeholder={`Legenda individual (opcional)`}
                     className="text-sm h-8 flex-1"
                   />
