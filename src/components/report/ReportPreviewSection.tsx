@@ -1,19 +1,24 @@
 import React from 'react';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta } from '@/types';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
+import { INDENT } from '@/lib/previewConstants';
 
 // Renders rich-text HTML content safely (from Tiptap editor)
 const RichContent: React.FC<{ html: string; className?: string; style?: React.CSSProperties }> = ({ html, className, style }) => {
   if (!html || (!html.includes('<') && !html.includes('&'))) {
-    // Plain text — render as-is
     return <div className={className} style={style}>{html}</div>;
   }
   return <div className={className} style={style} dangerouslySetInnerHTML={{ __html: html }} />;
 };
 
+// ABNT-aligned text indent (1.25 cm = 12.5 mm)
+const indentStyle: React.CSSProperties = { textIndent: `${INDENT}mm` };
+
+// Section title style: bold only, no underline (matches PDF addSectionTitle)
+const sectionTitleClass = "text-lg font-bold uppercase mb-4";
+
 interface Props {
   section: ReportSection;
-  // Data
   objectText: string;
   summary: string;
   goalNarratives: Record<string, string>;
@@ -26,17 +31,14 @@ interface Props {
   futureActions: string;
   expenses: ExpenseItem[];
   links: { attendance: string; registration: string; media: string };
-  // Per-section photos + metadata
   sectionPhotos?: Record<string, string[]>;
   photoMetadata?: Record<string, ReportPhotoMeta[]>;
-  // Project
   goals: Goal[];
   organizationName: string;
   organizationAddress?: string;
   organizationWebsite?: string;
   organizationEmail?: string;
   organizationPhone?: string;
-  // Helpers
   getActivitiesByGoal: (goalId: string) => Activity[];
   getCommunicationActivities: () => Activity[];
   getOtherActivities: () => Activity[];
@@ -59,7 +61,6 @@ const PreviewPhoto: React.FC<{ photo: string; meta?: ReportPhotoMeta; index: num
   );
 };
 
-// Renders a list of photos with their metadata
 const PreviewPhotoGrid: React.FC<{ photos: string[]; metas?: ReportPhotoMeta[]; title?: string }> = ({ photos, metas, title }) => {
   if (!photos || photos.length === 0) return null;
   return (
@@ -78,7 +79,6 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
   const { section } = props;
   if (!section.isVisible) return null;
 
-  // Get section-level photos
   const sectionKey = section.type === 'custom' ? section.id : section.key;
   const secPhotos = props.sectionPhotos?.[sectionKey] || [];
   const secMetas = props.photoMetadata?.[sectionKey] || [];
@@ -102,7 +102,7 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
     default:
       return (
         <section key={section.id} className="mb-8 page-break">
-          <h3 className="text-lg font-bold uppercase mb-4 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
+          <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
           <RichContent html={section.content || ''} className="text-justify" />
           {renderSectionPhotos()}
         </section>
@@ -112,22 +112,22 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
 
 const ObjectPreview: React.FC<Props> = ({ section, objectText }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
-    <RichContent html={objectText} className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }} />
+    <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
+    <RichContent html={objectText} className="text-justify leading-relaxed" style={indentStyle} />
   </section>
 );
 
 const SummaryPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({ section, summary, renderPhotos }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
-    <RichContent html={summary} className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }} />
+    <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
+    <RichContent html={summary} className="text-justify leading-relaxed" style={indentStyle} />
     {renderPhotos?.()}
   </section>
 );
 
 const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, getActivitiesByGoal, formatActivityDate }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-6 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
+    <h3 className={`${sectionTitleClass} mb-6`} style={{ textAlign: 'left' }}>{section.title}</h3>
     {goals.map((goal, idx) => {
       const goalActs = getActivitiesByGoal(goal.id);
       const manualPhotos = goalPhotos[goal.id] || [];
@@ -138,7 +138,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
       return (
         <div key={goal.id} className="mb-10">
           <h4 className="font-bold mb-3" style={{ textAlign: 'left', color: '#000' }}>{goal.title}</h4>
-          <RichContent html={goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'} className="text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }} />
+          <RichContent html={goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'} className="text-justify mb-4 leading-relaxed" style={indentStyle} />
           {goalActs.length > 0 && (
             <div className="mt-4 text-sm">
               <p className="font-medium mb-2">Atividades realizadas:</p>
@@ -168,8 +168,8 @@ const OtherPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> =
   return (
     <React.Fragment>
       <section className="mb-8 page-break">
-        <h3 className="text-lg font-bold uppercase mb-4 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
-        <RichContent html={otherActionsNarrative || '[Descreva outras informações diversas sobre o projeto]'} className="text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }} />
+        <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
+        <RichContent html={otherActionsNarrative || '[Descreva outras informações diversas sobre o projeto]'} className="text-justify mb-4 leading-relaxed" style={indentStyle} />
         {otherActs.length > 0 && (
           <div className="mt-4 text-sm">
             {otherActs.map(act => (
@@ -200,8 +200,8 @@ const CommunicationPreview: React.FC<Props & { renderPhotos?: () => React.ReactN
   return (
     <React.Fragment>
       <section className="mb-8 page-break">
-        <h3 className="text-lg font-bold uppercase mb-4 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
-        <RichContent html={communicationNarrative || '[Descreva as ações de divulgação]'} className="text-justify mb-4 leading-relaxed" style={{ textIndent: '1.25cm' }} />
+        <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
+        <RichContent html={communicationNarrative || '[Descreva as ações de divulgação]'} className="text-justify mb-4 leading-relaxed" style={indentStyle} />
         {commActs.length > 0 && (
           <div className="mt-4 text-sm">
             {commActs.map(act => (
@@ -224,23 +224,23 @@ const CommunicationPreview: React.FC<Props & { renderPhotos?: () => React.ReactN
 
 const SatisfactionPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({ section, satisfaction, renderPhotos }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
-    <RichContent html={satisfaction || '[Descreva a visão do público sobre o projeto e os principais feedbacks]'} className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }} />
+    <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
+    <RichContent html={satisfaction || '[Descreva a visão do público sobre o projeto e os principais feedbacks]'} className="text-justify leading-relaxed" style={indentStyle} />
     {renderPhotos?.()}
   </section>
 );
 
 const FuturePreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({ section, futureActions, renderPhotos }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
-    <RichContent html={futureActions || '[Descreva as ações futuras do projeto]'} className="text-justify leading-relaxed" style={{ textIndent: '1.25cm' }} />
+    <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
+    <RichContent html={futureActions || '[Descreva as ações futuras do projeto]'} className="text-justify leading-relaxed" style={indentStyle} />
     {renderPhotos?.()}
   </section>
 );
 
 const ExpensesPreview: React.FC<Props> = ({ section, expenses }) => (
   <section className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
+    <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
     <p className="text-sm text-muted-foreground mb-4">Insira fotos e descreva sobre o uso e aplicação de cada item de despesa previsto no plano de trabalho.</p>
     {expenses.length === 0 ? (
       <p className="text-muted-foreground italic">[Nenhum item de despesa registrado]</p>
@@ -269,7 +269,7 @@ const ExpensesPreview: React.FC<Props> = ({ section, expenses }) => (
 
 const LinksPreview = React.forwardRef<HTMLElement, Props>(({ section, links }, ref) => (
   <section ref={ref} className="mb-8 page-break">
-    <h3 className="text-lg font-bold uppercase mb-4 pb-2 border-b border-foreground" style={{ textAlign: 'left' }}>{section.title}</h3>
+    <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
     <ul className="space-y-3 text-sm">
       <li><strong>Listas de Presença:</strong>{' '}{links.attendance ? <a href={links.attendance} className="text-primary underline break-all">{links.attendance}</a> : '[Insira o link]'}</li>
       <li><strong>Listas de Inscrição:</strong>{' '}{links.registration ? <a href={links.registration} className="text-primary underline break-all">{links.registration}</a> : '[Insira o link]'}</li>
