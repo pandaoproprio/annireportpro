@@ -3,7 +3,7 @@ import { JustificationReport } from '@/types/justificationReport';
 import {
   createPdfContext, ensureSpace, addParagraph, addBulletItem, addRichParagraph,
   addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
-  parseHtmlToBlocks, preloadHeaderImages, addInlineImage, addGalleryGrid,
+  parseHtmlToBlocks, preloadHeaderImages, addInlineImage, addGalleryGrid, buildHeaderConfig,
   PAGE_W, CW, LINE_H,
 } from '@/lib/pdfHelpers';
 import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
@@ -32,25 +32,8 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
   );
 
   const ctx = createPdfContext();
-  
-  if (vc && (bannerImg || logoImg || logoCenterImg || logoSecondaryImg)) {
-    ctx.headerConfig = {
-      bannerImg, bannerHeightMm: vc.headerBannerHeightMm, bannerFit: vc.headerBannerFit, bannerVisible: vc.headerBannerVisible,
-      logoImg, logoSecondaryImg, logoCenterImg,
-      headerLeftText: vc.headerLeftText, headerRightText: vc.headerRightText,
-      logoVisible: vc.logoConfig?.visible,
-      logoCenterVisible: vc.logoCenterConfig?.visible,
-      logoSecondaryVisible: vc.logoSecondaryConfig?.visible,
-      logoWidthMm: vc.logoConfig?.widthMm,
-      logoCenterWidthMm: vc.logoCenterConfig?.widthMm,
-      logoSecondaryWidthMm: vc.logoSecondaryConfig?.widthMm,
-      logoAlignment: vc.headerLogoAlignment,
-      logoGapMm: vc.headerLogoGap,
-      topPaddingMm: vc.headerTopPadding,
-      headerHeightMm: vc.headerHeight,
-      contentSpacingMm: vc.headerContentSpacing,
-    };
-  }
+  const headerCfg = buildHeaderConfig(vc, { bannerImg, logoImg, logoSecondaryImg, logoCenterImg });
+  if (headerCfg) ctx.headerConfig = headerCfg;
 
   const { pdf } = ctx;
 

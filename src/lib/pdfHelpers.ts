@@ -87,6 +87,39 @@ export interface PdfContext {
   headerConfig?: HeaderConfig;
 }
 
+// ── Build HeaderConfig from visual config + preloaded images (shared utility) ──
+export const buildHeaderConfig = (
+  vc: { headerBannerHeightMm?: number; headerBannerFit?: 'contain' | 'cover' | 'fill'; headerBannerVisible?: boolean;
+    headerLeftText?: string; headerRightText?: string;
+    logoConfig?: { visible?: boolean; widthMm?: number };
+    logoCenterConfig?: { visible?: boolean; widthMm?: number };
+    logoSecondaryConfig?: { visible?: boolean; widthMm?: number };
+    headerLogoAlignment?: 'left' | 'center' | 'right' | 'space-between' | 'space-around';
+    headerLogoGap?: number; headerTopPadding?: number; headerHeight?: number; headerContentSpacing?: number;
+  } | undefined,
+  images: { bannerImg?: PreloadedImage | null; logoImg?: PreloadedImage | null; logoSecondaryImg?: PreloadedImage | null; logoCenterImg?: PreloadedImage | null },
+): HeaderConfig | undefined => {
+  if (!vc) return undefined;
+  const { bannerImg, logoImg, logoSecondaryImg, logoCenterImg } = images;
+  if (!bannerImg && !logoImg && !logoCenterImg && !logoSecondaryImg) return undefined;
+  return {
+    bannerImg, bannerHeightMm: vc.headerBannerHeightMm, bannerFit: vc.headerBannerFit, bannerVisible: vc.headerBannerVisible,
+    logoImg, logoSecondaryImg, logoCenterImg,
+    headerLeftText: vc.headerLeftText, headerRightText: vc.headerRightText,
+    logoVisible: vc.logoConfig?.visible,
+    logoCenterVisible: vc.logoCenterConfig?.visible,
+    logoSecondaryVisible: vc.logoSecondaryConfig?.visible,
+    logoWidthMm: vc.logoConfig?.widthMm,
+    logoCenterWidthMm: vc.logoCenterConfig?.widthMm,
+    logoSecondaryWidthMm: vc.logoSecondaryConfig?.widthMm,
+    logoAlignment: vc.headerLogoAlignment,
+    logoGapMm: vc.headerLogoGap,
+    topPaddingMm: vc.headerTopPadding,
+    headerHeightMm: vc.headerHeight,
+    contentSpacingMm: vc.headerContentSpacing,
+  };
+};
+
 // ── Context creation ──
 export const createPdfContext = (): PdfContext => {
   const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
