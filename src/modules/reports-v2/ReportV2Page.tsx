@@ -4,6 +4,7 @@ import { useAppData } from '@/contexts/AppDataContext';
 import { Eye, FileEdit, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ReportV2Data } from './types';
+import { DEFAULT_HEADER } from './types';
 import ReportForm from './ReportForm';
 import ReportPreview from './ReportPreview';
 import { generatePdf } from './pdfGenerator';
@@ -20,6 +21,7 @@ const ReportV2Page: React.FC = () => {
     object: '',
     summary: '',
     sections: [],
+    header: DEFAULT_HEADER,
   });
 
   // Pre-fill from active project
