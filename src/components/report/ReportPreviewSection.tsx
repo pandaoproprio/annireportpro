@@ -8,7 +8,57 @@ const RichContent: React.FC<{ html: string; className?: string; style?: React.CS
   if (!html || (!html.includes('<') && !html.includes('&'))) {
     return <div className={className} style={style}>{html}</div>;
   }
-  return <div className={className} style={style} dangerouslySetInnerHTML={{ __html: html }} />;
+
+  // Parse gallery and inline-image nodes so they render in preview
+  const parts: React.ReactNode[] = [];
+  const temp = document.createElement('div');
+  temp.innerHTML = html;
+
+  temp.childNodes.forEach((node, idx) => {
+    if (node instanceof HTMLElement) {
+      // Gallery node
+      if (node.hasAttribute('data-gallery') || node.getAttribute('data-gallery') !== null) {
+        try {
+          const images: Array<{ src: string; caption: string }> = JSON.parse(node.getAttribute('data-images') || '[]');
+          const columns = parseInt(node.getAttribute('data-columns') || '2', 10);
+          if (images.length > 0) {
+            parts.push(
+              <div key={`gallery-${idx}`} className="my-4 grid gap-3" style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+                {images.map((img, i) => (
+                  <div key={i}>
+                    <img src={img.src} alt={img.caption || `Imagem ${i + 1}`} className="rounded-md w-full h-auto object-contain" />
+                    {img.caption && <p className="text-xs text-muted-foreground italic mt-1 text-center">{img.caption}</p>}
+                  </div>
+                ))}
+              </div>
+            );
+            return;
+          }
+        } catch { /* fall through */ }
+      }
+
+      // Inline image with custom caption/width
+      if (node.tagName === 'IMG') {
+        const src = node.getAttribute('src') || '';
+        const caption = node.getAttribute('data-caption') || '';
+        const widthPct = parseInt(node.getAttribute('data-width') || '100', 10);
+        parts.push(
+          <div key={`img-${idx}`} className="my-3 text-center">
+            <img src={src} alt={caption || 'Imagem'} style={{ width: `${widthPct}%`, margin: '0 auto' }} className="rounded-md max-w-full block mx-auto" />
+            {caption && <p className="text-xs text-muted-foreground italic mt-1">{caption}</p>}
+          </div>
+        );
+        return;
+      }
+    }
+
+    // Default: render as HTML
+    const wrapper = document.createElement('div');
+    wrapper.appendChild(node.cloneNode(true));
+    parts.push(<div key={`html-${idx}`} dangerouslySetInnerHTML={{ __html: wrapper.innerHTML }} />);
+  });
+
+  return <div className={className} style={style}>{parts}</div>;
 };
 
 // ABNT-aligned text indent (1.25 cm = 12.5 mm)
