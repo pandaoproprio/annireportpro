@@ -1,5 +1,5 @@
-import React, { forwardRef, useRef, useCallback } from 'react';
-import { useEditor, EditorContent } from '@tiptap/react';
+import React, { forwardRef, useRef, useCallback, useState, useEffect } from 'react';
+import { useEditor, EditorContent, NodeViewWrapper, NodeViewProps, ReactNodeViewRenderer } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TiptapImage from '@tiptap/extension-image';
@@ -18,6 +18,94 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { Input } from '@/components/ui/input';
+import { Slider } from '@/components/ui/slider';
+
+// ── Custom Image NodeView with caption + resize ──
+const InlineImageView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }) => {
+  const [editing, setEditing] = useState(false);
+  const caption = node.attrs['data-caption'] || '';
+  const widthPct = node.attrs['data-width'] || 100;
+
+  return (
+    <NodeViewWrapper className="my-3">
+      <div
+        className={cn(
+          'relative inline-block w-full text-center group cursor-pointer',
+          selected && 'ring-2 ring-primary/50 ring-offset-2 rounded'
+        )}
+        onClick={() => setEditing(true)}
+      >
+        <img
+          src={node.attrs.src}
+          alt={node.attrs.alt || caption || 'Imagem'}
+          style={{ width: `${widthPct}%`, margin: '0 auto' }}
+          className="rounded-md max-w-full block mx-auto"
+          draggable={false}
+        />
+        {caption && !editing && (
+          <p className="text-xs text-muted-foreground italic mt-1">{caption}</p>
+        )}
+        {!caption && !editing && (
+          <p className="text-xs text-muted-foreground/50 italic mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            Clique para adicionar legenda e ajustar tamanho
+          </p>
+        )}
+      </div>
+
+      {editing && (
+        <div
+          className="mt-2 p-3 border rounded-lg bg-muted/50 space-y-3"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">Legenda da imagem</label>
+            <Input
+              value={caption}
+              onChange={(e) => updateAttributes({ 'data-caption': e.target.value })}
+              placeholder="Ex: Imagem 1: Reunião Geral - Praça Floriano, nº 55"
+              className="text-sm h-8"
+              autoFocus
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-medium text-muted-foreground">
+              Largura: {widthPct}%
+            </label>
+            <Slider
+              value={[widthPct]}
+              onValueChange={([v]) => updateAttributes({ 'data-width': v })}
+              min={20}
+              max={100}
+              step={5}
+              className="w-full"
+            />
+          </div>
+          <button
+            onClick={() => setEditing(false)}
+            className="text-xs text-primary font-medium hover:underline"
+          >
+            Concluído
+          </button>
+        </div>
+      )}
+    </NodeViewWrapper>
+  );
+};
+
+// ── Extended Image Extension ──
+const CustomImage = TiptapImage.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      'data-caption': { default: '', parseHTML: el => el.getAttribute('data-caption') || '', renderHTML: attrs => ({ 'data-caption': attrs['data-caption'] || '' }) },
+      'data-width': { default: 100, parseHTML: el => parseInt(el.getAttribute('data-width') || '100', 10), renderHTML: attrs => ({ 'data-width': String(attrs['data-width'] || 100) }) },
+    };
+  },
+  addNodeView() {
+    return ReactNodeViewRenderer(InlineImageView);
+  },
+});
 
 interface RichTextEditorProps {
   value: string;
@@ -39,10 +127,9 @@ interface RichTextEditorProps {
         orderedList: { keepMarks: true, keepAttributes: false },
       }),
       Underline.configure({}),
-      ...(enableImages ? [TiptapImage.configure({
+      ...(enableImages ? [CustomImage.configure({
         inline: false,
         allowBase64: false,
-        HTMLAttributes: { class: 'rounded-md max-w-full my-2' },
       })] : []),
     ],
     content: value,
@@ -68,7 +155,12 @@ interface RichTextEditorProps {
       const { error } = await supabase.storage.from('team-report-photos').upload(path, file, { contentType: file.type });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(path);
-      editor.chain().focus().setImage({ src: urlData.publicUrl, alt: 'Imagem inserida' }).run();
+      editor.chain().focus().setImage({
+        src: urlData.publicUrl,
+        alt: 'Imagem inserida',
+        'data-caption': '',
+        'data-width': 80,
+      } as any).run();
     } catch {
       toast.error('Erro ao enviar imagem');
     } finally {
@@ -187,7 +279,7 @@ interface RichTextEditorProps {
       {/* Editor */}
       <EditorContent 
         editor={editor} 
-        className="[&_.ProseMirror]:min-h-[250px] [&_.ProseMirror_p]:my-2 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:ml-6 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:ml-6 [&_.ProseMirror_li]:my-1 [&_.ProseMirror_img]:max-w-full [&_.ProseMirror_img]:rounded-md [&_.ProseMirror_img]:my-3"
+        className="[&_.ProseMirror]:min-h-[250px] [&_.ProseMirror_p]:my-2 [&_.ProseMirror_ul]:list-disc [&_.ProseMirror_ul]:ml-6 [&_.ProseMirror_ol]:list-decimal [&_.ProseMirror_ol]:ml-6 [&_.ProseMirror_li]:my-1"
       />
       
       {!value && (

@@ -80,7 +80,7 @@ export const exportJustificationToPdf = async (data: JustificationExportData) =>
     addSectionTitle(ctx, section.title);
     const blocks = parseHtmlToBlocks(report[section.key]);
     for (const block of blocks) {
-      if (block.type === 'image' && block.imageSrc) await addInlineImage(ctx, block.imageSrc, block.imageCaption);
+      if (block.type === 'image' && block.imageSrc) await addInlineImage(ctx, block.imageSrc, block.imageCaption, block.imageWidthPct);
       else if (block.type === 'bullet') addBulletItem(ctx, block.content);
       else if (block.segments && block.segments.some(s => s.bold || s.italic || s.underline)) addRichParagraph(ctx, block.segments);
       else addParagraph(ctx, block.content);

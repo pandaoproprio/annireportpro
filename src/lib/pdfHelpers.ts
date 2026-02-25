@@ -40,6 +40,7 @@ export interface TextBlock {
   segments?: StyledSegment[];
   imageSrc?: string;
   imageCaption?: string;
+  imageWidthPct?: number;
 }
 
 export interface PreloadedImage {
@@ -338,8 +339,9 @@ export const parseHtmlToBlocks = (html: string): TextBlock[] => {
       const tag = el.tagName.toLowerCase();
       if (tag === 'img') {
         const src = el.getAttribute('src') || '';
-        const alt = el.getAttribute('alt') || '';
-        if (src) blocks.push({ type: 'image', content: alt, imageSrc: src, imageCaption: alt });
+        const caption = el.getAttribute('data-caption') || el.getAttribute('alt') || '';
+        const widthPct = parseInt(el.getAttribute('data-width') || '100', 10);
+        if (src) blocks.push({ type: 'image', content: caption, imageSrc: src, imageCaption: caption, imageWidthPct: widthPct });
       } else if (tag === 'li') {
         const t = el.textContent?.trim() || '';
         const segs = extractSegments(el);
@@ -349,8 +351,9 @@ export const parseHtmlToBlocks = (html: string): TextBlock[] => {
         const imgEl = el.querySelector('img');
         if (imgEl) {
           const src = imgEl.getAttribute('src') || '';
-          const alt = imgEl.getAttribute('alt') || '';
-          if (src) blocks.push({ type: 'image', content: alt, imageSrc: src, imageCaption: alt });
+          const caption = imgEl.getAttribute('data-caption') || imgEl.getAttribute('alt') || '';
+          const widthPct = parseInt(imgEl.getAttribute('data-width') || '100', 10);
+          if (src) blocks.push({ type: 'image', content: caption, imageSrc: src, imageCaption: caption, imageWidthPct: widthPct });
           // Also process non-img text in the paragraph
           const textContent = el.textContent?.trim() || '';
           if (textContent) {
@@ -512,17 +515,18 @@ export const loadImage = async (url: string): Promise<{ data: string; width: num
 };
 
 // ── Inline image (from rich-text editor) ──
-export const addInlineImage = async (ctx: PdfContext, src: string, caption?: string): Promise<void> => {
+export const addInlineImage = async (ctx: PdfContext, src: string, caption?: string, widthPct?: number): Promise<void> => {
   const imgData = await loadImage(src);
   if (!imgData) return;
   const { pdf } = ctx;
-  const maxW = CW;
-  const maxH = 90; // max height in mm
+  const pct = Math.max(20, Math.min(100, widthPct || 100));
+  const maxW = CW * (pct / 100);
+  const maxH = 110;
   const aspect = imgData.width / imgData.height;
   let drawW = maxW;
   let drawH = drawW / aspect;
   if (drawH > maxH) { drawH = maxH; drawW = drawH * aspect; }
-  const totalH = drawH + (caption ? 10 : 4);
+  const totalH = drawH + (caption ? 14 : 4);
   ensureSpace(ctx, totalH);
   const x = ML + (CW - drawW) / 2; // center
   try { pdf.addImage(imgData.data, 'JPEG', x, ctx.currentY, drawW, drawH); } catch (e) { console.warn('Inline img error:', e); }
