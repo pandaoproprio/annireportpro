@@ -318,10 +318,13 @@ export const Settings: React.FC = () => {
                       {formData.goals.length > 0 && (
                         <ul className="space-y-2">
                           {formData.goals.map((goal, idx) => (
-                            <li key={goal.id || idx} className="flex justify-between items-center p-2 bg-muted rounded">
-                              <div>
-                                <span className="font-medium">{goal.title}</span>
-                                {goal.targetAudience && <span className="text-sm text-muted-foreground ml-2">({goal.targetAudience})</span>}
+                            <li key={goal.id || idx} className="flex justify-between items-start p-2 bg-muted rounded">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{goal.title}</span>
+                                  {goal.targetAudience && <span className="text-sm text-muted-foreground">({goal.targetAudience})</span>}
+                                </div>
+                                {goal.description && <p className="text-sm text-muted-foreground mt-1">{goal.description}</p>}
                               </div>
                               <Button type="button" variant="ghost" size="icon" onClick={() => removeGoal(idx)}>
                                 <Trash2 className="w-4 h-4 text-destructive" />
