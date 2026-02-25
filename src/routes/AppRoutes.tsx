@@ -126,12 +126,14 @@ const Layout: React.FC = () => {
           {/* Navigation */}
           <nav className="flex-1 px-3 py-4 space-y-4 overflow-auto">
             {/* Visão Geral */}
-            <div>
-              <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Visão Geral</p>
-              <div className="space-y-0.5">
-                <SidebarLink to="/" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" onClick={closeSidebar} />
+            {hasPermission('dashboard') && (
+              <div>
+                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Visão Geral</p>
+                <div className="space-y-0.5">
+                  <SidebarLink to="/" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" onClick={closeSidebar} />
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Projetos */}
             {projects.length > 0 && (
@@ -185,20 +187,22 @@ const Layout: React.FC = () => {
             )}
 
             {/* Administração */}
-            <div>
-              <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Administração</p>
-              <div className="space-y-0.5">
-                {hasPermission('settings_edit') && (
-                  <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" onClick={closeSidebar} />
-                )}
-                {hasPermission('user_management') && (
-                  <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
-                )}
-                {hasPermission('system_logs') && (
-                  <SidebarLink to="/logs" icon={<ScrollText className="w-5 h-5" />} label="Logs do Sistema" onClick={closeSidebar} />
-                )}
+            {(hasPermission('settings_edit') || hasPermission('user_management') || hasPermission('system_logs')) && (
+              <div>
+                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Administração</p>
+                <div className="space-y-0.5">
+                  {hasPermission('settings_edit') && (
+                    <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" onClick={closeSidebar} />
+                  )}
+                  {hasPermission('user_management') && (
+                    <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
+                  )}
+                  {hasPermission('system_logs') && (
+                    <SidebarLink to="/logs" icon={<ScrollText className="w-5 h-5" />} label="Logs do Sistema" onClick={closeSidebar} />
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </nav>
 
           {/* User Info */}

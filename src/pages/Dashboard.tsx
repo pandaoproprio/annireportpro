@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useAppData } from '@/contexts/AppDataContext';
 import { StatCard } from '@/components/StatCard';
 import { Button } from '@/components/ui/button';
@@ -40,13 +41,20 @@ const DashboardSkeleton = () => (
 
 export const Dashboard: React.FC = () => {
   const { profile, role } = useAuth();
+  const { hasPermission } = usePermissions();
   const { activeProject: project, projects, isLoadingProjects: projectsLoading, activities, isLoadingActivities: activitiesLoading } = useAppData();
+  const canCreateProject = role === 'SUPER_ADMIN' || role === 'ADMIN';
+
+  // Redirect users without dashboard permission to their default page
+  if (!hasPermission('dashboard')) {
+    return <Navigate to="/activities" replace />;
+  }
 
   if (projectsLoading) {
     return <DashboardSkeleton />;
   }
   
-  // Empty Project State (Admins Only)
+  // Empty Project State
   if (!project) {
     return (
       <div className="flex flex-col items-center justify-center h-[80vh] animate-fadeIn text-center">
@@ -57,14 +65,18 @@ export const Dashboard: React.FC = () => {
             </div>
             <h2 className="text-2xl font-display font-bold text-foreground mb-2">Bem-vindo ao GIRA Relatórios</h2>
             <p className="text-muted-foreground mb-6">
-              Nenhum projeto foi configurado ainda. Crie seu primeiro projeto para começar.
+              {canCreateProject
+                ? 'Nenhum projeto foi configurado ainda. Crie seu primeiro projeto para começar.'
+                : 'Nenhum projeto foi vinculado à sua conta. Entre em contato com o administrador.'}
             </p>
-            <Link to="/setup">
-              <Button className="w-full sm:w-auto">
-                <PlusCircle className="w-4 h-4 mr-2" />
-                Configurar Novo Projeto
-              </Button>
-            </Link>
+            {canCreateProject && (
+              <Link to="/setup">
+                <Button className="w-full sm:w-auto">
+                  <PlusCircle className="w-4 h-4 mr-2" />
+                  Configurar Novo Projeto
+                </Button>
+              </Link>
+            )}
           </CardContent>
         </Card>
       </div>
