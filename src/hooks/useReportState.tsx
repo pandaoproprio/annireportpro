@@ -28,18 +28,6 @@ export const useReportState = () => {
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
   const [isExporting, setIsExporting] = useState(false);
   const [exportType, setExportType] = useState<'pdf' | 'docx' | null>(null);
-  const [logo, setLogo] = useState('');
-  const [logoCenter, setLogoCenter] = useState('');
-  const [logoSecondary, setLogoSecondary] = useState('');
-  const [coverTitle, setCoverTitle] = useState('Relatório Parcial de Cumprimento do Objeto');
-  const [coverSubtitle, setCoverSubtitle] = useState('');
-  const [headerLeftText, setHeaderLeftText] = useState('');
-  const [headerRightText, setHeaderRightText] = useState('');
-  const [footerText, setFooterText] = useState('');
-  const [footerShowAddress, setFooterShowAddress] = useState(true);
-  const [footerShowContact, setFooterShowContact] = useState(true);
-  const [footerAlignment, setFooterAlignment] = useState<'left' | 'center' | 'right'>('center');
-  const [headerBannerUrl, setHeaderBannerUrl] = useState('');
   const [objectText, setObjectText] = useState('');
   const [summary, setSummary] = useState('');
   const [goalNarratives, setGoalNarratives] = useState<Record<string, string>>({});
@@ -62,22 +50,10 @@ export const useReportState = () => {
   const [photoMetadata, setPhotoMetadata] = useState<Record<string, ReportPhotoMeta[]>>({});
   const [pageLayouts, setPageLayouts] = useState<Record<string, PageLayout>>({});
 
-  // Initialize from project data
+  // Initialize from project data (content only — visual config is in useReportVisualConfig)
   useEffect(() => {
     if (project) {
       const rd = project.reportData || {};
-      setLogo(rd.logo || '');
-      setLogoCenter(rd.logoCenter || '');
-      setLogoSecondary(rd.logoSecondary || '');
-      setCoverTitle(rd.coverTitle || 'Relatório Parcial de Cumprimento do Objeto');
-      setCoverSubtitle(rd.coverSubtitle || '');
-      setHeaderLeftText(rd.headerLeftText || '');
-      setHeaderRightText(rd.headerRightText || '');
-      setHeaderBannerUrl(rd.headerBannerUrl || '');
-      setFooterText(rd.footerText || '');
-      setFooterShowAddress(rd.footerShowAddress !== false);
-      setFooterShowContact(rd.footerShowContact !== false);
-      setFooterAlignment(rd.footerAlignment || 'center');
       setObjectText(rd.objectOverride || project.object || '');
       setSummary(rd.executiveSummary || project.summary || '');
       setGoalNarratives(rd.goalNarratives || {});
@@ -113,18 +89,6 @@ export const useReportState = () => {
 
   const saveReportData = (showToast = true) => {
     updateReportData({
-      logo,
-      logoCenter,
-      logoSecondary,
-      coverTitle,
-      coverSubtitle,
-      headerBannerUrl,
-      headerLeftText,
-      headerRightText,
-      footerText,
-      footerShowAddress,
-      footerShowContact,
-      footerAlignment,
       objectOverride: objectText,
       executiveSummary: summary,
       goalNarratives,
@@ -226,24 +190,6 @@ export const useReportState = () => {
   const removeExpense = (id: string) => setExpenses(expenses.filter(e => e.id !== id));
 
   // Photo uploads
-  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>, position: 'primary' | 'center' | 'secondary' = 'primary') => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      try {
-        const photoId = crypto.randomUUID();
-        const fileExt = file.name.split('.').pop() || 'png';
-        const filePath = `reports/${project?.id}/logos/${position}_${photoId}.${fileExt}`;
-        const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
-        if (error) { toast.error('Erro ao enviar logo'); return; }
-        const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
-        if (position === 'secondary') setLogoSecondary(urlData.publicUrl);
-        else if (position === 'center') setLogoCenter(urlData.publicUrl);
-        else setLogo(urlData.publicUrl);
-        toast.success('Logo enviado com sucesso');
-      } catch { toast.error('Erro ao processar logo'); }
-    }
-  };
-
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<string[]>>) => {
     if (e.target.files && e.target.files.length > 0) {
       for (const file of Array.from(e.target.files)) {
@@ -484,11 +430,6 @@ export const useReportState = () => {
   return {
     project, activities,
     mode, setMode, isExporting, setIsExporting, exportType, setExportType,
-    logo, setLogo, logoCenter, setLogoCenter, logoSecondary, setLogoSecondary,
-    coverTitle, setCoverTitle, coverSubtitle, setCoverSubtitle,
-    headerLeftText, setHeaderLeftText, headerRightText, setHeaderRightText,
-    headerBannerUrl, setHeaderBannerUrl,
-    footerText, setFooterText, footerShowAddress, setFooterShowAddress, footerShowContact, setFooterShowContact, footerAlignment, setFooterAlignment,
     objectText, setObjectText, summary, setSummary,
     goalNarratives, setGoalNarratives, goalPhotos, setGoalPhotos,
     otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,
@@ -502,7 +443,7 @@ export const useReportState = () => {
     moveSection, toggleVisibility, updateSectionTitle, updateCustomContent, addCustomSection, removeSection,
     pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     addExpense, updateExpense, removeExpense,
-    handleLogoUpload, handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
+    handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
     handleDocumentUpload,
     handleSectionPhotoUpload, removeSectionPhoto,
     handleSectionDocUpload, removeSectionDoc,
