@@ -13,6 +13,7 @@ import { ReportEditSection } from '@/components/report/ReportEditSection';
 import { ReportPreviewSection } from '@/components/report/ReportPreviewSection';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
+import { mmToPx, a4PageStyle, MR, ML, MB } from '@/lib/previewConstants';
 
 export const ReportGenerator: React.FC = () => {
   const state = useReportState();
@@ -97,32 +98,32 @@ export const ReportGenerator: React.FC = () => {
 
   // Dynamic header height: use banner height when banner is active, else headerHeight
   const effectiveHeaderHeightPx = config.headerBannerUrl && config.headerBannerVisible
-    ? config.headerBannerHeightMm * 3
-    : config.headerHeight * 2;
+    ? mmToPx(config.headerBannerHeightMm)
+    : mmToPx(config.headerHeight);
 
-  const headerContentGapPx = (config.headerContentSpacing ?? 8) * 3; // mm→px approx
+  const headerContentGapPx = mmToPx(config.headerContentSpacing ?? 8);
 
   const ReportHeader = () => (
     <div className="pb-4 border-b print:border-b-0" style={{ paddingTop: `${config.headerTopPadding}px`, minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px` }}>
       {config.headerBannerUrl && config.headerBannerVisible ? (
-        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ height: `${config.headerBannerHeightMm * 3}px`, objectFit: config.headerBannerFit }} />
+        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ height: `${mmToPx(config.headerBannerHeightMm)}px`, objectFit: config.headerBannerFit }} />
       ) : (
-        <div className="flex items-center" style={{ justifyContent: logoJustify, gap: `${config.headerLogoGap * 2}px` }}>
+        <div className="flex items-center" style={{ justifyContent: logoJustify, gap: `${mmToPx(config.headerLogoGap)}px` }}>
           <div className="flex items-center gap-3">
             {config.logo && config.logoConfig.visible && (
-              <img src={config.logo} alt="Logo" className="object-contain" style={{ width: `${config.logoConfig.widthMm * 2.5}px` }} />
+              <img src={config.logo} alt="Logo" className="object-contain" style={{ width: `${mmToPx(config.logoConfig.widthMm)}px` }} />
             )}
             {config.headerLeftText && <span className="text-xs text-muted-foreground">{config.headerLeftText}</span>}
           </div>
           <div className="flex items-center justify-center">
             {config.logoCenter && config.logoCenterConfig.visible && (
-              <img src={config.logoCenter} alt="Logo Centro" className="object-contain" style={{ width: `${config.logoCenterConfig.widthMm * 2.5}px` }} />
+              <img src={config.logoCenter} alt="Logo Centro" className="object-contain" style={{ width: `${mmToPx(config.logoCenterConfig.widthMm)}px` }} />
             )}
           </div>
           <div className="flex items-center gap-3">
             {config.headerRightText && <span className="text-xs text-muted-foreground">{config.headerRightText}</span>}
             {config.logoSecondary && config.logoSecondaryConfig.visible && (
-              <img src={config.logoSecondary} alt="Logo Secundário" className="object-contain" style={{ width: `${config.logoSecondaryConfig.widthMm * 2.5}px` }} />
+              <img src={config.logoSecondary} alt="Logo Secundário" className="object-contain" style={{ width: `${mmToPx(config.logoSecondaryConfig.widthMm)}px` }} />
             )}
           </div>
         </div>
@@ -240,12 +241,12 @@ export const ReportGenerator: React.FC = () => {
       {mode === 'preview' && (
         <div className="bg-muted p-4 md:p-8 rounded-lg overflow-auto no-print animate-fadeIn">
           {/* ── Cover Page (separate A4 container) ── */}
-          <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
+          <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp" style={a4PageStyle}>
             <div className="flex flex-col items-center min-h-[800px] pb-10 page-break" style={{ justifyContent: config.coverLogoCenterV ? 'center' : 'flex-start' }}>
               {/* Cover-specific logo */}
               {coverLogoSrc && config.coverLogoVisible !== false && (
-                <div style={{ marginTop: config.coverLogoCenterV ? 0 : `${config.coverLogoTopMm * 2.5}px` }}>
-                  <img src={coverLogoSrc} alt="Logo Capa" className="object-contain mx-auto" style={{ width: `${config.coverLogoWidthMm * 2.5}px` }} />
+                <div style={{ marginTop: config.coverLogoCenterV ? 0 : `${mmToPx(config.coverLogoTopMm)}px` }}>
+                  <img src={coverLogoSrc} alt="Logo Capa" className="object-contain mx-auto" style={{ width: `${mmToPx(config.coverLogoWidthMm)}px` }} />
                 </div>
               )}
               <div className="flex flex-col items-center w-full" style={{ gap: `${config.coverSpacingLogoTitle}px`, lineHeight: config.coverLineSpacing, marginTop: `${config.coverSpacingLogoTitle}px` }}>
@@ -283,19 +284,19 @@ export const ReportGenerator: React.FC = () => {
 
           {/* ── Content Pages (each visible section as a separate A4 page) ── */}
           {sections.filter(s => s.isVisible).map((section, idx) => (
-            <div key={section.id} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp relative" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
+            <div key={section.id} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp relative" style={a4PageStyle}>
               <ReportHeader />
               <ReportPreviewSection section={section} {...previewSectionProps} />
-              <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
+              <div className="absolute bottom-0 left-0 right-0" style={{ padding: `0 ${MR}mm ${MB / 2}mm ${ML}mm` }}>
                 <ReportFooter />
               </div>
               {/* Page number */}
-              <span className="absolute bottom-[10mm] right-[20mm] text-xs text-muted-foreground">{idx + 2}</span>
+              <span className="absolute text-xs text-muted-foreground" style={{ bottom: `${MB / 2}mm`, right: `${MR}mm` }}>{idx + 2}</span>
             </div>
           ))}
 
           {/* ── Signature Page ── */}
-          <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp relative" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', lineHeight: '1.5', padding: '30mm 20mm 20mm 30mm', textAlign: 'justify' }}>
+          <div ref={reportRef} className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 print:shadow-none print:w-full print:max-w-none print:p-0 text-foreground animate-slideUp relative" style={a4PageStyle}>
             <ReportHeader />
             <div className="mt-16 pt-10 flex flex-col items-center break-inside-avoid">
               <p className="mb-8">Rio de Janeiro, {new Date().toLocaleDateString('pt-BR', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
@@ -303,7 +304,7 @@ export const ReportGenerator: React.FC = () => {
               <p className="font-bold uppercase">Assinatura do Responsável</p>
               <p className="text-sm">{project.organizationName}</p>
             </div>
-            <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
+            <div className="absolute bottom-0 left-0 right-0" style={{ padding: `0 ${MR}mm ${MB / 2}mm ${ML}mm` }}>
               <ReportFooter />
             </div>
           </div>
