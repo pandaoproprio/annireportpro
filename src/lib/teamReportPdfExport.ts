@@ -4,7 +4,7 @@ import { ptBR } from 'date-fns/locale';
 import {
   createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem, addRichParagraph,
   addSectionTitle, addHeaderLine, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
-  parseHtmlToBlocks, loadImage, preloadHeaderImages, addInlineImage, addGalleryGrid,
+  parseHtmlToBlocks, loadImage, preloadHeaderImages, addInlineImage, addGalleryGrid, buildHeaderConfig,
   PAGE_W, ML, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION,
 } from '@/lib/pdfHelpers';
 import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
@@ -32,26 +32,8 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
   );
 
   const ctx = createPdfContext();
-  
-  // Set header config for post-pass rendering
-  if (vc && (bannerImg || logoImg || logoCenterImg || logoSecondaryImg)) {
-    ctx.headerConfig = {
-      bannerImg, bannerHeightMm: vc.headerBannerHeightMm, bannerFit: vc.headerBannerFit, bannerVisible: vc.headerBannerVisible,
-      logoImg, logoSecondaryImg, logoCenterImg,
-      headerLeftText: vc.headerLeftText, headerRightText: vc.headerRightText,
-      logoVisible: vc.logoConfig?.visible,
-      logoCenterVisible: vc.logoCenterConfig?.visible,
-      logoSecondaryVisible: vc.logoSecondaryConfig?.visible,
-      logoWidthMm: vc.logoConfig?.widthMm,
-      logoCenterWidthMm: vc.logoCenterConfig?.widthMm,
-      logoSecondaryWidthMm: vc.logoSecondaryConfig?.widthMm,
-      logoAlignment: vc.headerLogoAlignment,
-      logoGapMm: vc.headerLogoGap,
-      topPaddingMm: vc.headerTopPadding,
-      headerHeightMm: vc.headerHeight,
-      contentSpacingMm: vc.headerContentSpacing,
-    };
-  }
+  const headerCfg = buildHeaderConfig(vc, { bannerImg, logoImg, logoSecondaryImg, logoCenterImg });
+  if (headerCfg) ctx.headerConfig = headerCfg;
 
   const { pdf } = ctx;
 

@@ -7,7 +7,7 @@ import {
   createPdfContext, addPage, ensureSpace, addParagraph, addBulletItem, addRichParagraph,
   addSectionTitle, addFooterAndPageNumbers, addSignatureBlock, FooterInfo,
   loadImage, addPhotoGrid, addPhotoLayout, parseHtmlToBlocks, addInlineImage, addGalleryGrid, PdfContext,
-  preloadHeaderImages,
+  preloadHeaderImages, buildHeaderConfig,
   PAGE_W, PAGE_H, ML, MR, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION, MT,
 } from '@/lib/pdfHelpers';
 
@@ -245,28 +245,8 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // ══════════════════════════════════════════════════════════════
   // CONTENT PAGES — now set headerConfig so addPage() adjusts Y
   // ══════════════════════════════════════════════════════════════
-  ctx.headerConfig = {
-    bannerImg,
-    bannerHeightMm: vc?.headerBannerHeightMm,
-    bannerFit: vc?.headerBannerFit,
-    bannerVisible: vc?.headerBannerVisible,
-    logoImg,
-    logoSecondaryImg,
-    logoCenterImg,
-    headerLeftText,
-    headerRightText,
-    logoVisible: vc?.logoConfig?.visible,
-    logoCenterVisible: vc?.logoCenterConfig?.visible,
-    logoSecondaryVisible: vc?.logoSecondaryConfig?.visible,
-    logoWidthMm: vc?.logoConfig?.widthMm,
-    logoCenterWidthMm: vc?.logoCenterConfig?.widthMm,
-    logoSecondaryWidthMm: vc?.logoSecondaryConfig?.widthMm,
-    logoAlignment: vc?.headerLogoAlignment,
-    logoGapMm: vc?.headerLogoGap,
-    topPaddingMm: vc?.headerTopPadding,
-    headerHeightMm: vc?.headerHeight,
-    contentSpacingMm: vc?.headerContentSpacing,
-  };
+  const headerCfg = buildHeaderConfig(vc, { bannerImg, logoImg, logoSecondaryImg, logoCenterImg });
+  if (headerCfg) ctx.headerConfig = headerCfg;
   addPage(ctx);
 
   for (const section of sections) {
