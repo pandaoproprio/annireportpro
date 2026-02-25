@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ReportSection } from '@/types';
 import { JustificationReport, JustificationReportDraft } from '@/types/justificationReport';
+import { useSectionManager } from '@/hooks/useSectionManager';
+import { useFileUploader } from '@/hooks/useFileUploader';
 
 export interface AttachmentFile {
   name: string;
@@ -52,18 +54,20 @@ export const useJustificationReportState = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [sections, setSections] = useState<ReportSection[]>(DEFAULT_SECTIONS);
   const [sectionContents, setSectionContents] = useState<Record<JustificationSectionKey, string>>({
-    objectSection: '',
-    justificationSection: '',
-    executedActionsSection: '',
-    futureActionsSection: '',
-    requestedDeadlineSection: '',
-    attachmentsSection: '',
+    objectSection: '', justificationSection: '', executedActionsSection: '',
+    futureActionsSection: '', requestedDeadlineSection: '', attachmentsSection: '',
   });
   const [attachmentFiles, setAttachmentFiles] = useState<AttachmentFile[]>([]);
-  const [sectionPhotos, setSectionPhotos] = useState<Record<string, string[]>>({});
-  const [sectionDocs, setSectionDocs] = useState<Record<string, AttachmentFile[]>>({});
+
+  // ── Shared section manager ──
+  const sectionManager = useSectionManager({ defaultSections: DEFAULT_SECTIONS, insertBeforeKey: 'attachmentsSection' });
+
+  // ── Shared file uploader ──
+  const fileUploader = useFileUploader({
+    projectId: project?.id,
+    basePath: `reports/${project?.id}/justificativas/photos`,
+  });
 
   // Fetch drafts
   const fetchDrafts = useCallback(async () => {
@@ -114,9 +118,9 @@ export const useJustificationReportState = () => {
       futureActionsSection: '', requestedDeadlineSection: '', attachmentsSection: '',
     });
     setAttachmentFiles([]);
-    setSectionPhotos({});
-    setSectionDocs({});
-    setSections(DEFAULT_SECTIONS);
+    fileUploader.setSectionPhotos({});
+    fileUploader.setSectionDocs({});
+    sectionManager.setSections(DEFAULT_SECTIONS);
     setMode('edit');
   };
 
@@ -132,80 +136,15 @@ export const useJustificationReportState = () => {
       attachmentsSection: draft.attachmentsSection,
     });
     setAttachmentFiles(draft.attachmentFiles || []);
-    setSectionPhotos(draft.sectionPhotos || {});
-    setSectionDocs((draft as any).sectionDocs || {});
-    setSections(DEFAULT_SECTIONS);
+    fileUploader.setSectionPhotos(draft.sectionPhotos || {});
+    fileUploader.setSectionDocs((draft as any).sectionDocs || {});
+    sectionManager.setSections(DEFAULT_SECTIONS);
     setShowDraftsList(false);
   };
 
   // Update section content
   const updateSectionContent = (key: JustificationSectionKey, value: string) => {
     setSectionContents(prev => ({ ...prev, [key]: value }));
-  };
-
-  // Section management (same pattern as ReportStructureEditor)
-  const moveSection = (index: number, direction: 'up' | 'down') => {
-    const newSections = [...sections];
-    if (direction === 'up' && index > 0) {
-      [newSections[index], newSections[index - 1]] = [newSections[index - 1], newSections[index]];
-    } else if (direction === 'down' && index < newSections.length - 1) {
-      [newSections[index], newSections[index + 1]] = [newSections[index + 1], newSections[index]];
-    }
-    setSections(newSections);
-  };
-
-  const toggleVisibility = (index: number) => {
-    const newSections = [...sections];
-    newSections[index].isVisible = !newSections[index].isVisible;
-    setSections(newSections);
-  };
-
-  const updateSectionTitle = (index: number, newTitle: string) => {
-    const newSections = [...sections];
-    newSections[index].title = newTitle;
-    setSections(newSections);
-  };
-
-  const updateCustomContent = (index: number, content: string) => {
-    const newSections = [...sections];
-    newSections[index].content = content;
-    setSections(newSections);
-  };
-
-  const addCustomSection = () => {
-    const newSection: ReportSection = {
-      id: `custom_${Date.now()}`,
-      type: 'custom',
-      key: 'custom',
-      title: 'Nova Seção',
-      content: '',
-      isVisible: true,
-    };
-    const attachmentsIndex = sections.findIndex(s => s.key === 'attachmentsSection');
-    if (attachmentsIndex !== -1) {
-      const newArr = [...sections];
-      newArr.splice(attachmentsIndex, 0, newSection);
-      setSections(newArr);
-    } else {
-      setSections([...sections, newSection]);
-    }
-  };
-
-  const [pendingRemoveIndex, setPendingRemoveIndex] = useState<number | null>(null);
-
-  const removeSection = (index: number) => {
-    setPendingRemoveIndex(index);
-  };
-
-  const confirmRemoveSection = () => {
-    if (pendingRemoveIndex !== null) {
-      setSections(sections.filter((_, i) => i !== pendingRemoveIndex));
-      setPendingRemoveIndex(null);
-    }
-  };
-
-  const cancelRemoveSection = () => {
-    setPendingRemoveIndex(null);
   };
 
   // Save draft
@@ -223,13 +162,11 @@ export const useJustificationReportState = () => {
         requested_deadline_section: sectionContents.requestedDeadlineSection,
         attachments_section: sectionContents.attachmentsSection,
         attachment_files: attachmentFiles as any,
-        section_photos: sectionPhotos as any,
-        section_docs: sectionDocs as any,
+        section_photos: fileUploader.sectionPhotos as any,
         is_draft: true,
       };
 
       if (currentDraftId) {
-        // On update, don't override user_id (SuperAdmin editing another user's draft)
         const { user_id, ...updatePayload } = payload;
         const { error } = await supabase
           .from('justification_reports')
@@ -304,43 +241,6 @@ export const useJustificationReportState = () => {
     e.target.value = '';
   };
 
-  // Section photo upload
-  const handleSectionPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => {
-    if (!e.target.files || !e.target.files.length || !project?.id) return;
-    for (const file of Array.from(e.target.files)) {
-      try {
-        const photoId = crypto.randomUUID();
-        const fileExt = file.name.split('.').pop() || 'jpg';
-        const filePath = `reports/${project.id}/justificativas/photos/${sectionKey}/${photoId}.${fileExt}`;
-        const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
-        if (error) { toast.error(`Erro ao enviar foto: ${file.name}`); continue; }
-        const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
-        setSectionPhotos(prev => ({
-          ...prev,
-          [sectionKey]: [...(prev[sectionKey] || []), urlData.publicUrl],
-        }));
-      } catch { toast.error(`Erro ao processar foto: ${file.name}`); }
-    }
-    e.target.value = '';
-    toast.success('Foto(s) enviada(s) com sucesso!');
-  };
-
-  const removeSectionPhoto = async (sectionKey: string, index: number) => {
-    const photos = sectionPhotos[sectionKey] || [];
-    const photoUrl = photos[index];
-    if (photoUrl) {
-      try {
-        const urlParts = new URL(photoUrl).pathname.split('/');
-        const filePath = urlParts.slice(-5).join('/');
-        await supabase.storage.from('team-report-photos').remove([filePath]);
-      } catch { /* still remove from UI */ }
-    }
-    setSectionPhotos(prev => ({
-      ...prev,
-      [sectionKey]: (prev[sectionKey] || []).filter((_, i) => i !== index),
-    }));
-  };
-
   const removeAttachmentFile = async (index: number) => {
     const file = attachmentFiles[index];
     if (file?.url) {
@@ -353,48 +253,6 @@ export const useJustificationReportState = () => {
     setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  // Per-section document upload
-  const handleSectionDocUpload = async (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => {
-    if (!e.target.files || !e.target.files[0] || !project?.id) return;
-    const file = e.target.files[0];
-    const maxSize = 20 * 1024 * 1024;
-    if (file.size > maxSize) {
-      toast.error('Arquivo excede o tamanho máximo de 20MB.');
-      e.target.value = '';
-      return;
-    }
-    try {
-      const fileId = crypto.randomUUID();
-      const fileExt = file.name.split('.').pop() || 'pdf';
-      const filePath = `reports/${project.id}/justificativas/docs/${sectionKey}/${fileId}.${fileExt}`;
-      const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
-      if (error) { toast.error(`Erro ao enviar documento: ${file.name}`); return; }
-      const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
-      setSectionDocs(prev => ({
-        ...prev,
-        [sectionKey]: [...(prev[sectionKey] || []), { name: file.name, url: urlData.publicUrl }],
-      }));
-      toast.success(`Documento "${file.name}" enviado com sucesso`);
-    } catch { toast.error(`Erro ao processar documento: ${file.name}`); }
-    e.target.value = '';
-  };
-
-  const removeSectionDoc = async (sectionKey: string, index: number) => {
-    const docs = sectionDocs[sectionKey] || [];
-    const doc = docs[index];
-    if (doc?.url) {
-      try {
-        const urlParts = new URL(doc.url).pathname.split('/');
-        const filePath = urlParts.slice(-5).join('/');
-        await supabase.storage.from('team-report-photos').remove([filePath]);
-      } catch { /* still remove from UI */ }
-    }
-    setSectionDocs(prev => ({
-      ...prev,
-      [sectionKey]: (prev[sectionKey] || []).filter((_, i) => i !== index),
-    }));
-  };
-
   return {
     project,
     mode, setMode,
@@ -403,20 +261,30 @@ export const useJustificationReportState = () => {
     showDraftsList, setShowDraftsList,
     currentDraftId,
     drafts, isLoading, isSaving,
-    sections, sectionContents,
-    attachmentFiles, sectionPhotos,
+    sections: sectionManager.sections,
+    sectionContents,
+    attachmentFiles,
+    sectionPhotos: fileUploader.sectionPhotos,
     SECTION_PLACEHOLDERS,
     hasContent,
     resetForm, loadDraft,
     updateSectionContent,
-    moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
-    addCustomSection, removeSection,
-    pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
+    moveSection: sectionManager.moveSection,
+    toggleVisibility: sectionManager.toggleVisibility,
+    updateSectionTitle: sectionManager.updateSectionTitle,
+    updateCustomContent: sectionManager.updateCustomContent,
+    addCustomSection: sectionManager.addCustomSection,
+    removeSection: sectionManager.removeSection,
+    pendingRemoveIndex: sectionManager.pendingRemoveIndex,
+    confirmRemoveSection: sectionManager.confirmRemoveSection,
+    cancelRemoveSection: sectionManager.cancelRemoveSection,
     saveDraft, deleteDraft,
     buildReportData,
     handleDocumentUpload, removeAttachmentFile,
-    handleSectionPhotoUpload, removeSectionPhoto,
-    handleSectionDocUpload, removeSectionDoc,
-    sectionDocs,
+    handleSectionPhotoUpload: fileUploader.handleSectionPhotoUpload,
+    removeSectionPhoto: fileUploader.removeSectionPhoto,
+    handleSectionDocUpload: fileUploader.handleSectionDocUpload,
+    removeSectionDoc: fileUploader.removeSectionDoc,
+    sectionDocs: fileUploader.sectionDocs,
   };
 };
