@@ -212,6 +212,7 @@ export type Database = {
           object_section: string
           project_id: string
           requested_deadline_section: string
+          section_docs: Json
           section_photos: Json
           updated_at: string
           user_id: string
@@ -230,6 +231,7 @@ export type Database = {
           object_section?: string
           project_id: string
           requested_deadline_section?: string
+          section_docs?: Json
           section_photos?: Json
           updated_at?: string
           user_id: string
@@ -248,6 +250,7 @@ export type Database = {
           object_section?: string
           project_id?: string
           requested_deadline_section?: string
+          section_docs?: Json
           section_photos?: Json
           updated_at?: string
           user_id?: string
