@@ -1,86 +1,162 @@
 
 
-# Plano: Modulo Reports V2 — Isolado com html2pdf.js
+# Plano: Refatoracao Completa do Modulo Reports V2
 
-## Objetivo
+## Visao Geral
 
-Criar um modulo novo e independente em `src/modules/reports-v2/` que oferece um formulario de relatorio simplificado, preview fiel em formato A4 com grid de fotos funcional, e exportacao PDF via `html2pdf.js` — sem alterar nenhum componente existente do sistema.
+Refatorar o modulo `src/modules/reports-v2/` para suportar atividades ilimitadas com upload de video, remover despesas, e migrar a geracao de PDF para server-side via Edge Function com Browserless (Puppeteer).
+
+---
+
+## Pre-requisito: API Key do Browserless
+
+Antes da implementacao, sera necessario configurar a chave de API do servico Browserless como secret no backend. Voce precisara:
+
+1. Criar uma conta em [browserless.io](https://www.browserless.io/)
+2. Obter sua API Key no painel do Browserless
+3. Informar a chave quando solicitado pelo sistema
+
+---
 
 ## Estrutura de Arquivos
 
 ```text
 src/modules/reports-v2/
-  ├── types.ts            -- Tipos locais do modulo
-  ├── ReportForm.tsx       -- Formulario de edicao com upload multiplo
-  ├── ReportPreview.tsx    -- Preview A4 fiel com grid de fotos
-  ├── pdfGenerator.ts      -- Exportacao PDF via html2pdf.js
-  └── ReportV2Page.tsx     -- Pagina container (orquestra form, preview, export)
+  ├── types.ts                    -- Tipos atualizados (sem despesas, com media)
+  ├── ReportForm.tsx              -- Formulario com atividades ilimitadas + upload video
+  ├── ReportPreviewTemplate.tsx   -- HTML puro para PDF (independente do React no server)
+  ├── ReportPreview.tsx           -- Preview client-side (reutiliza template)
+  ├── reportService.ts            -- Servico que chama a Edge Function
+  └── ReportV2Page.tsx            -- Orquestrador (form, preview, export)
+
+supabase/functions/
+  └── gerar-pdf-relatorio/
+      └── index.ts                -- Edge Function com Puppeteer via Browserless
 ```
+
+---
 
 ## Detalhes Tecnicos
 
-### 1. `types.ts`
-- Tipos locais: `ReportV2Data` com campos `title`, `object`, `summary`, `sections` (array de secoes dinamicas com titulo + conteudo + fotos `string[]`).
-- Nao importa tipos de `src/types/index.ts` nem de `pdfHelpers.ts`.
+### 1. `types.ts` -- Atualizacao
 
-### 2. `ReportForm.tsx`
-- Formulario com campos: Titulo, Objeto (textarea), Resumo (textarea).
-- Secoes dinamicas: botao "Adicionar Secao" cria nova secao com titulo, conteudo (textarea) e upload de fotos.
-- Upload de fotos:
-  - `<input type="file" accept="image/*" multiple />`
-  - Integra com o hook existente `useFileUploader` (importado de `@/hooks/useFileUploader`), reutilizando o upload para Supabase Storage.
-  - Estado local de URLs (`string[]`) por secao.
-  - Grid de preview imediato: `grid grid-cols-2 md:grid-cols-3 gap-4`, cada imagem com `rounded-md object-cover h-40 w-full`.
-  - Botao de remover foto individual.
+Substituir a estrutura atual por:
 
-### 3. `ReportPreview.tsx`
-- Container A4: `w-[794px] min-h-[1123px] bg-white p-16 space-y-8`, fonte Times New Roman.
-- Renderiza o conteudo real do formulario (nao placeholders).
-- Secoes: titulo em negrito uppercase + texto justificado + grid de fotos.
-- Grid de fotos identico ao form: `grid grid-cols-2 md:grid-cols-3 gap-4`.
-- O elemento raiz recebe `id="report-preview"` para captura pelo html2pdf.
-- Quebras de pagina via CSS `break-inside: avoid` nos blocos de secao.
+```typescript
+interface MediaItem {
+  type: "image" | "video";
+  url: string;
+  caption?: string;
+}
 
-### 4. `pdfGenerator.ts`
-- Usa `html2pdf.js` (ja instalado).
-- Funcao `generatePdf(filename: string): Promise<void>`:
-  - Captura o elemento `#report-preview`.
-  - Configuracao:
-    - `margin: 10`
-    - `format: 'a4'`
-    - `orientation: 'portrait'`
-    - `html2canvas: { scale: 2, useCORS: true }`
-    - `pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }`
-  - Filename dinamico recebido como parametro.
-- Nenhum calculo manual de coordenada. O PDF e a renderizacao exata do preview HTML.
+interface ReportV2Activity {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  media: MediaItem[];
+}
 
-### 5. `ReportV2Page.tsx`
-- Pagina container com dois modos: "Editar" e "Visualizar".
-- Toolbar com botoes: Editar, Visualizar, Gerar PDF (visivel apenas no modo preview).
-- No modo editar: renderiza `ReportForm`.
-- No modo visualizar: renderiza `ReportPreview` + botao "Gerar PDF" que chama `generatePdf`.
-- Busca dados do projeto ativo via `useAppData` para preencher titulo e objeto iniciais.
+interface ReportV2Data {
+  title: string;
+  object: string;
+  summary: string;
+  activities: ReportV2Activity[];  // substitui sections
+  header: ReportV2Header;
+}
+```
 
-### 6. Rota
-- Adicionar rota `/report-v2` no `AppRoutes.tsx` (lazy-loaded), dentro do `Layout`, protegida por `PermissionGuard permission="report_object"`.
-- Adicionar link na sidebar sob "Gestao": "Relatorio V2" (icone FileText).
+- Campo `sections` renomeado para `activities` com estrutura enriquecida
+- Campo `photos: string[]` substituido por `media: MediaItem[]`
+- Nenhuma referencia a despesas
+
+### 2. `ReportForm.tsx` -- Refatoracao
+
+- Manter campos globais: Titulo, Objeto, Resumo, Logos do cabecalho
+- Substituir "Secoes" por "Atividades" com campos: titulo, descricao, data
+- Upload de midia aceita `image/*,video/*`
+- Grid de preview: imagens renderizadas normalmente; videos exibidos com thumbnail e icone de play
+- Botao adicionar/remover atividade sem limite
+- Remover completamente qualquer referencia a despesas
+
+### 3. `ReportPreviewTemplate.tsx` -- HTML Puro para PDF
+
+- Funcao que recebe `ReportV2Data` e retorna string HTML completa
+- CSS inline, layout A4 real (210mm x 297mm)
+- `page-break-before` configurado entre atividades
+- Secoes vazias nao renderizadas
+- Videos representados por thumbnail placeholder + legenda "(video)"
+- Independente do React (template string puro)
+
+### 4. `ReportPreview.tsx` -- Preview Client
+
+- Reutiliza a mesma logica visual do template
+- Renderiza como componente React para preview no navegador
+- Videos exibidos com elemento `<video>` nativo com controls
+
+### 5. `reportService.ts` -- Servico de PDF
+
+```typescript
+export async function generateReportPdf(data: ReportV2Data): Promise<Blob> {
+  const { data: result, error } = await supabase.functions.invoke(
+    'gerar-pdf-relatorio',
+    { body: data }
+  );
+  // retorna blob do PDF
+}
+```
+
+### 6. Edge Function `gerar-pdf-relatorio`
+
+- Recebe JSON do relatorio no body
+- Renderiza HTML template com CSS inline (mesma funcao de `ReportPreviewTemplate`)
+- Conecta ao Browserless via API key
+- Usa Puppeteer para:
+  - `page.setContent(html)`
+  - `page.pdf({ format: 'A4', printBackground: true })`
+- Retorna PDF como blob/base64
+- Configuracao em `config.toml`: `verify_jwt = false` (validacao manual via `getClaims`)
+
+### 7. `ReportV2Page.tsx` -- Orquestrador
+
+- State: `ReportV2Data` como source of truth unico
+- Modos: Editar / Visualizar
+- Botao "Gerar PDF" chama `reportService.generateReportPdf(data)`
+- Download automatico do blob retornado
+- Sem `useEffect` sincronizando midia
+
+---
+
+## Remocao de Despesas
+
+- Nenhum campo `expense_records`, `ExpenseRecord` ou `DollarSign` no modulo V2
+- Nao afeta o `ActivityManager.tsx` existente (que mantem suas despesas)
+- Nao altera schema do banco (coluna `expense_records` na tabela `activities` permanece intocada)
+
+---
 
 ## O que NAO sera alterado
 
-- `src/lib/pdfHelpers.ts` — intocado
-- `src/hooks/useReportState.tsx` — intocado
-- `src/components/report/*` — intocados
-- `src/pages/ReportGenerator.tsx` — intocado
-- Nenhum componente UI global (sidebar layout, hooks de auth, etc.)
-- Nenhuma tabela ou RLS no banco de dados
+- `src/pages/ActivityManager.tsx` -- intocado
+- `src/hooks/useActivities.tsx` -- intocado
+- `src/lib/pdfHelpers.ts` -- intocado
+- `src/components/report/*` -- intocados
+- `src/pages/ReportGenerator.tsx` -- intocado
+- Layout compartilhado, sidebar, hooks globais -- intocados
+- RLS policies -- intocadas
+- Nenhum contratoService existente
 
-## Fluxo do Usuario
+---
 
-1. Acessa `/report-v2` pelo sidebar.
-2. Preenche titulo, objeto, resumo.
-3. Adiciona secoes com texto e fotos (upload multiplo → Storage → URLs).
-4. Fotos aparecem imediatamente no grid do formulario.
-5. Clica "Visualizar" → ve o preview A4 fiel.
-6. Clica "Gerar PDF" → `html2pdf.js` converte o preview exatamente como renderizado.
-7. PDF baixado automaticamente com quebras de pagina automaticas.
+## Sequencia de Implementacao
+
+1. Solicitar API Key do Browserless ao usuario
+2. Atualizar `types.ts` com nova estrutura
+3. Refatorar `ReportForm.tsx` (atividades + midia)
+4. Criar `ReportPreviewTemplate.tsx` (HTML puro)
+5. Atualizar `ReportPreview.tsx` (usa template)
+6. Criar Edge Function `gerar-pdf-relatorio`
+7. Criar `reportService.ts`
+8. Atualizar `ReportV2Page.tsx` (integrar tudo)
+9. Remover `pdfGenerator.ts` (html2pdf antigo)
 
