@@ -192,30 +192,26 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     { label: 'CNPJ: ', value: report.providerDocument || '[Não informado]' },
   ]);
 
-  // ── Footer + page numbers (uses visual config only, no legacy footerText) ──
-  if (!hideInstitutionalFooter) {
-    const footerInfo: FooterInfo = {
-      orgName: project.organizationName,
-      address: (vc?.footerShowAddress !== false) ? project.organizationAddress : undefined,
-      website: (vc?.footerShowContact !== false) ? project.organizationWebsite : undefined,
-      email: (vc?.footerShowContact !== false) ? project.organizationEmail : undefined,
-      phone: (vc?.footerShowContact !== false) ? project.organizationPhone : undefined,
-      customText: vc?.footerText || undefined,
-      alignment: (vc?.footerAlignment || 'center') as 'left' | 'center' | 'right',
-      institutionalEnabled: vc?.footerInstitutionalEnabled,
-      line1Text: vc?.footerLine1Text,
-      line1FontSize: vc?.footerLine1FontSize,
-      line2Text: vc?.footerLine2Text,
-      line2FontSize: vc?.footerLine2FontSize,
-      line3Text: vc?.footerLine3Text,
-      line3FontSize: vc?.footerLine3FontSize,
-      lineSpacing: vc?.footerLineSpacing,
-      topSpacing: vc?.footerTopSpacing,
-    };
-    addFooterAndPageNumbers(ctx, project.organizationName, false, footerInfo);
-  } else {
-    addFooterAndPageNumbers(ctx, project.organizationName, false);
-  }
+  // ── Footer + page numbers ──
+  const footerInfo: FooterInfo = {
+    orgName: project.organizationName,
+    address: (vc?.footerShowAddress !== false) ? project.organizationAddress : undefined,
+    website: (vc?.footerShowContact !== false) ? project.organizationWebsite : undefined,
+    email: (vc?.footerShowContact !== false) ? project.organizationEmail : undefined,
+    phone: (vc?.footerShowContact !== false) ? project.organizationPhone : undefined,
+    customText: vc?.footerText || undefined,
+    alignment: (vc?.footerAlignment || 'center') as 'left' | 'center' | 'right',
+    institutionalEnabled: hideInstitutionalFooter ? false : (vc?.footerInstitutionalEnabled !== false),
+    line1Text: vc?.footerLine1Text,
+    line1FontSize: vc?.footerLine1FontSize,
+    line2Text: vc?.footerLine2Text,
+    line2FontSize: vc?.footerLine2FontSize,
+    line3Text: vc?.footerLine3Text,
+    line3FontSize: vc?.footerLine3FontSize,
+    lineSpacing: vc?.footerLineSpacing,
+    topSpacing: vc?.footerTopSpacing,
+  };
+  addFooterAndPageNumbers(ctx, project.organizationName, false, footerInfo);
 
   // Save
   const memberName = report.responsibleName.replace(/\s+/g, '_');

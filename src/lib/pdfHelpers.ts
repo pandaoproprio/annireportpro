@@ -960,6 +960,12 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
     // Skip footer on cover page
     if (isCoverPage) continue;
 
+    const instEnabled = info.institutionalEnabled !== false;
+    const hasCustomText = !!info.customText;
+
+    // Skip footer line entirely if nothing to show
+    if (!instEnabled && !hasCustomText) continue;
+
     // Footer line
     pdf.setDrawColor(180, 180, 180);
     const footerLineY = PAGE_H - 18;
@@ -977,7 +983,6 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
       return (PAGE_W - textWidth) / 2; // center
     };
 
-    const instEnabled = info.institutionalEnabled !== false;
 
     if (instEnabled) {
       const ls = info.lineSpacing ?? 3;
@@ -1042,27 +1047,26 @@ export const addSignatureBlock = (
   ctx.currentY += LINE_H * 3;
 
   ensureSpace(ctx, 35);
-  const cx = PAGE_W / 2;
   const sigW = 80;
   pdf.setDrawColor(0);
-  pdf.line(cx - sigW / 2, ctx.currentY, cx + sigW / 2, ctx.currentY);
+  pdf.line(ML, ctx.currentY, ML + sigW, ctx.currentY);
   ctx.currentY += 5;
 
   pdf.setFont('times', 'normal');
-  pdf.text(sigLabel, cx - pdf.getTextWidth(sigLabel) / 2, ctx.currentY);
+  pdf.text(sigLabel, ML, ctx.currentY);
   ctx.currentY += LINE_H + 2;
 
   if (extra && extra.length > 0) {
     for (const item of extra) {
       pdf.setFont('times', 'bold');
-      pdf.text(item.label, cx - 60, ctx.currentY);
+      pdf.text(item.label, ML, ctx.currentY);
       const lw = pdf.getTextWidth(item.label);
       pdf.setFont('times', 'normal');
-      pdf.text(item.value, cx - 60 + lw, ctx.currentY);
+      pdf.text(item.value, ML + lw, ctx.currentY);
       ctx.currentY += LINE_H;
     }
   } else {
     pdf.setFont('times', 'bold');
-    pdf.text(orgName, cx - pdf.getTextWidth(orgName) / 2, ctx.currentY);
+    pdf.text(orgName, ML, ctx.currentY);
   }
 };
