@@ -153,6 +153,12 @@ export interface PhotoWithCaption {
   caption: string;
 }
 
+export interface PhotoGroup {
+  id: string;
+  caption: string;
+  photoIds: string[];
+}
+
 export interface AdditionalSection {
   id: string;
   title: string;
@@ -172,6 +178,7 @@ export interface TeamReport {
   executionReport: string;
   photos: string[];
   photoCaptions?: PhotoWithCaption[];
+  photoGroups?: PhotoGroup[];
   reportTitle?: string;
   executionReportTitle?: string;
   attachmentsTitle?: string;
