@@ -670,6 +670,7 @@ export const addPhotoGrid = async (
   photoUrls: string[],
   sectionLabel: string,
   captions?: string[],
+  groups?: { id: string; caption: string; photoIds: string[] }[],
 ): Promise<void> => {
   if (photoUrls.length === 0) return;
 
@@ -684,55 +685,74 @@ export const addPhotoGrid = async (
   pdf.text(titleText, ML, ctx.currentY);
   ctx.currentY += LINE_H + 4;
 
-  const useSingleColumn = photoUrls.length === 1;
   const COL_GAP = 8;
-  const photoW = useSingleColumn ? CW : (CW - COL_GAP) / 2;
-  const photoH = useSingleColumn ? photoW * 0.65 : photoW * 0.85;
-  const CAPTION_H = 6;
-  const cols = useSingleColumn ? 1 : 2;
 
-  let idx = 0;
-  while (idx < photoUrls.length) {
-    const rowNeeded = photoH + CAPTION_H + 6;
-    if (ctx.currentY + rowNeeded > MAX_Y) addPage(ctx);
-    const rowY = ctx.currentY;
+  // Helper to render a set of photo indices with optional shared caption
+  const renderSet = async (indices: number[], sharedCaption?: string) => {
+    const useSingle = indices.length === 1;
+    const photoW = useSingle ? CW : (CW - COL_GAP) / 2;
+    const photoH = useSingle ? photoW * 0.65 : photoW * 0.85;
+    const CAPTION_H = 6;
+    const cols = useSingle ? 1 : 2;
 
-    for (let col = 0; col < cols && idx < photoUrls.length; col++) {
-      const x = useSingleColumn ? ML : (col === 0 ? ML : ML + photoW + COL_GAP);
-      const imgData = await loadImage(photoUrls[idx]);
-      if (imgData) {
-        const imgAspect = imgData.width / imgData.height;
-        const cellAspect = photoW / photoH;
-        let drawW: number, drawH: number, drawX: number, drawY: number;
-        if (imgAspect > cellAspect) {
-          drawW = photoW;
-          drawH = photoW / imgAspect;
-          drawX = x;
-          drawY = rowY + (photoH - drawH) / 2;
-        } else {
-          drawH = photoH;
-          drawW = photoH * imgAspect;
-          drawX = x + (photoW - drawW) / 2;
-          drawY = rowY;
+    let i = 0;
+    while (i < indices.length) {
+      const rowNeeded = photoH + CAPTION_H + 6;
+      if (ctx.currentY + rowNeeded > MAX_Y) addPage(ctx);
+      const rowY = ctx.currentY;
+
+      for (let col = 0; col < cols && i < indices.length; col++) {
+        const idx = indices[i];
+        const x = useSingle ? ML : (col === 0 ? ML : ML + photoW + COL_GAP);
+        const imgData = await loadImage(photoUrls[idx]);
+        if (imgData) {
+          const imgAspect = imgData.width / imgData.height;
+          const cellAspect = photoW / photoH;
+          let drawW: number, drawH: number, drawX: number, drawY: number;
+          if (imgAspect > cellAspect) { drawW = photoW; drawH = photoW / imgAspect; drawX = x; drawY = rowY + (photoH - drawH) / 2; }
+          else { drawH = photoH; drawW = photoH * imgAspect; drawX = x + (photoW - drawW) / 2; drawY = rowY; }
+          try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Image error:', e); }
         }
-        try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); }
-        catch (e) { console.warn('Image error:', e); }
-      }
 
-      // Caption
-      const caption = captions?.[idx] || `Foto ${idx + 1}`;
-      pdf.setFontSize(FONT_CAPTION);
-      pdf.setFont('times', 'italic');
-      const capLines: string[] = pdf.splitTextToSize(caption, photoW);
-      const capY = rowY + photoH + 3;
-      for (let cl = 0; cl < Math.min(capLines.length, 2); cl++) {
-        pdf.text(capLines[cl], x + photoW / 2, capY + cl * 4, { align: 'center' });
+        if (!sharedCaption) {
+          const caption = captions?.[idx] || `Foto ${idx + 1}`;
+          pdf.setFontSize(FONT_CAPTION);
+          pdf.setFont('times', 'italic');
+          const capLines: string[] = pdf.splitTextToSize(caption, photoW);
+          const capY = rowY + photoH + 3;
+          for (let cl = 0; cl < Math.min(capLines.length, 2); cl++) {
+            pdf.text(capLines[cl], x + photoW / 2, capY + cl * 4, { align: 'center' });
+          }
+        }
+        i++;
       }
-
-      idx++;
+      ctx.currentY = rowY + photoH + CAPTION_H + 4;
     }
 
-    ctx.currentY = rowY + photoH + CAPTION_H + 4;
+    if (sharedCaption) {
+      pdf.setFontSize(FONT_CAPTION);
+      pdf.setFont('times', 'italic');
+      const capLines: string[] = pdf.splitTextToSize(sharedCaption, CW);
+      for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+        const lineW = pdf.getTextWidth(capLines[j]);
+        pdf.text(capLines[j], ML + (CW - lineW) / 2, ctx.currentY + j * 4.5);
+      }
+      ctx.currentY += capLines.length * 4.5 + 6;
+    }
+  };
+
+  if (groups && groups.length > 0) {
+    const groupedIndices = new Set(groups.flatMap(g => g.photoIds.map(Number)));
+    // Render groups first
+    for (const group of groups) {
+      const indices = group.photoIds.map(Number).filter(i => i < photoUrls.length);
+      if (indices.length > 0) await renderSet(indices, group.caption);
+    }
+    // Render ungrouped
+    const ungrouped = photoUrls.map((_, i) => i).filter(i => !groupedIndices.has(i));
+    if (ungrouped.length > 0) await renderSet(ungrouped);
+  } else {
+    await renderSet(photoUrls.map((_, i) => i));
   }
 };
 
