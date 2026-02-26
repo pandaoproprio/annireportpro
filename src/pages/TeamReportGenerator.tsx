@@ -89,6 +89,7 @@ export const TeamReportGenerator: React.FC = () => {
   const [useGroupCaption, setUseGroupCaption] = useState(false);
   const [groupCaption, setGroupCaption] = useState('Registro fotográfico das atividades realizadas');
   const [photoSizePx, setPhotoSizePx] = useState(300);
+  const [showInstitutionalFooter, setShowInstitutionalFooter] = useState(true);
 
   // DnD sensors
   const sensors = useSensors(
@@ -349,7 +350,7 @@ export const TeamReportGenerator: React.FC = () => {
         updatedAt: new Date().toISOString(),
       };
 
-      await exportTeamReportToPdf({ project, report: reportData, visualConfig: vc.config });
+      await exportTeamReportToPdf({ project, report: reportData, visualConfig: vc.config, hideInstitutionalFooter: !showInstitutionalFooter });
       toast.success('Relatório PDF exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
@@ -709,6 +710,14 @@ export const TeamReportGenerator: React.FC = () => {
                 Se deixar em branco, será usado o nome da organização: "{project.organizationName}"
               </p>
             </div>
+            <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+              <Label htmlFor="showFooter" className="text-sm font-medium">Exibir rodapé institucional</Label>
+              <Switch
+                id="showFooter"
+                checked={showInstitutionalFooter}
+                onCheckedChange={setShowInstitutionalFooter}
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -929,28 +938,31 @@ export const TeamReportGenerator: React.FC = () => {
   const instEnabled = config.footerInstitutionalEnabled !== false;
   const footerAlign = config.footerAlignment || 'center';
 
-  const PreviewFooter = () => (
-    <div className="mt-8 pt-4 border-t" style={{ paddingTop: `${config.footerTopSpacing || 4}px`, textAlign: footerAlign }}>
-      {instEnabled && (
-        <div className="space-y-0">
-          <p className="font-bold" style={{ fontSize: `${config.footerLine1FontSize || 9}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
-            {config.footerLine1Text || project.organizationName}
-          </p>
-          {config.footerLine2Text && (
-            <p style={{ fontSize: `${config.footerLine2FontSize || 7}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
-              {config.footerLine2Text}
+  const PreviewFooter = () => {
+    if (!showInstitutionalFooter) return null;
+    return (
+      <div className="mt-8 pt-4 border-t" style={{ paddingTop: `${config.footerTopSpacing || 4}px`, textAlign: footerAlign }}>
+        {instEnabled && (
+          <div className="space-y-0">
+            <p className="font-bold" style={{ fontSize: `${config.footerLine1FontSize || 9}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
+              {config.footerLine1Text || project.organizationName}
             </p>
-          )}
-          {config.footerLine3Text && (
-            <p style={{ fontSize: `${config.footerLine3FontSize || 7}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
-              {config.footerLine3Text}
-            </p>
-          )}
-        </div>
-      )}
-      {config.footerText && <p className="italic mt-1 text-xs text-muted-foreground">{config.footerText}</p>}
-    </div>
-  );
+            {config.footerLine2Text && (
+              <p style={{ fontSize: `${config.footerLine2FontSize || 7}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
+                {config.footerLine2Text}
+              </p>
+            )}
+            {config.footerLine3Text && (
+              <p style={{ fontSize: `${config.footerLine3FontSize || 7}pt`, marginBottom: `${config.footerLineSpacing || 3}px` }}>
+                {config.footerLine3Text}
+              </p>
+            )}
+          </div>
+        )}
+        {config.footerText && <p className="italic mt-1 text-xs text-muted-foreground">{config.footerText}</p>}
+      </div>
+    );
+  };
 
   // A4 page style
   const a4Style: React.CSSProperties = {
