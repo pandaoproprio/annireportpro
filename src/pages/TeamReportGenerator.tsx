@@ -23,6 +23,8 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save, Trash2, FileEdit, Loader2, PenTool } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
 import { exportTeamReportToPdf } from '@/lib/teamReportPdfExport';
 import { toast } from 'sonner';
@@ -84,6 +86,9 @@ export const TeamReportGenerator: React.FC = () => {
   const [attachmentsTitle, setAttachmentsTitle] = useState('3. Anexos de Comprovação');
   const [footerText, setFooterText] = useState('');
   const [additionalSections, setAdditionalSections] = useState<{ id: string; title: string; content: string }[]>([]);
+  const [useGroupCaption, setUseGroupCaption] = useState(false);
+  const [groupCaption, setGroupCaption] = useState('Registro fotográfico das atividades realizadas');
+  const [photoSizePx, setPhotoSizePx] = useState(300);
 
   // DnD sensors
   const sensors = useSensors(
@@ -802,29 +807,61 @@ export const TeamReportGenerator: React.FC = () => {
               Adicionar Fotos
             </Button>
 
+            {photosWithCaptions.length >= 2 && (
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="groupCaption" className="text-sm font-medium">Legenda única para todas as fotos</Label>
+                  <Switch
+                    id="groupCaption"
+                    checked={useGroupCaption}
+                    onCheckedChange={setUseGroupCaption}
+                  />
+                </div>
+                {useGroupCaption && (
+                  <Input
+                    value={groupCaption}
+                    onChange={e => setGroupCaption(e.target.value)}
+                    placeholder="Legenda compartilhada..."
+                  />
+                )}
+              </div>
+            )}
+
             {photosWithCaptions.length > 0 && (
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={handleDragEnd}
-              >
-                <SortableContext
-                  items={photosWithCaptions.map(p => p.id)}
-                  strategy={verticalListSortingStrategy}
+              <>
+                <div className="space-y-2">
+                  <Label className="text-sm">Tamanho das fotos: {photoSizePx}px</Label>
+                  <Slider
+                    value={[photoSizePx]}
+                    onValueChange={([v]) => setPhotoSizePx(v)}
+                    min={120}
+                    max={600}
+                    step={20}
+                  />
+                </div>
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
                 >
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                    {photosWithCaptions.map((photo, idx) => (
-                      <SortablePhoto
-                        key={photo.id}
-                        photo={photo}
-                        index={idx}
-                        onRemove={removePhoto}
-                        onUpdateCaption={updatePhotoCaption}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+                  <SortableContext
+                    items={photosWithCaptions.map(p => p.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                      {photosWithCaptions.map((photo, idx) => (
+                        <SortablePhoto
+                          key={photo.id}
+                          photo={photo}
+                          index={idx}
+                          onRemove={removePhoto}
+                          onUpdateCaption={updatePhotoCaption}
+                        />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              </>
             )}
           </CardContent>
         </Card>
@@ -1012,19 +1049,26 @@ export const TeamReportGenerator: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {photosWithCaptions.map((photo, idx) => (
                 <div key={photo.id} className="space-y-2">
-                  <div className="w-full bg-muted rounded-lg border overflow-hidden flex items-center justify-center" style={{ minHeight: '180px' }}>
+                  <div className="w-full bg-muted rounded-lg border overflow-hidden flex items-center justify-center" style={{ height: `${photoSizePx}px` }}>
                     <img
                       src={photo.url}
                       alt={`Registro ${idx + 1}`}
-                      className="max-w-full max-h-[400px] object-contain"
+                      className="max-w-full max-h-full object-contain"
                     />
                   </div>
-                  <p className="text-xs text-center italic text-muted-foreground">
-                    {photo.caption}
-                  </p>
+                  {!useGroupCaption && (
+                    <p className="text-xs text-center italic text-muted-foreground">
+                      {photo.caption}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
+            {useGroupCaption && (
+              <p className="text-xs text-center italic text-muted-foreground mt-4">
+                {groupCaption}
+              </p>
+            )}
             <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
               <PreviewFooter />
             </div>
@@ -1035,18 +1079,18 @@ export const TeamReportGenerator: React.FC = () => {
         {/* ── Signature Page ── */}
         <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 text-foreground animate-slideUp relative" style={a4Style}>
           <PreviewHeader />
-          <div style={{ marginTop: '80px' }}>
-            <p className="text-center mb-16" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt' }}>
+          <div style={{ marginTop: '80px', fontFamily: 'Times New Roman, serif', fontSize: '12pt' }}>
+            <p style={{ margin: '0 0 48px 0' }}>
               Rio de Janeiro, {format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.
             </p>
-            <div className="flex flex-col items-center mt-16 mb-8">
-              <div style={{ width: '280px', borderTop: '1px solid #000', paddingTop: '4px', textAlign: 'center' }}>
-                <p style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', margin: 0 }}>
-                  Assinatura do responsável legal
-                </p>
+
+            <div style={{ marginTop: '64px', marginBottom: '8px' }}>
+              <div style={{ width: '280px', borderTop: '1px solid #000', paddingTop: '4px' }}>
+                <p style={{ margin: 0 }}>Assinatura do responsável legal</p>
               </div>
             </div>
-            <div style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', marginTop: '24px' }}>
+
+            <div style={{ marginTop: '24px' }}>
               <p style={{ margin: '4px 0' }}><strong>Nome e cargo:</strong> {responsibleName} - {functionRole}</p>
               <p style={{ margin: '4px 0' }}><strong>CNPJ:</strong> {providerDocument || '[Não informado]'}</p>
             </div>
