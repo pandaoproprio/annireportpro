@@ -977,6 +977,7 @@ export const TeamReportGenerator: React.FC = () => {
           <h2 className="text-lg font-bold mb-3">{executionReportTitle}</h2>
           <div
             className="text-justify prose prose-sm max-w-none whitespace-pre-line [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
+            style={{ textIndent: '12.5mm' }}
             dangerouslySetInnerHTML={{ __html: executionReport || '<p>[Nenhum relato informado]</p>' }}
           />
 
@@ -993,6 +994,7 @@ export const TeamReportGenerator: React.FC = () => {
             <h2 className="text-lg font-bold mb-3">{section.title}</h2>
             <div
               className="text-justify prose prose-sm max-w-none whitespace-pre-line [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
+              style={{ textIndent: '12.5mm' }}
               dangerouslySetInnerHTML={{ __html: section.content || '<p>[Nenhum conteúdo]</p>' }}
             />
             <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
@@ -1018,7 +1020,7 @@ export const TeamReportGenerator: React.FC = () => {
                     />
                   </div>
                   <p className="text-xs text-center italic text-muted-foreground">
-                    Foto {idx + 1}: {photo.caption}
+                    {photo.caption}
                   </p>
                 </div>
               ))}
