@@ -36,7 +36,7 @@ export const JustificationPreviewSection: React.FC<Props> = ({ section, index, s
         <>
           {!isEmpty && (
             <div
-              className="prose prose-sm max-w-none text-justify leading-relaxed [&_p]:mb-3 [&_p]:indent-[1.25cm] [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
+              className="prose prose-sm max-w-none text-justify leading-relaxed whitespace-pre-line [&_p]:mb-3 [&_p]:indent-[1.25cm] [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6"
               dangerouslySetInnerHTML={{ __html: content }}
             />
           )}
