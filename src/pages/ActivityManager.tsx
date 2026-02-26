@@ -31,7 +31,7 @@ import {
 import { 
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
   FolderGit2, Search, Users, Loader2, FileEdit, Save, Eye, ChevronDown, ChevronUp,
-  FileText, Upload, Paperclip
+  FileText, Upload, Paperclip, Play
 } from 'lucide-react';
 import {
   Dialog,
@@ -672,7 +672,12 @@ export const ActivityManager: React.FC = () => {
                       <div className="flex gap-2 mt-2">
                         {act.photos.slice(0, 4).map((photo, idx) => (
                           photo.match(/\.(mp4|mov|webm|avi)(\?|$)/i) ? (
-                            <video key={idx} src={photo} muted className="h-16 w-16 object-cover rounded border" />
+                            <div key={idx} className="relative h-16 w-16 cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); setLightboxPhoto(photo); }}>
+                              <video src={photo} muted className="h-16 w-16 object-cover rounded border" />
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded">
+                                <Play className="w-5 h-5 text-white fill-white" />
+                              </div>
+                            </div>
                           ) : (
                             <img key={idx} src={photo} alt="" className="h-16 w-16 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); setLightboxPhoto(photo); }} />
                           )
@@ -862,11 +867,15 @@ export const ActivityManager: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Photo Lightbox */}
+      {/* Photo/Video Lightbox */}
       <Dialog open={!!lightboxPhoto} onOpenChange={(open) => !open && setLightboxPhoto(null)}>
         <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] p-2 flex items-center justify-center bg-black/90 border-none">
           {lightboxPhoto && (
-            <img src={lightboxPhoto} alt="Foto ampliada" className="max-w-full max-h-[90vh] object-contain rounded" />
+            lightboxPhoto.match(/\.(mp4|mov|webm|avi)(\?|$)/i) ? (
+              <video src={lightboxPhoto} controls autoPlay className="max-w-full max-h-[90vh] rounded" />
+            ) : (
+              <img src={lightboxPhoto} alt="Foto ampliada" className="max-w-full max-h-[90vh] object-contain rounded" />
+            )
           )}
         </DialogContent>
       </Dialog>
