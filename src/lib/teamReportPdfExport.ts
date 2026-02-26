@@ -199,9 +199,10 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         pdf.setFontSize(FONT_CAPTION);
         pdf.setFont('times', 'italic');
         const capLines: string[] = pdf.splitTextToSize(sharedCaption, CW);
-        const capX = ML + (CW - pdf.getTextWidth(capLines[0] || '')) / 2;
         for (let j = 0; j < Math.min(capLines.length, 3); j++) {
-          pdf.text(capLines[j], ML, ctx.currentY + j * 4.5);
+          const lineW = pdf.getTextWidth(capLines[j]);
+          const capX = ML + (CW - lineW) / 2;
+          pdf.text(capLines[j], capX, ctx.currentY + j * 4.5);
         }
         ctx.currentY += capLines.length * 4.5 + 6;
       }
