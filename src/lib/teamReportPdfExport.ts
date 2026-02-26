@@ -152,7 +152,23 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         const w = isFullWidth ? CW : colW;
         const h = w * 0.75;
 
-        if (ctx.currentY + h + 20 > MAX_Y) addPage(ctx);
+        // Pre-calculate caption height to include in space check
+        let estimatedCapH = 0;
+        if (!sharedCaption) {
+          pdf.setFontSize(FONT_CAPTION);
+          if (isFullWidth) {
+            const capLines: string[] = pdf.splitTextToSize(photos[idx].caption || '', w);
+            estimatedCapH = capLines.length * 4.5 + 4;
+          } else {
+            // Estimate max caption height from the two photos in this row
+            for (let ci = 0; ci < 2 && idx + ci < photos.length; ci++) {
+              const capLines: string[] = pdf.splitTextToSize(photos[idx + ci].caption || '', w);
+              estimatedCapH = Math.max(estimatedCapH, capLines.length * 4.5 + 4);
+            }
+          }
+        }
+
+        if (ctx.currentY + h + estimatedCapH + 6 > MAX_Y) addPage(ctx);
         const rowY = ctx.currentY;
 
         if (isFullWidth) {
@@ -168,8 +184,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
             for (let j = 0; j < capLines.length; j++) {
               pdf.text(capLines[j], col1X, capY + j * 4.5);
             }
-            const capHeight = capLines.length * 4.5;
-            ctx.currentY = rowY + h + 4 + capHeight + 6;
+            ctx.currentY = rowY + h + 4 + capLines.length * 4.5 + 6;
           } else {
             ctx.currentY = rowY + h + 6;
           }
