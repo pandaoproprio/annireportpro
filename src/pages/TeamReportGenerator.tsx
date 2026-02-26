@@ -1035,12 +1035,19 @@ export const TeamReportGenerator: React.FC = () => {
         {/* ── Signature Page ── */}
         <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 text-foreground animate-slideUp relative" style={a4Style}>
           <PreviewHeader />
-          <div className="mt-16 pt-10 flex flex-col items-center">
-            <p className="mb-8">Rio de Janeiro, {format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.</p>
-            <div className="w-80 border-t border-foreground mb-2 mt-16"></div>
-            <p className="font-bold uppercase">Assinatura do responsável legal</p>
-            <p className="mt-4"><strong>Nome e cargo:</strong> {responsibleName} - {functionRole}</p>
-            <p><strong>CNPJ:</strong> {providerDocument || '[Não informado]'}</p>
+          <div className="flex flex-col items-center justify-center" style={{ minHeight: '60%' }}>
+            <p className="mb-16 text-center" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt' }}>
+              Rio de Janeiro, {format(new Date(), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}.
+            </p>
+            <div className="mt-8" style={{ width: '280px', borderTop: '1px solid #000', paddingTop: '4px', textAlign: 'center' }}>
+              <p style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt', margin: 0 }}>
+                Assinatura do responsável legal
+              </p>
+            </div>
+            <div className="mt-8 text-left" style={{ fontFamily: 'Times New Roman, serif', fontSize: '12pt' }}>
+              <p style={{ margin: '4px 0' }}><strong>Nome e cargo:</strong> {responsibleName} - {functionRole}</p>
+              <p style={{ margin: '4px 0' }}><strong>CNPJ:</strong> {providerDocument || '[Não informado]'}</p>
+            </div>
           </div>
           <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
             <PreviewFooter />
