@@ -976,12 +976,20 @@ export const TeamReportGenerator: React.FC = () => {
   // Preview View
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <Button variant="ghost" onClick={() => setIsPreview(false)}>
           <ArrowLeft className="w-4 h-4 mr-2" />
           Voltar ao Formulário
         </Button>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Switch
+              id="previewFooterToggle"
+              checked={showInstitutionalFooter}
+              onCheckedChange={setShowInstitutionalFooter}
+            />
+            <Label htmlFor="previewFooterToggle" className="text-sm cursor-pointer whitespace-nowrap">Rodapé</Label>
+          </div>
           <Button variant="outline" onClick={handleExportPdf} disabled={isExporting}>
             <FileDown className="w-4 h-4 mr-2" />
             Exportar PDF
