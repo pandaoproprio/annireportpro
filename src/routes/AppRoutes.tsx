@@ -131,7 +131,7 @@ const Layout: React.FC = () => {
               <div>
                 <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Visão Geral</p>
                 <div className="space-y-0.5">
-                  <SidebarLink to="/" icon={<LayoutDashboard className="w-5 h-5" />} label="Dashboard" onClick={closeSidebar} />
+                  <SidebarLink to="/" icon={<LayoutDashboard className="w-5 h-5" />} label={role === 'OFICINEIRO' ? 'Meu Diário' : 'Dashboard'} onClick={closeSidebar} />
                 </div>
               </div>
             )}
