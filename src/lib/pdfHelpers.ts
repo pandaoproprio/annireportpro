@@ -175,7 +175,11 @@ const justifyLine = (pdf: jsPDF, words: string[], x: number, maxWidth: number, y
 // ── Justified paragraph with 1.25 cm first-line indent and 1.5 line spacing ──
 export const addParagraph = (ctx: PdfContext, rawText: string): void => {
   const text = sanitizeText(rawText);
-  if (!text || text.trim() === '') return;
+  if (!text || text.trim() === '') {
+    // Empty paragraph = blank line spacing (preserves Enter key line breaks)
+    ctx.currentY += LINE_H;
+    return;
+  }
   const { pdf } = ctx;
   pdf.setFontSize(FONT_BODY);
   pdf.setFont('times', 'normal');
@@ -423,10 +427,11 @@ export const parseHtmlToBlocks = (html: string): TextBlock[] => {
             const segs = extractSegments(el);
             blocks.push({ type: 'paragraph', content: textContent, segments: segs });
           }
-        } else {
+      } else {
           const t = el.textContent?.trim() || '';
           const segs = extractSegments(el);
-          if (t) blocks.push({ type: 'paragraph', content: t, segments: segs });
+          // Preserve empty paragraphs as spacing (blank lines from Enter)
+          blocks.push({ type: 'paragraph', content: t, segments: t ? segs : [] });
         }
       } else {
         el.childNodes.forEach(c => processNode(c));

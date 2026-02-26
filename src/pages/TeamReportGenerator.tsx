@@ -992,7 +992,7 @@ export const TeamReportGenerator: React.FC = () => {
             <PreviewHeader />
             <h2 className="text-lg font-bold mb-3">{section.title}</h2>
             <div
-              className="text-justify prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
+              className="text-justify prose prose-sm max-w-none whitespace-pre-line [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
               dangerouslySetInnerHTML={{ __html: section.content || '<p>[Nenhum conteúdo]</p>' }}
             />
             <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
