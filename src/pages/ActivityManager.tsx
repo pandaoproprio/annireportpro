@@ -29,7 +29,7 @@ import {
 import { 
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
   FolderGit2, Search, Users, Loader2, FileEdit, Save, Eye, ChevronDown, ChevronUp,
-  FileText, DollarSign, Upload, Paperclip
+  FileText, Upload, Paperclip
 } from 'lucide-react';
 import {
   Dialog,
@@ -213,38 +213,40 @@ export const ActivityManager: React.FC = () => {
       const files = Array.from(e.target.files);
       
       for (const file of files) {
+        const isVideo = file.type.startsWith('video/');
+        const isImage = file.type.startsWith('image/');
+        if (!isVideo && !isImage) {
+          toast.error(`Tipo não suportado: ${file.name}`);
+          continue;
+        }
         try {
-          // Generate unique file path
           const photoId = crypto.randomUUID();
-          const fileExt = file.name.split('.').pop() || 'jpg';
+          const fileExt = file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
           const filePath = `activities/${project?.id}/${photoId}.${fileExt}`;
           
-          // Upload to Storage
           const { error } = await supabase.storage
             .from('team-report-photos')
             .upload(filePath, file, { cacheControl: '3600', upsert: false });
           
           if (error) {
             console.error('Upload error:', error);
-            toast.error(`Erro ao enviar foto: ${file.name}`);
+            toast.error(`Erro ao enviar: ${file.name}`);
             continue;
           }
           
-          // Get public URL
           const { data: urlData } = supabase.storage
             .from('team-report-photos')
             .getPublicUrl(filePath);
           
-          // Add URL to photos array (not base64)
           setNewActivity(prev => ({ 
             ...prev, 
             photos: [...(prev.photos || []), urlData.publicUrl] 
           }));
           
-          toast.success(`Foto ${file.name} enviada com sucesso`);
+          toast.success(`${isVideo ? 'Vídeo' : 'Foto'} ${file.name} enviado(a)`);
         } catch (error) {
-          console.error('Photo upload error:', error);
-          toast.error(`Erro ao processar foto: ${file.name}`);
+          console.error('Upload error:', error);
+          toast.error(`Erro ao processar: ${file.name}`);
         }
       }
       
@@ -299,6 +301,15 @@ export const ActivityManager: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-20">
+
+      {/* Botão Nova Atividade */}
+      {!isFormOpen && (
+        <div className="flex justify-end">
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" /> Nova Atividade
+          </Button>
+        </div>
+      )}
 
       {/* Form */}
       {isFormOpen && (
@@ -387,14 +398,18 @@ export const ActivityManager: React.FC = () => {
 
               {/* Photo Upload with Captions */}
               <div className="space-y-2">
-                <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos</Label>
-                <Input type="file" accept="image/*" multiple onChange={handlePhotoUpload} />
+                <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos e Vídeos</Label>
+                <Input type="file" accept="image/*,video/*" multiple onChange={handlePhotoUpload} />
                 {newActivity.photos && newActivity.photos.length > 0 && (
                   <div className="space-y-3 mt-2">
                     {newActivity.photos.map((photo, idx) => (
                       <div key={idx} className="flex items-start gap-3 p-2 border rounded-md bg-muted/30">
                         <div className="relative group shrink-0">
-                          <img src={photo} alt={`Foto ${idx + 1}`} className="h-20 w-20 object-cover rounded border" />
+                          {photo.match(/\.(mp4|mov|webm|avi)(\?|$)/i) ? (
+                            <video src={photo} className="h-20 w-20 object-cover rounded border" muted />
+                          ) : (
+                            <img src={photo} alt={`Mídia ${idx + 1}`} className="h-20 w-20 object-cover rounded border" />
+                          )}
                           <button 
                             type="button" 
                             onClick={() => removePhoto(idx)} 
@@ -458,85 +473,6 @@ export const ActivityManager: React.FC = () => {
                         }}>
                           <X className="w-4 h-4 text-destructive" />
                         </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Expense Records */}
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2"><DollarSign className="w-4 h-4" /> Despesas</Label>
-                <Button type="button" variant="outline" size="sm" onClick={() => {
-                  setNewActivity(prev => ({
-                    ...prev,
-                    expenseRecords: [...(prev.expenseRecords || []), { id: crypto.randomUUID(), description: '' }]
-                  }));
-                }}>
-                  <Plus className="w-4 h-4 mr-1" /> Adicionar Despesa
-                </Button>
-                {newActivity.expenseRecords && newActivity.expenseRecords.length > 0 && (
-                  <div className="space-y-3 mt-2">
-                    {newActivity.expenseRecords.map((expense, idx) => (
-                      <div key={expense.id} className="p-3 border rounded-md bg-muted/30 space-y-2">
-                        <div className="flex items-start gap-2">
-                          <Textarea
-                            rows={2}
-                            placeholder="Descreva a despesa (ex: Material de escritório, transporte...)"
-                            value={expense.description}
-                            onChange={(e) => {
-                              const records = [...(newActivity.expenseRecords || [])];
-                              records[idx] = { ...records[idx], description: e.target.value };
-                              setNewActivity({ ...newActivity, expenseRecords: records });
-                            }}
-                            className="flex-1 text-sm"
-                          />
-                          <button type="button" onClick={() => {
-                            setNewActivity(prev => ({ ...prev, expenseRecords: (prev.expenseRecords || []).filter((_, i) => i !== idx) }));
-                          }}>
-                            <X className="w-4 h-4 text-destructive" />
-                          </button>
-                        </div>
-                        <div>
-                          <Label className="text-xs text-muted-foreground">Comprovante (foto ou PDF)</Label>
-                          {expense.fileUrl ? (
-                            <div className="flex items-center gap-2 mt-1">
-                              <Paperclip className="w-3.5 h-3.5 text-muted-foreground" />
-                              <a href={expense.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate">{expense.fileName || 'Comprovante'}</a>
-                              <button type="button" onClick={() => {
-                                const records = [...(newActivity.expenseRecords || [])];
-                                records[idx] = { ...records[idx], fileUrl: undefined, fileName: undefined };
-                                setNewActivity({ ...newActivity, expenseRecords: records });
-                              }}>
-                                <X className="w-3.5 h-3.5 text-destructive" />
-                              </button>
-                            </div>
-                          ) : (
-                            <Input
-                              type="file"
-                              accept="image/*,.pdf"
-                              className="mt-1"
-                              onChange={async (e) => {
-                                if (!e.target.files?.[0] || !project) return;
-                                const file = e.target.files[0];
-                                if (file.size > 20 * 1024 * 1024) { toast.error('Arquivo muito grande (máx. 20MB)'); e.target.value = ''; return; }
-                                try {
-                                  const fileId = crypto.randomUUID();
-                                  const ext = file.name.split('.').pop() || 'pdf';
-                                  const path = `activities/${project.id}/expenses/${fileId}.${ext}`;
-                                  const { error } = await supabase.storage.from('team-report-photos').upload(path, file, { cacheControl: '3600', upsert: false });
-                                  if (error) throw error;
-                                  const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(path);
-                                  const records = [...(newActivity.expenseRecords || [])];
-                                  records[idx] = { ...records[idx], fileUrl: urlData.publicUrl, fileName: file.name };
-                                  setNewActivity({ ...newActivity, expenseRecords: records });
-                                  toast.success('Comprovante enviado');
-                                } catch { toast.error('Erro ao enviar comprovante'); }
-                                e.target.value = '';
-                              }}
-                            />
-                          )}
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -661,7 +597,11 @@ export const ActivityManager: React.FC = () => {
                     {act.photos && act.photos.length > 0 && (
                       <div className="flex gap-2 mt-2">
                         {act.photos.slice(0, 4).map((photo, idx) => (
-                          <img key={idx} src={photo} alt="" className="h-16 w-16 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); setLightboxPhoto(photo); }} />
+                          photo.match(/\.(mp4|mov|webm|avi)(\?|$)/i) ? (
+                            <video key={idx} src={photo} muted className="h-16 w-16 object-cover rounded border" />
+                          ) : (
+                            <img key={idx} src={photo} alt="" className="h-16 w-16 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); setLightboxPhoto(photo); }} />
+                          )
                         ))}
                         {act.photos.length > 4 && (
                           <div className="h-16 w-16 rounded border bg-muted flex items-center justify-center text-sm text-muted-foreground">
@@ -801,18 +741,22 @@ export const ActivityManager: React.FC = () => {
               {viewingActivity.photos && viewingActivity.photos.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-medium text-muted-foreground uppercase">
-                    Fotos ({viewingActivity.photos.length})
+                    Fotos e Vídeos ({viewingActivity.photos.length})
                   </p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {viewingActivity.photos.map((photo, idx) => (
                       <div key={idx} className="space-y-1">
-                        <a href={photo} target="_blank" rel="noopener noreferrer">
-                          <img
-                            src={photo}
-                            alt={viewingActivity.photoCaptions?.[String(idx)] || `Foto ${idx + 1}`}
-                            className="w-full h-32 object-cover rounded-md border hover:opacity-90 transition-opacity cursor-pointer"
-                          />
-                        </a>
+                        {photo.match(/\.(mp4|mov|webm|avi)(\?|$)/i) ? (
+                          <video src={photo} controls muted className="w-full h-32 object-cover rounded-md border" />
+                        ) : (
+                          <a href={photo} target="_blank" rel="noopener noreferrer">
+                            <img
+                              src={photo}
+                              alt={viewingActivity.photoCaptions?.[String(idx)] || `Foto ${idx + 1}`}
+                              className="w-full h-32 object-cover rounded-md border hover:opacity-90 transition-opacity cursor-pointer"
+                            />
+                          </a>
+                        )}
                         {viewingActivity.photoCaptions?.[String(idx)] && (
                           <p className="text-xs text-muted-foreground italic text-center">{viewingActivity.photoCaptions[String(idx)]}</p>
                         )}
@@ -839,27 +783,6 @@ export const ActivityManager: React.FC = () => {
                 </div>
               )}
 
-              {viewingActivity.expenseRecords && viewingActivity.expenseRecords.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground uppercase">
-                    <DollarSign className="w-3.5 h-3.5 inline mr-1" />
-                    Despesas
-                  </p>
-                  <div className="space-y-2">
-                    {viewingActivity.expenseRecords.map((expense, idx) => (
-                      <div key={idx} className="p-2 border rounded-md bg-muted/30">
-                        <p className="text-sm text-foreground">{expense.description || 'Sem descrição'}</p>
-                        {expense.fileUrl && (
-                          <a href={expense.fileUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary hover:underline mt-1">
-                            <Paperclip className="w-3 h-3" />
-                            {expense.fileName || 'Comprovante'}
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
         </DialogContent>
