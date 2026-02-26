@@ -14,6 +14,7 @@ import { TermsOfUse } from '@/pages/TermsOfUse';
 import { DiaryLogin } from '@/pages/DiaryLogin';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { OfflineBadge } from '@/components/OfflineBadge';
+import { AiChatBot } from '@/components/AiChatBot';
 import { Button } from '@/components/ui/button';
 import { 
   Select, 
@@ -281,6 +282,7 @@ const Layout: React.FC = () => {
           </p>
         </footer>
       </main>
+      <AiChatBot />
     </div>
   );
 };

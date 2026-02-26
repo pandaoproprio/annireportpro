@@ -28,7 +28,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { mode = "generate", activities, goalTitle, goalAudience, sectionType, projectName, projectObject, text } = body;
+    const { mode = "generate", activities, goalTitle, goalAudience, sectionType, projectName, projectObject, text, chatHistory } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -38,7 +38,53 @@ serve(async (req) => {
     let systemPrompt = "";
     let userPrompt = "";
 
-    if (mode === "correct") {
+    if (mode === "chat") {
+      systemPrompt = `Você é um assistente virtual amigável e prestativo para oficineiros de projetos sociais no Brasil.
+Você ajuda a escrever descrições de atividades, corrigir textos, sugerir melhorias e tirar dúvidas sobre preenchimento de relatórios e diários de bordo.
+Responda sempre em português brasileiro. Seja conciso mas completo. Use formatação simples (negrito com **).
+Se pedirem para gerar texto, escreva em tom institucional adequado para relatórios de prestação de contas.`;
+      
+      const messages = [
+        { role: "system", content: systemPrompt },
+        ...(chatHistory || []).map((m: any) => ({ role: m.role, content: m.content })),
+      ];
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "google/gemini-3-flash-preview",
+          messages,
+          temperature: 0.7,
+          max_tokens: 1500,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Limite de requisições excedido." }), {
+            status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Créditos de IA esgotados." }), {
+            status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        const errText = await response.text();
+        console.error("AI Gateway error:", errText);
+        throw new Error(`AI Gateway returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      const resultText = data.choices?.[0]?.message?.content || "";
+      return new Response(JSON.stringify({ text: resultText }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    } else if (mode === "correct") {
       systemPrompt = `Você é um revisor gramatical e ortográfico especializado em português brasileiro formal.
 Corrija erros de gramática, ortografia, concordância, pontuação e regência.
 Mantenha o conteúdo e significado original inalterados.
