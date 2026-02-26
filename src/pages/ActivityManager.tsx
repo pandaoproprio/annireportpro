@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { FirstActivityCelebration } from '@/components/FirstActivityCelebration';
+import CameraCapture from '@/components/CameraCapture';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -399,7 +400,32 @@ export const ActivityManager: React.FC = () => {
               {/* Photo Upload with Captions */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2"><ImageIcon className="w-4 h-4" /> Fotos e Vídeos</Label>
-                <Input type="file" accept="image/*,video/*" multiple onChange={handlePhotoUpload} />
+                <div className="flex flex-wrap gap-2 items-center">
+                  <Input type="file" accept="image/*,video/*" multiple onChange={handlePhotoUpload} className="flex-1 min-w-[200px]" />
+                  <CameraCapture
+                    onCapture={async (file) => {
+                      if (!project) return;
+                      const isVideo = file.type.startsWith('video/');
+                      try {
+                        const photoId = crypto.randomUUID();
+                        const ext = file.name.split('.').pop() || (isVideo ? 'webm' : 'jpg');
+                        const filePath = `activities/${project.id}/${photoId}.${ext}`;
+                        const { error } = await supabase.storage
+                          .from('team-report-photos')
+                          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+                        if (error) { toast.error('Erro ao enviar mídia'); return; }
+                        const { data: urlData } = supabase.storage
+                          .from('team-report-photos')
+                          .getPublicUrl(filePath);
+                        setNewActivity(prev => ({
+                          ...prev,
+                          photos: [...(prev.photos || []), urlData.publicUrl]
+                        }));
+                        toast.success(`${isVideo ? 'Vídeo' : 'Foto'} capturado(a) com sucesso!`);
+                      } catch { toast.error('Erro ao processar captura'); }
+                    }}
+                  />
+                </div>
                 {newActivity.photos && newActivity.photos.length > 0 && (
                   <div className="space-y-3 mt-2">
                     {newActivity.photos.map((photo, idx) => (
