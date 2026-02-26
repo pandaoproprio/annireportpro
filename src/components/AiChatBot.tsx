@@ -14,7 +14,7 @@ interface Message {
 export const AiChatBot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Olá! 👋 Sou seu assistente de IA. Posso te ajudar a:\n\n• **Escrever descrições** de atividades\n• **Corrigir textos** com erros\n• **Sugerir melhorias** no conteúdo\n• **Tirar dúvidas** sobre o sistema\n\nComo posso te ajudar?' }
+    { role: 'assistant', content: 'Olá! 👋 Sou o **GIRA BOT**. Posso te ajudar a:\n\n• **Escrever descrições** de atividades\n• **Corrigir textos** com erros\n• **Sugerir melhorias** no conteúdo\n• **Tirar dúvidas** sobre o sistema\n\nComo posso te ajudar?' }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -80,7 +80,7 @@ export const AiChatBot: React.FC = () => {
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center hover:scale-105 active:scale-95"
-        title="Assistente IA"
+        title="GIRA BOT"
       >
         <MessageCircle className="w-6 h-6" />
       </button>
@@ -93,7 +93,7 @@ export const AiChatBot: React.FC = () => {
       <div className="flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground rounded-t-2xl">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5" />
-          <span className="font-semibold text-sm">Assistente IA</span>
+          <span className="font-semibold text-sm">GIRA BOT</span>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => setIsOpen(false)} className="p-1.5 rounded-lg hover:bg-primary-foreground/20 transition-colors">
