@@ -165,12 +165,17 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
             pdf.setFont('times', 'italic');
             const capLines: string[] = pdf.splitTextToSize(photo.caption || '', w);
             const capY = rowY + h + 4;
-            for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+            for (let j = 0; j < capLines.length; j++) {
               pdf.text(capLines[j], col1X, capY + j * 4.5);
             }
+            const capHeight = capLines.length * 4.5;
+            ctx.currentY = rowY + h + 4 + capHeight + 6;
+          } else {
+            ctx.currentY = rowY + h + 6;
           }
           idx++;
         } else {
+          let maxCapH = 0;
           for (let col = 0; col < 2 && idx < photos.length; col++) {
             const photo = photos[idx];
             const x = col === 0 ? col1X : col2X;
@@ -183,15 +188,15 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
               pdf.setFont('times', 'italic');
               const capLines: string[] = pdf.splitTextToSize(photo.caption || '', w);
               const capY = rowY + h + 4;
-              for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+              for (let j = 0; j < capLines.length; j++) {
                 pdf.text(capLines[j], x, capY + j * 4.5);
               }
+              maxCapH = Math.max(maxCapH, capLines.length * 4.5);
             }
             idx++;
           }
+          ctx.currentY = rowY + h + 4 + (maxCapH > 0 ? maxCapH + 6 : 6);
         }
-
-        ctx.currentY = rowY + h + 22;
       }
 
       // Render shared caption after the group
@@ -199,7 +204,7 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         pdf.setFontSize(FONT_CAPTION);
         pdf.setFont('times', 'italic');
         const capLines: string[] = pdf.splitTextToSize(sharedCaption, CW);
-        for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+        for (let j = 0; j < capLines.length; j++) {
           const lineW = pdf.getTextWidth(capLines[j]);
           const capX = ML + (CW - lineW) / 2;
           pdf.text(capLines[j], capX, ctx.currentY + j * 4.5);

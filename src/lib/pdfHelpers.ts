@@ -603,7 +603,7 @@ export const addInlineImage = async (ctx: PdfContext, src: string, caption?: str
     pdf.setFontSize(FONT_CAPTION);
     pdf.setFont('times', 'italic');
     const capLines: string[] = pdf.splitTextToSize(caption, CW);
-    for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+    for (let j = 0; j < capLines.length; j++) {
       pdf.text(capLines[j], ML + (CW - pdf.getTextWidth(capLines[j])) / 2, ctx.currentY);
       ctx.currentY += 4.5;
     }
@@ -733,7 +733,7 @@ export const addPhotoGrid = async (
       pdf.setFontSize(FONT_CAPTION);
       pdf.setFont('times', 'italic');
       const capLines: string[] = pdf.splitTextToSize(sharedCaption, CW);
-      for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+      for (let j = 0; j < capLines.length; j++) {
         const lineW = pdf.getTextWidth(capLines[j]);
         pdf.text(capLines[j], ML + (CW - lineW) / 2, ctx.currentY + j * 4.5);
       }
