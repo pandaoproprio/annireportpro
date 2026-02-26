@@ -976,7 +976,7 @@ export const TeamReportGenerator: React.FC = () => {
           <PreviewHeader />
           <h2 className="text-lg font-bold mb-3">{executionReportTitle}</h2>
           <div
-            className="text-justify prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
+            className="text-justify prose prose-sm max-w-none whitespace-pre-line [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
             dangerouslySetInnerHTML={{ __html: executionReport || '<p>[Nenhum relato informado]</p>' }}
           />
 
