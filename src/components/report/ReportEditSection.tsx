@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, PhotoSize, PhotoLayout } from '@/types';
+import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, PhotoSize, PhotoLayout, PhotoGroup } from '@/types';
 import { PageLayout } from '@/types/imageLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,8 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ImageLayoutEditor } from '@/components/report/ImageLayoutEditor';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
 import { ImageEditorDialog } from '@/components/report/ImageEditorDialog';
@@ -53,6 +54,8 @@ interface Props {
   replacePhotoUrl: (key: string, index: number, newUrl: string, setter: React.Dispatch<React.SetStateAction<string[]>> | null, goalId?: string) => void;
   pageLayouts: Record<string, PageLayout>;
   setPageLayouts: React.Dispatch<React.SetStateAction<Record<string, PageLayout>>>;
+  sectionPhotoGroups: Record<string, PhotoGroup[]>;
+  setSectionPhotoGroups: React.Dispatch<React.SetStateAction<Record<string, PhotoGroup[]>>>;
   // Project data
   goals: Goal[];
   projectName: string;
@@ -157,12 +160,48 @@ export const ReportEditSection: React.FC<Props> = (props) => {
   );
 };
 
-const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts }) => {
+const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts, sectionPhotoGroups, setSectionPhotoGroups }) => {
   const sectionKey = section.type === 'custom' ? section.id : section.key;
   const photos = sectionPhotos[sectionKey] || [];
   const docs = sectionDocs[sectionKey] || [];
   const metas = photoMetadata[sectionKey] || [];
+  const groups = sectionPhotoGroups[sectionKey] || [];
   const [showLayoutEditor, setShowLayoutEditor] = useState(false);
+  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+
+  const toggleSelect = (idx: number) => {
+    setSelectedIndices(prev => { const s = new Set(prev); if (s.has(idx)) s.delete(idx); else s.add(idx); return s; });
+  };
+
+  const createGroup = () => {
+    if (selectedIndices.size < 2) return;
+    const indices = Array.from(selectedIndices);
+    // Remove from existing groups
+    const cleaned = groups.map(g => ({
+      ...g, photoIds: g.photoIds.filter(id => !indices.map(String).includes(id)),
+    })).filter(g => g.photoIds.length > 0);
+    setSectionPhotoGroups(prev => ({
+      ...prev,
+      [sectionKey]: [...cleaned, { id: crypto.randomUUID(), caption: 'Registro fotográfico das atividades realizadas', photoIds: indices.map(String) }],
+    }));
+    setSelectedIndices(new Set());
+  };
+
+  const removeGroup = (groupId: string) => {
+    setSectionPhotoGroups(prev => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || []).filter(g => g.id !== groupId),
+    }));
+  };
+
+  const updateGroupCaption = (groupId: string, caption: string) => {
+    setSectionPhotoGroups(prev => ({
+      ...prev,
+      [sectionKey]: (prev[sectionKey] || []).map(g => g.id === groupId ? { ...g, caption } : g),
+    }));
+  };
+
+  const getPhotoGroupId = (idx: number) => groups.find(g => g.photoIds.includes(String(idx)))?.id || null;
 
   return (
     <div className="mt-4 space-y-4 border-t pt-4">
@@ -171,30 +210,81 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
           <ImageIcon className="w-4 h-4" /> Registro Fotográfico
         </Label>
         <Input type="file" accept="image/*" multiple onChange={e => handleSectionPhotoUpload(e, sectionKey)} className="text-sm" />
+
+        {/* Grouping controls */}
+        {photos.length >= 2 && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            <Button variant="outline" size="sm" onClick={createGroup} disabled={selectedIndices.size < 2}>
+              <FolderPlus className="w-4 h-4 mr-1" /> Agrupar selecionadas ({selectedIndices.size})
+            </Button>
+            {selectedIndices.size > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIndices(new Set())}>Limpar seleção</Button>
+            )}
+          </div>
+        )}
+
+        {/* Existing groups */}
+        {groups.map(group => {
+          const groupPhotos = group.photoIds.map(id => photos[Number(id)]).filter(Boolean);
+          if (groupPhotos.length === 0) return null;
+          return (
+            <div key={group.id} className="p-3 border-2 border-primary/30 rounded-lg bg-primary/5 space-y-3 mt-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-primary uppercase">Grupo ({groupPhotos.length} fotos)</span>
+                <Button variant="ghost" size="sm" onClick={() => removeGroup(group.id)}>
+                  <FolderMinus className="w-4 h-4 mr-1" /> Desagrupar
+                </Button>
+              </div>
+              <Input value={group.caption} onChange={e => updateGroupCaption(group.id, e.target.value)} placeholder="Legenda do grupo..." className="text-sm" />
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {groupPhotos.map((photo, i) => (
+                  <div key={i} className="relative aspect-square bg-muted rounded overflow-hidden">
+                    <img src={photo} alt="" className="w-full h-full object-contain" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+
         {photos.length > 0 && (
           <>
-            <Button
-              variant="outline" size="sm"
-              className="mt-1"
-              onClick={() => setShowLayoutEditor(true)}
-            >
+            <Button variant="outline" size="sm" className="mt-1" onClick={() => setShowLayoutEditor(true)}>
               <LayoutGrid className="w-4 h-4 mr-2" /> Editor de Layout
             </Button>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
-              {photos.map((photo, pIdx) => (
-                <PhotoCard
-                  key={pIdx}
-                  photo={photo}
-                  index={pIdx}
-                  metaKey={sectionKey}
-                  meta={metas[pIdx]}
-                  projectId={projectId}
-                  updatePhotoCaption={updatePhotoCaption}
-                  updatePhotoSize={updatePhotoSize}
-                  onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
-                  onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
-                />
-              ))}
+              {photos.map((photo, pIdx) => {
+                const inGroup = getPhotoGroupId(pIdx);
+                return (
+                  <div key={pIdx} className="relative">
+                    {!inGroup && photos.length >= 2 && (
+                      <div className="absolute top-2 right-8 z-10">
+                        <Checkbox
+                          checked={selectedIndices.has(pIdx)}
+                          onCheckedChange={() => toggleSelect(pIdx)}
+                          className="bg-background/80 border-2"
+                        />
+                      </div>
+                    )}
+                    {inGroup && (
+                      <div className="absolute inset-0 bg-primary/10 rounded-lg z-10 pointer-events-none flex items-center justify-center">
+                        <span className="text-xs font-medium text-primary bg-background/90 px-2 py-1 rounded">Em grupo</span>
+                      </div>
+                    )}
+                    <PhotoCard
+                      photo={photo}
+                      index={pIdx}
+                      metaKey={sectionKey}
+                      meta={metas[pIdx]}
+                      projectId={projectId}
+                      updatePhotoCaption={updatePhotoCaption}
+                      updatePhotoSize={updatePhotoSize}
+                      onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
+                      onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           </>
         )}

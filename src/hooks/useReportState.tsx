@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useAppData } from '@/contexts/AppDataContext';
-import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta } from '@/types';
+import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta, PhotoGroup } from '@/types';
 import { PageLayout } from '@/types/imageLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -42,6 +42,7 @@ export const useReportState = () => {
   const [linkFileNames, setLinkFileNames] = useState<{ attendance: string; registration: string; media: string }>({ attendance: '', registration: '', media: '' });
   const [photoMetadata, setPhotoMetadata] = useState<Record<string, ReportPhotoMeta[]>>({});
   const [pageLayouts, setPageLayouts] = useState<Record<string, PageLayout>>({});
+  const [sectionPhotoGroups, setSectionPhotoGroups] = useState<Record<string, PhotoGroup[]>>({});
 
   // ── Shared section manager ──
   const sectionManager = useSectionManager({ defaultSections: DEFAULT_SECTIONS, insertBeforeKey: 'expenses' });
@@ -94,6 +95,7 @@ export const useReportState = () => {
       fileUploader.setSectionDocs((rd as any).sectionDocs || {});
       setPhotoMetadata((rd as any).photoMetadata || {});
       setPageLayouts((rd as any).pageLayouts || {});
+      setSectionPhotoGroups((rd as any).sectionPhotoGroups || {});
     }
   }, [project]);
 
@@ -124,6 +126,7 @@ export const useReportState = () => {
         sectionDocs: fileUploader.sectionDocs,
         photoMetadata,
         pageLayouts,
+        sectionPhotoGroups,
       } as any);
       if (showToast) toast.success('Rascunho salvo com sucesso!');
     } catch (error) {
@@ -300,6 +303,7 @@ export const useReportState = () => {
     sectionDocs: fileUploader.sectionDocs,
     photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     pageLayouts, setPageLayouts,
+    sectionPhotoGroups, setSectionPhotoGroups,
     saveReportData,
     moveSection: sectionManager.moveSection,
     toggleVisibility: sectionManager.toggleVisibility,

@@ -92,6 +92,7 @@ interface Props {
   links: { attendance: string; registration: string; media: string };
   sectionPhotos?: Record<string, string[]>;
   photoMetadata?: Record<string, ReportPhotoMeta[]>;
+  sectionPhotoGroups?: Record<string, { id: string; caption: string; photoIds: string[] }[]>;
   goals: Goal[];
   organizationName: string;
   organizationAddress?: string;
@@ -120,16 +121,30 @@ const PreviewPhoto: React.FC<{ photo: string; meta?: ReportPhotoMeta; index: num
   );
 };
 
-const PreviewPhotoGrid: React.FC<{ photos: string[]; metas?: ReportPhotoMeta[]; title?: string }> = ({ photos, metas, title }) => {
+const PreviewPhotoGrid: React.FC<{ photos: string[]; metas?: ReportPhotoMeta[]; title?: string; groups?: { id: string; caption: string; photoIds: string[] }[] }> = ({ photos, metas, title, groups }) => {
   if (!photos || photos.length === 0) return null;
+  const groupedIndices = new Set((groups || []).flatMap(g => g.photoIds.map(Number)));
+  const ungrouped = photos.map((_, i) => i).filter(i => !groupedIndices.has(i));
   return (
     <div className="mt-6 mb-4">
       {title && <p className="font-semibold text-sm mb-3 uppercase">{title}</p>}
-      <div className="flex flex-wrap gap-4 justify-center">
-        {photos.map((photo, idx) => (
-          <PreviewPhoto key={idx} photo={photo} meta={metas?.[idx]} index={idx} />
-        ))}
-      </div>
+      {(groups || []).map(group => {
+        const indices = group.photoIds.map(Number).filter(i => i < photos.length);
+        if (indices.length === 0) return null;
+        return (
+          <div key={group.id} className="mb-4">
+            <div className="flex flex-wrap gap-4 justify-center">
+              {indices.map(i => <PreviewPhoto key={i} photo={photos[i]} meta={metas?.[i]} index={i} />)}
+            </div>
+            <p className="text-xs text-muted-foreground text-center mt-1 italic">{group.caption}</p>
+          </div>
+        );
+      })}
+      {ungrouped.length > 0 && (
+        <div className="flex flex-wrap gap-4 justify-center">
+          {ungrouped.map(i => <PreviewPhoto key={i} photo={photos[i]} meta={metas?.[i]} index={i} />)}
+        </div>
+      )}
     </div>
   );
 };
@@ -142,9 +157,11 @@ export const ReportPreviewSection: React.FC<Props> = (props) => {
   const secPhotos = props.sectionPhotos?.[sectionKey] || [];
   const secMetas = props.photoMetadata?.[sectionKey] || [];
 
+  const secGroups = props.sectionPhotoGroups?.[sectionKey] || [];
+
   const renderSectionPhotos = () => {
     if (secPhotos.length === 0) return null;
-    return <PreviewPhotoGrid photos={secPhotos} metas={secMetas} title="Registros Fotográficos" />;
+    return <PreviewPhotoGrid photos={secPhotos} metas={secMetas} title="Registros Fotográficos" groups={secGroups} />;
   };
 
   switch (section.key) {
@@ -184,7 +201,7 @@ const SummaryPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }>
   </section>
 );
 
-const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, getActivitiesByGoal, formatActivityDate }) => (
+const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, sectionPhotoGroups, getActivitiesByGoal, formatActivityDate }) => (
   <section className="mb-8 page-break">
     <h3 className={`${sectionTitleClass} mb-6`} style={{ textAlign: 'left' }}>{section.title}</h3>
     {goals.map((goal, idx) => {
@@ -210,7 +227,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
               ))}
             </div>
           )}
-          <PreviewPhotoGrid photos={allGoalPhotos} metas={goalMetas} title={`Registros Fotográficos – Meta ${idx + 1}`} />
+          <PreviewPhotoGrid photos={allGoalPhotos} metas={goalMetas} title={`Registros Fotográficos – Meta ${idx + 1}`} groups={sectionPhotoGroups?.[goal.id]} />
         </div>
       );
     })}
