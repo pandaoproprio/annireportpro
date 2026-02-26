@@ -106,6 +106,7 @@ export const TeamReportPdfContent: React.FC<TeamReportPdfContentProps> = ({ proj
             fontFamily: 'Times New Roman, serif',
             fontSize: '12pt',
             lineHeight: '1.5',
+            whiteSpace: 'pre-line',
           }}
           dangerouslySetInnerHTML={{ 
             __html: report.executionReport || '<p>[Nenhum relato informado]</p>' 
