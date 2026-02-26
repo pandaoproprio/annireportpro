@@ -5,6 +5,7 @@ import { MessageCircle, X, Send, Loader2, Bot, User, Minimize2 } from 'lucide-re
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -12,14 +13,30 @@ interface Message {
 }
 
 export const AiChatBot: React.FC = () => {
+  const { profile } = useAuth();
+  const firstName = profile?.name?.split(' ')[0] || 'amigo(a)';
+  
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'assistant', content: 'Olá! 👋 Sou o **GIRA BOT**. Posso te ajudar a:\n\n• **Escrever descrições** de atividades\n• **Corrigir textos** com erros\n• **Sugerir melhorias** no conteúdo\n• **Tirar dúvidas** sobre o sistema\n\nComo posso te ajudar?' }
+    { role: 'assistant', content: `Olá, **${firstName}**! 👋 Sou o **GIRA BOT**, seu companheiro no dia a dia. Posso te ajudar a:\n\n• **Escrever descrições** de atividades\n• **Corrigir textos** com erros\n• **Sugerir melhorias** no conteúdo\n• **Tirar dúvidas** sobre o sistema\n• **Conversar** sobre seu dia de trabalho 😊\n\nComo posso te ajudar hoje?` }
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Update welcome message when profile loads
+  useEffect(() => {
+    if (profile?.name) {
+      const name = profile.name.split(' ')[0];
+      setMessages(prev => {
+        if (prev.length === 1 && prev[0].role === 'assistant') {
+          return [{ role: 'assistant', content: `Olá, **${name}**! 👋 Sou o **GIRA BOT**, seu companheiro no dia a dia. Posso te ajudar a:\n\n• **Escrever descrições** de atividades\n• **Corrigir textos** com erros\n• **Sugerir melhorias** no conteúdo\n• **Tirar dúvidas** sobre o sistema\n• **Conversar** sobre seu dia de trabalho 😊\n\nComo posso te ajudar hoje?` }];
+        }
+        return prev;
+      });
+    }
+  }, [profile?.name]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -40,6 +57,7 @@ export const AiChatBot: React.FC = () => {
         body: {
           mode: 'chat',
           text: trimmed,
+          userName: profile?.name || undefined,
           chatHistory: newMessages.slice(-10).map(m => ({ role: m.role, content: m.content })),
         },
       });
