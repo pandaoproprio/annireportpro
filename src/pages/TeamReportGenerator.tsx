@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTeamReports, TeamReportDraft } from '@/hooks/useTeamReports';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
-import { TeamReport, PhotoWithCaption } from '@/types';
+import { TeamReport, PhotoWithCaption, PhotoGroup } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,7 +22,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save, Trash2, FileEdit, Loader2, PenTool } from 'lucide-react';
+import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save, Trash2, FileEdit, Loader2, PenTool, FolderPlus, FolderMinus, CheckSquare } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
@@ -46,6 +46,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { SortablePhoto } from '@/components/SortablePhoto';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -90,6 +91,8 @@ export const TeamReportGenerator: React.FC = () => {
   const [groupCaption, setGroupCaption] = useState('Registro fotográfico das atividades realizadas');
   const [photoSizePx, setPhotoSizePx] = useState(300);
   const [showInstitutionalFooter, setShowInstitutionalFooter] = useState(true);
+  const [photoGroups, setPhotoGroups] = useState<PhotoGroup[]>([]);
+  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
 
   // DnD sensors
   const sensors = useSensors(
@@ -116,6 +119,8 @@ export const TeamReportGenerator: React.FC = () => {
     setAttachmentsTitle('3. Anexos de Comprovação');
     setFooterText('');
     setAdditionalSections([]);
+    setPhotoGroups([]);
+    setSelectedPhotoIds(new Set());
   };
 
   // Load draft into form
@@ -197,6 +202,15 @@ export const TeamReportGenerator: React.FC = () => {
   };
 
   const removePhoto = (index: number) => {
+    const removedPhoto = photosWithCaptions[index];
+    // Also remove from any group
+    if (removedPhoto) {
+      setPhotoGroups(prev => prev.map(g => ({
+        ...g,
+        photoIds: g.photoIds.filter(id => id !== removedPhoto.id),
+      })).filter(g => g.photoIds.length > 0));
+      setSelectedPhotoIds(prev => { const s = new Set(prev); s.delete(removedPhoto.id); return s; });
+    }
     setPhotosWithCaptions(prev => prev.filter((_, i) => i !== index));
   };
 
@@ -204,6 +218,50 @@ export const TeamReportGenerator: React.FC = () => {
     setPhotosWithCaptions(prev => 
       prev.map((photo, i) => i === index ? { ...photo, caption } : photo)
     );
+  };
+
+  const togglePhotoSelection = (photoId: string) => {
+    setSelectedPhotoIds(prev => {
+      const next = new Set(prev);
+      if (next.has(photoId)) next.delete(photoId);
+      else next.add(photoId);
+      return next;
+    });
+  };
+
+  const createPhotoGroup = () => {
+    if (selectedPhotoIds.size < 2) {
+      toast.error('Selecione pelo menos 2 fotos para agrupar');
+      return;
+    }
+    // Remove selected photos from existing groups
+    const idsArray = Array.from(selectedPhotoIds);
+    setPhotoGroups(prev => {
+      const cleaned = prev.map(g => ({
+        ...g,
+        photoIds: g.photoIds.filter(id => !selectedPhotoIds.has(id)),
+      })).filter(g => g.photoIds.length > 0);
+      return [...cleaned, {
+        id: crypto.randomUUID(),
+        caption: 'Registro fotográfico das atividades realizadas',
+        photoIds: idsArray,
+      }];
+    });
+    setSelectedPhotoIds(new Set());
+    toast.success(`Grupo criado com ${idsArray.length} fotos`);
+  };
+
+  const removePhotoGroup = (groupId: string) => {
+    setPhotoGroups(prev => prev.filter(g => g.id !== groupId));
+  };
+
+  const updateGroupCaption = (groupId: string, caption: string) => {
+    setPhotoGroups(prev => prev.map(g => g.id === groupId ? { ...g, caption } : g));
+  };
+
+  const getPhotoGroupId = (photoId: string): string | null => {
+    const group = photoGroups.find(g => g.photoIds.includes(photoId));
+    return group?.id || null;
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -293,6 +351,7 @@ export const TeamReportGenerator: React.FC = () => {
         executionReport,
         photos: photosWithCaptions.map(p => p.url),
         photoCaptions: photosWithCaptions,
+        photoGroups,
         reportTitle,
         executionReportTitle,
         attachmentsTitle,
@@ -341,6 +400,7 @@ export const TeamReportGenerator: React.FC = () => {
         executionReport,
         photos: photosWithCaptions.map(p => p.url),
         photoCaptions: photosWithCaptions,
+        photoGroups,
         reportTitle,
         executionReportTitle,
         attachmentsTitle,
@@ -816,25 +876,59 @@ export const TeamReportGenerator: React.FC = () => {
               Adicionar Fotos
             </Button>
 
+            {/* Grouping controls */}
             {photosWithCaptions.length >= 2 && (
-              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="groupCaption" className="text-sm font-medium">Legenda única para todas as fotos</Label>
-                  <Switch
-                    id="groupCaption"
-                    checked={useGroupCaption}
-                    onCheckedChange={setUseGroupCaption}
-                  />
-                </div>
-                {useGroupCaption && (
-                  <Input
-                    value={groupCaption}
-                    onChange={e => setGroupCaption(e.target.value)}
-                    placeholder="Legenda compartilhada..."
-                  />
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={createPhotoGroup}
+                  disabled={selectedPhotoIds.size < 2}
+                >
+                  <FolderPlus className="w-4 h-4 mr-1" />
+                  Agrupar selecionadas ({selectedPhotoIds.size})
+                </Button>
+                {selectedPhotoIds.size > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedPhotoIds(new Set())}>
+                    Limpar seleção
+                  </Button>
                 )}
               </div>
             )}
+
+            {/* Existing groups */}
+            {photoGroups.map(group => {
+              const groupPhotos = group.photoIds
+                .map(id => photosWithCaptions.find(p => p.id === id))
+                .filter(Boolean) as PhotoWithCaption[];
+              if (groupPhotos.length === 0) return null;
+              return (
+                <div key={group.id} className="p-3 border-2 border-primary/30 rounded-lg bg-primary/5 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-primary uppercase">
+                      Grupo ({groupPhotos.length} fotos)
+                    </span>
+                    <Button variant="ghost" size="sm" onClick={() => removePhotoGroup(group.id)}>
+                      <FolderMinus className="w-4 h-4 mr-1" />
+                      Desagrupar
+                    </Button>
+                  </div>
+                  <Input
+                    value={group.caption}
+                    onChange={e => updateGroupCaption(group.id, e.target.value)}
+                    placeholder="Legenda do grupo..."
+                    className="text-sm"
+                  />
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {groupPhotos.map(photo => (
+                      <div key={photo.id} className="relative aspect-square bg-muted rounded overflow-hidden">
+                        <img src={photo.url} alt="" className="w-full h-full object-contain" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
 
             {photosWithCaptions.length > 0 && (
               <>
@@ -858,15 +952,33 @@ export const TeamReportGenerator: React.FC = () => {
                     strategy={verticalListSortingStrategy}
                   >
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                      {photosWithCaptions.map((photo, idx) => (
-                        <SortablePhoto
-                          key={photo.id}
-                          photo={photo}
-                          index={idx}
-                          onRemove={removePhoto}
-                          onUpdateCaption={updatePhotoCaption}
-                        />
-                      ))}
+                      {photosWithCaptions.map((photo, idx) => {
+                        const inGroup = getPhotoGroupId(photo.id);
+                        return (
+                          <div key={photo.id} className="relative">
+                            {!inGroup && photosWithCaptions.length >= 2 && (
+                              <div className="absolute top-2 right-8 z-10">
+                                <Checkbox
+                                  checked={selectedPhotoIds.has(photo.id)}
+                                  onCheckedChange={() => togglePhotoSelection(photo.id)}
+                                  className="bg-background/80 border-2"
+                                />
+                              </div>
+                            )}
+                            {inGroup && (
+                              <div className="absolute inset-0 bg-primary/10 rounded-lg z-10 pointer-events-none flex items-center justify-center">
+                                <span className="text-xs font-medium text-primary bg-background/90 px-2 py-1 rounded">Em grupo</span>
+                              </div>
+                            )}
+                            <SortablePhoto
+                              photo={photo}
+                              index={idx}
+                              onRemove={removePhoto}
+                              onUpdateCaption={updatePhotoCaption}
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
                   </SortableContext>
                 </DndContext>
@@ -1066,29 +1178,52 @@ export const TeamReportGenerator: React.FC = () => {
           <div className="bg-card shadow-2xl max-w-[210mm] mx-auto min-h-[297mm] mb-8 text-foreground animate-slideUp relative" style={a4Style}>
             <PreviewHeader />
             <h2 className="text-lg font-bold mb-3">{attachmentsTitle}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {photosWithCaptions.map((photo, idx) => (
-                <div key={photo.id} className="space-y-2">
-                  <div className="w-full bg-muted rounded-lg border overflow-hidden flex items-center justify-center" style={{ height: `${photoSizePx}px` }}>
-                    <img
-                      src={photo.url}
-                      alt={`Registro ${idx + 1}`}
-                      className="max-w-full max-h-full object-contain"
-                    />
+            
+            {/* Render grouped photos first */}
+            {photoGroups.map(group => {
+              const groupPhotos = group.photoIds
+                .map(id => photosWithCaptions.find(p => p.id === id))
+                .filter(Boolean) as PhotoWithCaption[];
+              if (groupPhotos.length === 0) return null;
+              return (
+                <div key={group.id} className="mb-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {groupPhotos.map((photo, idx) => (
+                      <div key={photo.id}>
+                        <div className="w-full bg-muted rounded-lg border overflow-hidden flex items-center justify-center" style={{ height: `${photoSizePx}px` }}>
+                          <img src={photo.url} alt={`Registro ${idx + 1}`} className="max-w-full max-h-full object-contain" />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {!useGroupCaption && (
-                    <p className="text-xs text-center italic text-muted-foreground">
-                      {photo.caption}
-                    </p>
-                  )}
+                  <p className="text-xs text-center italic text-muted-foreground mt-2">
+                    {group.caption}
+                  </p>
                 </div>
-              ))}
-            </div>
-            {useGroupCaption && (
-              <p className="text-xs text-center italic text-muted-foreground mt-4">
-                {groupCaption}
-              </p>
-            )}
+              );
+            })}
+
+            {/* Render ungrouped photos */}
+            {(() => {
+              const groupedIds = new Set(photoGroups.flatMap(g => g.photoIds));
+              const ungrouped = photosWithCaptions.filter(p => !groupedIds.has(p.id));
+              if (ungrouped.length === 0) return null;
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {ungrouped.map((photo, idx) => (
+                    <div key={photo.id} className="space-y-2">
+                      <div className="w-full bg-muted rounded-lg border overflow-hidden flex items-center justify-center" style={{ height: `${photoSizePx}px` }}>
+                        <img src={photo.url} alt={`Registro ${idx + 1}`} className="max-w-full max-h-full object-contain" />
+                      </div>
+                      <p className="text-xs text-center italic text-muted-foreground">
+                        {photo.caption}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
+
             <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
               <PreviewFooter />
             </div>

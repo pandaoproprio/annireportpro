@@ -104,23 +104,29 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     : report.photos?.map((url, i) => ({ url, caption: 'Registro fotográfico das atividades realizadas', id: `photo-${i}` })) || [];
 
   // Pre-load all images and filter out failures
-  const loadedPhotos: { url: string; caption: string; imgData: { data: string; width: number; height: number } }[] = [];
+  const loadedPhotosMap: Map<string, { url: string; caption: string; imgData: { data: string; width: number; height: number } }> = new Map();
   for (const photo of photosRaw) {
     const imgData = await loadImage(photo.url);
     if (imgData) {
-      loadedPhotos.push({ url: photo.url, caption: photo.caption || '', imgData });
+      loadedPhotosMap.set(photo.id, { url: photo.url, caption: photo.caption || '', imgData });
     } else {
       console.warn('Skipping photo that failed to load:', photo.url);
     }
   }
 
-  if (loadedPhotos.length > 0) {
-    const attTitle = report.attachmentsTitle || 'Registros Fotográficos';
-    const firstW = loadedPhotos.length === 1 ? CW : (CW - 10) / 2;
-    const firstH = firstW * 0.75;
+  const groups = report.photoGroups || [];
+  const groupedIds = new Set(groups.flatMap(g => g.photoIds));
+  const ungroupedPhotos = photosRaw.filter(p => !groupedIds.has(p.id));
+  const hasPhotos = loadedPhotosMap.size > 0;
 
-    // Ensure title + first photo row stay together (avoid orphan title)
+  if (hasPhotos) {
+    const attTitle = report.attachmentsTitle || 'Registros Fotográficos';
+    const COL_GAP = 10;
+    const colW = (CW - COL_GAP) / 2;
+
+    // Ensure title + first row stay together
     ctx.currentY += LINE_H;
+    const firstH = colW * 0.75;
     ensureSpace(ctx, LINE_H + 6 + firstH + 20);
 
     pdf.setFontSize(FONT_BODY);
@@ -128,59 +134,87 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     pdf.text(attTitle, ML, ctx.currentY);
     ctx.currentY += LINE_H + 4;
 
-    const COL_GAP = 10;
-    const colW = (CW - COL_GAP) / 2;
     const col1X = ML;
     const col2X = ML + colW + COL_GAP;
 
-    let idx = 0;
-    while (idx < loadedPhotos.length) {
-      const remaining = loadedPhotos.length - idx;
-      // Last photo alone or single photo total → full width
-      const isFullWidth = remaining === 1;
-      const w = isFullWidth ? CW : colW;
-      const h = w * 0.75;
+    // Helper to render a set of photos with optional shared caption
+    const renderPhotoSet = (photoIds: string[], sharedCaption?: string) => {
+      const photos = photoIds
+        .map(id => loadedPhotosMap.get(id))
+        .filter(Boolean) as { url: string; caption: string; imgData: { data: string; width: number; height: number } }[];
+      
+      if (photos.length === 0) return;
 
-      if (ctx.currentY + h + 20 > MAX_Y) addPage(ctx);
-      const rowY = ctx.currentY;
+      let idx = 0;
+      while (idx < photos.length) {
+        const remaining = photos.length - idx;
+        const isFullWidth = remaining === 1;
+        const w = isFullWidth ? CW : colW;
+        const h = w * 0.75;
 
-      if (isFullWidth) {
-        // Single photo (full width)
-        const photo = loadedPhotos[idx];
-        try { pdf.addImage(photo.imgData.data, 'JPEG', col1X, rowY, w, h); }
-        catch (e) { console.warn('Image error:', e); }
+        if (ctx.currentY + h + 20 > MAX_Y) addPage(ctx);
+        const rowY = ctx.currentY;
 
-        pdf.setFontSize(FONT_CAPTION);
-        pdf.setFont('times', 'italic');
-        const caption = photo.caption || `Foto ${idx + 1}`;
-        const capLines: string[] = pdf.splitTextToSize(caption, w);
-        const capY = rowY + h + 4;
-        for (let j = 0; j < Math.min(capLines.length, 3); j++) {
-          pdf.text(capLines[j], col1X, capY + j * 4.5);
-        }
-        idx++;
-      } else {
-        // Two photos side by side
-        for (let col = 0; col < 2 && idx < loadedPhotos.length; col++) {
-          const photo = loadedPhotos[idx];
-          const x = col === 0 ? col1X : col2X;
-
-          try { pdf.addImage(photo.imgData.data, 'JPEG', x, rowY, w, h); }
+        if (isFullWidth) {
+          const photo = photos[idx];
+          try { pdf.addImage(photo.imgData.data, 'JPEG', col1X, rowY, w, h); }
           catch (e) { console.warn('Image error:', e); }
 
-          pdf.setFontSize(FONT_CAPTION);
-          pdf.setFont('times', 'italic');
-          const caption = photo.caption || `Foto ${idx + 1}`;
-          const capLines: string[] = pdf.splitTextToSize(caption, w);
-          const capY = rowY + h + 4;
-          for (let j = 0; j < Math.min(capLines.length, 3); j++) {
-            pdf.text(capLines[j], x, capY + j * 4.5);
+          if (!sharedCaption) {
+            pdf.setFontSize(FONT_CAPTION);
+            pdf.setFont('times', 'italic');
+            const capLines: string[] = pdf.splitTextToSize(photo.caption || '', w);
+            const capY = rowY + h + 4;
+            for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+              pdf.text(capLines[j], col1X, capY + j * 4.5);
+            }
           }
           idx++;
+        } else {
+          for (let col = 0; col < 2 && idx < photos.length; col++) {
+            const photo = photos[idx];
+            const x = col === 0 ? col1X : col2X;
+
+            try { pdf.addImage(photo.imgData.data, 'JPEG', x, rowY, w, h); }
+            catch (e) { console.warn('Image error:', e); }
+
+            if (!sharedCaption) {
+              pdf.setFontSize(FONT_CAPTION);
+              pdf.setFont('times', 'italic');
+              const capLines: string[] = pdf.splitTextToSize(photo.caption || '', w);
+              const capY = rowY + h + 4;
+              for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+                pdf.text(capLines[j], x, capY + j * 4.5);
+              }
+            }
+            idx++;
+          }
         }
+
+        ctx.currentY = rowY + h + 22;
       }
 
-      ctx.currentY = rowY + h + 22;
+      // Render shared caption after the group
+      if (sharedCaption) {
+        pdf.setFontSize(FONT_CAPTION);
+        pdf.setFont('times', 'italic');
+        const capLines: string[] = pdf.splitTextToSize(sharedCaption, CW);
+        const capX = ML + (CW - pdf.getTextWidth(capLines[0] || '')) / 2;
+        for (let j = 0; j < Math.min(capLines.length, 3); j++) {
+          pdf.text(capLines[j], ML, ctx.currentY + j * 4.5);
+        }
+        ctx.currentY += capLines.length * 4.5 + 6;
+      }
+    };
+
+    // Render grouped photos first
+    for (const group of groups) {
+      renderPhotoSet(group.photoIds, group.caption);
+    }
+
+    // Render ungrouped photos with individual captions
+    if (ungroupedPhotos.length > 0) {
+      renderPhotoSet(ungroupedPhotos.map(p => p.id));
     }
   }
 
