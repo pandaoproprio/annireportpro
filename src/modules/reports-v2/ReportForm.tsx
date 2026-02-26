@@ -4,11 +4,10 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { PlusCircle, Trash2, Upload, X, ImagePlus } from 'lucide-react';
-import { useFileUploader } from '@/hooks/useFileUploader';
+import { PlusCircle, Trash2, Upload, X, ImagePlus, Play } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { ReportV2Data, ReportV2Section, ReportV2Header } from './types';
+import type { ReportV2Data, ReportV2Activity, ReportV2Header, MediaItem } from './types';
 
 interface ReportFormProps {
   data: ReportV2Data;
@@ -19,11 +18,8 @@ interface ReportFormProps {
 const BUCKET = 'team-report-photos';
 
 const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, projectId }) => {
-  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const mediaInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const logoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
-
-  const { sectionPhotos, setSectionPhotos, handleSectionPhotoUpload, removeSectionPhoto } =
-    useFileUploader({ projectId, basePath: `reports/${projectId}/v2` });
 
   const updateField = <K extends keyof ReportV2Data>(key: K, value: ReportV2Data[K]) => {
     onChange({ ...data, [key]: value });
@@ -54,44 +50,59 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, projectId }) =>
     updateHeader({ [position]: '' });
   };
 
-  const addSection = () => {
-    const newSection: ReportV2Section = { id: crypto.randomUUID(), title: '', content: '', photos: [] };
-    updateField('sections', [...data.sections, newSection]);
+  // Activities
+  const addActivity = () => {
+    const activity: ReportV2Activity = {
+      id: crypto.randomUUID(),
+      title: '',
+      description: '',
+      date: '',
+      media: [],
+    };
+    updateField('activities', [...data.activities, activity]);
   };
 
-  const updateSection = (index: number, patch: Partial<ReportV2Section>) => {
-    const updated = data.sections.map((s, i) => (i === index ? { ...s, ...patch } : s));
-    updateField('sections', updated);
+  const updateActivity = (index: number, patch: Partial<ReportV2Activity>) => {
+    const updated = data.activities.map((a, i) => (i === index ? { ...a, ...patch } : a));
+    updateField('activities', updated);
   };
 
-  const removeSection = (index: number) => {
-    updateField('sections', data.sections.filter((_, i) => i !== index));
+  const removeActivity = (index: number) => {
+    updateField('activities', data.activities.filter((_, i) => i !== index));
   };
 
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, sectionId: string, sectionIndex: number) => {
-    await handleSectionPhotoUpload(e, sectionId);
-    setTimeout(() => {
-      setSectionPhotos((prev) => {
-        const photos = prev[sectionId] || [];
-        updateSection(sectionIndex, { photos });
-        return prev;
-      });
-    }, 100);
+  // Media upload (image + video)
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, activityIndex: number) => {
+    if (!e.target.files?.length || !projectId) return;
+    const activity = data.activities[activityIndex];
+    const newMedia: MediaItem[] = [...activity.media];
+
+    for (const file of Array.from(e.target.files)) {
+      const isVideo = file.type.startsWith('video/');
+      const isImage = file.type.startsWith('image/');
+      if (!isVideo && !isImage) {
+        toast.error(`Tipo não suportado: ${file.name}`);
+        continue;
+      }
+      try {
+        const id = crypto.randomUUID();
+        const ext = file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
+        const path = `reports/${projectId}/v2/activities/${activity.id}/${id}.${ext}`;
+        const { error } = await supabase.storage.from(BUCKET).upload(path, file, { cacheControl: '3600', upsert: false });
+        if (error) { toast.error(`Erro ao enviar: ${file.name}`); continue; }
+        const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
+        newMedia.push({ type: isVideo ? 'video' : 'image', url: urlData.publicUrl });
+      } catch { toast.error(`Erro: ${file.name}`); }
+    }
+
+    updateActivity(activityIndex, { media: newMedia });
+    toast.success('Mídia enviada!');
+    e.target.value = '';
   };
 
-  const handleRemovePhoto = async (sectionId: string, photoIndex: number, sectionIndex: number) => {
-    await removeSectionPhoto(sectionId, photoIndex);
-    setTimeout(() => {
-      setSectionPhotos((prev) => {
-        const photos = prev[sectionId] || [];
-        updateSection(sectionIndex, { photos });
-        return prev;
-      });
-    }, 100);
-  };
-
-  const getPhotos = (section: ReportV2Section): string[] => {
-    return sectionPhotos[section.id] || section.photos;
+  const removeMedia = (activityIndex: number, mediaIndex: number) => {
+    const activity = data.activities[activityIndex];
+    updateActivity(activityIndex, { media: activity.media.filter((_, i) => i !== mediaIndex) });
   };
 
   const logoPositions: { key: keyof ReportV2Header; label: string }[] = [
@@ -112,35 +123,17 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, projectId }) =>
                 <Label className="text-sm text-muted-foreground">{label}</Label>
                 {data.header[key] ? (
                   <div className="relative group">
-                    <img
-                      src={data.header[key]}
-                      alt={label}
-                      className="h-16 object-contain rounded border border-border p-1 bg-white w-full"
-                    />
-                    <button
-                      onClick={() => removeLogo(key)}
-                      className="absolute top-0 right-0 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
+                    <img src={data.header[key]} alt={label} className="h-16 object-contain rounded border border-border p-1 bg-white w-full" />
+                    <button onClick={() => removeLogo(key)} className="absolute top-0 right-0 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <X className="w-3 h-3" />
                     </button>
                   </div>
                 ) : (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => logoInputRefs.current[key]?.click()}
-                  >
+                  <Button variant="outline" size="sm" className="w-full" onClick={() => logoInputRefs.current[key]?.click()}>
                     <ImagePlus className="w-4 h-4 mr-2" /> Enviar
                   </Button>
                 )}
-                <input
-                  ref={(el) => { logoInputRefs.current[key] = el; }}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={(e) => handleLogoUpload(e, key)}
-                />
+                <input ref={(el) => { logoInputRefs.current[key] = el; }} type="file" accept="image/*" className="hidden" onChange={(e) => handleLogoUpload(e, key)} />
               </div>
             ))}
           </div>
@@ -165,48 +158,54 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, projectId }) =>
         <Textarea id="summary" value={data.summary} onChange={(e) => updateField('summary', e.target.value)} placeholder="Resumo executivo do relatório..." rows={4} />
       </div>
 
-      {/* Seções dinâmicas */}
+      {/* Atividades dinâmicas */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold text-foreground">Seções</h3>
-          <Button variant="outline" size="sm" onClick={addSection}>
-            <PlusCircle className="w-4 h-4 mr-2" /> Adicionar Seção
+          <h3 className="text-base font-semibold text-foreground">Atividades</h3>
+          <Button variant="outline" size="sm" onClick={addActivity}>
+            <PlusCircle className="w-4 h-4 mr-2" /> Adicionar Atividade
           </Button>
         </div>
 
-        {data.sections.map((section, index) => (
-          <Card key={section.id} className="border-border">
+        {data.activities.map((activity, index) => (
+          <Card key={activity.id} className="border-border">
             <CardContent className="p-4 space-y-4">
               <div className="flex items-center justify-between">
-                <Label className="font-semibold">Seção {index + 1}</Label>
-                <Button variant="ghost" size="icon" onClick={() => removeSection(index)}>
+                <Label className="font-semibold">Atividade {index + 1}</Label>
+                <Button variant="ghost" size="icon" onClick={() => removeActivity(index)}>
                   <Trash2 className="w-4 h-4 text-destructive" />
                 </Button>
               </div>
 
-              <Input value={section.title} onChange={(e) => updateSection(index, { title: e.target.value })} placeholder="Título da seção" />
-              <Textarea value={section.content} onChange={(e) => updateSection(index, { content: e.target.value })} placeholder="Conteúdo da seção..." rows={4} />
+              <Input value={activity.title} onChange={(e) => updateActivity(index, { title: e.target.value })} placeholder="Título da atividade" />
+              <Input type="date" value={activity.date} onChange={(e) => updateActivity(index, { date: e.target.value })} />
+              <Textarea value={activity.description} onChange={(e) => updateActivity(index, { description: e.target.value })} placeholder="Descrição da atividade..." rows={4} />
 
-              {/* Upload de fotos */}
+              {/* Upload de mídia */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Button variant="outline" size="sm" onClick={() => fileInputRefs.current[section.id]?.click()}>
-                    <Upload className="w-4 h-4 mr-2" /> Enviar Fotos
-                  </Button>
-                  <input
-                    ref={(el) => { fileInputRefs.current[section.id] = el; }}
-                    type="file" accept="image/*" multiple className="hidden"
-                    onChange={(e) => handlePhotoUpload(e, section.id, index)}
-                  />
-                </div>
+                <Button variant="outline" size="sm" onClick={() => mediaInputRefs.current[activity.id]?.click()}>
+                  <Upload className="w-4 h-4 mr-2" /> Enviar Fotos/Vídeos
+                </Button>
+                <input
+                  ref={(el) => { mediaInputRefs.current[activity.id] = el; }}
+                  type="file" accept="image/*,video/*" multiple className="hidden"
+                  onChange={(e) => handleMediaUpload(e, index)}
+                />
 
-                {getPhotos(section).length > 0 && (
+                {activity.media.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {getPhotos(section).map((url, photoIdx) => (
-                      <div key={photoIdx} className="relative group">
-                        <img src={url} alt={`Foto ${photoIdx + 1}`} className="rounded-md object-cover h-40 w-full" />
+                    {activity.media.map((item, mIdx) => (
+                      <div key={mIdx} className="relative group">
+                        {item.type === 'image' ? (
+                          <img src={item.url} alt={`Mídia ${mIdx + 1}`} className="rounded-md object-cover h-40 w-full" />
+                        ) : (
+                          <div className="relative h-40 w-full rounded-md bg-muted flex items-center justify-center overflow-hidden">
+                            <video src={item.url} className="absolute inset-0 w-full h-full object-cover" muted />
+                            <Play className="w-10 h-10 text-foreground/70 z-10" />
+                          </div>
+                        )}
                         <button
-                          onClick={() => handleRemovePhoto(section.id, photoIdx, index)}
+                          onClick={() => removeMedia(index, mIdx)}
                           className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                         >
                           <X className="w-3 h-3" />

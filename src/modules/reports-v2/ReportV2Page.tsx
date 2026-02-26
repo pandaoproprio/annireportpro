@@ -7,7 +7,7 @@ import type { ReportV2Data } from './types';
 import { DEFAULT_HEADER } from './types';
 import ReportForm from './ReportForm';
 import ReportPreview from './ReportPreview';
-import { generatePdf } from './pdfGenerator';
+import { generateReportPdf } from './reportService';
 
 type Mode = 'edit' | 'preview';
 
@@ -20,7 +20,7 @@ const ReportV2Page: React.FC = () => {
     title: '',
     object: '',
     summary: '',
-    sections: [],
+    activities: [],
     header: DEFAULT_HEADER,
   });
 
@@ -38,8 +38,14 @@ const ReportV2Page: React.FC = () => {
   const handleGeneratePdf = async () => {
     setGenerating(true);
     try {
+      const blob = await generateReportPdf(data);
       const filename = `${data.title || 'relatorio'}.pdf`.replace(/\s+/g, '_');
-      await generatePdf(filename);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
       toast.success('PDF gerado com sucesso!');
     } catch (err) {
       console.error(err);

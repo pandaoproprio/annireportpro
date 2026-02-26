@@ -1,8 +1,15 @@
-export interface ReportV2Section {
+export interface MediaItem {
+  type: 'image' | 'video';
+  url: string;
+  caption?: string;
+}
+
+export interface ReportV2Activity {
   id: string;
   title: string;
-  content: string;
-  photos: string[];
+  description: string;
+  date: string;
+  media: MediaItem[];
 }
 
 export interface ReportV2Header {
@@ -15,7 +22,7 @@ export interface ReportV2Data {
   title: string;
   object: string;
   summary: string;
-  sections: ReportV2Section[];
+  activities: ReportV2Activity[];
   header: ReportV2Header;
 }
 
