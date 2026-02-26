@@ -28,7 +28,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { mode = "generate", activities, goalTitle, goalAudience, sectionType, projectName, projectObject, text, chatHistory } = body;
+    const { mode = "generate", activities, goalTitle, goalAudience, sectionType, projectName, projectObject, text, chatHistory, userName } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -110,8 +110,11 @@ O oficineiro pode filtrar atividades por tipo, meta vinculada, status (rascunho/
 - Use a IA para melhorar a qualidade dos textos
 
 Responda sempre em português brasileiro. Seja conciso mas completo. Use formatação simples (negrito com **).
-Se pedirem para gerar texto, escreva em tom institucional adequado para relatórios de prestação de contas.`;
-      
+Se pedirem para gerar texto, escreva em tom institucional adequado para relatórios de prestação de contas.
+
+## Usuário Atual
+${userName ? `O oficineiro(a) que está conversando com você se chama **${userName}**. Trate-o(a) pelo primeiro nome de forma carinhosa e próxima.` : 'Nome do usuário não disponível.'}`;
+
       const messages = [
         { role: "system", content: systemPrompt },
         ...(chatHistory || []).map((m: any) => ({ role: m.role, content: m.content })),
