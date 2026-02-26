@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/dialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { SpeechToTextButton } from '@/components/SpeechToTextButton';
 
 export const ActivityManager: React.FC = () => {
   const { activeProject: project, activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useAppData();
@@ -385,14 +386,20 @@ export const ActivityManager: React.FC = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Descrição da Atividade</Label>
-                  <AiTextToolbar
-                    text={newActivity.description || ''}
-                    onResult={(text) => setNewActivity({...newActivity, description: text})}
-                    sectionType="generic"
-                    projectName={project?.name}
-                    projectObject={project?.object}
-                    hideGenerate={false}
-                  />
+                  <div className="flex items-center gap-1">
+                    <SpeechToTextButton
+                      currentText={newActivity.description || ''}
+                      onTranscript={(text) => setNewActivity({...newActivity, description: text})}
+                    />
+                    <AiTextToolbar
+                      text={newActivity.description || ''}
+                      onResult={(text) => setNewActivity({...newActivity, description: text})}
+                      sectionType="generic"
+                      projectName={project?.name}
+                      projectObject={project?.object}
+                      hideGenerate={false}
+                    />
+                  </div>
                 </div>
                 <Textarea rows={3} required value={newActivity.description} onChange={e => setNewActivity({...newActivity, description: e.target.value})} placeholder="Descreva o que foi realizado..." />
               </div>
@@ -401,26 +408,38 @@ export const ActivityManager: React.FC = () => {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Resultados Obtidos</Label>
-                    <AiTextToolbar
-                      text={newActivity.results || ''}
-                      onResult={(text) => setNewActivity({...newActivity, results: text})}
-                      sectionType="generic"
-                      projectName={project?.name}
-                      hideGenerate
-                    />
+                    <div className="flex items-center gap-1">
+                      <SpeechToTextButton
+                        currentText={newActivity.results || ''}
+                        onTranscript={(text) => setNewActivity({...newActivity, results: text})}
+                      />
+                      <AiTextToolbar
+                        text={newActivity.results || ''}
+                        onResult={(text) => setNewActivity({...newActivity, results: text})}
+                        sectionType="generic"
+                        projectName={project?.name}
+                        hideGenerate
+                      />
+                    </div>
                   </div>
                   <Textarea rows={2} value={newActivity.results} onChange={e => setNewActivity({...newActivity, results: e.target.value})} placeholder="Quais foram os resultados?" />
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Desafios/Observações</Label>
-                    <AiTextToolbar
-                      text={newActivity.challenges || ''}
-                      onResult={(text) => setNewActivity({...newActivity, challenges: text})}
-                      sectionType="generic"
-                      projectName={project?.name}
-                      hideGenerate
-                    />
+                    <div className="flex items-center gap-1">
+                      <SpeechToTextButton
+                        currentText={newActivity.challenges || ''}
+                        onTranscript={(text) => setNewActivity({...newActivity, challenges: text})}
+                      />
+                      <AiTextToolbar
+                        text={newActivity.challenges || ''}
+                        onResult={(text) => setNewActivity({...newActivity, challenges: text})}
+                        sectionType="generic"
+                        projectName={project?.name}
+                        hideGenerate
+                      />
+                    </div>
                   </div>
                   <Textarea rows={2} value={newActivity.challenges} onChange={e => setNewActivity({...newActivity, challenges: e.target.value})} placeholder="Houve algum desafio?" />
                 </div>
