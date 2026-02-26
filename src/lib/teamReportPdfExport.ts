@@ -138,6 +138,15 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
     const col2X = ML + colW + COL_GAP;
 
     // Helper to render a set of photos with optional shared caption
+    // Helper: compute image height from actual aspect ratio, capped
+    const getImgH = (photo: { imgData: { width: number; height: number } }, displayW: number, maxH?: number) => {
+      const ar = photo.imgData.height / photo.imgData.width;
+      let h = displayW * ar;
+      if (h > displayW * 0.85) h = displayW * 0.85; // cap very tall images
+      if (maxH && h > maxH) h = maxH;
+      return h;
+    };
+
     const renderPhotoSet = (photoIds: string[], sharedCaption?: string) => {
       const photos = photoIds
         .map(id => loadedPhotosMap.get(id))
@@ -150,9 +159,8 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
         const remaining = photos.length - idx;
         const isFullWidth = remaining === 1;
         const w = isFullWidth ? CW : colW;
-        const h = w * 0.75;
 
-        // Pre-calculate caption height to include in space check
+        // Pre-calculate caption height
         let estimatedCapH = 0;
         if (!sharedCaption) {
           pdf.setFontSize(FONT_CAPTION);
@@ -160,7 +168,6 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
             const capLines: string[] = pdf.splitTextToSize(photos[idx].caption || '', w);
             estimatedCapH = capLines.length * 4.5 + 4;
           } else {
-            // Estimate max caption height from the two photos in this row
             for (let ci = 0; ci < 2 && idx + ci < photos.length; ci++) {
               const capLines: string[] = pdf.splitTextToSize(photos[idx + ci].caption || '', w);
               estimatedCapH = Math.max(estimatedCapH, capLines.length * 4.5 + 4);
@@ -168,11 +175,15 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
           }
         }
 
-        if (ctx.currentY + h + estimatedCapH + 6 > MAX_Y) addPage(ctx);
-        const rowY = ctx.currentY;
-
         if (isFullWidth) {
           const photo = photos[idx];
+          // Calculate height using actual aspect ratio, fitting available space
+          const availH = MAX_Y - ctx.currentY - estimatedCapH - 10;
+          const h = getImgH(photo, w, availH > 30 ? availH : undefined);
+
+          if (ctx.currentY + h + estimatedCapH + 6 > MAX_Y) addPage(ctx);
+          const rowY = ctx.currentY;
+
           try { pdf.addImage(photo.imgData.data, 'JPEG', col1X, rowY, w, h); }
           catch (e) { console.warn('Image error:', e); }
 
@@ -190,12 +201,23 @@ export const exportTeamReportToPdf = async (data: TeamReportExportData): Promise
           }
           idx++;
         } else {
+          // Side by side: use the taller image's height (capped)
+          const photo1 = photos[idx];
+          const photo2 = idx + 1 < photos.length ? photos[idx + 1] : null;
+          const h1 = getImgH(photo1, w);
+          const h2 = photo2 ? getImgH(photo2, w) : 0;
+          const h = Math.max(h1, h2);
+
+          if (ctx.currentY + h + estimatedCapH + 6 > MAX_Y) addPage(ctx);
+          const rowY = ctx.currentY;
+
           let maxCapH = 0;
           for (let col = 0; col < 2 && idx < photos.length; col++) {
             const photo = photos[idx];
             const x = col === 0 ? col1X : col2X;
+            const pH = getImgH(photo, w);
 
-            try { pdf.addImage(photo.imgData.data, 'JPEG', x, rowY, w, h); }
+            try { pdf.addImage(photo.imgData.data, 'JPEG', x, rowY, w, pH); }
             catch (e) { console.warn('Image error:', e); }
 
             if (!sharedCaption) {
