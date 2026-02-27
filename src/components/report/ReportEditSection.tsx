@@ -730,6 +730,8 @@ const extractFileName = (url: string) => {
 };
 
 const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, handleDocumentUpload, activities, selectedVideoUrls, setSelectedVideoUrls }, ref) => {
+  const [showVideoPicker, setShowVideoPicker] = React.useState(false);
+
   // Auto-derive video entries from diary activities
   const diaryVideos = React.useMemo(() => {
     const videos: { url: string; activityDate: string; activityDescription: string }[] = [];
@@ -743,23 +745,25 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
     return videos;
   }, [activities]);
 
+  // Sync selected videos into links.media
+  React.useEffect(() => {
+    if (selectedVideoUrls.length > 0) {
+      setLinks({ ...links, media: selectedVideoUrls.join('\n') });
+      setLinkFileNames(prev => ({ ...prev, media: `${selectedVideoUrls.length} vídeo(s) do Diário` }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedVideoUrls]);
+
   const toggleVideo = (url: string) => {
     setSelectedVideoUrls(prev =>
       prev.includes(url) ? prev.filter(u => u !== url) : [...prev, url]
     );
   };
 
-  const toggleAll = () => {
-    const allUrls = diaryVideos.map(v => v.url);
-    const allSelected = allUrls.every(u => selectedVideoUrls.includes(u));
-    setSelectedVideoUrls(allSelected ? [] : allUrls);
-  };
-
-  const selectedCount = diaryVideos.filter(v => selectedVideoUrls.includes(v.url)).length;
-
   const clearLink = (field: 'attendance' | 'registration' | 'media') => {
     setLinks({ ...links, [field]: '' });
     setLinkFileNames(prev => ({ ...prev, [field]: '' }));
+    if (field === 'media') setSelectedVideoUrls([]);
   };
 
   const renderLinkField = (label: string, field: 'attendance' | 'registration' | 'media', accept: string) => {
@@ -771,25 +775,49 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
       <div className="space-y-2">
         <Label>{label}</Label>
         {hasFile ? (
-          <div className="flex items-center gap-2 p-2.5 border rounded-md bg-muted/50">
-            <FileText className="w-4 h-4 text-primary shrink-0" />
-            <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={url}>
-              {fileName || 'Documento enviado'}
-            </a>
-            <button onClick={() => clearLink(field)} className="text-destructive/60 hover:text-destructive shrink-0" title="Remover">
-              <Trash2 className="w-3.5 h-3.5" />
+          <div className="space-y-1">
+            {/* If multiple URLs (videos), show each */}
+            {field === 'media' && selectedVideoUrls.length > 0 ? (
+              selectedVideoUrls.map((vUrl, vi) => (
+                <div key={vi} className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                  <Video className="w-4 h-4 text-primary shrink-0" />
+                  <a href={vUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={vUrl}>
+                    {extractFileName(vUrl)}
+                  </a>
+                </div>
+              ))
+            ) : (
+              <div className="flex items-center gap-2 p-2.5 border rounded-md bg-muted/50">
+                <FileText className="w-4 h-4 text-primary shrink-0" />
+                <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={url}>
+                  {fileName || 'Documento enviado'}
+                </a>
+              </div>
+            )}
+            <button onClick={() => clearLink(field)} className="text-xs text-destructive/60 hover:text-destructive flex items-center gap-1 mt-1">
+              <Trash2 className="w-3 h-3" /> Limpar
             </button>
           </div>
         ) : (
           <Input placeholder="https://..." value={url} onChange={e => setLinks({ ...links, [field]: e.target.value })} />
         )}
         {!hasFile && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <Label htmlFor={`upload-${field}`} className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors">
               <Upload className="w-3.5 h-3.5" />
               Enviar documento
             </Label>
             <input id={`upload-${field}`} type="file" accept={accept} className="hidden" onChange={e => handleDocumentUpload(e, field)} />
+            {field === 'media' && diaryVideos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowVideoPicker(!showVideoPicker)}
+                className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors"
+              >
+                <Video className="w-3.5 h-3.5" />
+                Inserir vídeo do Diário ({diaryVideos.length})
+              </button>
+            )}
             <span className="text-xs text-muted-foreground">PDF, DOC, XLS, imagens...</span>
           </div>
         )}
@@ -806,27 +834,17 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
         {renderLinkField('Mídias (Fotos, Vídeos)', 'media', '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.mp4,.zip')}
       </div>
 
-      {/* Auto-derived video links from Diary */}
-      {diaryVideos.length > 0 && (
-        <div className="mt-6 space-y-3">
-          <div className="flex items-center gap-2">
-            <Video className="w-4 h-4 text-primary" />
-            <h4 className="text-sm font-semibold text-foreground">Vídeos do Diário de Bordo</h4>
-            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-              {selectedCount}/{diaryVideos.length} selecionados
-            </span>
+      {/* Video picker (toggled from the media field button) */}
+      {showVideoPicker && diaryVideos.length > 0 && (
+        <div className="border rounded-lg p-4 space-y-3 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Video className="w-4 h-4 text-primary" />
+              <h4 className="text-sm font-semibold text-foreground">Selecionar vídeos do Diário</h4>
+            </div>
+            <button onClick={() => setShowVideoPicker(false)} className="text-xs text-muted-foreground hover:text-foreground">Fechar</button>
           </div>
-          <p className="text-xs text-muted-foreground">Selecione os vídeos que serão incluídos na exportação PDF/DOCX.</p>
-          <div className="flex items-center gap-2 mb-1">
-            <Checkbox
-              id="toggle-all-videos"
-              checked={selectedCount === diaryVideos.length && diaryVideos.length > 0}
-              onCheckedChange={toggleAll}
-            />
-            <Label htmlFor="toggle-all-videos" className="text-xs text-muted-foreground cursor-pointer">
-              {selectedCount === diaryVideos.length ? 'Desmarcar todos' : 'Selecionar todos'}
-            </Label>
-          </div>
+          <p className="text-xs text-muted-foreground">Marque os vídeos para inserir os links automaticamente no campo Mídias.</p>
           <div className="space-y-2">
             {diaryVideos.map((v, i) => {
               const isSelected = selectedVideoUrls.includes(v.url);
@@ -834,7 +852,7 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
                 <div
                   key={i}
                   className={`border rounded-md transition-colors ${
-                    isSelected ? 'bg-primary/5 border-primary/30' : 'bg-muted/30 border-border'
+                    isSelected ? 'bg-primary/5 border-primary/30' : 'bg-background border-border'
                   }`}
                 >
                   <div
