@@ -434,6 +434,46 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         pdf.setFont('times', 'normal');
         pdf.text(links.media || '[não informado]', ML + mw, ctx.currentY);
         ctx.currentY += LINE_H;
+
+        // Auto-derived video links from Diary activities
+        {
+          const videoExts = ['mp4', 'mov', 'webm', 'avi', 'mkv', 'flv', 'wmv', 'm4v'];
+          const diaryVideos: { url: string; date: string; desc: string }[] = [];
+          activities.forEach(a => {
+            (a.photos || []).forEach(url => {
+              const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+              if (videoExts.includes(ext)) {
+                diaryVideos.push({ url, date: a.date, desc: a.description?.substring(0, 80) || '' });
+              }
+            });
+          });
+
+          if (diaryVideos.length > 0) {
+            ctx.currentY += LINE_H;
+            ensureSpace(ctx, LINE_H * 2);
+            pdf.setFont('times', 'bold');
+            pdf.text('Vídeos do Diário de Bordo:', ML, ctx.currentY);
+            ctx.currentY += LINE_H;
+            pdf.setFont('times', 'normal');
+
+            for (const v of diaryVideos) {
+              ensureSpace(ctx, LINE_H * 2);
+              const dateStr = new Date(v.date).toLocaleDateString('pt-BR');
+              const fileName = (() => { try { const p = new URL(v.url).pathname.split('/'); return p[p.length - 1] || 'video'; } catch { return 'video'; } })();
+              addBulletItem(ctx, `${fileName} (${dateStr}) — ${v.desc}`);
+              // Render URL as text below
+              pdf.setFontSize(FONT_CAPTION);
+              ensureSpace(ctx, LINE_H);
+              const urlLines: string[] = pdf.splitTextToSize(v.url, CW - 12);
+              for (const uLine of urlLines) {
+                pdf.text(uLine, ML + 12, ctx.currentY);
+                ctx.currentY += LINE_H * 0.85;
+              }
+              pdf.setFontSize(FONT_BODY);
+              ctx.currentY += 1;
+            }
+          }
+        }
         break;
 
       default:
