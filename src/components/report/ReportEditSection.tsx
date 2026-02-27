@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus } from 'lucide-react';
+import { ActivityCountBadge } from '@/components/report/ActivityCountBadge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageLayoutEditor } from '@/components/report/ImageLayoutEditor';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
@@ -328,26 +329,48 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
   );
 };
 
-const SectionHeader: React.FC<Props> = ({ section, index, updateSectionTitle, removeSection }) => (
-  <div className="flex items-center gap-2 mb-4 border-b pb-2">
-    <span className="bg-muted text-muted-foreground w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">{index + 1}</span>
-    {section.type === 'custom' ? (
-      <Input value={section.title} onChange={(e) => updateSectionTitle(index, e.target.value)} className="font-semibold text-lg flex-1" placeholder="Título da Seção" />
-    ) : (
-      <h3 className="text-lg font-semibold flex-1">{section.title}</h3>
-    )}
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded hidden sm:inline-block">
-        {section.type === 'custom' ? 'Personalizada' : 'Padrão'}
-      </span>
-      {section.type === 'custom' && (
-        <button onClick={() => removeSection(index)} className="text-destructive/60 hover:text-destructive p-1">
-          <Trash2 className="w-4 h-4" />
-        </button>
+const getActivityCountForSection = (
+  sectionKey: string,
+  activities: Activity[],
+  goals: Goal[],
+  getActivitiesByGoal: (goalId: string) => Activity[],
+  getCommunicationActivities: () => Activity[],
+  getOtherActivities: () => Activity[],
+): number | undefined => {
+  switch (sectionKey) {
+    case 'summary': return activities.length;
+    case 'goals': return goals.reduce((sum, g) => sum + getActivitiesByGoal(g.id).length, 0);
+    case 'other': return getOtherActivities().length;
+    case 'communication': return getCommunicationActivities().length;
+    default: return undefined; // object, satisfaction, future, expenses, links, custom
+  }
+};
+
+const SectionHeader: React.FC<Props> = ({ section, index, updateSectionTitle, removeSection, activities, goals, getActivitiesByGoal, getCommunicationActivities, getOtherActivities }) => {
+  const activityCount = getActivityCountForSection(section.key, activities, goals, getActivitiesByGoal, getCommunicationActivities, getOtherActivities);
+
+  return (
+    <div className="flex items-center gap-2 mb-4 border-b pb-2">
+      <span className="bg-muted text-muted-foreground w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold">{index + 1}</span>
+      {section.type === 'custom' ? (
+        <Input value={section.title} onChange={(e) => updateSectionTitle(index, e.target.value)} className="font-semibold text-lg flex-1" placeholder="Título da Seção" />
+      ) : (
+        <h3 className="text-lg font-semibold flex-1">{section.title}</h3>
       )}
+      <div className="flex items-center gap-2">
+        {activityCount !== undefined && <ActivityCountBadge count={activityCount} />}
+        <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded hidden sm:inline-block">
+          {section.type === 'custom' ? 'Personalizada' : 'Padrão'}
+        </span>
+        {section.type === 'custom' && (
+          <button onClick={() => removeSection(index)} className="text-destructive/60 hover:text-destructive p-1">
+            <Trash2 className="w-4 h-4" />
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const SectionContent: React.FC<Props> = (props) => {
   const { section } = props;
