@@ -301,6 +301,49 @@ export const exportToDocx = async (data: ExportData) => {
             spacing: { after: 200 },
           })
         );
+
+        // Auto-derived video links from Diary activities
+        {
+          const videoExts = ['mp4', 'mov', 'webm', 'avi', 'mkv', 'flv', 'wmv', 'm4v'];
+          const diaryVideos: { url: string; date: string; desc: string }[] = [];
+          activities.forEach(a => {
+            (a.photos || []).forEach(url => {
+              const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+              if (videoExts.includes(ext)) {
+                diaryVideos.push({ url, date: a.date, desc: a.description?.substring(0, 80) || '' });
+              }
+            });
+          });
+
+          if (diaryVideos.length > 0) {
+            docSections.push(
+              new Paragraph({
+                spacing: { before: 200, after: 100 },
+                children: [new TextRun({ text: 'Vídeos do Diário de Bordo:', bold: true, font: 'Times New Roman', size: 24 })],
+              })
+            );
+
+            for (const v of diaryVideos) {
+              const dateStr = new Date(v.date).toLocaleDateString('pt-BR');
+              const fileName = (() => { try { const p = new URL(v.url).pathname.split('/'); return p[p.length - 1] || 'video'; } catch { return 'video'; } })();
+              docSections.push(
+                new Paragraph({
+                  spacing: { after: 40 },
+                  indent: { left: 400 },
+                  children: [
+                    new TextRun({ text: `• ${fileName}`, bold: true, font: 'Times New Roman', size: 24 }),
+                    new TextRun({ text: ` (${dateStr}) — ${v.desc}`, font: 'Times New Roman', size: 24 }),
+                  ],
+                }),
+                new Paragraph({
+                  spacing: { after: 100 },
+                  indent: { left: 400 },
+                  children: [new TextRun({ text: v.url, font: 'Times New Roman', size: 20, color: '0563C1' })],
+                })
+              );
+            }
+          }
+        }
         break;
 
       default:
