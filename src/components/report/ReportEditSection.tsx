@@ -10,12 +10,13 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus, Check, ClipboardPaste } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus, Check, ClipboardPaste, BookImage } from 'lucide-react';
 import { ActivityCountBadge } from '@/components/report/ActivityCountBadge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageLayoutEditor } from '@/components/report/ImageLayoutEditor';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
 import { ImageEditorDialog } from '@/components/report/ImageEditorDialog';
+import { DiaryImagePickerDialog } from '@/components/report/DiaryImagePickerDialog';
 import { SectionDoc } from '@/hooks/useReportState';
 import { toast } from 'sonner';
 import { ActivitiesByMonthInline, ActivityTypesInline, AttendeesByGoalInline, GoalProgressInline } from '@/components/report/ReportCharts';
@@ -86,6 +87,7 @@ interface Props {
   removeSectionPhoto: (sectionKey: string, index: number) => void;
   handleSectionDocUpload: (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => void;
   removeSectionDoc: (sectionKey: string, index: number) => void;
+  insertDiaryPhotos: (sectionKey: string, urls: string[], captions: Record<string, string>) => void;
 }
 
 // ── Photo card with caption, width slider, and edit button ──
@@ -167,7 +169,7 @@ export const ReportEditSection: React.FC<Props> = (props) => {
   );
 };
 
-const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts, sectionPhotoGroups, setSectionPhotoGroups }) => {
+const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts, sectionPhotoGroups, setSectionPhotoGroups, activities, insertDiaryPhotos }) => {
   const sectionKey = section.type === 'custom' ? section.id : section.key;
   const photos = sectionPhotos[sectionKey] || [];
   const docs = sectionDocs[sectionKey] || [];
@@ -175,6 +177,18 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
   const groups = sectionPhotoGroups[sectionKey] || [];
   const [showLayoutEditor, setShowLayoutEditor] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
+  const [diaryPickerOpen, setDiaryPickerOpen] = useState(false);
+
+  const handleDiaryInsert = (diaryPhotos: { url: string; caption: string; activityDate: string }[]) => {
+    const newUrls = diaryPhotos.map(p => p.url).filter(url => !photos.includes(url));
+    if (newUrls.length === 0) {
+      toast.info('As imagens selecionadas já estão nesta seção');
+      return;
+    }
+    const captions: Record<string, string> = {};
+    diaryPhotos.forEach(p => { if (p.caption) captions[p.url] = p.caption; });
+    insertDiaryPhotos(sectionKey, newUrls, captions);
+  };
 
   const toggleSelect = (idx: number) => {
     setSelectedIndices(prev => { const s = new Set(prev); if (s.has(idx)) s.delete(idx); else s.add(idx); return s; });
@@ -183,7 +197,6 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
   const createGroup = () => {
     if (selectedIndices.size < 2) return;
     const indices = Array.from(selectedIndices);
-    // Remove from existing groups
     const cleaned = groups.map(g => ({
       ...g, photoIds: g.photoIds.filter(id => !indices.map(String).includes(id)),
     })).filter(g => g.photoIds.length > 0);
@@ -216,7 +229,19 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
         <Label className="flex items-center gap-2 text-sm font-semibold">
           <ImageIcon className="w-4 h-4" /> Registro Fotográfico
         </Label>
-        <Input type="file" accept="image/*" multiple onChange={e => handleSectionPhotoUpload(e, sectionKey)} className="text-sm" />
+        <div className="flex flex-wrap items-center gap-2">
+          <Input type="file" accept="image/*" multiple onChange={e => handleSectionPhotoUpload(e, sectionKey)} className="text-sm flex-1 min-w-[200px]" />
+          <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => setDiaryPickerOpen(true)}>
+            <BookImage className="w-4 h-4" />
+            Inserir imagem do Diário
+          </Button>
+        </div>
+        <DiaryImagePickerDialog
+          open={diaryPickerOpen}
+          onOpenChange={setDiaryPickerOpen}
+          activities={activities}
+          onInsert={handleDiaryInsert}
+        />
 
         {/* Grouping controls */}
         {photos.length >= 2 && (
