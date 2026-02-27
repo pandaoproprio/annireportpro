@@ -10,13 +10,14 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus, Check, ClipboardPaste } from 'lucide-react';
 import { ActivityCountBadge } from '@/components/report/ActivityCountBadge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageLayoutEditor } from '@/components/report/ImageLayoutEditor';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
 import { ImageEditorDialog } from '@/components/report/ImageEditorDialog';
 import { SectionDoc } from '@/hooks/useReportState';
+import { toast } from 'sonner';
 
 interface Props {
   section: ReportSection;
@@ -408,9 +409,16 @@ const ObjectSection: React.FC<Props> = ({ objectText, setObjectText }) => (
   </div>
 );
 
-/** Reusable collapsible activities panel */
-const ActivitiesPanel: React.FC<{ activities: Activity[]; expanded: boolean; formatActivityDate: (d: string, e?: string) => string; label: string }> = ({ activities, expanded, formatActivityDate, label }) => {
+/** Reusable collapsible activities panel with insert-on-approval */
+const ActivitiesPanel: React.FC<{
+  activities: Activity[];
+  expanded: boolean;
+  formatActivityDate: (d: string, e?: string) => string;
+  label: string;
+  onInsert?: (text: string) => void;
+}> = ({ activities, expanded, formatActivityDate, label, onInsert }) => {
   const panelRef = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (expanded && panelRef.current) {
@@ -420,14 +428,73 @@ const ActivitiesPanel: React.FC<{ activities: Activity[]; expanded: boolean; for
 
   if (activities.length === 0) return null;
 
+  const toggle = (id: string) => {
+    setSelected(prev => { const s = new Set(prev); if (s.has(id)) s.delete(id); else s.add(id); return s; });
+  };
+
+  const selectAll = () => {
+    if (selected.size === activities.length) setSelected(new Set());
+    else setSelected(new Set(activities.map(a => a.id)));
+  };
+
+  const handleInsert = () => {
+    if (!onInsert || selected.size === 0) return;
+    const selectedActs = activities.filter(a => selected.has(a.id));
+    const text = selectedActs.map(act => {
+      const date = formatActivityDate(act.date, act.endDate || undefined);
+      return `<p><strong>${date}</strong> — ${act.description}</p>` +
+        (act.results ? `<p>Resultados: ${act.results}</p>` : '') +
+        (act.attendeesCount ? `<p>Participantes: ${act.attendeesCount}</p>` : '');
+    }).join('\n');
+    onInsert(text);
+    setSelected(new Set());
+    toast.success(`${selectedActs.length} atividade(s) inserida(s) no texto`);
+  };
+
   return (
     <Collapsible open={expanded}>
       <CollapsibleContent>
         <div ref={panelRef} className="mb-4 p-3 bg-success/5 border border-success/20 rounded animate-in slide-in-from-top-2 duration-200">
-          <p className="text-sm font-medium text-success mb-2">📋 {activities.length} {label}</p>
-          <div className="max-h-40 overflow-y-auto text-xs space-y-1">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-success">📋 {activities.length} {label}</p>
+            {onInsert && (
+              <div className="flex items-center gap-1.5">
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={selectAll}>
+                  {selected.size === activities.length ? 'Desmarcar' : 'Selecionar'} tudo
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  disabled={selected.size === 0}
+                  onClick={handleInsert}
+                >
+                  <ClipboardPaste className="w-3 h-3" />
+                  Inserir {selected.size > 0 ? `(${selected.size})` : ''}
+                </Button>
+              </div>
+            )}
+          </div>
+          <div className="max-h-48 overflow-y-auto text-xs space-y-1">
             {activities.map(act => (
-              <div key={act.id}><strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 80)}...</div>
+              <div
+                key={act.id}
+                className={`flex items-start gap-2 p-1.5 rounded cursor-pointer transition-colors ${
+                  selected.has(act.id) ? 'bg-success/10 border border-success/30' : 'hover:bg-muted/50'
+                }`}
+                onClick={() => toggle(act.id)}
+              >
+                <Checkbox
+                  checked={selected.has(act.id)}
+                  onCheckedChange={() => toggle(act.id)}
+                  className="mt-0.5 shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 100)}{act.description.length > 100 ? '...' : ''}
+                  {act.attendeesCount > 0 && <span className="text-muted-foreground ml-1">({act.attendeesCount} participantes)</span>}
+                </div>
+                {selected.has(act.id) && <Check className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />}
+              </div>
             ))}
           </div>
         </div>
@@ -438,7 +505,13 @@ const ActivitiesPanel: React.FC<{ activities: Activity[]; expanded: boolean; for
 
 const SummarySection: React.FC<ExtProps> = ({ summary, setSummary, activities, projectName, projectObject, activitiesExpanded, formatActivityDate }) => (
   <div className="space-y-4">
-    <ActivitiesPanel activities={activities} expanded={activitiesExpanded} formatActivityDate={formatActivityDate} label="atividade(s) registradas no Diário de Bordo" />
+    <ActivitiesPanel
+      activities={activities}
+      expanded={activitiesExpanded}
+      formatActivityDate={formatActivityDate}
+      label="atividade(s) registradas no Diário de Bordo"
+      onInsert={(text) => setSummary(summary ? summary + '\n' + text : text)}
+    />
     <div className="flex items-center justify-between">
       <Label>Resumo / Visão Geral</Label>
       <AiTextToolbar text={summary} onResult={setSummary} sectionType="summary" activities={activities} projectName={projectName} projectObject={projectObject} />
@@ -465,7 +538,13 @@ const GoalsSection: React.FC<ExtProps> = ({
             {goalActs.length > 0 && <ActivityCountBadge count={goalActs.length} label={`atividade(s) vinculadas à meta "${goal.title}"`} />}
           </div>
           <p className="text-sm text-muted-foreground mb-3">Público-alvo: {goal.targetAudience}</p>
-          <ActivitiesPanel activities={goalActs} expanded={activitiesExpanded} formatActivityDate={formatActivityDate} label="atividade(s) do Diário de Bordo vinculadas" />
+          <ActivitiesPanel
+            activities={goalActs}
+            expanded={activitiesExpanded}
+            formatActivityDate={formatActivityDate}
+            label="atividade(s) do Diário de Bordo vinculadas"
+            onInsert={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: (goalNarratives[goal.id] || '') + '\n' + text })}
+          />
           <div className="flex items-center justify-between">
             <Label>Relato Narrativo da Meta</Label>
             <AiTextToolbar
@@ -511,7 +590,13 @@ const OtherSection: React.FC<ExtProps> = ({
   const otherActs = getOtherActivities();
   return (
     <div className="space-y-4">
-      <ActivitiesPanel activities={otherActs} expanded={activitiesExpanded} formatActivityDate={formatActivityDate} label="atividade(s) relacionadas" />
+      <ActivitiesPanel
+        activities={otherActs}
+        expanded={activitiesExpanded}
+        formatActivityDate={formatActivityDate}
+        label="atividade(s) relacionadas"
+        onInsert={(text) => setOtherActionsNarrative(otherActionsNarrative ? otherActionsNarrative + '\n' + text : text)}
+      />
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
         <AiTextToolbar text={otherActionsNarrative} onResult={setOtherActionsNarrative} sectionType="other" activities={otherActs} projectName={projectName} projectObject={projectObject} />
@@ -529,7 +614,13 @@ const CommunicationSection: React.FC<ExtProps> = ({
   const commActs = getCommunicationActivities();
   return (
     <div className="space-y-4">
-      <ActivitiesPanel activities={commActs} expanded={activitiesExpanded} formatActivityDate={formatActivityDate} label="atividade(s) de divulgação" />
+      <ActivitiesPanel
+        activities={commActs}
+        expanded={activitiesExpanded}
+        formatActivityDate={formatActivityDate}
+        label="atividade(s) de divulgação"
+        onInsert={(text) => setCommunicationNarrative(communicationNarrative ? communicationNarrative + '\n' + text : text)}
+      />
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
         <AiTextToolbar text={communicationNarrative} onResult={setCommunicationNarrative} sectionType="communication" activities={commActs} projectName={projectName} projectObject={projectObject} />
