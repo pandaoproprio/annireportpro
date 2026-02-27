@@ -10,7 +10,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus, Check, ClipboardPaste, BookImage } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus, Check, ClipboardPaste, BookImage, Video, ExternalLink } from 'lucide-react';
 import { ActivityCountBadge } from '@/components/report/ActivityCountBadge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageLayoutEditor } from '@/components/report/ImageLayoutEditor';
@@ -711,7 +711,36 @@ const ExpensesSection: React.FC<Props> = ({ expenses, addExpense, updateExpense,
   </div>
 );
 
-const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, handleDocumentUpload }, ref) => {
+const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm', 'avi', 'mkv', 'flv', 'wmv', 'm4v'];
+
+const isVideoUrl = (url: string) => {
+  try {
+    const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
+    return VIDEO_EXTENSIONS.includes(ext);
+  } catch { return false; }
+};
+
+const extractFileName = (url: string) => {
+  try {
+    const parts = new URL(url).pathname.split('/');
+    return parts[parts.length - 1] || 'video';
+  } catch { return 'video'; }
+};
+
+const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, handleDocumentUpload, activities }, ref) => {
+  // Auto-derive video entries from diary activities
+  const diaryVideos = React.useMemo(() => {
+    const videos: { url: string; activityDate: string; activityDescription: string }[] = [];
+    activities.forEach(a => {
+      (a.photos || []).forEach(url => {
+        if (isVideoUrl(url)) {
+          videos.push({ url, activityDate: a.date, activityDescription: a.description?.substring(0, 80) || '' });
+        }
+      });
+    });
+    return videos;
+  }, [activities]);
+
   const clearLink = (field: 'attendance' | 'registration' | 'media') => {
     setLinks({ ...links, [field]: '' });
     setLinkFileNames(prev => ({ ...prev, [field]: '' }));
@@ -760,6 +789,36 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
         {renderLinkField('Listas de Inscrição', 'registration', '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png')}
         {renderLinkField('Mídias (Fotos, Vídeos)', 'media', '.pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.mp4,.zip')}
       </div>
+
+      {/* Auto-derived video links from Diary */}
+      {diaryVideos.length > 0 && (
+        <div className="mt-6 space-y-3">
+          <div className="flex items-center gap-2">
+            <Video className="w-4 h-4 text-primary" />
+            <h4 className="text-sm font-semibold text-foreground">Vídeos do Diário de Bordo</h4>
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{diaryVideos.length}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">Links gerados automaticamente a partir dos vídeos registrados nas atividades.</p>
+          <div className="space-y-2">
+            {diaryVideos.map((v, i) => (
+              <div key={i} className="flex items-center gap-3 p-2.5 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
+                <Video className="w-4 h-4 text-primary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate block" title={v.url}>
+                    {extractFileName(v.url)}
+                  </a>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(v.activityDate).toLocaleDateString('pt-BR')} — {v.activityDescription}
+                  </span>
+                </div>
+                <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary shrink-0" title="Abrir vídeo">
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 });
