@@ -833,35 +833,49 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
               return (
                 <div
                   key={i}
-                  className={`flex items-center gap-3 p-2.5 border rounded-md transition-colors cursor-pointer ${
-                    isSelected ? 'bg-primary/5 border-primary/30' : 'bg-muted/30 hover:bg-muted/50 border-border'
+                  className={`border rounded-md transition-colors ${
+                    isSelected ? 'bg-primary/5 border-primary/30' : 'bg-muted/30 border-border'
                   }`}
-                  onClick={() => toggleVideo(v.url)}
                 >
-                  <Checkbox
-                    checked={isSelected}
-                    onCheckedChange={() => toggleVideo(v.url)}
-                    onClick={e => e.stopPropagation()}
-                  />
-                  <Video className="w-4 h-4 text-primary shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-foreground truncate block">
-                      {extractFileName(v.url)}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(v.activityDate).toLocaleDateString('pt-BR')} — {v.activityDescription}
-                    </span>
-                  </div>
-                  <a
-                    href={v.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary shrink-0"
-                    title="Abrir vídeo"
-                    onClick={e => e.stopPropagation()}
+                  <div
+                    className="flex items-center gap-3 p-2.5 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => toggleVideo(v.url)}
                   >
-                    <ExternalLink className="w-3.5 h-3.5" />
-                  </a>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleVideo(v.url)}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <Video className="w-4 h-4 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm text-foreground truncate block">
+                        {extractFileName(v.url)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(v.activityDate).toLocaleDateString('pt-BR')} — {v.activityDescription}
+                      </span>
+                    </div>
+                    <a
+                      href={v.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary shrink-0"
+                      title="Abrir vídeo"
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                  {isSelected && (
+                    <div className="px-2.5 pb-2.5">
+                      <video
+                        src={v.url}
+                        controls
+                        preload="metadata"
+                        className="w-full max-h-48 rounded bg-black/5"
+                      />
+                    </div>
+                  )}
                 </div>
               );
             })}
