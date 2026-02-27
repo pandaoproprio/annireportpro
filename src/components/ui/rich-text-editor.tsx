@@ -359,6 +359,13 @@ interface RichTextEditorProps {
     },
   });
 
+  // Sync external value changes into the editor (e.g. from activity insertion)
+  useEffect(() => {
+    if (editor && value !== editor.getHTML()) {
+      editor.commands.setContent(value, { emitUpdate: false });
+    }
+  }, [value, editor]);
+
   const uploadFile = useCallback(async (file: File): Promise<string | null> => {
     if (!file.type.startsWith('image/')) { toast.error(`"${file.name}" não é uma imagem`); return null; }
     if (file.size > 10 * 1024 * 1024) { toast.error(`"${file.name}" é muito grande (máx. 10MB)`); return null; }
