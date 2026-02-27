@@ -40,6 +40,7 @@ export const useReportState = () => {
   const [expenses, setExpenses] = useState<ExpenseItem[]>([]);
   const [links, setLinks] = useState<{ attendance: string; registration: string; media: string }>({ attendance: '', registration: '', media: '' });
   const [linkFileNames, setLinkFileNames] = useState<{ attendance: string; registration: string; media: string }>({ attendance: '', registration: '', media: '' });
+  const [linkDisplayNames, setLinkDisplayNames] = useState<{ attendance: string; registration: string; media: string }>({ attendance: '', registration: '', media: '' });
   const [photoMetadata, setPhotoMetadata] = useState<Record<string, ReportPhotoMeta[]>>({});
   const [pageLayouts, setPageLayouts] = useState<Record<string, PageLayout>>({});
   const [sectionPhotoGroups, setSectionPhotoGroups] = useState<Record<string, PhotoGroup[]>>({});
@@ -88,6 +89,11 @@ export const useReportState = () => {
           registration: rd.links.registrationFileName || '',
           media: rd.links.mediaFileName || '',
         });
+        setLinkDisplayNames({
+          attendance: rd.links.attendanceDisplayName || '',
+          registration: rd.links.registrationDisplayName || '',
+          media: rd.links.mediaDisplayName || '',
+        });
       }
       if (rd.sections && rd.sections.length > 0) {
         sectionManager.setSections(rd.sections);
@@ -122,6 +128,9 @@ export const useReportState = () => {
           attendanceFileName: linkFileNames.attendance,
           registrationFileName: linkFileNames.registration,
           mediaFileName: linkFileNames.media,
+          attendanceDisplayName: linkDisplayNames.attendance,
+          registrationDisplayName: linkDisplayNames.registration,
+          mediaDisplayName: linkDisplayNames.media,
         },
         sections: sectionManager.sections,
         sectionPhotos: fileUploader.sectionPhotos,
@@ -322,7 +331,7 @@ export const useReportState = () => {
     otherActionsNarrative, setOtherActionsNarrative, otherActionsPhotos, setOtherActionsPhotos,
     communicationNarrative, setCommunicationNarrative, communicationPhotos, setCommunicationPhotos,
     satisfaction, setSatisfaction, futureActions, setFutureActions,
-    expenses, links, setLinks, linkFileNames, setLinkFileNames,
+    expenses, links, setLinks, linkFileNames, setLinkFileNames, linkDisplayNames, setLinkDisplayNames,
     sections: sectionManager.sections,
     sectionPhotos: fileUploader.sectionPhotos,
     sectionDocs: fileUploader.sectionDocs,

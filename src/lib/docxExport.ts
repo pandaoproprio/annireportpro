@@ -32,6 +32,7 @@ interface ExportData {
   futureActions: string;
   expenses: ExpenseItem[];
   links: { attendance: string; registration: string; media: string };
+  linkDisplayNames?: { attendance: string; registration: string; media: string };
   visualConfig?: ReportVisualConfig;
   selectedVideoUrls?: string[];
 }
@@ -289,46 +290,44 @@ export const exportToDocx = async (data: ExportData) => {
         break;
 
       case 'links':
+        const dn = data.linkDisplayNames || { attendance: '', registration: '', media: '' };
         docSections.push(
           new Paragraph({
-            text: `Lista de Presença: ${links.attendance || '[não informado]'}`,
+            text: `Lista de Presença: ${dn.attendance || links.attendance || '[não informado]'}`,
             spacing: { after: 100 },
           }),
           new Paragraph({
-            text: `Lista de Inscrição: ${links.registration || '[não informado]'}`,
+            text: `Lista de Inscrição: ${dn.registration || links.registration || '[não informado]'}`,
             spacing: { after: 100 },
           }),
           new Paragraph({
-            text: `Mídias (Fotos/Vídeos): ${links.media || '[não informado]'}`,
+            text: `Mídias (Fotos/Vídeos): ${dn.media || links.media || '[não informado]'}`,
             spacing: { after: 200 },
           })
           );
 
           // Render media links — may contain multiple URLs (one per line)
-          const mediaText = links.media || '[não informado]';
-          const mediaUrls = mediaText.split('\n').filter(l => l.trim());
-          if (mediaUrls.length <= 1) {
-            docSections.push(
-              new Paragraph({
-                text: `Mídias (Fotos/Vídeos): ${mediaUrls[0] || '[não informado]'}`,
-                spacing: { after: 200 },
-              })
-            );
-          } else {
-            docSections.push(
-              new Paragraph({
-                spacing: { after: 100 },
-                children: [new TextRun({ text: 'Mídias (Fotos/Vídeos):', bold: true, font: 'Times New Roman', size: 24 })],
-              })
-            );
-            for (const mUrl of mediaUrls) {
+          if (!dn.media) {
+            const mediaText = links.media || '[não informado]';
+            const mediaUrls = mediaText.split('\n').filter(l => l.trim());
+            if (mediaUrls.length > 1) {
+              // Remove the single-line version already pushed above, re-add with multiple lines
+              docSections.pop(); // remove the single Mídias paragraph
               docSections.push(
                 new Paragraph({
-                  spacing: { after: 60 },
-                  indent: { left: 400 },
-                  children: [new TextRun({ text: mUrl, font: 'Times New Roman', size: 22, color: '0563C1' })],
+                  spacing: { after: 100 },
+                  children: [new TextRun({ text: 'Mídias (Fotos/Vídeos):', bold: true, font: 'Times New Roman', size: 24 })],
                 })
               );
+              for (const mUrl of mediaUrls) {
+                docSections.push(
+                  new Paragraph({
+                    spacing: { after: 60 },
+                    indent: { left: 400 },
+                    children: [new TextRun({ text: mUrl, font: 'Times New Roman', size: 22, color: '0563C1' })],
+                  })
+                );
+              }
             }
           }
         break;

@@ -49,6 +49,8 @@ interface Props {
   setLinks: (v: { attendance: string; registration: string; media: string }) => void;
   linkFileNames: { attendance: string; registration: string; media: string };
   setLinkFileNames: React.Dispatch<React.SetStateAction<{ attendance: string; registration: string; media: string }>>;
+  linkDisplayNames: { attendance: string; registration: string; media: string };
+  setLinkDisplayNames: React.Dispatch<React.SetStateAction<{ attendance: string; registration: string; media: string }>>;
   // Per-section uploads
   sectionPhotos: Record<string, string[]>;
   sectionDocs: Record<string, SectionDoc[]>;
@@ -729,7 +731,7 @@ const extractFileName = (url: string) => {
   } catch { return 'video'; }
 };
 
-const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, handleDocumentUpload, activities, selectedVideoUrls, setSelectedVideoUrls }, ref) => {
+const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, linkDisplayNames, setLinkDisplayNames, handleDocumentUpload, activities, selectedVideoUrls, setSelectedVideoUrls }, ref) => {
   const [showVideoPicker, setShowVideoPicker] = React.useState(false);
 
   // Auto-derive video entries from diary activities
@@ -763,19 +765,31 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
   const clearLink = (field: 'attendance' | 'registration' | 'media') => {
     setLinks({ ...links, [field]: '' });
     setLinkFileNames(prev => ({ ...prev, [field]: '' }));
+    setLinkDisplayNames(prev => ({ ...prev, [field]: '' }));
     if (field === 'media') setSelectedVideoUrls([]);
   };
 
   const renderLinkField = (label: string, field: 'attendance' | 'registration' | 'media', accept: string) => {
     const url = links[field];
     const fileName = linkFileNames[field];
+    const displayName = linkDisplayNames[field];
     const hasFile = !!url;
 
     return (
       <div className="space-y-2">
         <Label>{label}</Label>
         {hasFile ? (
-          <div className="space-y-1">
+          <div className="space-y-2">
+            {/* Display name (custom label) */}
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Nome de exibição (aparece no relatório)</Label>
+              <Input
+                placeholder={`Ex: ${label}`}
+                value={displayName}
+                onChange={e => setLinkDisplayNames(prev => ({ ...prev, [field]: e.target.value }))}
+                className="text-sm"
+              />
+            </div>
             {/* If multiple URLs (videos), show each */}
             {field === 'media' && selectedVideoUrls.length > 0 ? (
               selectedVideoUrls.map((vUrl, vi) => (
