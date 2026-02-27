@@ -18,6 +18,7 @@ import { AiTextToolbar } from '@/components/report/AiTextToolbar';
 import { ImageEditorDialog } from '@/components/report/ImageEditorDialog';
 import { SectionDoc } from '@/hooks/useReportState';
 import { toast } from 'sonner';
+import { ActivitiesByMonthInline, ActivityTypesInline, AttendeesByGoalInline, GoalProgressInline } from '@/components/report/ReportCharts';
 
 interface Props {
   section: ReportSection;
@@ -505,6 +506,10 @@ const ActivitiesPanel: React.FC<{
 
 const SummarySection: React.FC<ExtProps> = ({ summary, setSummary, activities, projectName, projectObject, activitiesExpanded, formatActivityDate }) => (
   <div className="space-y-4">
+    <div className="flex flex-wrap gap-2">
+      <ActivitiesByMonthInline activities={activities} />
+      <ActivityTypesInline activities={activities} />
+    </div>
     <ActivitiesPanel
       activities={activities}
       expanded={activitiesExpanded}
@@ -524,9 +529,13 @@ const GoalsSection: React.FC<ExtProps> = ({
   goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject, projectId,
   handleGoalPhotoUpload, removeGoalPhoto, getActivitiesByGoal, formatActivityDate,
   photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
-  activitiesExpanded,
+  activitiesExpanded, activities,
 }) => (
   <div className="space-y-6">
+    <div className="flex flex-wrap gap-2">
+      <AttendeesByGoalInline activities={activities} goals={goals} getActivitiesByGoal={getActivitiesByGoal} />
+      <GoalProgressInline goals={goals} getActivitiesByGoal={getActivitiesByGoal} />
+    </div>
     {goals.map((goal, idx) => {
       const goalActs = getActivitiesByGoal(goal.id);
       const photos = goalPhotos[goal.id] || [];
