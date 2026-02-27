@@ -302,50 +302,35 @@ export const exportToDocx = async (data: ExportData) => {
             text: `Mídias (Fotos/Vídeos): ${links.media || '[não informado]'}`,
             spacing: { after: 200 },
           })
-        );
+          );
 
-        // Auto-derived video links from Diary activities
-        {
-          const videoExts = ['mp4', 'mov', 'webm', 'avi', 'mkv', 'flv', 'wmv', 'm4v'];
-          const diaryVideos: { url: string; date: string; desc: string }[] = [];
-          activities.forEach(a => {
-            (a.photos || []).forEach(url => {
-              const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
-              if (videoExts.includes(ext) && selectedVideoUrls.includes(url)) {
-                diaryVideos.push({ url, date: a.date, desc: a.description?.substring(0, 80) || '' });
-              }
-            });
-          });
-
-          if (diaryVideos.length > 0) {
+          // Render media links — may contain multiple URLs (one per line)
+          const mediaText = links.media || '[não informado]';
+          const mediaUrls = mediaText.split('\n').filter(l => l.trim());
+          if (mediaUrls.length <= 1) {
             docSections.push(
               new Paragraph({
-                spacing: { before: 200, after: 100 },
-                children: [new TextRun({ text: 'Vídeos do Diário de Bordo:', bold: true, font: 'Times New Roman', size: 24 })],
+                text: `Mídias (Fotos/Vídeos): ${mediaUrls[0] || '[não informado]'}`,
+                spacing: { after: 200 },
               })
             );
-
-            for (const v of diaryVideos) {
-              const dateStr = new Date(v.date).toLocaleDateString('pt-BR');
-              const fileName = (() => { try { const p = new URL(v.url).pathname.split('/'); return p[p.length - 1] || 'video'; } catch { return 'video'; } })();
+          } else {
+            docSections.push(
+              new Paragraph({
+                spacing: { after: 100 },
+                children: [new TextRun({ text: 'Mídias (Fotos/Vídeos):', bold: true, font: 'Times New Roman', size: 24 })],
+              })
+            );
+            for (const mUrl of mediaUrls) {
               docSections.push(
                 new Paragraph({
-                  spacing: { after: 40 },
+                  spacing: { after: 60 },
                   indent: { left: 400 },
-                  children: [
-                    new TextRun({ text: `• ${fileName}`, bold: true, font: 'Times New Roman', size: 24 }),
-                    new TextRun({ text: ` (${dateStr}) — ${v.desc}`, font: 'Times New Roman', size: 24 }),
-                  ],
-                }),
-                new Paragraph({
-                  spacing: { after: 100 },
-                  indent: { left: 400 },
-                  children: [new TextRun({ text: v.url, font: 'Times New Roman', size: 20, color: '0563C1' })],
+                  children: [new TextRun({ text: mUrl, font: 'Times New Roman', size: 22, color: '0563C1' })],
                 })
               );
             }
           }
-        }
         break;
 
       default:
