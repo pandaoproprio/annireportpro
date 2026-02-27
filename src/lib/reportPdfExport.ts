@@ -27,6 +27,7 @@ export interface ReportPdfExportData {
   futureActions: string;
   expenses: ExpenseItem[];
   links: { attendance: string; registration: string; media: string };
+  linkDisplayNames?: { attendance: string; registration: string; media: string };
   sectionPhotos?: Record<string, string[]>;
   photoMetadata?: Record<string, ReportPhotoMeta[]>;
   visualConfig?: ReportVisualConfig;
@@ -420,14 +421,22 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         pdf.text('Lista de Presença: ', ML, ctx.currentY);
         const lpw = pdf.getTextWidth('Lista de Presença: ');
         pdf.setFont('times', 'normal');
-        pdf.text(links.attendance || '[não informado]', ML + lpw, ctx.currentY);
+        const attDisplay = data.linkDisplayNames?.attendance || links.attendance || '[não informado]';
+        pdf.text(attDisplay, ML + lpw, ctx.currentY);
+        if (links.attendance && data.linkDisplayNames?.attendance) {
+          pdf.link(ML + lpw, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(attDisplay), LINE_H, { url: links.attendance });
+        }
         ctx.currentY += LINE_H;
 
         pdf.setFont('times', 'bold');
         pdf.text('Lista de Inscrição: ', ML, ctx.currentY);
         const liw = pdf.getTextWidth('Lista de Inscrição: ');
         pdf.setFont('times', 'normal');
-        pdf.text(links.registration || '[não informado]', ML + liw, ctx.currentY);
+        const regDisplay = data.linkDisplayNames?.registration || links.registration || '[não informado]';
+        pdf.text(regDisplay, ML + liw, ctx.currentY);
+        if (links.registration && data.linkDisplayNames?.registration) {
+          pdf.link(ML + liw, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(regDisplay), LINE_H, { url: links.registration });
+        }
         ctx.currentY += LINE_H;
 
         pdf.setFont('times', 'bold');
@@ -435,9 +444,17 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         const mw = pdf.getTextWidth('Mídias (Fotos/Vídeos): ');
         pdf.setFont('times', 'normal');
         {
+          const mediaDisplayName = data.linkDisplayNames?.media;
           const mediaText = links.media || '[não informado]';
           const mediaLines = mediaText.split('\n').filter(l => l.trim());
-          if (mediaLines.length <= 1) {
+          if (mediaDisplayName) {
+            // Show custom display name as single entry
+            pdf.text(mediaDisplayName, ML + mw, ctx.currentY);
+            if (mediaLines.length === 1) {
+              pdf.link(ML + mw, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(mediaDisplayName), LINE_H, { url: mediaLines[0] });
+            }
+            ctx.currentY += LINE_H;
+          } else if (mediaLines.length <= 1) {
             pdf.text(mediaLines[0] || '[não informado]', ML + mw, ctx.currentY);
             ctx.currentY += LINE_H;
           } else {

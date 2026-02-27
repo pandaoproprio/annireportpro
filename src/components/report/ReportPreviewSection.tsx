@@ -90,6 +90,7 @@ interface Props {
   futureActions: string;
   expenses: ExpenseItem[];
   links: { attendance: string; registration: string; media: string };
+  linkDisplayNames?: { attendance: string; registration: string; media: string };
   sectionPhotos?: Record<string, string[]>;
   photoMetadata?: Record<string, ReportPhotoMeta[]>;
   sectionPhotoGroups?: Record<string, { id: string; caption: string; photoIds: string[] }[]>;
@@ -343,14 +344,17 @@ const ExpensesPreview: React.FC<Props> = ({ section, expenses }) => (
   </section>
 );
 
-const LinksPreview = React.forwardRef<HTMLElement, Props>(({ section, links }, ref) => (
-  <section ref={ref} className="mb-8 page-break">
-    <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
-    <ul className="space-y-3 text-sm">
-      <li><strong>Listas de Presença:</strong>{' '}{links.attendance ? <a href={links.attendance} className="text-primary underline break-all">{links.attendance}</a> : '[Insira o link]'}</li>
-      <li><strong>Listas de Inscrição:</strong>{' '}{links.registration ? <a href={links.registration} className="text-primary underline break-all">{links.registration}</a> : '[Insira o link]'}</li>
-      <li><strong>Mídias (Fotos, Vídeos):</strong>{' '}{links.media ? <a href={links.media} className="text-primary underline break-all">{links.media}</a> : '[Insira o link]'}</li>
-    </ul>
-  </section>
-));
+const LinksPreview = React.forwardRef<HTMLElement, Props>(({ section, links, linkDisplayNames }, ref) => {
+  const dn = linkDisplayNames || { attendance: '', registration: '', media: '' };
+  return (
+    <section ref={ref} className="mb-8 page-break">
+      <h3 className={sectionTitleClass} style={{ textAlign: 'left' }}>{section.title}</h3>
+      <ul className="space-y-3 text-sm">
+        <li><strong>Listas de Presença:</strong>{' '}{links.attendance ? <a href={links.attendance} className="text-primary underline break-all">{dn.attendance || links.attendance}</a> : '[Insira o link]'}</li>
+        <li><strong>Listas de Inscrição:</strong>{' '}{links.registration ? <a href={links.registration} className="text-primary underline break-all">{dn.registration || links.registration}</a> : '[Insira o link]'}</li>
+        <li><strong>Mídias (Fotos, Vídeos):</strong>{' '}{links.media ? <a href={links.media} className="text-primary underline break-all">{dn.media || links.media}</a> : '[Insira o link]'}</li>
+      </ul>
+    </section>
+  );
+});
 LinksPreview.displayName = 'LinksPreview';
