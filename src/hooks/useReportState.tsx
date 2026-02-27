@@ -289,6 +289,28 @@ export const useReportState = () => {
     }
   };
 
+  // Insert diary photos by reference (no duplication)
+  const insertDiaryPhotos = (sectionKey: string, urls: string[], captions: Record<string, string>) => {
+    fileUploader.setSectionPhotos(prev => ({
+      ...prev,
+      [sectionKey]: [...(prev[sectionKey] || []), ...urls],
+    }));
+    // Auto-fill captions from diary data
+    if (Object.keys(captions).length > 0) {
+      setPhotoMetadata(prev => {
+        const existing = prev[sectionKey] || [];
+        const currentPhotos = fileUploader.sectionPhotos[sectionKey] || [];
+        const newMetas = [...existing];
+        urls.forEach((url) => {
+          const idx = currentPhotos.length + urls.indexOf(url);
+          while (newMetas.length <= idx) newMetas.push({ caption: '', size: 'medium' });
+          if (captions[url]) newMetas[idx] = { ...newMetas[idx], caption: captions[url] };
+        });
+        return { ...prev, [sectionKey]: newMetas };
+      });
+    }
+  };
+
   return {
     project, activities,
     mode, setMode, isExporting, setIsExporting, exportType, setExportType,
@@ -321,6 +343,7 @@ export const useReportState = () => {
     removeSectionPhoto: fileUploader.removeSectionPhoto,
     handleSectionDocUpload: fileUploader.handleSectionDocUpload,
     removeSectionDoc: fileUploader.removeSectionDoc,
+    insertDiaryPhotos,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   };
 };

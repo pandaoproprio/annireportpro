@@ -39,6 +39,7 @@ export const ReportGenerator: React.FC = () => {
     handleDocumentUpload,
     handleSectionPhotoUpload, removeSectionPhoto,
     handleSectionDocUpload, removeSectionDoc,
+    insertDiaryPhotos,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   } = state;
 
@@ -187,6 +188,7 @@ export const ReportGenerator: React.FC = () => {
     handleDocumentUpload,
     handleSectionPhotoUpload, removeSectionPhoto,
     handleSectionDocUpload, removeSectionDoc,
+    insertDiaryPhotos,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   };
 
