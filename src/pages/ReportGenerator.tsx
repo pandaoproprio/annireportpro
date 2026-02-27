@@ -62,6 +62,7 @@ export const ReportGenerator: React.FC = () => {
         visualConfig: vc.config,
         pageLayouts,
         sectionPhotoGroups,
+        selectedVideoUrls: state.selectedVideoUrls,
       });
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
@@ -81,6 +82,7 @@ export const ReportGenerator: React.FC = () => {
         goalNarratives, otherActionsNarrative,
         communicationNarrative, satisfaction, futureActions, expenses, links,
         visualConfig: vc.config,
+        selectedVideoUrls: state.selectedVideoUrls,
       });
     } catch (error) {
       console.error('Erro ao exportar DOCX:', error);
@@ -180,6 +182,7 @@ export const ReportGenerator: React.FC = () => {
     photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     pageLayouts, setPageLayouts,
     sectionPhotoGroups, setSectionPhotoGroups,
+    selectedVideoUrls: state.selectedVideoUrls, setSelectedVideoUrls: state.setSelectedVideoUrls,
     goals: project.goals, projectName: project.name, projectObject: project.object, activities,
     projectId: project.id,
     updateSectionTitle, updateCustomContent, removeSection,

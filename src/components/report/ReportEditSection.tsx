@@ -61,6 +61,8 @@ interface Props {
   setPageLayouts: React.Dispatch<React.SetStateAction<Record<string, PageLayout>>>;
   sectionPhotoGroups: Record<string, PhotoGroup[]>;
   setSectionPhotoGroups: React.Dispatch<React.SetStateAction<Record<string, PhotoGroup[]>>>;
+  selectedVideoUrls: string[];
+  setSelectedVideoUrls: React.Dispatch<React.SetStateAction<string[]>>;
   // Project data
   goals: Goal[];
   projectName: string;
@@ -727,7 +729,7 @@ const extractFileName = (url: string) => {
   } catch { return 'video'; }
 };
 
-const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, handleDocumentUpload, activities }, ref) => {
+const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, handleDocumentUpload, activities, selectedVideoUrls, setSelectedVideoUrls }, ref) => {
   // Auto-derive video entries from diary activities
   const diaryVideos = React.useMemo(() => {
     const videos: { url: string; activityDate: string; activityDescription: string }[] = [];
@@ -740,6 +742,20 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
     });
     return videos;
   }, [activities]);
+
+  const toggleVideo = (url: string) => {
+    setSelectedVideoUrls(prev =>
+      prev.includes(url) ? prev.filter(u => u !== url) : [...prev, url]
+    );
+  };
+
+  const toggleAll = () => {
+    const allUrls = diaryVideos.map(v => v.url);
+    const allSelected = allUrls.every(u => selectedVideoUrls.includes(u));
+    setSelectedVideoUrls(allSelected ? [] : allUrls);
+  };
+
+  const selectedCount = diaryVideos.filter(v => selectedVideoUrls.includes(v.url)).length;
 
   const clearLink = (field: 'attendance' | 'registration' | 'media') => {
     setLinks({ ...links, [field]: '' });
@@ -796,26 +812,59 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
           <div className="flex items-center gap-2">
             <Video className="w-4 h-4 text-primary" />
             <h4 className="text-sm font-semibold text-foreground">Vídeos do Diário de Bordo</h4>
-            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">{diaryVideos.length}</span>
+            <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+              {selectedCount}/{diaryVideos.length} selecionados
+            </span>
           </div>
-          <p className="text-xs text-muted-foreground">Links gerados automaticamente a partir dos vídeos registrados nas atividades.</p>
+          <p className="text-xs text-muted-foreground">Selecione os vídeos que serão incluídos na exportação PDF/DOCX.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <Checkbox
+              id="toggle-all-videos"
+              checked={selectedCount === diaryVideos.length && diaryVideos.length > 0}
+              onCheckedChange={toggleAll}
+            />
+            <Label htmlFor="toggle-all-videos" className="text-xs text-muted-foreground cursor-pointer">
+              {selectedCount === diaryVideos.length ? 'Desmarcar todos' : 'Selecionar todos'}
+            </Label>
+          </div>
           <div className="space-y-2">
-            {diaryVideos.map((v, i) => (
-              <div key={i} className="flex items-center gap-3 p-2.5 border rounded-md bg-muted/30 hover:bg-muted/50 transition-colors">
-                <Video className="w-4 h-4 text-primary shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate block" title={v.url}>
-                    {extractFileName(v.url)}
+            {diaryVideos.map((v, i) => {
+              const isSelected = selectedVideoUrls.includes(v.url);
+              return (
+                <div
+                  key={i}
+                  className={`flex items-center gap-3 p-2.5 border rounded-md transition-colors cursor-pointer ${
+                    isSelected ? 'bg-primary/5 border-primary/30' : 'bg-muted/30 hover:bg-muted/50 border-border'
+                  }`}
+                  onClick={() => toggleVideo(v.url)}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleVideo(v.url)}
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <Video className="w-4 h-4 text-primary shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm text-foreground truncate block">
+                      {extractFileName(v.url)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {new Date(v.activityDate).toLocaleDateString('pt-BR')} — {v.activityDescription}
+                    </span>
+                  </div>
+                  <a
+                    href={v.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-muted-foreground hover:text-primary shrink-0"
+                    title="Abrir vídeo"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
                   </a>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(v.activityDate).toLocaleDateString('pt-BR')} — {v.activityDescription}
-                  </span>
                 </div>
-                <a href={v.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary shrink-0" title="Abrir vídeo">
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

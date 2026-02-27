@@ -33,6 +33,7 @@ interface ExportData {
   expenses: ExpenseItem[];
   links: { attendance: string; registration: string; media: string };
   visualConfig?: ReportVisualConfig;
+  selectedVideoUrls?: string[];
 }
 
 const formatActivityDate = (date: string, endDate?: string) => {
@@ -80,6 +81,7 @@ export const exportToDocx = async (data: ExportData) => {
     futureActions,
     expenses,
     links,
+    selectedVideoUrls = [],
   } = data;
 
   const getActivitiesByGoal = (goalId: string) =>
@@ -309,7 +311,7 @@ export const exportToDocx = async (data: ExportData) => {
           activities.forEach(a => {
             (a.photos || []).forEach(url => {
               const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
-              if (videoExts.includes(ext)) {
+              if (videoExts.includes(ext) && selectedVideoUrls.includes(url)) {
                 diaryVideos.push({ url, date: a.date, desc: a.description?.substring(0, 80) || '' });
               }
             });

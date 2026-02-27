@@ -43,6 +43,7 @@ export const useReportState = () => {
   const [photoMetadata, setPhotoMetadata] = useState<Record<string, ReportPhotoMeta[]>>({});
   const [pageLayouts, setPageLayouts] = useState<Record<string, PageLayout>>({});
   const [sectionPhotoGroups, setSectionPhotoGroups] = useState<Record<string, PhotoGroup[]>>({});
+  const [selectedVideoUrls, setSelectedVideoUrls] = useState<string[]>([]);
 
   // ── Shared section manager ──
   const sectionManager = useSectionManager({ defaultSections: DEFAULT_SECTIONS, insertBeforeKey: 'expenses' });
@@ -96,6 +97,7 @@ export const useReportState = () => {
       setPhotoMetadata((rd as any).photoMetadata || {});
       setPageLayouts((rd as any).pageLayouts || {});
       setSectionPhotoGroups((rd as any).sectionPhotoGroups || {});
+      setSelectedVideoUrls((rd as any).selectedVideoUrls || []);
     }
   }, [project]);
 
@@ -127,6 +129,7 @@ export const useReportState = () => {
         photoMetadata,
         pageLayouts,
         sectionPhotoGroups,
+        selectedVideoUrls,
       } as any);
       if (showToast) toast.success('Rascunho salvo com sucesso!');
     } catch (error) {
@@ -326,6 +329,7 @@ export const useReportState = () => {
     photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     pageLayouts, setPageLayouts,
     sectionPhotoGroups, setSectionPhotoGroups,
+    selectedVideoUrls, setSelectedVideoUrls,
     saveReportData,
     moveSection: sectionManager.moveSection,
     toggleVisibility: sectionManager.toggleVisibility,
