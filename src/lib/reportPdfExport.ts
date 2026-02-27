@@ -32,6 +32,7 @@ export interface ReportPdfExportData {
   visualConfig?: ReportVisualConfig;
   pageLayouts?: Record<string, PageLayout>;
   sectionPhotoGroups?: Record<string, PhotoGroup[]>;
+  selectedVideoUrls?: string[];
 }
 
 const formatActivityDate = (date: string, endDate?: string) => {
@@ -54,6 +55,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     visualConfig: vc,
     pageLayouts = {},
     sectionPhotoGroups = {},
+    selectedVideoUrls = [],
   } = data;
 
   // Extract visual config values with defaults
@@ -435,14 +437,14 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         pdf.text(links.media || '[não informado]', ML + mw, ctx.currentY);
         ctx.currentY += LINE_H;
 
-        // Auto-derived video links from Diary activities
+        // Auto-derived video links from Diary activities (only selected)
         {
           const videoExts = ['mp4', 'mov', 'webm', 'avi', 'mkv', 'flv', 'wmv', 'm4v'];
           const diaryVideos: { url: string; date: string; desc: string }[] = [];
           activities.forEach(a => {
             (a.photos || []).forEach(url => {
               const ext = url.split('.').pop()?.split('?')[0]?.toLowerCase() || '';
-              if (videoExts.includes(ext)) {
+              if (videoExts.includes(ext) && selectedVideoUrls.includes(url)) {
                 diaryVideos.push({ url, date: a.date, desc: a.description?.substring(0, 80) || '' });
               }
             });
