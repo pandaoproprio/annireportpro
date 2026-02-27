@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, PhotoSize, PhotoLayout, PhotoGroup } from '@/types';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PageLayout } from '@/types/imageLayout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -146,13 +147,16 @@ const PhotoCard: React.FC<{
 
 export const ReportEditSection: React.FC<Props> = (props) => {
   const { section, index } = props;
+  const [activitiesExpanded, setActivitiesExpanded] = useState(false);
   if (!section.isVisible) return null;
+
+  const extProps = { ...props, activitiesExpanded, setActivitiesExpanded };
 
   return (
     <Card className="mb-6 border-l-4 border-l-primary/30">
       <CardContent className="pt-6">
-        <SectionHeader {...props} />
-        <SectionContent {...props} />
+        <SectionHeader {...extProps} />
+        <SectionContent {...extProps} />
         {section.key !== 'object' && section.key !== 'expenses' && section.key !== 'links' && (
           <SectionUploads {...props} />
         )}
@@ -346,7 +350,9 @@ const getActivityCountForSection = (
   }
 };
 
-const SectionHeader: React.FC<Props> = ({ section, index, updateSectionTitle, removeSection, activities, goals, getActivitiesByGoal, getCommunicationActivities, getOtherActivities }) => {
+type ExtProps = Props & { activitiesExpanded: boolean; setActivitiesExpanded: (v: boolean) => void };
+
+const SectionHeader: React.FC<ExtProps> = ({ section, index, updateSectionTitle, removeSection, activities, goals, getActivitiesByGoal, getCommunicationActivities, getOtherActivities, activitiesExpanded, setActivitiesExpanded }) => {
   const activityCount = getActivityCountForSection(section.key, activities, goals, getActivitiesByGoal, getCommunicationActivities, getOtherActivities);
 
   return (
@@ -358,7 +364,12 @@ const SectionHeader: React.FC<Props> = ({ section, index, updateSectionTitle, re
         <h3 className="text-lg font-semibold flex-1">{section.title}</h3>
       )}
       <div className="flex items-center gap-2">
-        {activityCount !== undefined && <ActivityCountBadge count={activityCount} />}
+        {activityCount !== undefined && (
+          <ActivityCountBadge
+            count={activityCount}
+            onClick={activityCount > 0 ? () => setActivitiesExpanded(!activitiesExpanded) : undefined}
+          />
+        )}
         <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded hidden sm:inline-block">
           {section.type === 'custom' ? 'Personalizada' : 'Padrão'}
         </span>
@@ -372,7 +383,7 @@ const SectionHeader: React.FC<Props> = ({ section, index, updateSectionTitle, re
   );
 };
 
-const SectionContent: React.FC<Props> = (props) => {
+const SectionContent: React.FC<ExtProps> = (props) => {
   const { section } = props;
 
   switch (section.key) {
@@ -397,8 +408,37 @@ const ObjectSection: React.FC<Props> = ({ objectText, setObjectText }) => (
   </div>
 );
 
-const SummarySection: React.FC<Props> = ({ summary, setSummary, activities, projectName, projectObject }) => (
+/** Reusable collapsible activities panel */
+const ActivitiesPanel: React.FC<{ activities: Activity[]; expanded: boolean; formatActivityDate: (d: string, e?: string) => string; label: string }> = ({ activities, expanded, formatActivityDate, label }) => {
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (expanded && panelRef.current) {
+      panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [expanded]);
+
+  if (activities.length === 0) return null;
+
+  return (
+    <Collapsible open={expanded}>
+      <CollapsibleContent>
+        <div ref={panelRef} className="mb-4 p-3 bg-success/5 border border-success/20 rounded animate-in slide-in-from-top-2 duration-200">
+          <p className="text-sm font-medium text-success mb-2">📋 {activities.length} {label}</p>
+          <div className="max-h-40 overflow-y-auto text-xs space-y-1">
+            {activities.map(act => (
+              <div key={act.id}><strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 80)}...</div>
+            ))}
+          </div>
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
+const SummarySection: React.FC<ExtProps> = ({ summary, setSummary, activities, projectName, projectObject, activitiesExpanded, formatActivityDate }) => (
   <div className="space-y-4">
+    <ActivitiesPanel activities={activities} expanded={activitiesExpanded} formatActivityDate={formatActivityDate} label="atividade(s) registradas no Diário de Bordo" />
     <div className="flex items-center justify-between">
       <Label>Resumo / Visão Geral</Label>
       <AiTextToolbar text={summary} onResult={setSummary} sectionType="summary" activities={activities} projectName={projectName} projectObject={projectObject} />
@@ -407,10 +447,11 @@ const SummarySection: React.FC<Props> = ({ summary, setSummary, activities, proj
   </div>
 );
 
-const GoalsSection: React.FC<Props> = ({
+const GoalsSection: React.FC<ExtProps> = ({
   goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject, projectId,
   handleGoalPhotoUpload, removeGoalPhoto, getActivitiesByGoal, formatActivityDate,
   photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
+  activitiesExpanded,
 }) => (
   <div className="space-y-6">
     {goals.map((goal, idx) => {
@@ -419,18 +460,12 @@ const GoalsSection: React.FC<Props> = ({
       const metas = photoMetadata[goal.id] || [];
       return (
         <div key={goal.id} className="p-4 border rounded-lg bg-muted/50">
-          <h4 className="font-bold text-primary mb-2">META {idx + 1}: {goal.title}</h4>
+          <div className="flex items-center gap-2 mb-2">
+            <h4 className="font-bold text-primary">META {idx + 1}: {goal.title}</h4>
+            {goalActs.length > 0 && <ActivityCountBadge count={goalActs.length} label={`atividade(s) vinculadas à meta "${goal.title}"`} />}
+          </div>
           <p className="text-sm text-muted-foreground mb-3">Público-alvo: {goal.targetAudience}</p>
-          {goalActs.length > 0 && (
-            <div className="mb-4 p-3 bg-success/5 border border-success/20 rounded">
-              <p className="text-sm font-medium text-success mb-2">📋 {goalActs.length} atividade(s) do Diário de Bordo vinculadas</p>
-              <div className="max-h-32 overflow-y-auto text-xs space-y-1">
-                {goalActs.map(act => (
-                  <div key={act.id}><strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 80)}...</div>
-                ))}
-              </div>
-            </div>
-          )}
+          <ActivitiesPanel activities={goalActs} expanded={activitiesExpanded} formatActivityDate={formatActivityDate} label="atividade(s) do Diário de Bordo vinculadas" />
           <div className="flex items-center justify-between">
             <Label>Relato Narrativo da Meta</Label>
             <AiTextToolbar
@@ -468,21 +503,15 @@ const GoalsSection: React.FC<Props> = ({
   </div>
 );
 
-const OtherSection: React.FC<Props> = ({
+const OtherSection: React.FC<ExtProps> = ({
   otherActionsNarrative, setOtherActionsNarrative,
   projectName, projectObject, getOtherActivities, formatActivityDate,
+  activitiesExpanded,
 }) => {
   const otherActs = getOtherActivities();
   return (
     <div className="space-y-4">
-      {otherActs.length > 0 && (
-        <div className="p-3 bg-muted/50 border rounded">
-          <p className="text-sm font-medium mb-2">📋 Atividades relacionadas ({otherActs.length}):</p>
-          <div className="max-h-32 overflow-y-auto text-xs space-y-1">
-            {otherActs.map(act => (<div key={act.id}><strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 60)}...</div>))}
-          </div>
-        </div>
-      )}
+      <ActivitiesPanel activities={otherActs} expanded={activitiesExpanded} formatActivityDate={formatActivityDate} label="atividade(s) relacionadas" />
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
         <AiTextToolbar text={otherActionsNarrative} onResult={setOtherActionsNarrative} sectionType="other" activities={otherActs} projectName={projectName} projectObject={projectObject} />
@@ -492,21 +521,15 @@ const OtherSection: React.FC<Props> = ({
   );
 };
 
-const CommunicationSection: React.FC<Props> = ({
+const CommunicationSection: React.FC<ExtProps> = ({
   communicationNarrative, setCommunicationNarrative,
   projectName, projectObject, getCommunicationActivities, formatActivityDate,
+  activitiesExpanded,
 }) => {
   const commActs = getCommunicationActivities();
   return (
     <div className="space-y-4">
-      {commActs.length > 0 && (
-        <div className="p-3 bg-muted/50 border rounded">
-          <p className="text-sm font-medium mb-2">📋 Atividades de divulgação ({commActs.length}):</p>
-          <div className="max-h-32 overflow-y-auto text-xs space-y-1">
-            {commActs.map(act => (<div key={act.id}><strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 60)}...</div>))}
-          </div>
-        </div>
-      )}
+      <ActivitiesPanel activities={commActs} expanded={activitiesExpanded} formatActivityDate={formatActivityDate} label="atividade(s) de divulgação" />
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
         <AiTextToolbar text={communicationNarrative} onResult={setCommunicationNarrative} sectionType="communication" activities={commActs} projectName={projectName} projectObject={projectObject} />
