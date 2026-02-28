@@ -45,11 +45,14 @@ export const JustificationReportGenerator: React.FC = () => {
   // Auto-load draft from URL query param (switch project if needed)
   useEffect(() => {
     const draftId = searchParams.get('draftId');
-    const projectId = searchParams.get('projectId');
-    if (projectId && project?.id !== projectId) {
-      switchProject(projectId);
+    const projectIdParam = searchParams.get('projectId');
+    const hasValidProjectId = !!projectIdParam && projectIdParam !== 'undefined' && projectIdParam !== 'null';
+
+    if (hasValidProjectId && project?.id !== projectIdParam) {
+      switchProject(projectIdParam);
       return;
     }
+
     if (draftId && drafts.length > 0 && !currentDraftId) {
       const draft = drafts.find((d: any) => d.id === draftId);
       if (draft) {
@@ -57,7 +60,7 @@ export const JustificationReportGenerator: React.FC = () => {
         setSearchParams({}, { replace: true });
       }
     }
-  }, [searchParams, drafts, currentDraftId, project?.id]);
+  }, [searchParams, drafts, currentDraftId, project?.id, switchProject, setSearchParams]);
 
   if (!project) {
     return (

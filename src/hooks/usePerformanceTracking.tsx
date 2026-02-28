@@ -129,7 +129,7 @@ export function usePerformanceTracking(projectId: string | undefined) {
 
   // WIP drafts — admins see all users, regular users see only their own
   const { data: wipDrafts = [] as WipDraft[] } = useQuery({
-    queryKey: ['wip-drafts', user?.id, isAdmin],
+    queryKey: ['wip-drafts-v2', user?.id, isAdmin],
     queryFn: async (): Promise<WipDraft[]> => {
       if (!user?.id) return [];
 
