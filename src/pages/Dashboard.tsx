@@ -7,7 +7,8 @@ import { StatCard } from '@/components/StatCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target, BarChart3 } from 'lucide-react';
 import { ActivitiesByMonthChart } from '@/components/dashboard/ActivitiesByMonthChart';
 import { ActivityTypesChart } from '@/components/dashboard/ActivityTypesChart';
 import { AttendeesByGoalChart } from '@/components/dashboard/AttendeesByGoalChart';
@@ -15,6 +16,9 @@ import { PendingActivitiesBanner } from '@/components/PendingActivitiesBanner';
 import { useSlaTracking } from '@/hooks/useSlaTracking';
 import { SlaDashboardCards } from '@/components/sla/SlaDashboardCards';
 import { SlaOverdueBanner } from '@/components/sla/SlaOverdueBanner';
+import { PerformanceDashboard } from '@/components/performance/PerformanceDashboard';
+import { WipAlertBanner } from '@/components/performance/WipAlertBanner';
+import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
 
 const DashboardSkeleton = () => (
   <div className="space-y-6 animate-fadeIn">
@@ -47,9 +51,11 @@ export const Dashboard: React.FC = () => {
   const { hasPermission } = usePermissions();
   const { activeProject: project, projects, isLoadingProjects: projectsLoading, activities, isLoadingActivities: activitiesLoading } = useAppData();
   const canCreateProject = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const isAdminUser = role === 'SUPER_ADMIN' || role === 'ADMIN';
   const { getSummary, getOverdueTrackings, refreshStatuses } = useSlaTracking(project?.id);
   const slaSummary = getSummary();
   const overdueItems = getOverdueTrackings();
+  const { wipCount } = usePerformanceTracking(project?.id);
 
   // Refresh SLA statuses on mount
   React.useEffect(() => {
@@ -105,6 +111,8 @@ export const Dashboard: React.FC = () => {
     <div className="space-y-6 animate-fadeIn">
       {/* SLA Overdue Banner */}
       <SlaOverdueBanner overdueItems={overdueItems} />
+      {/* WIP Alert Banner */}
+      <WipAlertBanner wipCount={wipCount} />
       {/* Pending Activities Reminder */}
       <PendingActivitiesBanner />
       {/* Greeting */}
@@ -122,114 +130,160 @@ export const Dashboard: React.FC = () => {
           </span>
         </div>
       </div>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} />
-        ))}
-      </div>
 
-      {/* SLA Indicators */}
-      <SlaDashboardCards summary={slaSummary} />
-
-      {/* Analytics Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ActivitiesByMonthChart
+      {isAdminUser ? (
+        <Tabs defaultValue="painel" className="w-full">
+          <TabsList>
+            <TabsTrigger value="painel">Painel</TabsTrigger>
+            <TabsTrigger value="performance" className="flex items-center gap-1.5">
+              <BarChart3 className="w-4 h-4" />
+              Performance
+            </TabsTrigger>
+          </TabsList>
+          <TabsContent value="painel">
+            <DashboardPanelContent
+              stats={stats}
+              slaSummary={slaSummary}
+              activities={activities}
+              project={project}
+              activitiesLoading={activitiesLoading}
+              role={role}
+            />
+          </TabsContent>
+          <TabsContent value="performance">
+            <PerformanceDashboard projectId={project?.id} />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <DashboardPanelContent
+          stats={stats}
+          slaSummary={slaSummary}
           activities={activities}
-          startDate={project.startDate}
-          endDate={project.endDate}
+          project={project}
+          activitiesLoading={activitiesLoading}
+          role={role}
         />
-        <ActivityTypesChart activities={activities} />
-      </div>
-
-      {activities.length > 0 && project.goals.length > 0 && (
-        <AttendeesByGoalChart activities={activities} goals={project.goals} />
       )}
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Goals Progress */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Progresso das Metas</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-            {project.goals.length === 0 ? (
-                <div className="text-center py-6">
-                  <Target className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-                  <p className="text-muted-foreground text-sm mb-3">Nenhuma meta cadastrada.</p>
-                  {role !== 'OFICINEIRO' && (
-                    <Link to="/settings">
-                      <Button variant="outline" size="sm">
-                        <PlusCircle className="w-4 h-4 mr-1" />
-                        Cadastrar Meta
-                      </Button>
-                    </Link>
-                  )}
-                </div>
-              ) : (
-                project.goals.map(goal => {
-                  const count = activities.filter(a => a.goalId === goal.id).length;
-                  return (
-                    <div key={goal.id}>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span className="truncate mr-2">{goal.title}</span>
-                        <span className="font-medium text-primary whitespace-nowrap">{count} atividades</span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div 
-                          className="bg-primary h-2 rounded-full transition-all duration-1000 ease-out" 
-                          style={{ width: `${Math.min(100, count * 10)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activities */}
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader>
-            <CardTitle className="text-lg">Atividades Recentes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activitiesLoading ? (
-              <div className="flex justify-center py-4">
-                <Loader2 className="w-6 h-6 animate-spin text-primary" />
-              </div>
-            ) : activities.length === 0 ? (
-              <div className="text-center py-6">
-                <FileEdit className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
-                <p className="text-muted-foreground text-sm mb-3">Nenhuma atividade registrada neste projeto.</p>
-                <Link to="/activities">
-                  <Button variant="outline" size="sm">
-                    <PlusCircle className="w-4 h-4 mr-1" />
-                    Registrar Atividade
-                  </Button>
-                </Link>
-              </div>
-            ) : (
-              <ul className="space-y-3">
-                {activities.slice(0, 5).map(act => (
-                  <li key={act.id} className="text-sm border-l-2 border-brand-300 pl-3 py-1 hover:bg-muted/50 transition-colors rounded-r">
-                    <span className="text-muted-foreground text-xs block">{new Date(act.date).toLocaleDateString('pt-BR')}</span>
-                    <span className="text-foreground">{act.description.substring(0, 60)}...</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            <div className="mt-4 pt-4 border-t">
-              <Link to="/activities" className="text-primary text-sm font-medium hover:underline flex items-center group">
-                Ver diário completo 
-                <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 };
+
+// Extracted panel content to keep Dashboard clean
+interface DashboardPanelContentProps {
+  stats: Array<{ label: string; value: string | number; color: string }>;
+  slaSummary: any;
+  activities: any[];
+  project: any;
+  activitiesLoading: boolean;
+  role: string | null;
+}
+
+const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
+  stats, slaSummary, activities, project, activitiesLoading, role,
+}) => (
+  <div className="space-y-6 mt-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {stats.map((stat, i) => (
+        <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} />
+      ))}
+    </div>
+
+    <SlaDashboardCards summary={slaSummary} />
+
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <ActivitiesByMonthChart
+        activities={activities}
+        startDate={project.startDate}
+        endDate={project.endDate}
+      />
+      <ActivityTypesChart activities={activities} />
+    </div>
+
+    {activities.length > 0 && project.goals.length > 0 && (
+      <AttendeesByGoalChart activities={activities} goals={project.goals} />
+    )}
+
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader>
+          <CardTitle className="text-lg">Progresso das Metas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {project.goals.length === 0 ? (
+              <div className="text-center py-6">
+                <Target className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+                <p className="text-muted-foreground text-sm mb-3">Nenhuma meta cadastrada.</p>
+                {role !== 'OFICINEIRO' && (
+                  <Link to="/settings">
+                    <Button variant="outline" size="sm">
+                      <PlusCircle className="w-4 h-4 mr-1" />
+                      Cadastrar Meta
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            ) : (
+              project.goals.map((goal: any) => {
+                const count = activities.filter((a: any) => a.goalId === goal.id).length;
+                return (
+                  <div key={goal.id}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="truncate mr-2">{goal.title}</span>
+                      <span className="font-medium text-primary whitespace-nowrap">{count} atividades</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div
+                        className="bg-primary h-2 rounded-full transition-all duration-1000 ease-out"
+                        style={{ width: `${Math.min(100, count * 10)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="hover:shadow-md transition-shadow">
+        <CardHeader>
+          <CardTitle className="text-lg">Atividades Recentes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {activitiesLoading ? (
+            <div className="flex justify-center py-4">
+              <Loader2 className="w-6 h-6 animate-spin text-primary" />
+            </div>
+          ) : activities.length === 0 ? (
+            <div className="text-center py-6">
+              <FileEdit className="w-10 h-10 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="text-muted-foreground text-sm mb-3">Nenhuma atividade registrada neste projeto.</p>
+              <Link to="/activities">
+                <Button variant="outline" size="sm">
+                  <PlusCircle className="w-4 h-4 mr-1" />
+                  Registrar Atividade
+                </Button>
+              </Link>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {activities.slice(0, 5).map((act: any) => (
+                <li key={act.id} className="text-sm border-l-2 border-brand-300 pl-3 py-1 hover:bg-muted/50 transition-colors rounded-r">
+                  <span className="text-muted-foreground text-xs block">{new Date(act.date).toLocaleDateString('pt-BR')}</span>
+                  <span className="text-foreground">{act.description.substring(0, 60)}...</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="mt-4 pt-4 border-t">
+            <Link to="/activities" className="text-primary text-sm font-medium hover:underline flex items-center group">
+              Ver diário completo
+              <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  </div>
+);
