@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useAuth } from '@/hooks/useAuth';
 import { useTeamReports, TeamReportDraft } from '@/hooks/useTeamReports';
@@ -64,6 +64,7 @@ export const TeamReportGenerator: React.FC = () => {
   const vc = useReportVisualConfig(project?.id, 'report_team');
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { drafts, isLoading: isDraftsLoading, isSaving, saveDraft, deleteDraft } = useTeamReports(project?.id);
   
   const [currentDraftId, setCurrentDraftId] = useState<string | undefined>();
@@ -122,6 +123,18 @@ export const TeamReportGenerator: React.FC = () => {
     setPhotoGroups([]);
     setSelectedPhotoIds(new Set());
   };
+
+  // Auto-load draft from URL query param
+  useEffect(() => {
+    const draftId = searchParams.get('draftId');
+    if (draftId && drafts.length > 0 && !currentDraftId) {
+      const draft = drafts.find(d => d.id === draftId);
+      if (draft) {
+        loadDraft(draft);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, drafts, currentDraftId]);
 
   // Load draft into form
   const loadDraft = (draft: TeamReportDraft) => {
