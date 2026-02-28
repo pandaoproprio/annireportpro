@@ -2,10 +2,11 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Clock, CheckCircle, AlertTriangle, XCircle, Users, FileWarning } from 'lucide-react';
+import { Clock, CheckCircle, AlertTriangle, XCircle, Users, FileWarning, ShieldAlert } from 'lucide-react';
 import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
 import { usePermissions } from '@/hooks/usePermissions';
 import { SLA_REPORT_TYPE_LABELS } from '@/types/sla';
+import type { WipDraft } from '@/hooks/usePerformanceTracking';
 import { PerformanceConfigPanel } from './PerformanceConfigPanel';
 
 interface PerformanceDashboardProps {
@@ -28,7 +29,7 @@ function formatDraftAge(hours: number): string {
 }
 
 export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ projectId }) => {
-  const { summary, isLoading, thresholdHours, config, updateConfig } = usePerformanceTracking(projectId);
+  const { summary, isLoading, thresholdHours, config, updateConfig, wipDrafts, wipLimit } = usePerformanceTracking(projectId);
   const { isSuperAdmin } = usePermissions();
 
   if (isLoading) {
@@ -100,6 +101,9 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ proj
           </Card>
         ))}
       </div>
+
+      {/* WIP by Collaborator */}
+      <WipByCollaboratorCard wipDrafts={wipDrafts} wipLimit={wipLimit} />
 
       {/* Collaborator Ranking */}
       <Card>
@@ -183,5 +187,79 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ proj
         </CardContent>
       </Card>
     </div>
+  );
+};
+
+// WIP summary card grouped by collaborator
+const WipByCollaboratorCard: React.FC<{ wipDrafts: WipDraft[]; wipLimit: number }> = ({ wipDrafts, wipLimit }) => {
+  // Group by user
+  const byUser = wipDrafts.reduce<Record<string, { name: string; count: number; drafts: WipDraft[] }>>((acc, d) => {
+    if (!acc[d.user_id]) acc[d.user_id] = { name: d.user_name || 'Desconhecido', count: 0, drafts: [] };
+    acc[d.user_id].count++;
+    acc[d.user_id].drafts.push(d);
+    return acc;
+  }, {});
+
+  const usersOverLimit = Object.entries(byUser)
+    .filter(([, v]) => v.count > wipLimit)
+    .sort((a, b) => b[1].count - a[1].count);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg flex items-center gap-2">
+          <ShieldAlert className="w-5 h-5" />
+          WIP por Colaborador
+          {usersOverLimit.length > 0 && (
+            <span className="text-xs font-normal px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
+              {usersOverLimit.length} acima do limite
+            </span>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {Object.keys(byUser).length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-6">Nenhum rascunho ativo no momento.</p>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Colaborador</TableHead>
+                <TableHead className="text-center">Rascunhos</TableHead>
+                <TableHead className="text-center">Limite</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {Object.entries(byUser)
+                .sort((a, b) => b[1].count - a[1].count)
+                .map(([userId, { name, count }]) => {
+                  const overLimit = count > wipLimit;
+                  return (
+                    <TableRow key={userId}>
+                      <TableCell className="font-medium">{name}</TableCell>
+                      <TableCell className="text-center">
+                        <span className={overLimit ? 'text-destructive font-bold' : ''}>{count}</span>
+                      </TableCell>
+                      <TableCell className="text-center text-muted-foreground">{wipLimit}</TableCell>
+                      <TableCell className="text-center">
+                        {overLimit ? (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-destructive/10 text-destructive">
+                            <AlertTriangle className="w-3 h-3" /> Excedido
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                            <CheckCircle className="w-3 h-3" /> OK
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
   );
 };
