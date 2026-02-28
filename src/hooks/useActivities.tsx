@@ -29,6 +29,8 @@ interface DbActivity {
   cost_evidence: string | null;
   created_at: string;
   updated_at: string;
+  project_role_snapshot: string | null;
+  profiles?: { name: string; email: string } | null;
 }
 
 const dbTypeToEnum: Record<DbActivityType, ActivityType> = {
@@ -69,6 +71,9 @@ const mapDbToActivity = (db: DbActivity & { is_draft?: boolean; photo_captions?:
   photoCaptions: (db.photo_captions as Record<string, string>) || {},
   attendanceFiles: (db.attendance_files as AttendanceFile[]) || [],
   expenseRecords: (db.expense_records as ExpenseRecord[]) || [],
+  projectRoleSnapshot: db.project_role_snapshot || undefined,
+  authorName: db.profiles?.name || undefined,
+  authorEmail: db.profiles?.email || undefined,
 });
 
 const fetchActivitiesFromDb = async (
@@ -94,8 +99,26 @@ const fetchActivitiesFromDb = async (
 
   if (error) throw error;
 
+  const rows = data as DbActivity[];
+
+  // Fetch author profiles for all unique user_ids
+  const userIds = [...new Set(rows.map(r => r.user_id))];
+  let profileMap: Record<string, { name: string; email: string }> = {};
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from('profiles')
+      .select('user_id, name, email')
+      .in('user_id', userIds);
+    if (profiles) {
+      profileMap = Object.fromEntries(profiles.map(p => [p.user_id, { name: p.name, email: p.email }]));
+    }
+  }
+
   return {
-    activities: (data as DbActivity[]).map(mapDbToActivity),
+    activities: rows.map(r => mapDbToActivity({
+      ...r,
+      profiles: profileMap[r.user_id] || null,
+    })),
     total: count || 0,
   };
 };
@@ -145,6 +168,7 @@ export const useActivities = (projectId: string | null) => {
           photo_captions: activity.photoCaptions || {},
           attendance_files: activity.attendanceFiles || [],
           expense_records: activity.expenseRecords || [],
+          project_role_snapshot: role || null,
         } as any)
         .select()
         .single();
