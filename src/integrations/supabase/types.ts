@@ -510,6 +510,54 @@ export type Database = {
         }
         Relationships: []
       }
+      report_performance_tracking: {
+        Row: {
+          calculated_cycle_time: number | null
+          calculated_lead_time: number | null
+          created_at: string
+          id: string
+          performance_status: string
+          priority: number
+          project_id: string
+          published_at: string | null
+          reopen_count: number
+          report_id: string
+          report_type: Database["public"]["Enums"]["sla_report_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calculated_cycle_time?: number | null
+          calculated_lead_time?: number | null
+          created_at?: string
+          id?: string
+          performance_status?: string
+          priority?: number
+          project_id: string
+          published_at?: string | null
+          reopen_count?: number
+          report_id: string
+          report_type: Database["public"]["Enums"]["sla_report_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calculated_cycle_time?: number | null
+          calculated_lead_time?: number | null
+          created_at?: string
+          id?: string
+          performance_status?: string
+          priority?: number
+          project_id?: string
+          published_at?: string | null
+          reopen_count?: number
+          report_id?: string
+          report_type?: Database["public"]["Enums"]["sla_report_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       report_sla_config: {
         Row: {
           created_at: string
