@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { FileEdit } from 'lucide-react';
 import { exportReportToPdf } from '@/lib/reportPdfExport';
 import { exportToDocx } from '@/lib/docxExport';
+import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { useReportState } from '@/hooks/useReportState';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
@@ -64,6 +65,15 @@ export const ReportGenerator: React.FC = () => {
         sectionPhotoGroups,
         selectedVideoUrls: state.selectedVideoUrls,
       });
+      if (project?.id) {
+        createAsanaTaskOnPublish({
+          entityType: 'activity',
+          entityId: project.id,
+          projectId: project.id,
+          name: `[Relatório Objeto] ${project.name}`,
+          notes: `Exportação PDF do relatório do objeto`,
+        });
+      }
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
       toast.error('Erro ao exportar PDF. Tente novamente.');
@@ -84,6 +94,15 @@ export const ReportGenerator: React.FC = () => {
         visualConfig: vc.config,
         selectedVideoUrls: state.selectedVideoUrls,
       });
+      if (project?.id) {
+        createAsanaTaskOnPublish({
+          entityType: 'activity',
+          entityId: project.id,
+          projectId: project.id,
+          name: `[Relatório Objeto] ${project.name}`,
+          notes: `Exportação DOCX do relatório do objeto`,
+        });
+      }
     } catch (error) {
       console.error('Erro ao exportar DOCX:', error);
       toast.error('Erro ao exportar DOCX. Tente novamente.');

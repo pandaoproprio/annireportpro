@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { PhotoWithCaption, AdditionalSection } from '@/types';
 import type { Json } from '@/integrations/supabase/types';
 import { logAuditEvent } from '@/lib/auditLog';
+import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 
 export interface TeamReportDraft {
   id: string;
@@ -127,7 +128,18 @@ export const useTeamReports = (projectId?: string) => {
         return data?.id;
       }
     },
-    onSuccess: () => invalidate(),
+    onSuccess: (savedId, variables) => {
+      invalidate();
+      if (!variables.isDraft && savedId && projectId) {
+        createAsanaTaskOnPublish({
+          entityType: 'team_report',
+          entityId: savedId,
+          projectId,
+          name: `[Relatório Equipe] ${variables.providerName} - ${variables.periodStart} a ${variables.periodEnd}`,
+          notes: `Função: ${variables.functionRole}\nResponsável: ${variables.responsibleName}`,
+        });
+      }
+    },
     onError: () => toast.error('Erro ao salvar rascunho'),
   });
 
