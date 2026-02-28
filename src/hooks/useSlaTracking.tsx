@@ -79,11 +79,29 @@ export const useSlaTracking = (projectId?: string | null) => {
 
   const refreshStatuses = useMutation({
     mutationFn: async () => {
+      const previousStatuses = new Map(allTrackings.map(t => [t.id, t.status]));
+
       for (const t of allTrackings) {
         await supabase
           .from('report_sla_tracking')
           .update({ updated_at: new Date().toISOString() })
           .eq('id', t.id);
+      }
+
+      // Re-fetch to get updated statuses from the trigger
+      const { data: updatedTrackings } = await supabase
+        .from('report_sla_tracking')
+        .select('*');
+
+      // Sync changed statuses to Asana
+      if (updatedTrackings) {
+        for (const t of updatedTrackings) {
+          const prevStatus = previousStatuses.get(t.id);
+          if (prevStatus && prevStatus !== t.status) {
+            // Fire and forget — don't block the UI
+            syncSlaToAsana(t.report_type, t.report_id, t.status).catch(console.error);
+          }
+        }
       }
     },
     onSuccess: () => {
@@ -91,6 +109,24 @@ export const useSlaTracking = (projectId?: string | null) => {
       queryClient.invalidateQueries({ queryKey: ['sla-tracking-all'] });
     },
   });
+
+  const syncSlaToAsana = async (reportType: string, reportId: string, slaStatus: string) => {
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) return;
+
+      await supabase.functions.invoke('asana-integration', {
+        body: {
+          action: 'sync_sla_status',
+          entity_type: reportType,
+          entity_id: reportId,
+          sla_status: slaStatus,
+        },
+      });
+    } catch (e) {
+      console.error('Asana SLA sync failed:', e);
+    }
+  };
 
   const updateConfig = useMutation({
     mutationFn: async (config: Partial<SlaConfig> & { id: string }) => {
