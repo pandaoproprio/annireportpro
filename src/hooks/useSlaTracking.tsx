@@ -2,12 +2,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import type { SlaConfig, SlaTracking, SlaReportType } from '@/types/sla';
+import { slaConfigToTotalHours } from '@/types/sla';
 
 export const useSlaTracking = (projectId?: string | null) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch SLA configs
   const { data: configs = [] } = useQuery({
     queryKey: ['sla-configs'],
     queryFn: async () => {
@@ -21,7 +21,6 @@ export const useSlaTracking = (projectId?: string | null) => {
     staleTime: 60_000,
   });
 
-  // Fetch SLA tracking for current project
   const { data: trackings = [], isLoading } = useQuery({
     queryKey: ['sla-tracking', projectId],
     queryFn: async () => {
@@ -37,7 +36,6 @@ export const useSlaTracking = (projectId?: string | null) => {
     staleTime: 30_000,
   });
 
-  // Fetch ALL user's SLA trackings (for dashboard)
   const { data: allTrackings = [] } = useQuery({
     queryKey: ['sla-tracking-all'],
     queryFn: async () => {
@@ -50,7 +48,6 @@ export const useSlaTracking = (projectId?: string | null) => {
     staleTime: 30_000,
   });
 
-  // Create SLA tracking when a report is created
   const createTracking = useMutation({
     mutationFn: async (params: {
       reportType: SlaReportType;
@@ -58,9 +55,11 @@ export const useSlaTracking = (projectId?: string | null) => {
       projectId: string;
     }) => {
       const config = configs.find(c => c.report_type === params.reportType);
-      const days = config?.default_days || 15;
+      const totalHours = config
+        ? slaConfigToTotalHours(config.default_days, config.default_hours)
+        : 15 * 24; // fallback 15 days
       const deadline = new Date();
-      deadline.setDate(deadline.getDate() + days);
+      deadline.setTime(deadline.getTime() + totalHours * 60 * 60 * 1000);
 
       const { error } = await supabase.from('report_sla_tracking').upsert({
         report_type: params.reportType,
@@ -78,10 +77,8 @@ export const useSlaTracking = (projectId?: string | null) => {
     },
   });
 
-  // Refresh SLA statuses (trigger recalculation by touching updated_at)
   const refreshStatuses = useMutation({
     mutationFn: async () => {
-      // Touch each tracking to trigger the DB trigger recalculation
       for (const t of allTrackings) {
         await supabase
           .from('report_sla_tracking')
@@ -95,15 +92,17 @@ export const useSlaTracking = (projectId?: string | null) => {
     },
   });
 
-  // Update SLA config (admin only)
   const updateConfig = useMutation({
     mutationFn: async (config: Partial<SlaConfig> & { id: string }) => {
       const { error } = await supabase
         .from('report_sla_config')
         .update({
           default_days: config.default_days,
+          default_hours: config.default_hours,
           warning_days: config.warning_days,
+          warning_hours: config.warning_hours,
           escalation_days: config.escalation_days,
+          escalation_hours: config.escalation_hours,
         })
         .eq('id', config.id);
       if (error) throw error;
@@ -113,7 +112,6 @@ export const useSlaTracking = (projectId?: string | null) => {
     },
   });
 
-  // Helpers
   const getTrackingForReport = (reportType: SlaReportType, reportId: string) =>
     trackings.find(t => t.report_type === reportType && t.report_id === reportId);
 

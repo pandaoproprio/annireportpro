@@ -5,8 +5,11 @@ export interface SlaConfig {
   id: string;
   report_type: SlaReportType;
   default_days: number;
+  default_hours: number;
   warning_days: number;
+  warning_hours: number;
   escalation_days: number;
+  escalation_hours: number;
   is_active: boolean;
   created_by: string;
   created_at: string;
@@ -46,3 +49,16 @@ export const SLA_STATUS_COLORS: Record<SlaStatus, { bg: string; text: string; bo
   atrasado: { bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-300' },
   bloqueado: { bg: 'bg-red-200', text: 'text-red-900', border: 'border-red-500' },
 };
+
+/** Converts days+hours config to total hours */
+export function slaConfigToTotalHours(days: number, hours: number): number {
+  return days * 24 + hours;
+}
+
+/** Formats a duration in hours to a human-readable string */
+export function formatSlaDuration(days: number, hours: number): string {
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days}d`);
+  if (hours > 0) parts.push(`${hours}h`);
+  return parts.join(' ') || '0h';
+}

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Save, Loader2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import type { SlaConfig } from '@/types/sla';
-import { SLA_REPORT_TYPE_LABELS } from '@/types/sla';
+import { SLA_REPORT_TYPE_LABELS, formatSlaDuration } from '@/types/sla';
 import { useSlaTracking } from '@/hooks/useSlaTracking';
 
 export const SlaConfigPanel: React.FC = () => {
@@ -48,42 +48,86 @@ export const SlaConfigPanel: React.FC = () => {
       </CardHeader>
       <CardContent className="space-y-6">
         {localConfigs.map((config) => (
-          <div key={config.id} className="border rounded-lg p-4 space-y-3">
+          <div key={config.id} className="border rounded-lg p-4 space-y-4">
             <h4 className="font-semibold text-sm">
               {SLA_REPORT_TYPE_LABELS[config.report_type]}
             </h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <Label className="text-xs">Prazo padrão (dias)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={90}
-                  value={config.default_days}
-                  onChange={(e) => updateField(config.id, 'default_days', +e.target.value)}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Alerta (dias antes do vencimento)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={config.default_days - 1}
-                  value={config.warning_days}
-                  onChange={(e) => updateField(config.id, 'warning_days', +e.target.value)}
-                />
-              </div>
-              <div>
-                <Label className="text-xs">Bloqueio (dias após vencimento)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={30}
-                  value={config.escalation_days}
-                  onChange={(e) => updateField(config.id, 'escalation_days', +e.target.value)}
-                />
+
+            {/* Prazo padrão */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Prazo padrão: {formatSlaDuration(config.default_days, config.default_hours)}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Dias</Label>
+                  <Input
+                    type="number" min={0} max={90}
+                    value={config.default_days}
+                    onChange={(e) => updateField(config.id, 'default_days', +e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Horas</Label>
+                  <Input
+                    type="number" min={0} max={23}
+                    value={config.default_hours}
+                    onChange={(e) => updateField(config.id, 'default_hours', +e.target.value)}
+                  />
+                </div>
               </div>
             </div>
+
+            {/* Alerta */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Alerta (antes do vencimento): {formatSlaDuration(config.warning_days, config.warning_hours)}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Dias</Label>
+                  <Input
+                    type="number" min={0} max={90}
+                    value={config.warning_days}
+                    onChange={(e) => updateField(config.id, 'warning_days', +e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Horas</Label>
+                  <Input
+                    type="number" min={0} max={23}
+                    value={config.warning_hours}
+                    onChange={(e) => updateField(config.id, 'warning_hours', +e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Bloqueio */}
+            <div>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Bloqueio (após vencimento): {formatSlaDuration(config.escalation_days, config.escalation_hours)}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-xs">Dias</Label>
+                  <Input
+                    type="number" min={0} max={30}
+                    value={config.escalation_days}
+                    onChange={(e) => updateField(config.id, 'escalation_days', +e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label className="text-xs">Horas</Label>
+                  <Input
+                    type="number" min={0} max={23}
+                    value={config.escalation_hours}
+                    onChange={(e) => updateField(config.id, 'escalation_hours', +e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
             <Button
               size="sm"
               onClick={() => handleSave(config)}
@@ -99,7 +143,7 @@ export const SlaConfigPanel: React.FC = () => {
           </div>
         ))}
         <p className="text-xs text-muted-foreground">
-          O prazo é calculado automaticamente a partir da criação do relatório. O status do SLA é atualizado automaticamente pelo sistema.
+          O prazo é calculado automaticamente a partir da criação do relatório. Configure dias e horas para controle granular. O status é atualizado automaticamente pelo sistema.
         </p>
       </CardContent>
     </Card>
