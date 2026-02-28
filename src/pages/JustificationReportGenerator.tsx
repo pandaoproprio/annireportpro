@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useRef, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +21,7 @@ export const JustificationReportGenerator: React.FC = () => {
   const state = useJustificationReportState();
   const reportRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const vc = useReportVisualConfig(state.project?.id, 'justification');
 
@@ -38,6 +39,18 @@ export const JustificationReportGenerator: React.FC = () => {
     handleSectionPhotoUpload, removeSectionPhoto,
     handleSectionDocUpload, removeSectionDoc,
   } = state;
+
+  // Auto-load draft from URL query param
+  useEffect(() => {
+    const draftId = searchParams.get('draftId');
+    if (draftId && drafts.length > 0 && !currentDraftId) {
+      const draft = drafts.find((d: any) => d.id === draftId);
+      if (draft) {
+        loadDraft(draft);
+        setSearchParams({}, { replace: true });
+      }
+    }
+  }, [searchParams, drafts, currentDraftId]);
 
   if (!project) {
     return (
