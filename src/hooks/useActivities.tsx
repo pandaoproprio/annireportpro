@@ -90,7 +90,8 @@ const fetchActivitiesFromDb = async (
     .from('activities')
     .select('*', { count: 'exact' });
 
-  if (!isAdmin) query = query.eq('user_id', userId);
+  // RLS handles access control — team members, collaborators and admins
+  // see project activities based on their DB-level policies.
   if (projectId) query = query.eq('project_id', projectId);
 
   const { data, error, count } = await query
