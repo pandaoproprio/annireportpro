@@ -112,7 +112,7 @@ export const Dashboard: React.FC = () => {
       {/* SLA Overdue Banner */}
       <SlaOverdueBanner overdueItems={overdueItems} />
       {/* WIP Alert Banner */}
-      <WipAlertBanner wipCount={wipCount} wipLimit={wipLimit} wipDrafts={wipDrafts} />
+      <WipAlertBanner wipCount={wipCount} wipLimit={wipLimit} wipDrafts={wipDrafts} isAdmin={isAdminUser} />
       {/* Pending Activities Reminder */}
       <PendingActivitiesBanner />
       {/* Greeting */}

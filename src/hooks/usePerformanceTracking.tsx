@@ -9,6 +9,8 @@ export interface WipDraft {
   report_type: SlaReportType;
   created_at: string;
   provider_name?: string;
+  user_id: string;
+  user_name?: string;
 }
 
 export interface PerformanceConfig {
@@ -18,8 +20,9 @@ export interface PerformanceConfig {
 }
 
 export function usePerformanceTracking(projectId: string | undefined) {
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const queryClient = useQueryClient();
+  const isAdmin = role === 'SUPER_ADMIN' || role === 'ADMIN';
 
   // Fetch config
   const { data: config } = useQuery({
@@ -123,19 +126,36 @@ export function usePerformanceTracking(projectId: string | undefined) {
     enabled: !!projectId,
   });
 
-  // WIP drafts for current user (with details)
-  const { data: wipDrafts = [] } = useQuery<WipDraft[]>({
-    queryKey: ['wip-drafts', user?.id],
-    queryFn: async () => {
+  // WIP drafts — admins see all users, regular users see only their own
+  const { data: wipDrafts = [] as WipDraft[] } = useQuery({
+    queryKey: ['wip-drafts', user?.id, isAdmin],
+    queryFn: async (): Promise<WipDraft[]> => {
       if (!user?.id) return [];
-      const [teamRes, justRes] = await Promise.all([
-        supabase.from('team_reports').select('id, created_at, provider_name').eq('user_id', user.id).eq('is_draft', true).is('deleted_at', null),
-        supabase.from('justification_reports').select('id, created_at').eq('user_id', user.id).eq('is_draft', true).is('deleted_at', null),
-      ]);
-      return [
-        ...(teamRes.data || []).map(d => ({ id: d.id, report_type: 'report_team' as SlaReportType, created_at: d.created_at, provider_name: d.provider_name })),
-        ...(justRes.data || []).map(d => ({ id: d.id, report_type: 'justification' as SlaReportType, created_at: d.created_at })),
+
+      let teamQuery = supabase.from('team_reports').select('id, created_at, provider_name, user_id').eq('is_draft', true).is('deleted_at', null);
+      let justQuery = supabase.from('justification_reports').select('id, created_at, user_id').eq('is_draft', true).is('deleted_at', null);
+
+      if (!isAdmin) {
+        teamQuery = teamQuery.eq('user_id', user.id);
+        justQuery = justQuery.eq('user_id', user.id);
+      }
+
+      const [teamRes, justRes] = await Promise.all([teamQuery, justQuery]);
+
+      const allDrafts: WipDraft[] = [
+        ...(teamRes.data || []).map(d => ({ id: d.id, report_type: 'report_team' as SlaReportType, created_at: d.created_at, provider_name: d.provider_name, user_id: d.user_id })),
+        ...(justRes.data || []).map(d => ({ id: d.id, report_type: 'justification' as SlaReportType, created_at: d.created_at, user_id: d.user_id })),
       ];
+
+      // Enrich with user names
+      const userIds = [...new Set(allDrafts.map(d => d.user_id))];
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase.from('profiles').select('user_id, name').in('user_id', userIds);
+        const nameMap = new Map((profiles || []).map(p => [p.user_id, p.name]));
+        allDrafts.forEach(d => { d.user_name = nameMap.get(d.user_id) || 'Desconhecido'; });
+      }
+
+      return allDrafts;
     },
     enabled: !!user?.id,
   });
