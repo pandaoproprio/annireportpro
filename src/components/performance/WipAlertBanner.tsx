@@ -18,9 +18,10 @@ function formatAge(createdAt: string): string {
 }
 
 function getDraftRoute(draft: WipDraft): string {
-  const params = new URLSearchParams({ draftId: draft.id, projectId: draft.project_id });
-  if (draft.report_type === 'report_team') return `/team-report?${params}`;
-  if (draft.report_type === 'justification') return `/justificativa?${params}`;
+  const params = new URLSearchParams({ draftId: draft.id });
+  if (draft.project_id) params.set('projectId', draft.project_id);
+  if (draft.report_type === 'report_team') return `/team-report?${params.toString()}`;
+  if (draft.report_type === 'justification') return `/justificativa?${params.toString()}`;
   return '/';
 }
 
