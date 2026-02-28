@@ -274,6 +274,33 @@ export type Database = {
           },
         ]
       }
+      performance_config: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          stale_draft_threshold_hours: number
+          updated_at: string
+          wip_limit: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          stale_draft_threshold_hours?: number
+          updated_at?: string
+          wip_limit?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          stale_draft_threshold_hours?: number
+          updated_at?: string
+          wip_limit?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

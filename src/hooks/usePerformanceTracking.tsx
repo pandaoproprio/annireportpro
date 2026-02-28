@@ -4,9 +4,32 @@ import { useAuth } from '@/hooks/useAuth';
 import type { ReportPerformanceTracking, PerformanceSummary, CollaboratorRanking, StaleDraft } from '@/types/performance';
 import type { SlaReportType } from '@/types/sla';
 
+export interface PerformanceConfig {
+  id: string;
+  stale_draft_threshold_hours: number;
+  wip_limit: number;
+}
+
 export function usePerformanceTracking(projectId: string | undefined) {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+
+  // Fetch config
+  const { data: config } = useQuery({
+    queryKey: ['performance-config'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('performance_config' as any)
+        .select('*')
+        .limit(1)
+        .single();
+      if (error) return { id: '', stale_draft_threshold_hours: 168, wip_limit: 5 } as PerformanceConfig;
+      return data as unknown as PerformanceConfig;
+    },
+  });
+
+  const thresholdHours = config?.stale_draft_threshold_hours ?? 168;
+  const wipLimit = config?.wip_limit ?? 5;
 
   // Fetch performance tracking records for current project
   const { data: trackingRecords = [], isLoading: isLoadingTracking } = useQuery({
@@ -23,12 +46,12 @@ export function usePerformanceTracking(projectId: string | undefined) {
     enabled: !!projectId,
   });
 
-  // Fetch stale drafts (> 7 days) from team_reports + justification_reports
+  // Fetch stale drafts based on configurable threshold
   const { data: staleDrafts = [], isLoading: isLoadingStaleDrafts } = useQuery({
-    queryKey: ['stale-drafts', projectId],
+    queryKey: ['stale-drafts', projectId, thresholdHours],
     queryFn: async () => {
       if (!projectId) return [];
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const cutoff = new Date(Date.now() - thresholdHours * 60 * 60 * 1000).toISOString();
       
       const [teamRes, justRes] = await Promise.all([
         supabase
@@ -37,14 +60,14 @@ export function usePerformanceTracking(projectId: string | undefined) {
           .eq('project_id', projectId)
           .eq('is_draft', true)
           .is('deleted_at', null)
-          .lt('created_at', sevenDaysAgo),
+          .lt('created_at', cutoff),
         supabase
           .from('justification_reports')
           .select('id, user_id, created_at')
           .eq('project_id', projectId)
           .eq('is_draft', true)
           .is('deleted_at', null)
-          .lt('created_at', sevenDaysAgo),
+          .lt('created_at', cutoff),
       ]);
 
       const allDrafts = [
@@ -54,7 +77,6 @@ export function usePerformanceTracking(projectId: string | undefined) {
 
       if (allDrafts.length === 0) return [];
 
-      // Fetch profile names
       const userIds = [...new Set(allDrafts.map(d => d.user_id))];
       const { data: profiles } = await supabase
         .from('profiles')
@@ -62,14 +84,18 @@ export function usePerformanceTracking(projectId: string | undefined) {
         .in('user_id', userIds);
       const nameMap = new Map((profiles || []).map(p => [p.user_id, p.name]));
 
-      return allDrafts.map(d => ({
-        report_id: d.id,
-        report_type: d.report_type,
-        user_id: d.user_id,
-        user_name: nameMap.get(d.user_id) || 'Desconhecido',
-        created_at: d.created_at,
-        days_in_draft: Math.floor((Date.now() - new Date(d.created_at).getTime()) / (1000 * 60 * 60 * 24)),
-      })) as StaleDraft[];
+      return allDrafts.map(d => {
+        const hoursInDraft = (Date.now() - new Date(d.created_at).getTime()) / (1000 * 60 * 60);
+        return {
+          report_id: d.id,
+          report_type: d.report_type,
+          user_id: d.user_id,
+          user_name: nameMap.get(d.user_id) || 'Desconhecido',
+          created_at: d.created_at,
+          days_in_draft: Math.floor(hoursInDraft / 24),
+          hours_in_draft: Math.round(hoursInDraft),
+        };
+      }) as StaleDraft[];
     },
     enabled: !!projectId,
   });
@@ -111,7 +137,6 @@ export function usePerformanceTracking(projectId: string | undefined) {
       ? published.reduce((acc, r) => acc + (r.calculated_lead_time || 0), 0) / published.length
       : 0;
 
-    // Build collaborator ranking
     const byUser = new Map<string, { lead_times: number[]; reopens: number; count: number }>();
     published.forEach(r => {
       const entry = byUser.get(r.user_id) || { lead_times: [], reopens: 0, count: 0 };
@@ -123,7 +148,7 @@ export function usePerformanceTracking(projectId: string | undefined) {
 
     const ranking: CollaboratorRanking[] = Array.from(byUser.entries()).map(([uid, data]) => ({
       user_id: uid,
-      name: '', // will be enriched below
+      name: '',
       published_count: data.count,
       avg_lead_time_hours: data.lead_times.length > 0 ? data.lead_times.reduce((a, b) => a + b, 0) / data.lead_times.length : 0,
       reopen_total: data.reopens,
@@ -131,7 +156,7 @@ export function usePerformanceTracking(projectId: string | undefined) {
 
     return {
       avg_lead_time_hours: avgLeadTime,
-      on_time_percentage: 0, // computed below
+      on_time_percentage: 0,
       critical_drafts_count: staleDrafts.length,
       overdue_count: overdueCount,
       collaborator_ranking: ranking,
@@ -168,11 +193,31 @@ export function usePerformanceTracking(projectId: string | undefined) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['performance-tracking', projectId] }),
   });
 
+  // Update config mutation
+  const updateConfig = useMutation({
+    mutationFn: async (newConfig: { stale_draft_threshold_hours?: number; wip_limit?: number }) => {
+      if (!config?.id) return;
+      const { error } = await supabase
+        .from('performance_config' as any)
+        .update(newConfig as any)
+        .eq('id', config.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['performance-config'] });
+      queryClient.invalidateQueries({ queryKey: ['stale-drafts'] });
+    },
+  });
+
   return {
     trackingRecords,
     summary,
     wipCount,
+    wipLimit,
+    thresholdHours,
+    config,
     isLoading: isLoadingTracking || isLoadingStaleDrafts,
     updatePriority,
+    updateConfig,
   };
 }

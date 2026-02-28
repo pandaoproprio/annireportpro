@@ -55,7 +55,7 @@ export const Dashboard: React.FC = () => {
   const { getSummary, getOverdueTrackings, refreshStatuses } = useSlaTracking(project?.id);
   const slaSummary = getSummary();
   const overdueItems = getOverdueTrackings();
-  const { wipCount } = usePerformanceTracking(project?.id);
+  const { wipCount, wipLimit } = usePerformanceTracking(project?.id);
 
   // Refresh SLA statuses on mount
   React.useEffect(() => {
@@ -112,7 +112,7 @@ export const Dashboard: React.FC = () => {
       {/* SLA Overdue Banner */}
       <SlaOverdueBanner overdueItems={overdueItems} />
       {/* WIP Alert Banner */}
-      <WipAlertBanner wipCount={wipCount} />
+      <WipAlertBanner wipCount={wipCount} wipLimit={wipLimit} />
       {/* Pending Activities Reminder */}
       <PendingActivitiesBanner />
       {/* Greeting */}
