@@ -49,6 +49,7 @@ const ReportTemplateEditor = lazy(() => import('@/pages/ReportTemplateEditor').t
 const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'));
 const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'));
 const ReportV2Page = lazy(() => import('@/modules/reports-v2/ReportV2Page'));
+const InstallGuide = lazy(() => import('@/pages/InstallGuide').then(m => ({ default: m.InstallGuide })));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -292,6 +293,7 @@ export const AppRoutes: React.FC = () => {
     <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/instalar" element={<InstallGuide />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/lgpd" element={<PrivacyPolicy />} />
         <Route path="/licenca" element={<TermsOfUse />} />
