@@ -1,17 +1,19 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileEdit } from 'lucide-react';
+import { FileEdit, Link2 } from 'lucide-react';
 import { exportReportToPdf } from '@/lib/reportPdfExport';
 import { exportToDocx } from '@/lib/docxExport';
 import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { useReportState } from '@/hooks/useReportState';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
+import { useDiaryReportLinks } from '@/hooks/useDiaryReportLinks';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportStructureEditor } from '@/components/report/ReportStructureEditor';
 import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
 import { ReportEditSection } from '@/components/report/ReportEditSection';
 import { ReportPreviewSection } from '@/components/report/ReportPreviewSection';
+import { DiaryReportLinkDialog } from '@/components/report/DiaryReportLinkDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { toast } from 'sonner';
 import { mmToPx, a4PageStyle, MR, ML, MB } from '@/lib/previewConstants';
@@ -46,6 +48,8 @@ export const ReportGenerator: React.FC = () => {
 
   // Visual config scoped to this project + report_object
   const vc = useReportVisualConfig(project?.id, 'report_object');
+  const diaryLinks = useDiaryReportLinks(project?.id, 'report_object');
+  const [showDiaryLinkDialog, setShowDiaryLinkDialog] = useState(false);
 
   if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
 
@@ -234,6 +238,13 @@ export const ReportGenerator: React.FC = () => {
 
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
+          {/* Diary Link Button */}
+          <div className="flex justify-end">
+            <Button variant="outline" onClick={() => setShowDiaryLinkDialog(true)}>
+              <Link2 className="w-4 h-4 mr-2" />
+              Vincular Diário ({diaryLinks.linkedActivityIds.size})
+            </Button>
+          </div>
           <ReportStructureEditor
             sections={sections} moveSection={moveSection} toggleVisibility={toggleVisibility}
             updateSectionTitle={updateSectionTitle} removeSection={removeSection} addCustomSection={addCustomSection}
@@ -346,6 +357,17 @@ export const ReportGenerator: React.FC = () => {
         confirmLabel="Remover"
         variant="destructive"
         onConfirm={confirmRemoveSection}
+      />
+
+      <DiaryReportLinkDialog
+        open={showDiaryLinkDialog}
+        onOpenChange={setShowDiaryLinkDialog}
+        activities={activities}
+        linkedIds={diaryLinks.linkedActivityIds}
+        onLink={async (ids) => {
+          await diaryLinks.linkActivities(ids);
+          toast.success(`${ids.length} registro(s) vinculado(s) ao relatório`);
+        }}
       />
     </div>
   );

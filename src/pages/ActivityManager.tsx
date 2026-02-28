@@ -5,6 +5,8 @@ import CameraCapture from '@/components/CameraCapture';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
+import { canEditActivity, isWithinEditWindow, deriveSetor } from '@/lib/diaryEditRules';
+import { logAction } from '@/lib/systemLog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,8 +33,10 @@ import {
 import { 
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
   FolderGit2, Search, Users, Loader2, FileEdit, Save, Eye, ChevronDown, ChevronUp,
-  FileText, Upload, Paperclip, Play, UserCircle, CalendarRange
+  FileText, Upload, Paperclip, Play, UserCircle, CalendarRange, Lock, Shield
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TeamContributionDashboard } from '@/components/dashboard/TeamContributionDashboard';
 import {
   Dialog,
   DialogContent,
@@ -45,7 +49,8 @@ import { SpeechToTextButton } from '@/components/SpeechToTextButton';
 
 export const ActivityManager: React.FC = () => {
   const { activeProject: project, activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useAppData();
-  const { profile } = useAuth();
+  const { profile, role } = useAuth();
+  const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -150,6 +155,17 @@ export const ActivityManager: React.FC = () => {
   };
 
   const handleEdit = (activity: Activity) => {
+    const editCheck = canEditActivity(activity.createdAt, isAdmin, activity.isLinkedToReport);
+    if (!editCheck.allowed) {
+      toast.error(editCheck.reason || 'Edição não permitida');
+      logAction({
+        action: 'edit_attempt_blocked',
+        entityType: 'activity',
+        entityId: activity.id,
+        newData: { reason: editCheck.reason },
+      });
+      return;
+    }
     setNewActivity({ ...activity });
     setEditingId(activity.id);
     setIsFormOpen(true);
@@ -223,6 +239,7 @@ export const ActivityManager: React.FC = () => {
         photoCaptions: newActivity.photoCaptions || {},
         attendanceFiles: newActivity.attendanceFiles || [],
         expenseRecords: newActivity.expenseRecords || [],
+        setorResponsavel: deriveSetor(role),
       });
       toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade registrada!');
     }
@@ -324,6 +341,18 @@ export const ActivityManager: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn pb-20">
+
+      <Tabs defaultValue="diario" className="w-full">
+        <TabsList>
+          <TabsTrigger value="diario">Diário de Bordo</TabsTrigger>
+          {isAdmin && <TabsTrigger value="contribuicao">Contribuição da Equipe</TabsTrigger>}
+        </TabsList>
+
+        <TabsContent value="contribuicao">
+          <TeamContributionDashboard activities={activities} projectName={project?.name} />
+        </TabsContent>
+
+        <TabsContent value="diario" className="space-y-6 mt-4">
 
       {/* Botão Nova Atividade */}
       {!isFormOpen && (
@@ -698,6 +727,16 @@ export const ActivityManager: React.FC = () => {
                           <FileEdit className="w-3 h-3 mr-1" /> Rascunho
                         </Badge>
                       )}
+                      {!isWithinEditWindow(act.createdAt) && !act.isDraft && (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground border-muted-foreground/30">
+                          <Lock className="w-3 h-3 mr-1" /> Registro consolidado
+                        </Badge>
+                      )}
+                      {act.isLinkedToReport && (
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                          <Shield className="w-3 h-3 mr-1" /> Vinculado a relatório
+                        </Badge>
+                      )}
                       <Badge variant="outline" className={getTypeColor(act.type)}>
                         {act.type}
                       </Badge>
@@ -726,6 +765,11 @@ export const ActivityManager: React.FC = () => {
                         {act.projectRoleSnapshot && (
                           <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                             {act.projectRoleSnapshot}
+                          </Badge>
+                        )}
+                        {act.setorResponsavel && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-primary/30 text-primary">
+                            {act.setorResponsavel}
                           </Badge>
                         )}
                       </div>
@@ -760,12 +804,19 @@ export const ActivityManager: React.FC = () => {
                     <Button variant="outline" size="sm" onClick={() => setViewingActivity(act)} title="Ver detalhes">
                       <Eye className="w-4 h-4" />
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleEdit(act)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => handleDelete(act.id)} className="text-destructive hover:text-destructive">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    {(() => {
+                      const editCheck = canEditActivity(act.createdAt, isAdmin, act.isLinkedToReport);
+                      return (
+                        <>
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(act)} disabled={!editCheck.allowed} title={editCheck.reason || 'Editar'}>
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => handleDelete(act.id)} disabled={!editCheck.allowed} className="text-destructive hover:text-destructive" title={editCheck.reason || 'Excluir'}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </>
+                      );
+                    })()}
                   </div>
                 </div>
               </CardContent>
@@ -815,6 +866,11 @@ export const ActivityManager: React.FC = () => {
                     <FileEdit className="w-3 h-3 mr-1" /> Rascunho
                   </Badge>
                 )}
+                {!isWithinEditWindow(viewingActivity.createdAt) && !viewingActivity.isDraft && (
+                  <Badge variant="outline" className="bg-muted text-muted-foreground border-muted-foreground/30">
+                    <Lock className="w-3 h-3 mr-1" /> Registro consolidado
+                  </Badge>
+                )}
                 <Badge variant="outline" className={getTypeColor(viewingActivity.type)}>
                   {viewingActivity.type}
                 </Badge>
@@ -828,8 +884,16 @@ export const ActivityManager: React.FC = () => {
                     {viewingActivity.projectRoleSnapshot && (
                       <p className="text-xs text-muted-foreground">{viewingActivity.projectRoleSnapshot}</p>
                     )}
+                    {viewingActivity.setorResponsavel && (
+                      <p className="text-xs text-primary font-medium">{viewingActivity.setorResponsavel}</p>
+                    )}
                   </div>
                 </div>
+              )}
+              {viewingActivity.createdAt && (
+                <p className="text-xs text-muted-foreground">
+                  Registrado em: {new Date(viewingActivity.createdAt).toLocaleString('pt-BR')}
+                </p>
               )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -957,6 +1021,8 @@ export const ActivityManager: React.FC = () => {
           )}
         </DialogContent>
       </Dialog>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

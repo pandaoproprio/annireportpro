@@ -30,6 +30,7 @@ interface DbActivity {
   created_at: string;
   updated_at: string;
   project_role_snapshot: string | null;
+  setor_responsavel: string | null;
   profiles?: { name: string; email: string } | null;
 }
 
@@ -74,6 +75,8 @@ const mapDbToActivity = (db: DbActivity & { is_draft?: boolean; photo_captions?:
   projectRoleSnapshot: db.project_role_snapshot || undefined,
   authorName: db.profiles?.name || undefined,
   authorEmail: db.profiles?.email || undefined,
+  setorResponsavel: db.setor_responsavel || undefined,
+  createdAt: db.created_at || undefined,
 });
 
 const fetchActivitiesFromDb = async (
@@ -115,11 +118,28 @@ const fetchActivitiesFromDb = async (
     }
   }
 
+  // Check which activities are linked to reports
+  const activityIds = rows.map(r => r.id);
+  let linkedSet = new Set<string>();
+  if (activityIds.length > 0) {
+    const { data: links } = await (supabase as any)
+      .from('report_diary_links')
+      .select('activity_id')
+      .in('activity_id', activityIds);
+    if (links) {
+      linkedSet = new Set(links.map(l => l.activity_id));
+    }
+  }
+
   return {
-    activities: rows.map(r => mapDbToActivity({
-      ...r,
-      profiles: profileMap[r.user_id] || null,
-    })),
+    activities: rows.map(r => {
+      const act = mapDbToActivity({
+        ...r,
+        profiles: profileMap[r.user_id] || null,
+      });
+      act.isLinkedToReport = linkedSet.has(r.id);
+      return act;
+    }),
     total: count || 0,
   };
 };
@@ -170,6 +190,7 @@ export const useActivities = (projectId: string | null) => {
           attendance_files: activity.attendanceFiles || [],
           expense_records: activity.expenseRecords || [],
           project_role_snapshot: role || null,
+          setor_responsavel: activity.setorResponsavel || null,
         } as any)
         .select()
         .single();
