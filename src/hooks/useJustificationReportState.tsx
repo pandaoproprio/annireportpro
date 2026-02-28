@@ -7,6 +7,7 @@ import { ReportSection } from '@/types';
 import { JustificationReport, JustificationReportDraft } from '@/types/justificationReport';
 import { useSectionManager } from '@/hooks/useSectionManager';
 import { useFileUploader } from '@/hooks/useFileUploader';
+import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 
 export interface AttachmentFile {
   name: string;

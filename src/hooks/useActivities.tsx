@@ -5,6 +5,7 @@ import { useAuth } from './useAuth';
 import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
 import { logAuditEvent } from '@/lib/auditLog';
 import { logAction } from '@/lib/systemLog';
+import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { Database } from '@/integrations/supabase/types';
 
 type DbActivityType = Database['public']['Enums']['activity_type'];
@@ -150,9 +151,18 @@ export const useActivities = (projectId: string | null) => {
       if (error) throw error;
       return mapDbToActivity(data as DbActivity);
     },
-    onSuccess: (newActivity) => {
+    onSuccess: (newActivity, variables) => {
       invalidate();
       logAction({ action: 'activity_created', entityType: 'activity', entityId: newActivity.id, newData: { description: newActivity.description, type: newActivity.type } });
+      if (!variables.isDraft) {
+        createAsanaTaskOnPublish({
+          entityType: 'activity',
+          entityId: newActivity.id,
+          projectId: newActivity.projectId,
+          name: `[Atividade] ${newActivity.description?.substring(0, 80)}`,
+          notes: `Tipo: ${newActivity.type}\nData: ${newActivity.date}\nLocal: ${newActivity.location || ''}`,
+        });
+      }
     },
   });
 
@@ -208,6 +218,15 @@ export const useActivities = (projectId: string | null) => {
           entityName: activity.description?.substring(0, 60),
           metadata: { type: activity.type, date: activity.date },
         });
+        if (!activity.isDraft) {
+          createAsanaTaskOnPublish({
+            entityType: 'activity',
+            entityId: activity.id,
+            projectId: activity.projectId,
+            name: `[Atividade] ${activity.description?.substring(0, 80)}`,
+            notes: `Tipo: ${activity.type}\nData: ${activity.date}`,
+          });
+        }
       }
     },
     onSettled: () => invalidate(),

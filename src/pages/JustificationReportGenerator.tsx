@@ -8,6 +8,7 @@ import { ArrowLeft, Save, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportJustificationToDocx } from '@/lib/justificationDocxExport';
 import { exportJustificationToPdf } from '@/lib/justificationPdfExport';
+import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useJustificationReportState } from '@/hooks/useJustificationReportState';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
@@ -90,7 +91,17 @@ export const JustificationReportGenerator: React.FC = () => {
     setIsExporting(true);
     setExportType('pdf');
     try {
-      await exportJustificationToPdf({ project, report: buildReportData(), visualConfig: vc.config });
+      const reportData = buildReportData();
+      await exportJustificationToPdf({ project, report: reportData, visualConfig: vc.config });
+      if (currentDraftId && project?.id) {
+        createAsanaTaskOnPublish({
+          entityType: 'justification',
+          entityId: currentDraftId,
+          projectId: project.id,
+          name: `[Justificativa] ${project.name || 'Relatório de Justificativa'}`,
+          notes: `Projeto: ${project.name}`,
+        });
+      }
       toast.success('PDF exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
@@ -106,7 +117,17 @@ export const JustificationReportGenerator: React.FC = () => {
     setIsExporting(true);
     setExportType('docx');
     try {
-      await exportJustificationToDocx({ project, report: buildReportData(), sections, attachmentFiles, visualConfig: vc.config });
+      const reportData = buildReportData();
+      await exportJustificationToDocx({ project, report: reportData, sections, attachmentFiles, visualConfig: vc.config });
+      if (currentDraftId && project?.id) {
+        createAsanaTaskOnPublish({
+          entityType: 'justification',
+          entityId: currentDraftId,
+          projectId: project.id,
+          name: `[Justificativa] ${project.name || 'Relatório de Justificativa'}`,
+          notes: `Projeto: ${project.name}`,
+        });
+      }
       toast.success('DOCX exportado com sucesso!');
     } catch (error) {
       console.error('Erro ao exportar DOCX:', error);
