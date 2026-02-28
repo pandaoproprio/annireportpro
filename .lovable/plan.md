@@ -1,98 +1,81 @@
 
 
-# Camada de Gestao de Performance - Plano de Implementacao
+# Plano: 5 Melhorias Rapidas para o GIRA
 
-## Resumo
+## 1. Corrigir Asana no TeamReport -- adicionar `logAction` unificado
 
-Adicionar uma camada complementar de metricas de desempenho ao sistema GIRA Relatorios, sem modificar nenhuma funcionalidade, tabela, trigger ou fluxo existente. Tudo sera aditivo.
+**Problema**: `useTeamReports.tsx` usa apenas `logAuditEvent` (tabela `audit_logs`) mas nao usa `logAction` (tabela `system_logs`). Todos os outros modulos (Activities, Justification) ja usam ambos. Alem disso, o Asana task e criado corretamente, mas falta log de sistema para rastreabilidade.
+
+**Acoes**:
+- Em `useTeamReports.tsx`, importar `logAction` de `@/lib/systemLog`
+- No `onSuccess` do `saveDraftMutation`, adicionar `logAction` para `team_report_created` (quando nao e draft) e `team_report_updated`
+- No `deleteDraftMutation`, adicionar `logAction` para `team_report_deleted`
 
 ---
 
-## 1. Migracao de Banco de Dados
+## 2. Unificar logs -- criar funcao wrapper
 
-Criar tabela `report_performance_tracking`:
+**Problema**: O sistema tem dois sistemas de log paralelos (`logAction` para `system_logs` e `logAuditEvent` para `audit_logs`) que sao chamados separadamente em cada modulo, gerando inconsistencias.
+
+**Acoes**:
+- Criar `src/lib/unifiedLog.ts` com uma funcao `logUnified` que chama ambos (`logAction` + `logAuditEvent`) em uma unica chamada fire-and-forget
+- Migrar progressivamente: atualizar `useTeamReports.tsx`, `useActivities.tsx` e `useJustificationReports.tsx` para usar `logUnified` ao inves de chamadas separadas
+- Manter os arquivos `systemLog.ts` e `auditLog.ts` existentes (sem quebrar nada)
+
+---
+
+## 3. Trigger de setor -- DB trigger para preencher `setor_responsavel` automaticamente
+
+**Problema**: O campo `setor_responsavel` da tabela `activities` e preenchido no frontend via `deriveSetor()`. Se alguem inserir via API ou outro cliente, o campo fica vazio.
+
+**Acoes**:
+- Criar migration SQL com um trigger `BEFORE INSERT` na tabela `activities`
+- O trigger consulta `user_roles` para obter o role do usuario e preenche `setor_responsavel` automaticamente usando a mesma logica de mapeamento do `deriveSetor()`
+- Se o campo ja estiver preenchido no INSERT, o trigger nao sobrescreve (respeita valor explicito)
 
 ```text
-report_performance_tracking
-+-------------------------+----------------------------+
-| id                      | uuid PK                    |
-| report_type             | sla_report_type (enum)     |
-| report_id               | uuid NOT NULL              |
-| project_id              | uuid NOT NULL              |
-| user_id                 | uuid NOT NULL              |
-| created_at              | timestamptz DEFAULT now()  |
-| published_at            | timestamptz NULL           |
-| calculated_lead_time    | double precision NULL      |
-| calculated_cycle_time   | double precision NULL      |
-| reopen_count            | integer DEFAULT 0          |
-| priority                | integer DEFAULT 3 (1-5)    |
-| performance_status      | text DEFAULT 'normal'      |
-| updated_at              | timestamptz DEFAULT now()  |
-+-------------------------+----------------------------+
+Logica do trigger:
+  role super_admin -> "Administracao Geral"
+  role admin       -> "Administracao"
+  role analista    -> "Setor Tecnico"
+  role coordenador -> "Coordenacao de Projeto"
+  role oficineiro  -> "Oficinas / Execucao"
+  default          -> "Equipe Tecnica"
 ```
 
-**Indice unico**: `(report_type, report_id)` para evitar duplicatas.
+---
 
-**RLS**:
-- SELECT: usuario ve os proprios (`auth.uid() = user_id`) + admins veem todos
-- INSERT: `auth.uid() = user_id`
-- UPDATE: `auth.uid() = user_id` OU admin/super_admin
-- DELETE: bloqueado (`false`)
+## 4. Revisar RLS -- corrigir politicas RESTRICTIVE em `report_diary_links`
 
-**Trigger complementar `track_report_publication`**: Sera criado nas tabelas `team_reports` e `justification_reports` (AFTER UPDATE). Quando `is_draft` mudar de `true` para `false`:
-- Faz UPSERT em `report_performance_tracking` preenchendo `published_at = now()` e calculando `calculated_lead_time` (horas entre `created_at` do relatorio original e `now()`).
-- Quando `is_draft` mudar de `false` para `true` (reopen): incrementa `reopen_count`.
+**Problema**: As politicas da tabela `report_diary_links` sao todas RESTRICTIVE. Isso significa que um Admin que tenta fazer SELECT precisa satisfazer AMBAS as politicas (admin AND author), o que e incorreto. O comportamento esperado e que admin OU author possam ver.
 
-Esse trigger NAO altera as tabelas originais, apenas escreve na tabela complementar.
+**Acoes**:
+- Remover as politicas existentes e recria-las como PERMISSIVE (padrao do Postgres)
+- Manter a mesma logica: admins podem gerenciar tudo; usuarios podem ver/inserir/deletar os proprios links
+- Isso alinha `report_diary_links` com o padrao das demais tabelas do sistema
 
 ---
 
-## 2. Novos Arquivos Frontend
+## 5. Ajustar staleTime -- otimizar cache do SLA
 
-### `src/types/performance.ts`
-Tipos TypeScript para `ReportPerformanceTracking` e `PerformanceSummary`.
+**Problema**: O `staleTime` de `sla-tracking-all` esta em 30 segundos, mas essa query retorna TODOS os trackings e e usada em dashboards. Isso causa requisicoes excessivas. Ja `sla-configs` esta em 60s, o que e adequado.
 
-### `src/hooks/usePerformanceTracking.tsx`
-Hook com React Query para:
-- Buscar metricas por projeto (`report_performance_tracking` filtrado por `project_id`)
-- Calcular agregacoes: tempo medio de publicacao, % no prazo (cruzando com `report_sla_tracking`), rascunhos > 7 dias
-- Ranking por colaborador (agrupando por `user_id`, join com `profiles` para nomes)
-- Contagem de rascunhos do usuario atual (para alerta WIP)
-- Funcao `updatePriority(id, priority)` para atualizar prioridade
-
-### `src/components/performance/PerformanceDashboard.tsx`
-Nova aba "Performance" no Dashboard, com:
-- Cards: Tempo Medio de Publicacao, % No Prazo, Rascunhos Criticos (> 7 dias), Total Atrasados
-- Tabela de ranking por colaborador (nome, qtd publicados, tempo medio, reaberturas)
-- Lista de relatorios em rascunho > 7 dias com responsavel e tempo em rascunho
-- Tudo somente leitura
-
-### `src/components/performance/WipAlertBanner.tsx`
-Banner de alerta visual: se o usuario logado tiver mais de 5 rascunhos ativos (somando `team_reports` + `justification_reports` com `is_draft = true`), exibe um alerta amarelo no Dashboard. NAO bloqueia nenhuma acao.
+**Acoes**:
+- Em `useSlaTracking.tsx`: aumentar `staleTime` de `sla-tracking-all` de `30_000` para `120_000` (2 minutos)
+- Manter `sla-tracking` por projeto em `30_000` (e mais granular e muda mais)
+- Aumentar `sla-configs` de `60_000` para `300_000` (5 minutos, pois configs raramente mudam)
 
 ---
 
-## 3. Alteracoes em Arquivos Existentes
+## Resumo tecnico dos arquivos afetados
 
-### `src/pages/Dashboard.tsx`
-- Adicionar abas (Tabs) ao Dashboard: "Painel" (conteudo atual) e "Performance" (novo)
-- O conteudo atual fica intacto dentro da aba "Painel"
-- A aba "Performance" renderiza `<PerformanceDashboard />`
-- Adicionar `<WipAlertBanner />` junto aos banners existentes (SLA, Pending)
-- Visivel apenas para admins (`role === 'SUPER_ADMIN' || role === 'ADMIN'`)
+| Arquivo | Alteracao |
+|---|---|
+| `src/hooks/useTeamReports.tsx` | Adicionar `logAction`, migrar para `logUnified` |
+| `src/lib/unifiedLog.ts` | **Novo** -- wrapper que chama ambos os logs |
+| `src/hooks/useActivities.tsx` | Migrar para `logUnified` |
+| `src/hooks/useSlaTracking.tsx` | Ajustar staleTime |
+| Migration SQL | Trigger `setor_responsavel` + recriacao RLS `report_diary_links` |
 
-### `src/integrations/supabase/types.ts`
-NAO sera editado manualmente - atualizado automaticamente apos a migracao.
-
----
-
-## 4. Garantias de Nao-Regressao
-
-- Nenhuma coluna existente sera alterada
-- Nenhum trigger existente sera modificado
-- Nenhuma politica RLS existente sera tocada
-- O fluxo de isDraft permanece identico
-- O SLA atual continua funcionando independentemente
-- A tabela complementar apenas observa mudancas via trigger AFTER UPDATE
-- O Dashboard atual fica preservado dentro da aba "Painel"
+Nenhuma funcionalidade existente sera removida. Todas as alteracoes sao aditivas ou corretivas.
 
