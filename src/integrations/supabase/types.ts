@@ -34,6 +34,7 @@ export type Database = {
           photo_captions: Json
           photos: string[]
           project_id: string
+          project_role_snapshot: string | null
           results: string
           team_involved: string[]
           type: Database["public"]["Enums"]["activity_type"]
@@ -59,6 +60,7 @@ export type Database = {
           photo_captions?: Json
           photos?: string[]
           project_id: string
+          project_role_snapshot?: string | null
           results: string
           team_involved?: string[]
           type: Database["public"]["Enums"]["activity_type"]
@@ -84,6 +86,7 @@ export type Database = {
           photo_captions?: Json
           photos?: string[]
           project_id?: string
+          project_role_snapshot?: string | null
           results?: string
           team_involved?: string[]
           type?: Database["public"]["Enums"]["activity_type"]
@@ -1014,6 +1017,10 @@ export type Database = {
         Returns: boolean
       }
       is_project_owner: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_team_member_user: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }

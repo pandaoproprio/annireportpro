@@ -128,6 +128,11 @@ export interface Activity {
   photoCaptions?: Record<string, string>;
   attendanceFiles?: AttendanceFile[];
   expenseRecords?: ExpenseRecord[];
+  /** Snapshot of author's role at the time of creation */
+  projectRoleSnapshot?: string;
+  /** Author info (joined from profiles) */
+  authorName?: string;
+  authorEmail?: string;
 }
 
 export interface Project {

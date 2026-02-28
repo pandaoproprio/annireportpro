@@ -31,7 +31,7 @@ import {
 import { 
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
   FolderGit2, Search, Users, Loader2, FileEdit, Save, Eye, ChevronDown, ChevronUp,
-  FileText, Upload, Paperclip, Play
+  FileText, Upload, Paperclip, Play, UserCircle
 } from 'lucide-react';
 import {
   Dialog,
@@ -62,6 +62,7 @@ export const ActivityManager: React.FC = () => {
   const [filterType, setFilterType] = useState<string>('all');
   const [filterGoal, setFilterGoal] = useState<string>('all');
   const [filterDraft, setFilterDraft] = useState<string>('all');
+  const [filterAuthor, setFilterAuthor] = useState<string>('all');
 
   // Detect first activity creation
   useEffect(() => {
@@ -92,6 +93,19 @@ export const ActivityManager: React.FC = () => {
   // Filtered Activities
   const draftCount = useMemo(() => activities.filter(a => a.isDraft).length, [activities]);
 
+  // Unique authors for filter
+  const uniqueAuthors = useMemo(() => {
+    const map = new Map<string, string>();
+    activities.forEach(a => {
+      if (a.authorName) {
+        // Use authorEmail as key to deduplicate
+        const key = a.authorEmail || a.authorName;
+        if (!map.has(key)) map.set(key, a.authorName);
+      }
+    });
+    return Array.from(map.entries()).map(([key, name]) => ({ key, name }));
+  }, [activities]);
+
   const filteredActivities = useMemo(() => {
     return activities.filter(act => {
       const matchesSearch = act.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -103,10 +117,12 @@ export const ActivityManager: React.FC = () => {
       const matchesDraft = filterDraft === 'all' || 
                            (filterDraft === 'draft' && act.isDraft) || 
                            (filterDraft === 'final' && !act.isDraft);
+      const matchesAuthor = filterAuthor === 'all' || 
+                            (act.authorEmail || act.authorName) === filterAuthor;
 
-      return matchesSearch && matchesType && matchesGoal && matchesDraft;
+      return matchesSearch && matchesType && matchesGoal && matchesDraft && matchesAuthor;
     });
-  }, [activities, searchTerm, filterType, filterGoal, filterDraft]);
+  }, [activities, searchTerm, filterType, filterGoal, filterDraft, filterAuthor]);
 
   const resetForm = () => {
     setNewActivity({
@@ -618,6 +634,19 @@ export const ActivityManager: React.FC = () => {
             <SelectItem value="final">Finalizadas</SelectItem>
           </SelectContent>
         </Select>
+        {uniqueAuthors.length > 1 && (
+          <Select value={filterAuthor} onValueChange={setFilterAuthor}>
+            <SelectTrigger className="w-full md:w-48">
+              <SelectValue placeholder="Autor" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Autores</SelectItem>
+              {uniqueAuthors.map(a => (
+                <SelectItem key={a.key} value={a.key}>{a.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
 
       {/* Activities List */}
@@ -664,6 +693,17 @@ export const ActivityManager: React.FC = () => {
                         </span>
                       )}
                     </div>
+                    {act.authorName && (
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <UserCircle className="w-3.5 h-3.5" />
+                        <span className="font-medium">{act.authorName}</span>
+                        {act.projectRoleSnapshot && (
+                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                            {act.projectRoleSnapshot}
+                          </Badge>
+                        )}
+                      </div>
+                    )}
                     <p className="text-foreground">{act.description}</p>
                     {act.results && (
                       <p className="text-sm text-muted-foreground"><strong>Resultados:</strong> {act.results}</p>
@@ -753,6 +793,18 @@ export const ActivityManager: React.FC = () => {
                   {viewingActivity.type}
                 </Badge>
               </div>
+
+              {viewingActivity.authorName && (
+                <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                  <UserCircle className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">{viewingActivity.authorName}</p>
+                    {viewingActivity.projectRoleSnapshot && (
+                      <p className="text-xs text-muted-foreground">{viewingActivity.projectRoleSnapshot}</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
