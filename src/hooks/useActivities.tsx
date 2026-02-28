@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
-import { logAuditEvent } from '@/lib/auditLog';
+import { logUnified } from '@/lib/unifiedLog';
 import { logAction } from '@/lib/systemLog';
 import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { Database } from '@/integrations/supabase/types';
@@ -256,13 +256,13 @@ export const useActivities = (projectId: string | null) => {
     },
     onSuccess: (_, activity) => {
       if (user) {
-        logAuditEvent({
+        logUnified({
           userId: user.id,
-          action: 'UPDATE',
+          action: 'activity_updated',
           entityType: 'activity',
           entityId: activity.id,
           entityName: activity.description?.substring(0, 60),
-          metadata: { type: activity.type, date: activity.date },
+          newData: { type: activity.type, date: activity.date },
         });
         if (!activity.isDraft) {
           createAsanaTaskOnPublish({
@@ -289,7 +289,7 @@ export const useActivities = (projectId: string | null) => {
       const { error } = await query;
       if (error) throw error;
       const a = activities.find(a => a.id === id);
-      await logAuditEvent({ userId: user.id, action: 'DELETE', entityType: 'activities', entityId: id, entityName: a?.description?.substring(0, 100) });
+      logUnified({ userId: user.id, action: 'activity_deleted', entityType: 'activities', entityId: id, entityName: a?.description?.substring(0, 100) });
     },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ['activities'] });

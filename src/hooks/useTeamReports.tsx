@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { PhotoWithCaption, AdditionalSection } from '@/types';
 import type { Json } from '@/integrations/supabase/types';
-import { logAuditEvent } from '@/lib/auditLog';
+import { logUnified } from '@/lib/unifiedLog';
 import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 
 export interface TeamReportDraft {
@@ -130,6 +130,17 @@ export const useTeamReports = (projectId?: string) => {
     },
     onSuccess: (savedId, variables) => {
       invalidate();
+      if (user && savedId) {
+        const action = variables.isDraft ? 'team_report_updated' : 'team_report_created';
+        logUnified({
+          userId: user.id,
+          action,
+          entityType: 'team_reports',
+          entityId: savedId,
+          entityName: variables.providerName,
+          newData: { functionRole: variables.functionRole, periodStart: variables.periodStart, periodEnd: variables.periodEnd },
+        });
+      }
       if (!variables.isDraft && savedId && projectId) {
         createAsanaTaskOnPublish({
           entityType: 'team_report',
@@ -154,7 +165,13 @@ export const useTeamReports = (projectId?: string) => {
       if (!isAdmin) query = query.eq('user_id', user.id);
       const { error } = await query;
       if (error) throw error;
-      await logAuditEvent({ userId: user.id, action: 'DELETE', entityType: 'team_reports', entityId: draftId, entityName: draftToDelete?.providerName });
+      logUnified({
+        userId: user.id,
+        action: 'team_report_deleted',
+        entityType: 'team_reports',
+        entityId: draftId,
+        entityName: draftToDelete?.providerName,
+      });
     },
     onMutate: async (draftId) => {
       await queryClient.cancelQueries({ queryKey: ['team-reports'] });
