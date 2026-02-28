@@ -1,5 +1,6 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { AlertTriangle, ExternalLink } from 'lucide-react';
 import { SLA_REPORT_TYPE_LABELS } from '@/types/sla';
 import type { WipDraft } from '@/hooks/usePerformanceTracking';
 
@@ -16,10 +17,33 @@ function formatAge(createdAt: string): string {
   return `${Math.floor(hoursAgo / 24)}d ${hoursAgo % 24}h`;
 }
 
+function getDraftRoute(draft: WipDraft): string {
+  if (draft.report_type === 'report_team') return '/team-report';
+  if (draft.report_type === 'justification') return '/justificativa';
+  return '/';
+}
+
+function DraftItem({ d }: { d: WipDraft }) {
+  return (
+    <li className="text-xs text-muted-foreground flex items-center gap-2">
+      <span className="w-1.5 h-1.5 rounded-full bg-warning inline-block flex-shrink-0" />
+      <Link
+        to={getDraftRoute(d)}
+        className="flex items-center gap-1 font-medium text-primary hover:underline"
+      >
+        {SLA_REPORT_TYPE_LABELS[d.report_type]}
+        <ExternalLink className="w-3 h-3" />
+      </Link>
+      {d.provider_name && <span>— {d.provider_name}</span>}
+      <span className="text-muted-foreground">({formatAge(d.created_at)} atrás)</span>
+    </li>
+  );
+}
+
 export const WipAlertBanner: React.FC<WipAlertBannerProps> = ({ wipCount, wipLimit = 5, wipDrafts = [], isAdmin = false }) => {
   if (wipCount <= wipLimit) return null;
 
-  // For admins, group by user
+  // For admins, group by user and filter only those over limit
   const groupedByUser = isAdmin
     ? wipDrafts.reduce<Record<string, { name: string; drafts: WipDraft[] }>>((acc, d) => {
         const key = d.user_id;
@@ -29,7 +53,6 @@ export const WipAlertBanner: React.FC<WipAlertBannerProps> = ({ wipCount, wipLim
       }, {})
     : null;
 
-  // For admins, filter only users over limit
   const usersOverLimit = groupedByUser
     ? Object.entries(groupedByUser).filter(([, v]) => v.drafts.length > wipLimit)
     : [];
@@ -63,14 +86,7 @@ export const WipAlertBanner: React.FC<WipAlertBannerProps> = ({ wipCount, wipLim
                 {name} <span className="text-muted-foreground font-normal">— {drafts.length} rascunhos</span>
               </p>
               <ul className="mt-1 space-y-0.5">
-                {drafts.map(d => (
-                  <li key={d.id} className="text-xs text-muted-foreground flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-warning inline-block flex-shrink-0" />
-                    <span className="font-medium text-foreground">{SLA_REPORT_TYPE_LABELS[d.report_type]}</span>
-                    {d.provider_name && <span>— {d.provider_name}</span>}
-                    <span>({formatAge(d.created_at)} atrás)</span>
-                  </li>
-                ))}
+                {drafts.map(d => <DraftItem key={d.id} d={d} />)}
               </ul>
             </div>
           ))}
@@ -78,14 +94,7 @@ export const WipAlertBanner: React.FC<WipAlertBannerProps> = ({ wipCount, wipLim
       ) : (
         wipDrafts.length > 0 && (
           <ul className="ml-8 space-y-1">
-            {wipDrafts.map(d => (
-              <li key={d.id} className="text-xs text-muted-foreground flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-warning inline-block flex-shrink-0" />
-                <span className="font-medium text-foreground">{SLA_REPORT_TYPE_LABELS[d.report_type]}</span>
-                {d.provider_name && <span>— {d.provider_name}</span>}
-                <span>({formatAge(d.created_at)} atrás)</span>
-              </li>
-            ))}
+            {wipDrafts.map(d => <DraftItem key={d.id} d={d} />)}
           </ul>
         )
       )}
