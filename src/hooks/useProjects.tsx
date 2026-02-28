@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -111,7 +111,17 @@ const fetchProjectsFromDb = async (
 export const useProjects = () => {
   const { user, role } = useAuth();
   const queryClient = useQueryClient();
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [activeProjectId, setActiveProjectIdRaw] = useState<string | null>(() => {
+    try { return localStorage.getItem('gira-active-project-id'); } catch { return null; }
+  });
+
+  const setActiveProjectId = (id: string | null) => {
+    setActiveProjectIdRaw(id);
+    try {
+      if (id) localStorage.setItem('gira-active-project-id', id);
+      else localStorage.removeItem('gira-active-project-id');
+    } catch { /* ignore */ }
+  };
   const [page, setPage] = useState(0);
   const pageSize = 50;
 
@@ -124,14 +134,17 @@ export const useProjects = () => {
     staleTime: 30_000,
   });
 
-  const projects = data?.projects || [];
+  const projects = useMemo(() => {
+    const list = data?.projects || [];
+    return [...list].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+  }, [data?.projects]);
   const total = data?.total || 0;
 
-  // Auto-select first project
+  // Auto-select: restore saved project or fallback to first
   useEffect(() => {
-    if (projects.length > 0 && !activeProjectId) {
-      setActiveProjectId(projects[0].id);
-    }
+    if (projects.length === 0) return;
+    if (activeProjectId && projects.some(p => p.id === activeProjectId)) return;
+    setActiveProjectId(projects[0].id);
   }, [projects, activeProjectId]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['projects'] });
