@@ -33,6 +33,7 @@ export interface StaleDraft {
   user_name: string;
   created_at: string;
   days_in_draft: number;
+  hours_in_draft?: number;
 }
 
 export interface PerformanceSummary {

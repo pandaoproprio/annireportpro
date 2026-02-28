@@ -4,7 +4,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Skeleton } from '@/components/ui/skeleton';
 import { Clock, CheckCircle, AlertTriangle, XCircle, Users, FileWarning } from 'lucide-react';
 import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
+import { usePermissions } from '@/hooks/usePermissions';
 import { SLA_REPORT_TYPE_LABELS } from '@/types/sla';
+import { PerformanceConfigPanel } from './PerformanceConfigPanel';
 
 interface PerformanceDashboardProps {
   projectId: string | undefined;
@@ -18,8 +20,16 @@ function formatHours(hours: number): string {
   return remaining > 0 ? `${days}d ${remaining}h` : `${days}d`;
 }
 
+function formatDraftAge(hours: number): string {
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  const rem = hours % 24;
+  return rem > 0 ? `${days}d ${rem}h` : `${days}d`;
+}
+
 export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ projectId }) => {
-  const { summary, isLoading } = usePerformanceTracking(projectId);
+  const { summary, isLoading, thresholdHours, config, updateConfig } = usePerformanceTracking(projectId);
+  const { isSuperAdmin } = usePermissions();
 
   if (isLoading) {
     return (
@@ -33,6 +43,8 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ proj
       </div>
     );
   }
+
+  const thresholdLabel = formatDraftAge(thresholdHours);
 
   const cards = [
     {
@@ -48,7 +60,7 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ proj
       color: 'text-success',
     },
     {
-      label: 'Rascunhos Críticos (>7d)',
+      label: `Rascunhos Críticos (>${thresholdLabel})`,
       value: summary.critical_drafts_count,
       icon: AlertTriangle,
       color: summary.critical_drafts_count > 0 ? 'text-warning' : 'text-muted-foreground',
@@ -63,6 +75,15 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ proj
 
   return (
     <div className="space-y-6">
+      {/* Config Panel - SuperAdmin only */}
+      {isSuperAdmin && (
+        <PerformanceConfigPanel
+          config={config}
+          onSave={(values) => updateConfig.mutate(values)}
+          isSaving={updateConfig.isPending}
+        />
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map((card, i) => (
@@ -123,32 +144,32 @@ export const PerformanceDashboard: React.FC<PerformanceDashboardProps> = ({ proj
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <FileWarning className="w-5 h-5" />
-            Rascunhos em Risco (&gt;7 dias)
+            Rascunhos em Risco (&gt;{thresholdLabel})
           </CardTitle>
         </CardHeader>
         <CardContent>
           {summary.stale_drafts.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-6">Nenhum rascunho com mais de 7 dias.</p>
+            <p className="text-sm text-muted-foreground text-center py-6">Nenhum rascunho acima do limiar de {thresholdLabel}.</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Responsável</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead className="text-center">Dias em Rascunho</TableHead>
+                  <TableHead className="text-center">Tempo em Rascunho</TableHead>
                   <TableHead className="text-center">Criado em</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {summary.stale_drafts
-                  .sort((a, b) => b.days_in_draft - a.days_in_draft)
+                  .sort((a, b) => (b.hours_in_draft || 0) - (a.hours_in_draft || 0))
                   .map(d => (
                     <TableRow key={`${d.report_type}-${d.report_id}`}>
                       <TableCell className="font-medium">{d.user_name}</TableCell>
                       <TableCell>{SLA_REPORT_TYPE_LABELS[d.report_type]}</TableCell>
                       <TableCell className="text-center">
-                        <span className={d.days_in_draft > 14 ? 'text-destructive font-bold' : 'text-warning font-semibold'}>
-                          {d.days_in_draft}d
+                        <span className={(d.hours_in_draft || 0) > thresholdHours * 2 ? 'text-destructive font-bold' : 'text-warning font-semibold'}>
+                          {formatDraftAge(d.hours_in_draft || d.days_in_draft * 24)}
                         </span>
                       </TableCell>
                       <TableCell className="text-center text-muted-foreground text-sm">
