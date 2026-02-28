@@ -21,7 +21,7 @@ export const SlaBadge: React.FC<SlaBadgeProps> = ({ status, deadlineAt, compact 
     bloqueado: <XCircle className="w-3 h-3" />,
   };
 
-  const daysText = deadlineAt ? getDaysText(deadlineAt) : '';
+  const timeText = deadlineAt ? getTimeText(deadlineAt) : '';
 
   return (
     <Badge
@@ -29,17 +29,35 @@ export const SlaBadge: React.FC<SlaBadgeProps> = ({ status, deadlineAt, compact 
       variant="outline"
     >
       {icons[status]}
-      {compact ? label : `${label}${daysText ? ` • ${daysText}` : ''}`}
+      {compact ? label : `${label}${timeText ? ` • ${timeText}` : ''}`}
     </Badge>
   );
 };
 
-function getDaysText(deadlineAt: string): string {
+function getTimeText(deadlineAt: string): string {
   const now = new Date();
   const deadline = new Date(deadlineAt);
-  const diff = Math.ceil((deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const diffMs = deadline.getTime() - now.getTime();
+  const totalHours = diffMs / (1000 * 60 * 60);
 
-  if (diff > 0) return `${diff}d restantes`;
-  if (diff === 0) return 'Vence hoje';
-  return `${Math.abs(diff)}d em atraso`;
+  if (totalHours > 48) {
+    const days = Math.ceil(totalHours / 24);
+    return `${days}d restantes`;
+  }
+  if (totalHours > 0) {
+    const h = Math.floor(totalHours);
+    const m = Math.round((totalHours - h) * 60);
+    if (h === 0) return `${m}min restantes`;
+    return m > 0 ? `${h}h${m}min restantes` : `${h}h restantes`;
+  }
+
+  const absTotalHours = Math.abs(totalHours);
+  if (absTotalHours < 1) {
+    return `${Math.round(absTotalHours * 60)}min em atraso`;
+  }
+  if (absTotalHours < 48) {
+    const h = Math.floor(absTotalHours);
+    return `${h}h em atraso`;
+  }
+  return `${Math.ceil(absTotalHours / 24)}d em atraso`;
 }

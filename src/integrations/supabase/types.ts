@@ -515,34 +515,43 @@ export type Database = {
           created_at: string
           created_by: string
           default_days: number
+          default_hours: number
           escalation_days: number
+          escalation_hours: number
           id: string
           is_active: boolean
           report_type: Database["public"]["Enums"]["sla_report_type"]
           updated_at: string
           warning_days: number
+          warning_hours: number
         }
         Insert: {
           created_at?: string
           created_by: string
           default_days?: number
+          default_hours?: number
           escalation_days?: number
+          escalation_hours?: number
           id?: string
           is_active?: boolean
           report_type: Database["public"]["Enums"]["sla_report_type"]
           updated_at?: string
           warning_days?: number
+          warning_hours?: number
         }
         Update: {
           created_at?: string
           created_by?: string
           default_days?: number
+          default_hours?: number
           escalation_days?: number
+          escalation_hours?: number
           id?: string
           is_active?: boolean
           report_type?: Database["public"]["Enums"]["sla_report_type"]
           updated_at?: string
           warning_days?: number
+          warning_hours?: number
         }
         Relationships: []
       }
