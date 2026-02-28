@@ -15,6 +15,7 @@ import { DiaryLogin } from '@/pages/DiaryLogin';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { OfflineBadge } from '@/components/OfflineBadge';
 import { AiChatBot } from '@/components/AiChatBot';
+import { SlaLoginToast } from '@/components/sla/SlaLoginToast';
 import { Button } from '@/components/ui/button';
 import { 
   Select, 
@@ -284,6 +285,7 @@ const Layout: React.FC = () => {
         </footer>
       </main>
       <AiChatBot />
+      <SlaLoginToast />
     </div>
   );
 };
