@@ -60,7 +60,7 @@ import {
 } from '@/components/ui/alert-dialog';
 
 export const TeamReportGenerator: React.FC = () => {
-  const { activeProject: project } = useAppData();
+  const { activeProject: project, switchProject } = useAppData();
   const vc = useReportVisualConfig(project?.id, 'report_team');
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -124,9 +124,14 @@ export const TeamReportGenerator: React.FC = () => {
     setSelectedPhotoIds(new Set());
   };
 
-  // Auto-load draft from URL query param
+  // Auto-load draft from URL query param (switch project if needed)
   useEffect(() => {
     const draftId = searchParams.get('draftId');
+    const projectId = searchParams.get('projectId');
+    if (projectId && project?.id !== projectId) {
+      switchProject(projectId);
+      return; // wait for project to switch and drafts to reload
+    }
     if (draftId && drafts.length > 0 && !currentDraftId) {
       const draft = drafts.find(d => d.id === draftId);
       if (draft) {
@@ -134,7 +139,7 @@ export const TeamReportGenerator: React.FC = () => {
         setSearchParams({}, { replace: true });
       }
     }
-  }, [searchParams, drafts, currentDraftId]);
+  }, [searchParams, drafts, currentDraftId, project?.id]);
 
   // Load draft into form
   const loadDraft = (draft: TeamReportDraft) => {

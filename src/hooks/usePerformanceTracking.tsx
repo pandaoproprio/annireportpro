@@ -11,6 +11,7 @@ export interface WipDraft {
   provider_name?: string;
   user_id: string;
   user_name?: string;
+  project_id: string;
 }
 
 export interface PerformanceConfig {
@@ -132,8 +133,8 @@ export function usePerformanceTracking(projectId: string | undefined) {
     queryFn: async (): Promise<WipDraft[]> => {
       if (!user?.id) return [];
 
-      let teamQuery = supabase.from('team_reports').select('id, created_at, provider_name, user_id').eq('is_draft', true).is('deleted_at', null);
-      let justQuery = supabase.from('justification_reports').select('id, created_at, user_id').eq('is_draft', true).is('deleted_at', null);
+      let teamQuery = supabase.from('team_reports').select('id, created_at, provider_name, user_id, project_id').eq('is_draft', true).is('deleted_at', null);
+      let justQuery = supabase.from('justification_reports').select('id, created_at, user_id, project_id').eq('is_draft', true).is('deleted_at', null);
 
       if (!isAdmin) {
         teamQuery = teamQuery.eq('user_id', user.id);
@@ -143,8 +144,8 @@ export function usePerformanceTracking(projectId: string | undefined) {
       const [teamRes, justRes] = await Promise.all([teamQuery, justQuery]);
 
       const allDrafts: WipDraft[] = [
-        ...(teamRes.data || []).map(d => ({ id: d.id, report_type: 'report_team' as SlaReportType, created_at: d.created_at, provider_name: d.provider_name, user_id: d.user_id })),
-        ...(justRes.data || []).map(d => ({ id: d.id, report_type: 'justification' as SlaReportType, created_at: d.created_at, user_id: d.user_id })),
+        ...(teamRes.data || []).map(d => ({ id: d.id, report_type: 'report_team' as SlaReportType, created_at: d.created_at, provider_name: d.provider_name, user_id: d.user_id, project_id: d.project_id })),
+        ...(justRes.data || []).map(d => ({ id: d.id, report_type: 'justification' as SlaReportType, created_at: d.created_at, user_id: d.user_id, project_id: d.project_id })),
       ];
 
       // Enrich with user names

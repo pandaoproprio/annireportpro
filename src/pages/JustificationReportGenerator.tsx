@@ -8,6 +8,7 @@ import { ArrowLeft, Save, Loader2, FileText } from 'lucide-react';
 import { toast } from 'sonner';
 import { exportJustificationToDocx } from '@/lib/justificationDocxExport';
 import { exportJustificationToPdf } from '@/lib/justificationPdfExport';
+import { useAppData } from '@/contexts/AppDataContext';
 import { useJustificationReportState } from '@/hooks/useJustificationReportState';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
@@ -22,6 +23,7 @@ export const JustificationReportGenerator: React.FC = () => {
   const reportRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { switchProject } = useAppData();
 
   const vc = useReportVisualConfig(state.project?.id, 'justification');
 
@@ -40,9 +42,14 @@ export const JustificationReportGenerator: React.FC = () => {
     handleSectionDocUpload, removeSectionDoc,
   } = state;
 
-  // Auto-load draft from URL query param
+  // Auto-load draft from URL query param (switch project if needed)
   useEffect(() => {
     const draftId = searchParams.get('draftId');
+    const projectId = searchParams.get('projectId');
+    if (projectId && project?.id !== projectId) {
+      switchProject(projectId);
+      return;
+    }
     if (draftId && drafts.length > 0 && !currentDraftId) {
       const draft = drafts.find((d: any) => d.id === draftId);
       if (draft) {
@@ -50,7 +57,7 @@ export const JustificationReportGenerator: React.FC = () => {
         setSearchParams({}, { replace: true });
       }
     }
-  }, [searchParams, drafts, currentDraftId]);
+  }, [searchParams, drafts, currentDraftId, project?.id]);
 
   if (!project) {
     return (
