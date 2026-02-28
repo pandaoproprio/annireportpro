@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppData } from '@/contexts/AppDataContext';
 import { ActivityManager } from '@/pages/ActivityManager';
+import { PwaInstallBanner } from '@/components/PwaInstallBanner';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -104,6 +105,7 @@ export const DiaryLayout: React.FC = () => {
       {/* Content */}
       <div className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-6 overflow-y-auto">
         {/* Welcome */}
+        <PwaInstallBanner />
         <div className="mb-6">
           <h1 className="text-xl md:text-2xl font-bold text-foreground">
             Bem-vindo ao Diário de Bordo, {profile?.name || 'Usuário'}! 👋
