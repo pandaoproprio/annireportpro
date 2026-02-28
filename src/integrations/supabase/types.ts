@@ -36,6 +36,7 @@ export type Database = {
           project_id: string
           project_role_snapshot: string | null
           results: string
+          setor_responsavel: string | null
           team_involved: string[]
           type: Database["public"]["Enums"]["activity_type"]
           updated_at: string
@@ -62,6 +63,7 @@ export type Database = {
           project_id: string
           project_role_snapshot?: string | null
           results: string
+          setor_responsavel?: string | null
           team_involved?: string[]
           type: Database["public"]["Enums"]["activity_type"]
           updated_at?: string
@@ -88,6 +90,7 @@ export type Database = {
           project_id?: string
           project_role_snapshot?: string | null
           results?: string
+          setor_responsavel?: string | null
           team_involved?: string[]
           type?: Database["public"]["Enums"]["activity_type"]
           updated_at?: string
@@ -611,6 +614,41 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      report_diary_links: {
+        Row: {
+          activity_id: string
+          author_id: string
+          created_at: string
+          id: string
+          report_id: string
+          report_type: string
+        }
+        Insert: {
+          activity_id: string
+          author_id: string
+          created_at?: string
+          id?: string
+          report_id: string
+          report_type?: string
+        }
+        Update: {
+          activity_id?: string
+          author_id?: string
+          created_at?: string
+          id?: string
+          report_id?: string
+          report_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_diary_links_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       report_performance_tracking: {
         Row: {

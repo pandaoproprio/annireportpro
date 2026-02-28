@@ -133,6 +133,12 @@ export interface Activity {
   /** Author info (joined from profiles) */
   authorName?: string;
   authorEmail?: string;
+  /** Sector snapshot at creation time */
+  setorResponsavel?: string;
+  /** Created at timestamp from DB */
+  createdAt?: string;
+  /** Whether this activity is linked to a published report */
+  isLinkedToReport?: boolean;
 }
 
 export interface Project {
