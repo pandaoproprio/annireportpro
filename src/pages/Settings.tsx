@@ -16,10 +16,11 @@ import { BatchDeleteProjects } from '@/components/BatchDeleteProjects';
 import { TrashBin } from '@/components/TrashBin';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SlaConfigPanel } from '@/components/sla/SlaConfigPanel';
+import { AsanaConfigPanel } from '@/components/asana/AsanaConfigPanel';
 
 export const Settings: React.FC = () => {
   const { signOut } = useAuth();
-  const { isAdmin, hasPermission } = usePermissions();
+  const { isAdmin, isSuperAdmin, hasPermission } = usePermissions();
   const { activeProject, updateProject, removeProject, isLoadingProjects } = useAppData();
   
   const [isEditingProject, setIsEditingProject] = useState(false);
@@ -460,6 +461,9 @@ export const Settings: React.FC = () => {
       </Card>
       {/* SLA Configuration (Admin only) */}
       {isAdmin && <SlaConfigPanel />}
+
+      {/* Asana Integration (SuperAdmin only) */}
+      {isSuperAdmin && <AsanaConfigPanel />}
 
       <div className="text-center text-xs text-muted-foreground mt-8">
         <p>Os dados são armazenados de forma segura com Lovable Cloud.</p>

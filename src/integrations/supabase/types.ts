@@ -100,6 +100,78 @@ export type Database = {
           },
         ]
       }
+      asana_config: {
+        Row: {
+          created_at: string
+          created_by: string
+          enable_create_tasks: boolean
+          enable_import_tasks: boolean
+          enable_notifications: boolean
+          enable_sync_status: boolean
+          id: string
+          project_gid: string
+          updated_at: string
+          workspace_gid: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          enable_create_tasks?: boolean
+          enable_import_tasks?: boolean
+          enable_notifications?: boolean
+          enable_sync_status?: boolean
+          id?: string
+          project_gid?: string
+          updated_at?: string
+          workspace_gid?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          enable_create_tasks?: boolean
+          enable_import_tasks?: boolean
+          enable_notifications?: boolean
+          enable_sync_status?: boolean
+          id?: string
+          project_gid?: string
+          updated_at?: string
+          workspace_gid?: string
+        }
+        Relationships: []
+      }
+      asana_task_mappings: {
+        Row: {
+          asana_task_gid: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          project_id: string
+          synced_at: string
+          user_id: string
+        }
+        Insert: {
+          asana_task_gid: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          project_id: string
+          synced_at?: string
+          user_id: string
+        }
+        Update: {
+          asana_task_gid?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          project_id?: string
+          synced_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action: string
