@@ -12,6 +12,9 @@ import { ActivitiesByMonthChart } from '@/components/dashboard/ActivitiesByMonth
 import { ActivityTypesChart } from '@/components/dashboard/ActivityTypesChart';
 import { AttendeesByGoalChart } from '@/components/dashboard/AttendeesByGoalChart';
 import { PendingActivitiesBanner } from '@/components/PendingActivitiesBanner';
+import { useSlaTracking } from '@/hooks/useSlaTracking';
+import { SlaDashboardCards } from '@/components/sla/SlaDashboardCards';
+import { SlaOverdueBanner } from '@/components/sla/SlaOverdueBanner';
 
 const DashboardSkeleton = () => (
   <div className="space-y-6 animate-fadeIn">
@@ -44,6 +47,14 @@ export const Dashboard: React.FC = () => {
   const { hasPermission } = usePermissions();
   const { activeProject: project, projects, isLoadingProjects: projectsLoading, activities, isLoadingActivities: activitiesLoading } = useAppData();
   const canCreateProject = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const { getSummary, getOverdueTrackings, refreshStatuses } = useSlaTracking(project?.id);
+  const slaSummary = getSummary();
+  const overdueItems = getOverdueTrackings();
+
+  // Refresh SLA statuses on mount
+  React.useEffect(() => {
+    if (project?.id) refreshStatuses.mutate();
+  }, [project?.id]);
 
   // Redirect users without dashboard permission to their default page
   if (!hasPermission('dashboard')) {
@@ -92,6 +103,8 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {/* SLA Overdue Banner */}
+      <SlaOverdueBanner overdueItems={overdueItems} />
       {/* Pending Activities Reminder */}
       <PendingActivitiesBanner />
       {/* Greeting */}
@@ -115,6 +128,9 @@ export const Dashboard: React.FC = () => {
           <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} />
         ))}
       </div>
+
+      {/* SLA Indicators */}
+      <SlaDashboardCards summary={slaSummary} />
 
       {/* Analytics Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

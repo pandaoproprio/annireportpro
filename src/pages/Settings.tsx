@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { BatchDeleteProjects } from '@/components/BatchDeleteProjects';
 import { TrashBin } from '@/components/TrashBin';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { SlaConfigPanel } from '@/components/sla/SlaConfigPanel';
 
 export const Settings: React.FC = () => {
   const { signOut } = useAuth();
@@ -457,6 +458,8 @@ export const Settings: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+      {/* SLA Configuration (Admin only) */}
+      {isAdmin && <SlaConfigPanel />}
 
       <div className="text-center text-xs text-muted-foreground mt-8">
         <p>Os dados são armazenados de forma segura com Lovable Cloud.</p>

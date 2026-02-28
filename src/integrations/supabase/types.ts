@@ -510,6 +510,84 @@ export type Database = {
         }
         Relationships: []
       }
+      report_sla_config: {
+        Row: {
+          created_at: string
+          created_by: string
+          default_days: number
+          escalation_days: number
+          id: string
+          is_active: boolean
+          report_type: Database["public"]["Enums"]["sla_report_type"]
+          updated_at: string
+          warning_days: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          default_days?: number
+          escalation_days?: number
+          id?: string
+          is_active?: boolean
+          report_type: Database["public"]["Enums"]["sla_report_type"]
+          updated_at?: string
+          warning_days?: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          default_days?: number
+          escalation_days?: number
+          id?: string
+          is_active?: boolean
+          report_type?: Database["public"]["Enums"]["sla_report_type"]
+          updated_at?: string
+          warning_days?: number
+        }
+        Relationships: []
+      }
+      report_sla_tracking: {
+        Row: {
+          blocked_at: string | null
+          created_at: string
+          deadline_at: string
+          escalated_at: string | null
+          id: string
+          project_id: string
+          report_id: string
+          report_type: Database["public"]["Enums"]["sla_report_type"]
+          status: Database["public"]["Enums"]["sla_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          blocked_at?: string | null
+          created_at?: string
+          deadline_at: string
+          escalated_at?: string | null
+          id?: string
+          project_id: string
+          report_id: string
+          report_type: Database["public"]["Enums"]["sla_report_type"]
+          status?: Database["public"]["Enums"]["sla_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          blocked_at?: string | null
+          created_at?: string
+          deadline_at?: string
+          escalated_at?: string | null
+          id?: string
+          project_id?: string
+          report_id?: string
+          report_type?: Database["public"]["Enums"]["sla_report_type"]
+          status?: Database["public"]["Enums"]["sla_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       report_templates: {
         Row: {
           created_at: string
@@ -833,6 +911,8 @@ export type Database = {
         | "analista"
         | "usuario"
         | "coordenador"
+      sla_report_type: "report_object" | "report_team" | "justification"
+      sla_status: "no_prazo" | "atencao" | "atrasado" | "bloqueado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1004,6 +1084,8 @@ export const Constants = {
         "usuario",
         "coordenador",
       ],
+      sla_report_type: ["report_object", "report_team", "justification"],
+      sla_status: ["no_prazo", "atencao", "atrasado", "bloqueado"],
     },
   },
 } as const
