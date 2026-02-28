@@ -2,7 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import type { ReportPerformanceTracking, PerformanceSummary, CollaboratorRanking, StaleDraft } from '@/types/performance';
-import type { SlaReportType } from '@/types/sla';
+import type { SlaReportType, SLA_REPORT_TYPE_LABELS } from '@/types/sla';
+
+export interface WipDraft {
+  id: string;
+  report_type: SlaReportType;
+  created_at: string;
+  provider_name?: string;
+}
 
 export interface PerformanceConfig {
   id: string;
@@ -116,19 +123,24 @@ export function usePerformanceTracking(projectId: string | undefined) {
     enabled: !!projectId,
   });
 
-  // WIP count for current user
-  const { data: wipCount = 0 } = useQuery({
-    queryKey: ['wip-count', user?.id],
+  // WIP drafts for current user (with details)
+  const { data: wipDrafts = [] } = useQuery<WipDraft[]>({
+    queryKey: ['wip-drafts', user?.id],
     queryFn: async () => {
-      if (!user?.id) return 0;
+      if (!user?.id) return [];
       const [teamRes, justRes] = await Promise.all([
-        supabase.from('team_reports').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_draft', true).is('deleted_at', null),
-        supabase.from('justification_reports').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('is_draft', true).is('deleted_at', null),
+        supabase.from('team_reports').select('id, created_at, provider_name').eq('user_id', user.id).eq('is_draft', true).is('deleted_at', null),
+        supabase.from('justification_reports').select('id, created_at').eq('user_id', user.id).eq('is_draft', true).is('deleted_at', null),
       ]);
-      return (teamRes.count || 0) + (justRes.count || 0);
+      return [
+        ...(teamRes.data || []).map(d => ({ id: d.id, report_type: 'report_team' as SlaReportType, created_at: d.created_at, provider_name: d.provider_name })),
+        ...(justRes.data || []).map(d => ({ id: d.id, report_type: 'justification' as SlaReportType, created_at: d.created_at })),
+      ];
     },
     enabled: !!user?.id,
   });
+
+  const wipCount = wipDrafts.length;
 
   // Build summary
   const summary: PerformanceSummary = (() => {
@@ -213,6 +225,7 @@ export function usePerformanceTracking(projectId: string | undefined) {
     trackingRecords,
     summary,
     wipCount,
+    wipDrafts,
     wipLimit,
     thresholdHours,
     config,
