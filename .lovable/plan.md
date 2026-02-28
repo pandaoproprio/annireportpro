@@ -1,52 +1,98 @@
 
 
-# Indicadores visuais de atividades do Diário de Bordo no Relatório
+# Camada de Gestao de Performance - Plano de Implementacao
 
-## Situação atual
+## Resumo
 
-Algumas seções do relatório ja mostram atividades vinculadas (Metas, Outras Ações, Comunicação), mas de forma inconsistente. As seções Resumo, Satisfação, Ações Futuras e seções personalizadas nao mostram nenhuma indicação de dados do Diario.
+Adicionar uma camada complementar de metricas de desempenho ao sistema GIRA Relatorios, sem modificar nenhuma funcionalidade, tabela, trigger ou fluxo existente. Tudo sera aditivo.
 
-## O que será feito
+---
 
-Adicionar um componente `ActivityIndicatorBadge` reutilizavel que sera exibido no cabeçalho de cada seção do relatório, mostrando quantas atividades do Diário de Bordo alimentam aquela seção.
+## 1. Migracao de Banco de Dados
 
-### Comportamento por seção
+Criar tabela `report_performance_tracking`:
 
-| Seção | Fonte de atividades | Indicador |
-|---|---|---|
-| Objeto | Nenhuma (texto manual) | Sem indicador |
-| Resumo | Todas as atividades | Badge com total |
-| Metas | Atividades por meta (goalId) | Badge por meta |
-| Outras Ações | Tipo: Outros/Administrativo/Ocorrência | Badge com contagem |
-| Comunicação | Tipo: Comunicação | Badge com contagem |
-| Satisfação | Nenhuma diretamente | Sem indicador |
-| Ações Futuras | Nenhuma diretamente | Sem indicador |
-| Despesas | Nenhuma diretamente | Sem indicador |
-| Links | Nenhuma diretamente | Sem indicador |
+```text
+report_performance_tracking
++-------------------------+----------------------------+
+| id                      | uuid PK                    |
+| report_type             | sla_report_type (enum)     |
+| report_id               | uuid NOT NULL              |
+| project_id              | uuid NOT NULL              |
+| user_id                 | uuid NOT NULL              |
+| created_at              | timestamptz DEFAULT now()  |
+| published_at            | timestamptz NULL           |
+| calculated_lead_time    | double precision NULL      |
+| calculated_cycle_time   | double precision NULL      |
+| reopen_count            | integer DEFAULT 0          |
+| priority                | integer DEFAULT 3 (1-5)    |
+| performance_status      | text DEFAULT 'normal'      |
+| updated_at              | timestamptz DEFAULT now()  |
++-------------------------+----------------------------+
+```
 
-### Design visual
+**Indice unico**: `(report_type, report_id)` para evitar duplicatas.
 
-- Badge colorido (verde quando ha atividades, cinza quando nao ha) no cabeçalho da seção
-- Icone de caderno (BookOpen) + numero de atividades
-- Tooltip ou texto explicativo: "X atividades do Diário de Bordo"
-- Manter os paineis expandiveis existentes nas seções de Metas, Outras Ações e Comunicação
+**RLS**:
+- SELECT: usuario ve os proprios (`auth.uid() = user_id`) + admins veem todos
+- INSERT: `auth.uid() = user_id`
+- UPDATE: `auth.uid() = user_id` OU admin/super_admin
+- DELETE: bloqueado (`false`)
 
-## Detalhes técnicos
+**Trigger complementar `track_report_publication`**: Sera criado nas tabelas `team_reports` e `justification_reports` (AFTER UPDATE). Quando `is_draft` mudar de `true` para `false`:
+- Faz UPSERT em `report_performance_tracking` preenchendo `published_at = now()` e calculando `calculated_lead_time` (horas entre `created_at` do relatorio original e `now()`).
+- Quando `is_draft` mudar de `false` para `true` (reopen): incrementa `reopen_count`.
 
-1. **Criar componente `ActivityCountBadge`** em `src/components/report/ActivityCountBadge.tsx`
-   - Props: `count: number`, `label?: string`
-   - Renderiza um badge com icone BookOpen + contagem
-   - Verde quando count > 0, cinza quando count === 0
+Esse trigger NAO altera as tabelas originais, apenas escreve na tabela complementar.
 
-2. **Atualizar `SectionHeader`** em `ReportEditSection.tsx`
-   - Receber prop `activityCount?: number`
-   - Exibir o badge ao lado do titulo da seção
+---
 
-3. **Calcular contagens no `ReportEditSection`**
-   - Resumo: `activities.length`
-   - Metas: ja existente via `getActivitiesByGoal`
-   - Comunicação: `getCommunicationActivities().length`
-   - Outras Ações: `getOtherActivities().length`
+## 2. Novos Arquivos Frontend
 
-4. **Atualizar `SectionContent` wrapper** para passar a contagem correta baseada na `section.key`
+### `src/types/performance.ts`
+Tipos TypeScript para `ReportPerformanceTracking` e `PerformanceSummary`.
+
+### `src/hooks/usePerformanceTracking.tsx`
+Hook com React Query para:
+- Buscar metricas por projeto (`report_performance_tracking` filtrado por `project_id`)
+- Calcular agregacoes: tempo medio de publicacao, % no prazo (cruzando com `report_sla_tracking`), rascunhos > 7 dias
+- Ranking por colaborador (agrupando por `user_id`, join com `profiles` para nomes)
+- Contagem de rascunhos do usuario atual (para alerta WIP)
+- Funcao `updatePriority(id, priority)` para atualizar prioridade
+
+### `src/components/performance/PerformanceDashboard.tsx`
+Nova aba "Performance" no Dashboard, com:
+- Cards: Tempo Medio de Publicacao, % No Prazo, Rascunhos Criticos (> 7 dias), Total Atrasados
+- Tabela de ranking por colaborador (nome, qtd publicados, tempo medio, reaberturas)
+- Lista de relatorios em rascunho > 7 dias com responsavel e tempo em rascunho
+- Tudo somente leitura
+
+### `src/components/performance/WipAlertBanner.tsx`
+Banner de alerta visual: se o usuario logado tiver mais de 5 rascunhos ativos (somando `team_reports` + `justification_reports` com `is_draft = true`), exibe um alerta amarelo no Dashboard. NAO bloqueia nenhuma acao.
+
+---
+
+## 3. Alteracoes em Arquivos Existentes
+
+### `src/pages/Dashboard.tsx`
+- Adicionar abas (Tabs) ao Dashboard: "Painel" (conteudo atual) e "Performance" (novo)
+- O conteudo atual fica intacto dentro da aba "Painel"
+- A aba "Performance" renderiza `<PerformanceDashboard />`
+- Adicionar `<WipAlertBanner />` junto aos banners existentes (SLA, Pending)
+- Visivel apenas para admins (`role === 'SUPER_ADMIN' || role === 'ADMIN'`)
+
+### `src/integrations/supabase/types.ts`
+NAO sera editado manualmente - atualizado automaticamente apos a migracao.
+
+---
+
+## 4. Garantias de Nao-Regressao
+
+- Nenhuma coluna existente sera alterada
+- Nenhum trigger existente sera modificado
+- Nenhuma politica RLS existente sera tocada
+- O fluxo de isDraft permanece identico
+- O SLA atual continua funcionando independentemente
+- A tabela complementar apenas observa mudancas via trigger AFTER UPDATE
+- O Dashboard atual fica preservado dentro da aba "Painel"
 
