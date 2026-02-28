@@ -9,6 +9,25 @@ const corsHeaders = {
 
 const ASANA_BASE = "https://app.asana.com/api/1.0";
 
+// SLA status → Asana section name mapping
+const SLA_SECTION_MAP: Record<string, string> = {
+  no_prazo: "📥 Publicado",
+  atencao: "⚠️ Atenção SLA",
+  atrasado: "🔴 Atrasado",
+  bloqueado: "🚫 Bloqueado",
+};
+
+// Canonical section order for project setup
+const CANONICAL_SECTIONS = [
+  "📥 Publicado",
+  "✏️ Em Revisão",
+  "⚠️ Atenção SLA",
+  "🔴 Atrasado",
+  "🚫 Bloqueado",
+  "📤 Aguardando Aprovação",
+  "✅ Concluído",
+];
+
 async function asanaFetch(path: string, options: RequestInit = {}) {
   const pat = Deno.env.get("ASANA_PAT");
   if (!pat) throw new Error("ASANA_PAT not configured");
@@ -28,6 +47,16 @@ async function asanaFetch(path: string, options: RequestInit = {}) {
   }
 
   return resp.json();
+}
+
+// Helper: get sections for a project and return a map name → gid
+async function getSectionMap(projectGid: string): Promise<Record<string, string>> {
+  const result = await asanaFetch(`/projects/${projectGid}/sections?opt_fields=name,gid`);
+  const map: Record<string, string> = {};
+  for (const section of result.data || []) {
+    map[section.name] = section.gid;
+  }
+  return map;
 }
 
 serve(async (req) => {
@@ -92,7 +121,63 @@ serve(async (req) => {
         return jsonResponse({ projects: result.data });
       }
 
-      // ── Create task ──
+      // ── Setup sections: create canonical sections in the project ──
+      case "setup_sections": {
+        const targetProject = payload.project_gid || config?.project_gid;
+        if (!targetProject) {
+          return jsonResponse({ error: "Project GID do Asana não configurado" }, 400);
+        }
+
+        // Get existing sections
+        const existingSections = await getSectionMap(targetProject);
+        const created: string[] = [];
+        const skipped: string[] = [];
+
+        // Create missing sections in order (insert_before not used — we create in order)
+        for (const sectionName of CANONICAL_SECTIONS) {
+          if (existingSections[sectionName]) {
+            skipped.push(sectionName);
+            continue;
+          }
+          await asanaFetch(`/projects/${targetProject}/sections`, {
+            method: "POST",
+            body: JSON.stringify({ data: { name: sectionName } }),
+          });
+          created.push(sectionName);
+        }
+
+        // Re-fetch to get final state
+        const finalSections = await getSectionMap(targetProject);
+
+        return jsonResponse({
+          success: true,
+          created,
+          skipped,
+          sections: finalSections,
+        });
+      }
+
+      // ── List sections ──
+      case "list_sections": {
+        const targetProject = payload.project_gid || config?.project_gid;
+        if (!targetProject) {
+          return jsonResponse({ error: "Project GID do Asana não configurado" }, 400);
+        }
+        const sections = await getSectionMap(targetProject);
+        return jsonResponse({ sections });
+      }
+
+      // ── Delete section ──
+      case "delete_section": {
+        const { section_gid } = payload;
+        if (!section_gid) {
+          return jsonResponse({ error: "section_gid é obrigatório" }, 400);
+        }
+        await asanaFetch(`/sections/${section_gid}`, { method: "DELETE" });
+        return jsonResponse({ success: true });
+      }
+
+      // ── Create task (now places in "📥 Publicado" section) ──
       case "create_task": {
         if (!config?.enable_create_tasks) {
           return jsonResponse({ error: "Criar tarefas no Asana está desativado" }, 403);
@@ -103,15 +188,26 @@ serve(async (req) => {
           return jsonResponse({ error: "Project GID do Asana não configurado" }, 400);
         }
 
+        // Find "📥 Publicado" section to place new tasks
+        const sections = await getSectionMap(targetProject);
+        const publishedSectionGid = sections["📥 Publicado"];
+
+        const taskData: Record<string, unknown> = {
+          name,
+          notes,
+          projects: [targetProject],
+        };
+
+        // If the published section exists, add membership
+        if (publishedSectionGid) {
+          taskData.memberships = [
+            { project: targetProject, section: publishedSectionGid },
+          ];
+        }
+
         const result = await asanaFetch("/tasks", {
           method: "POST",
-          body: JSON.stringify({
-            data: {
-              name,
-              notes,
-              projects: [targetProject],
-            },
-          }),
+          body: JSON.stringify({ data: taskData }),
         });
 
         // Save mapping
@@ -128,7 +224,80 @@ serve(async (req) => {
         return jsonResponse({ success: true, task: result.data });
       }
 
-      // ── Sync status (update existing Asana task) ──
+      // ── Sync SLA status → move task to correct Asana section ──
+      case "sync_sla_status": {
+        if (!config?.enable_sync_status) {
+          return jsonResponse({ error: "Sincronização de status está desativada" }, 403);
+        }
+        const { entity_type, entity_id, sla_status } = payload;
+
+        // Find mapping
+        const { data: mapping } = await supabase
+          .from("asana_task_mappings")
+          .select("asana_task_gid")
+          .eq("entity_type", entity_type)
+          .eq("entity_id", entity_id)
+          .single();
+
+        if (!mapping) {
+          return jsonResponse({ error: "Tarefa não encontrada no Asana" }, 404);
+        }
+
+        // Determine target section name
+        const targetSectionName = SLA_SECTION_MAP[sla_status];
+        if (!targetSectionName) {
+          return jsonResponse({ error: `Status SLA desconhecido: ${sla_status}` }, 400);
+        }
+
+        // Find section GID
+        const targetProject = config.project_gid;
+        if (!targetProject) {
+          return jsonResponse({ error: "Project GID não configurado" }, 400);
+        }
+
+        const sections = await getSectionMap(targetProject);
+        const sectionGid = sections[targetSectionName];
+
+        if (!sectionGid) {
+          return jsonResponse({
+            error: `Seção "${targetSectionName}" não encontrada no Asana. Execute setup_sections primeiro.`,
+          }, 404);
+        }
+
+        // Move task to section
+        await asanaFetch(`/sections/${sectionGid}/addTask`, {
+          method: "POST",
+          body: JSON.stringify({ data: { task: mapping.asana_task_gid } }),
+        });
+
+        // Add comment about status change
+        const statusLabels: Record<string, string> = {
+          no_prazo: "✅ No Prazo",
+          atencao: "⚠️ Atenção — prazo se aproximando",
+          atrasado: "🔴 Atrasado — prazo estourado",
+          bloqueado: "🚫 Bloqueado — requer intervenção",
+        };
+
+        await asanaFetch(`/tasks/${mapping.asana_task_gid}/stories`, {
+          method: "POST",
+          body: JSON.stringify({
+            data: {
+              text: `[GIRA SLA] Status atualizado: ${statusLabels[sla_status] || sla_status}`,
+            },
+          }),
+        });
+
+        // Update synced_at
+        await supabase
+          .from("asana_task_mappings")
+          .update({ synced_at: new Date().toISOString() })
+          .eq("entity_type", entity_type)
+          .eq("entity_id", entity_id);
+
+        return jsonResponse({ success: true, moved_to: targetSectionName });
+      }
+
+      // ── Sync status (legacy — update task fields) ──
       case "sync_status": {
         if (!config?.enable_sync_status) {
           return jsonResponse({ error: "Sincronização de status está desativada" }, 403);
