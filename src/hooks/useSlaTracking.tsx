@@ -18,7 +18,7 @@ export const useSlaTracking = (projectId?: string | null) => {
       if (error) throw error;
       return (data || []) as unknown as SlaConfig[];
     },
-    staleTime: 60_000,
+    staleTime: 300_000,
   });
 
   const { data: trackings = [], isLoading } = useQuery({
@@ -45,7 +45,7 @@ export const useSlaTracking = (projectId?: string | null) => {
       if (error) throw error;
       return (data || []) as unknown as SlaTracking[];
     },
-    staleTime: 30_000,
+    staleTime: 120_000,
   });
 
   const createTracking = useMutation({
