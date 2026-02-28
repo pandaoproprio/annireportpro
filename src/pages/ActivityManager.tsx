@@ -31,7 +31,7 @@ import {
 import { 
   Calendar, MapPin, Image as ImageIcon, Plus, X, Edit, Trash2, 
   FolderGit2, Search, Users, Loader2, FileEdit, Save, Eye, ChevronDown, ChevronUp,
-  FileText, Upload, Paperclip, Play, UserCircle
+  FileText, Upload, Paperclip, Play, UserCircle, CalendarRange
 } from 'lucide-react';
 import {
   Dialog,
@@ -63,6 +63,8 @@ export const ActivityManager: React.FC = () => {
   const [filterGoal, setFilterGoal] = useState<string>('all');
   const [filterDraft, setFilterDraft] = useState<string>('all');
   const [filterAuthor, setFilterAuthor] = useState<string>('all');
+  const [filterDateStart, setFilterDateStart] = useState<string>('');
+  const [filterDateEnd, setFilterDateEnd] = useState<string>('');
 
   // Detect first activity creation
   useEffect(() => {
@@ -119,10 +121,12 @@ export const ActivityManager: React.FC = () => {
                            (filterDraft === 'final' && !act.isDraft);
       const matchesAuthor = filterAuthor === 'all' || 
                             (act.authorEmail || act.authorName) === filterAuthor;
+      const matchesPeriodStart = !filterDateStart || act.date >= filterDateStart;
+      const matchesPeriodEnd = !filterDateEnd || act.date <= filterDateEnd;
 
-      return matchesSearch && matchesType && matchesGoal && matchesDraft && matchesAuthor;
+      return matchesSearch && matchesType && matchesGoal && matchesDraft && matchesAuthor && matchesPeriodStart && matchesPeriodEnd;
     });
-  }, [activities, searchTerm, filterType, filterGoal, filterDraft, filterAuthor]);
+  }, [activities, searchTerm, filterType, filterGoal, filterDraft, filterAuthor, filterDateStart, filterDateEnd]);
 
   const resetForm = () => {
     setNewActivity({
@@ -647,6 +651,28 @@ export const ActivityManager: React.FC = () => {
             </SelectContent>
           </Select>
         )}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <CalendarRange className="w-4 h-4 text-muted-foreground shrink-0 hidden md:block" />
+          <Input
+            type="date"
+            value={filterDateStart}
+            onChange={e => setFilterDateStart(e.target.value)}
+            className="w-full md:w-40"
+          />
+          <span className="text-muted-foreground text-sm">a</span>
+          <Input
+            type="date"
+            value={filterDateEnd}
+            onChange={e => setFilterDateEnd(e.target.value)}
+            className="w-full md:w-40"
+            min={filterDateStart || undefined}
+          />
+          {(filterDateStart || filterDateEnd) && (
+            <Button variant="ghost" size="icon" className="shrink-0" onClick={() => { setFilterDateStart(''); setFilterDateEnd(''); }}>
+              <X className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Activities List */}
