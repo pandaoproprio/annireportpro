@@ -698,6 +698,16 @@ export const TeamReportGenerator: React.FC = () => {
                   required
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="functionRole">Função *</Label>
+                <Input
+                  id="functionRole"
+                  placeholder="Ex: Coordenador de Produção"
+                  value={functionRole}
+                  onChange={e => setFunctionRole(e.target.value)}
+                  required
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
