@@ -30,6 +30,8 @@ import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
 import { exportTeamReportToPdf } from '@/lib/teamReportPdfExport';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { maskCpfCnpj } from '@/lib/masks';
+import { fetchCnpjData } from '@/lib/cnpjLookup';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
   DndContext,
@@ -95,7 +97,7 @@ export const TeamReportGenerator: React.FC = () => {
   const [showInstitutionalFooter, setShowInstitutionalFooter] = useState(true);
   const [photoGroups, setPhotoGroups] = useState<PhotoGroup[]>([]);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<string>>(new Set());
-
+  const [isFetchingCnpj, setIsFetchingCnpj] = useState(false);
   // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -174,6 +176,29 @@ export const TeamReportGenerator: React.FC = () => {
       </div>
     );
   }
+
+  // CNPJ auto-fill
+  const handleCnpjChange = async (rawValue: string) => {
+    const masked = maskCpfCnpj(rawValue);
+    setProviderDocument(masked);
+    
+    const digits = masked.replace(/\D/g, '');
+    if (digits.length === 14) {
+      setIsFetchingCnpj(true);
+      try {
+        const data = await fetchCnpjData(digits);
+        setProviderName(data.razao_social || data.nome_fantasia || '');
+        if (data.qsa?.length > 0 && !responsibleName) {
+          setResponsibleName(data.qsa[0].nome_socio);
+        }
+        toast.success('Dados do CNPJ preenchidos automaticamente!');
+      } catch (err: any) {
+        toast.error(err.message || 'Erro ao consultar CNPJ');
+      } finally {
+        setIsFetchingCnpj(false);
+      }
+    }
+  };
 
   const handleMemberSelect = (memberId: string) => {
     setSelectedMemberId(memberId);
@@ -650,12 +675,18 @@ export const TeamReportGenerator: React.FC = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="providerDocument">CNPJ</Label>
-                <Input
-                  id="providerDocument"
-                  placeholder="00.000.000/0000-00"
-                  value={providerDocument}
-                  onChange={e => setProviderDocument(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    id="providerDocument"
+                    placeholder="00.000.000/0000-00"
+                    value={providerDocument}
+                    onChange={e => handleCnpjChange(e.target.value)}
+                    maxLength={18}
+                  />
+                  {isFetchingCnpj && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="responsibleName">Responsável Técnico *</Label>
