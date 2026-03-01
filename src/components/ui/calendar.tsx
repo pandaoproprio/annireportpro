@@ -1,9 +1,99 @@
 import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { DayPicker } from "react-day-picker";
+import { DayPicker, CaptionProps, useNavigation } from "react-day-picker";
+import { format, setMonth, setYear } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+function CustomCaption(props: CaptionProps) {
+  const { goToMonth } = useNavigation();
+  const currentMonth = props.displayMonth;
+
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(2024, i, 1);
+    return { value: String(i), label: format(d, "LLLL", { locale: ptBR }) };
+  });
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 21 }, (_, i) => currentYear - 10 + i);
+
+  return (
+    <div className="flex items-center justify-between px-1 pt-1 gap-1">
+      <button
+        type="button"
+        onClick={() => {
+          const prev = new Date(currentMonth);
+          prev.setMonth(prev.getMonth() - 1);
+          goToMonth(prev);
+        }}
+        className={cn(
+          buttonVariants({ variant: "outline" }),
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+        )}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+
+      <div className="flex items-center gap-1">
+        <Select
+          value={String(currentMonth.getMonth())}
+          onValueChange={(val) => goToMonth(setMonth(currentMonth, parseInt(val)))}
+        >
+          <SelectTrigger className="h-7 text-xs px-2 w-auto gap-1 border-none shadow-none font-medium focus:ring-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="max-h-60">
+            {months.map((m) => (
+              <SelectItem key={m.value} value={m.value} className="text-xs capitalize">
+                {m.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={String(currentMonth.getFullYear())}
+          onValueChange={(val) => goToMonth(setYear(currentMonth, parseInt(val)))}
+        >
+          <SelectTrigger className="h-7 text-xs px-2 w-auto gap-1 border-none shadow-none font-medium focus:ring-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="max-h-60">
+            {years.map((y) => (
+              <SelectItem key={y} value={String(y)} className="text-xs">
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          const next = new Date(currentMonth);
+          next.setMonth(next.getMonth() + 1);
+          goToMonth(next);
+        }}
+        className={cn(
+          buttonVariants({ variant: "outline" }),
+          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
+        )}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
 
@@ -15,9 +105,9 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       classNames={{
         months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
         month: "space-y-4",
-        caption: "flex justify-center pt-1 relative items-center",
+        caption: "hidden",
         caption_label: "text-sm font-medium",
-        nav: "space-x-1 flex items-center",
+        nav: "hidden",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
           "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100",
@@ -42,8 +132,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
+        Caption: CustomCaption,
       }}
       {...props}
     />
