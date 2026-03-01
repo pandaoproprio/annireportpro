@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save, Trash2, FileEdit, Loader2, PenTool, FolderPlus, FolderMinus, CheckSquare } from 'lucide-react';
+import { DateRangePickers } from '@/components/DateRangePickers';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
@@ -686,60 +687,20 @@ export const TeamReportGenerator: React.FC = () => {
             <CardTitle className="text-lg">Período de Referência</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Data Início *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !periodStart && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {periodStart ? format(periodStart, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={periodStart}
-                      onSelect={setPeriodStart}
-                      locale={ptBR}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="space-y-2">
-                <Label>Data Fim *</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        'w-full justify-start text-left font-normal',
-                        !periodEnd && 'text-muted-foreground'
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {periodEnd ? format(periodEnd, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecionar data'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={periodEnd}
-                      onSelect={setPeriodEnd}
-                      locale={ptBR}
-                      className="pointer-events-auto"
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
+            <DateRangePickers
+              periodStart={periodStart}
+              periodEnd={periodEnd}
+              onStartChange={(date) => {
+                setPeriodStart(date);
+                // If end is before new start, clear it
+                if (date && periodEnd && periodEnd < date) {
+                  setPeriodEnd(undefined);
+                }
+              }}
+              onEndChange={setPeriodEnd}
+              projectStartDate={project.startDate ? new Date(project.startDate) : undefined}
+              projectEndDate={project.endDate ? new Date(project.endDate) : undefined}
+            />
           </CardContent>
         </Card>
 
