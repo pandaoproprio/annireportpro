@@ -125,6 +125,10 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Set MFA exemption for 24 hours
+        const exemptUntil = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        await supabaseAdmin.from('profiles').update({ mfa_exempt_until: exemptUntil }).eq('user_id', userId);
+
         // Log MFA disable
         await supabaseAdmin.from('system_logs').insert([{
           user_id: callingUser.id,

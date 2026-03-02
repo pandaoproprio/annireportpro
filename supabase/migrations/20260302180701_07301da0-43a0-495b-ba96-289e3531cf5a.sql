@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN mfa_exempt_until timestamp with time zone DEFAULT NULL;

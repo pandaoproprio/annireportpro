@@ -388,6 +388,7 @@ export type Database = {
           last_login_at: string | null
           lgpd_consent_at: string | null
           login_attempts_without_change: number
+          mfa_exempt_until: string | null
           must_change_password: boolean
           name: string
           password_changed_at: string | null
@@ -402,6 +403,7 @@ export type Database = {
           last_login_at?: string | null
           lgpd_consent_at?: string | null
           login_attempts_without_change?: number
+          mfa_exempt_until?: string | null
           must_change_password?: boolean
           name: string
           password_changed_at?: string | null
@@ -416,6 +418,7 @@ export type Database = {
           last_login_at?: string | null
           lgpd_consent_at?: string | null
           login_attempts_without_change?: number
+          mfa_exempt_until?: string | null
           must_change_password?: boolean
           name?: string
           password_changed_at?: string | null
