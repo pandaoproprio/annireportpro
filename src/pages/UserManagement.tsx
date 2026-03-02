@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3, ShieldCheck, UserCheck } from 'lucide-react';
+import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3, ShieldCheck, UserCheck, ShieldOff } from 'lucide-react';
 import { CollaboratorProjectsDialog } from '@/components/CollaboratorProjectsDialog';
 import { UserPermissionsDialog } from '@/components/UserPermissionsDialog';
 import { format } from 'date-fns';
@@ -30,7 +30,7 @@ const roleLabels: Record<string, { label: string; icon: React.ReactNode; color: 
 
 export const UserManagement: React.FC = () => {
   const { role } = useAuth();
-  const { users, isLoading, fetchUsers, createUser, updateUser, deleteUser } = useAdminUsers();
+  const { users, isLoading, fetchUsers, createUser, updateUser, deleteUser, disableMfa } = useAdminUsers();
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -311,9 +311,32 @@ export const UserManagement: React.FC = () => {
                             <ShieldCheck className="w-4 h-4" />
                           </Button>
                         )}
-                        <Button variant="ghost" size="icon" title="Resetar senha" onClick={() => { setResetPasswordUser(user); setNewPassword(''); setIsResetPasswordOpen(true); }}>
-                          <KeyRound className="w-4 h-4" />
-                        </Button>
+                         <Button variant="ghost" size="icon" title="Resetar senha" onClick={() => { setResetPasswordUser(user); setNewPassword(''); setIsResetPasswordOpen(true); }}>
+                           <KeyRound className="w-4 h-4" />
+                         </Button>
+                         {role === 'SUPER_ADMIN' && (
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                               <Button variant="ghost" size="icon" title="Desabilitar MFA">
+                                 <ShieldOff className="w-4 h-4" />
+                               </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Desabilitar MFA?</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   A autenticação multifator de <strong>{user.name}</strong> será removida. O usuário precisará configurar novamente caso necessário.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                 <AlertDialogAction onClick={() => disableMfa(user.id)}>
+                                   Desabilitar
+                                 </AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                         )}
                         <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
                           <Pencil className="w-4 h-4" />
                         </Button>

@@ -81,7 +81,23 @@ export const useAdminUsers = () => {
     },
   });
 
-  const isMutating = createUserMutation.isPending || updateUserMutation.isPending || deleteUserMutation.isPending;
+  const disableMfaMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('admin-users?action=disable-mfa', { method: 'POST', body: { userId } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: 'Sucesso', description: 'MFA desabilitado com sucesso!' });
+      invalidate();
+    },
+    onError: (error: Error) => {
+      toast({ variant: 'destructive', title: 'Erro', description: error.message || 'Erro ao desabilitar MFA' });
+    },
+  });
+
+  const isMutating = createUserMutation.isPending || updateUserMutation.isPending || deleteUserMutation.isPending || disableMfaMutation.isPending;
 
   return {
     users: usersQuery.data || [],
@@ -108,6 +124,14 @@ export const useAdminUsers = () => {
     deleteUser: async (userId: string) => {
       try {
         await deleteUserMutation.mutateAsync(userId);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error };
+      }
+    },
+    disableMfa: async (userId: string) => {
+      try {
+        await disableMfaMutation.mutateAsync(userId);
         return { success: true };
       } catch (error) {
         return { success: false, error };
