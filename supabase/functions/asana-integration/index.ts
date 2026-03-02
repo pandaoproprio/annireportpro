@@ -342,22 +342,26 @@ serve(async (req) => {
         }
         const { message, entity_type: nType, entity_id: nId } = payload;
 
-        // Try to find existing task
-        const { data: existingMapping } = await supabase
-          .from("asana_task_mappings")
-          .select("asana_task_gid")
-          .eq("entity_type", nType)
-          .eq("entity_id", nId)
-          .single();
+        // Try to find existing task only if entity info provided
+        if (nType && nId) {
+          const { data: existingMapping } = await supabase
+            .from("asana_task_mappings")
+            .select("asana_task_gid")
+            .eq("entity_type", nType)
+            .eq("entity_id", nId)
+            .single();
 
-        if (existingMapping) {
-          // Add comment
-          await asanaFetch(`/tasks/${existingMapping.asana_task_gid}/stories`, {
-            method: "POST",
-            body: JSON.stringify({ data: { text: message } }),
-          });
-        } else if (config.project_gid) {
-          // Create notification task
+          if (existingMapping) {
+            await asanaFetch(`/tasks/${existingMapping.asana_task_gid}/stories`, {
+              method: "POST",
+              body: JSON.stringify({ data: { text: message } }),
+            });
+            return jsonResponse({ success: true });
+          }
+        }
+
+        // Create notification task in project
+        if (config.project_gid) {
           await asanaFetch("/tasks", {
             method: "POST",
             body: JSON.stringify({
