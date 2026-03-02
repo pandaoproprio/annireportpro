@@ -14,6 +14,7 @@ export interface AdminUser {
   createdAt: string;
   lastSignIn: string | null;
   emailConfirmed: boolean;
+  mfaEnabled: boolean;
 }
 
 const ADMIN_USERS_KEY = ['admin-users'];
