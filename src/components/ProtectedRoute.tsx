@@ -64,8 +64,12 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
       return <Navigate to="/mfa-verify" replace />;
     }
 
-    // If admin without MFA enrolled, force setup
-    if (ADMIN_ROLES.includes(role) && !isEnrolled) {
+    // Check if user has a temporary MFA exemption
+    const mfaExemptUntil = (profile as any)?.mfa_exempt_until;
+    const isMfaExempt = mfaExemptUntil && new Date(mfaExemptUntil) > new Date();
+
+    // If admin without MFA enrolled, force setup (unless exempt)
+    if (ADMIN_ROLES.includes(role) && !isEnrolled && !isMfaExempt) {
       return (
         <>
           {children}
