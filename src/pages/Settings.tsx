@@ -13,6 +13,7 @@ import {
   Database, LogOut, Edit, Save, Plus, Trash2, X, Loader2, FolderCog, List, ShieldCheck, ShieldOff 
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { logAction } from '@/lib/systemLog';
 import { BatchDeleteProjects } from '@/components/BatchDeleteProjects';
 import { TrashBin } from '@/components/TrashBin';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
@@ -46,6 +47,27 @@ export const Settings: React.FC = () => {
       if (verifiedFactor) {
         const { error } = await supabase.auth.mfa.unenroll({ factorId: verifiedFactor.id });
         if (error) throw error;
+
+        // Log and notify Asana
+        logAction({ action: 'mfa_disabled', entityType: 'user', entityId: user?.id });
+        try {
+          const { data: configs } = await supabase.from('asana_config').select('enable_notifications').limit(1);
+          if (configs?.[0]?.enable_notifications) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              const { data: prof } = await supabase.from('profiles').select('name, email').eq('user_id', user?.id ?? '').single();
+              await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asana-integration`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+                body: JSON.stringify({
+                  action: 'notify',
+                  message: `🔓 MFA desativado por ${prof?.name || prof?.email || 'usuário'}`
+                }),
+              });
+            }
+          }
+        } catch { /* silently ignore */ }
+
         toast.success('MFA desativado com sucesso.');
         await refreshMfa();
       }

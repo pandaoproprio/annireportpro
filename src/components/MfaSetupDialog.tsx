@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, ShieldCheck, ShieldAlert, Copy, Check } from 'lucide-react';
 import { toast } from 'sonner';
+import { logAction } from '@/lib/systemLog';
 
 interface MfaSetupDialogProps {
   open: boolean;
@@ -78,6 +79,29 @@ export const MfaSetupDialog: React.FC<MfaSetupDialogProps> = ({
       });
 
       if (verifyError) throw verifyError;
+
+      // Log MFA activation
+      const { data: { user } } = await supabase.auth.getUser();
+      logAction({ action: 'mfa_enabled', entityType: 'user', entityId: user?.id });
+
+      // Notify Asana
+      try {
+        const { data: configs } = await supabase.from('asana_config').select('enable_notifications').limit(1);
+        if (configs?.[0]?.enable_notifications) {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            const { data: profile } = await supabase.from('profiles').select('name, email').eq('user_id', user?.id ?? '').single();
+            await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asana-integration`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+              body: JSON.stringify({
+                action: 'notify',
+                message: `🔐 MFA ativado por ${profile?.name || profile?.email || 'usuário'}`
+              }),
+            });
+          }
+        }
+      } catch { /* silently ignore */ }
 
       toast.success('MFA ativado com sucesso!');
       onOpenChange(false);
