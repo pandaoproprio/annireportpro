@@ -315,27 +315,33 @@ export const UserManagement: React.FC = () => {
                            <KeyRound className="w-4 h-4" />
                          </Button>
                          {role === 'SUPER_ADMIN' && (
-                           <AlertDialog>
-                             <AlertDialogTrigger asChild>
-                               <Button variant="ghost" size="icon" title="Desabilitar MFA">
-                                 <ShieldOff className="w-4 h-4" />
-                               </Button>
-                             </AlertDialogTrigger>
-                             <AlertDialogContent>
-                               <AlertDialogHeader>
-                                 <AlertDialogTitle>Desabilitar MFA?</AlertDialogTitle>
-                                 <AlertDialogDescription>
-                                   A autenticação multifator de <strong>{user.name}</strong> será removida. O usuário precisará configurar novamente caso necessário.
-                                 </AlertDialogDescription>
-                               </AlertDialogHeader>
-                               <AlertDialogFooter>
-                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                 <AlertDialogAction onClick={() => disableMfa(user.id)}>
-                                   Desabilitar
-                                 </AlertDialogAction>
-                               </AlertDialogFooter>
-                             </AlertDialogContent>
-                           </AlertDialog>
+                           user.mfaEnabled ? (
+                             <AlertDialog>
+                               <AlertDialogTrigger asChild>
+                                 <Button variant="ghost" size="icon" title="MFA ativo — Clique para desabilitar" className="text-emerald-600 hover:text-emerald-700">
+                                   <ShieldCheck className="w-4 h-4" />
+                                 </Button>
+                               </AlertDialogTrigger>
+                               <AlertDialogContent>
+                                 <AlertDialogHeader>
+                                   <AlertDialogTitle>Desabilitar MFA?</AlertDialogTitle>
+                                   <AlertDialogDescription>
+                                     A autenticação multifator de <strong>{user.name}</strong> será removida. O usuário precisará configurar novamente caso necessário.
+                                   </AlertDialogDescription>
+                                 </AlertDialogHeader>
+                                 <AlertDialogFooter>
+                                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                   <AlertDialogAction onClick={() => disableMfa(user.id)}>
+                                     Desabilitar
+                                   </AlertDialogAction>
+                                 </AlertDialogFooter>
+                               </AlertDialogContent>
+                             </AlertDialog>
+                           ) : (
+                             <Button variant="ghost" size="icon" title="MFA não configurado" disabled className="text-muted-foreground opacity-40">
+                               <ShieldOff className="w-4 h-4" />
+                             </Button>
+                           )
                          )}
                         <Button variant="ghost" size="icon" onClick={() => openEdit(user)}>
                           <Pencil className="w-4 h-4" />

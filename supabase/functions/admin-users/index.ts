@@ -282,10 +282,23 @@ Deno.serve(async (req) => {
       const { data: roles } = await supabaseAdmin.from('user_roles').select('*');
       const { data: allPermissions } = await supabaseAdmin.from('user_permissions').select('*');
 
-      const enrichedUsers = users.users.map(user => {
+      const enrichedUsers = await Promise.all(users.users.map(async (user) => {
         const profile = profiles?.find(p => p.user_id === user.id);
         const role = roles?.find(r => r.user_id === user.id);
         const userPerms = allPermissions?.filter(p => p.user_id === user.id).map(p => p.permission) || [];
+        
+        // Check MFA factors
+        let mfaEnabled = false;
+        try {
+          const factorsRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${user.id}/factors`, {
+            headers: { 'Authorization': `Bearer ${supabaseServiceKey}`, 'apikey': supabaseServiceKey }
+          });
+          if (factorsRes.ok) {
+            const factors = await factorsRes.json();
+            mfaEnabled = Array.isArray(factors) && factors.some((f: any) => f.status === 'verified');
+          }
+        } catch { /* ignore */ }
+
         return {
           id: user.id,
           email: user.email,
@@ -294,9 +307,10 @@ Deno.serve(async (req) => {
           permissions: userPerms,
           createdAt: user.created_at,
           lastSignIn: user.last_sign_in_at,
-          emailConfirmed: user.email_confirmed_at !== null
+          emailConfirmed: user.email_confirmed_at !== null,
+          mfaEnabled,
         };
-      });
+      }));
 
       return new Response(JSON.stringify({ users: enrichedUsers }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
