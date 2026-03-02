@@ -53,7 +53,8 @@ export const MfaVerify: React.FC = () => {
 
       if (verifyError) throw verifyError;
 
-      navigate('/');
+      // Force full reload so auth state (AAL2) is re-initialized
+      window.location.href = '/';
     } catch (err: any) {
       toast.error('Código inválido. Tente novamente.');
       setCode('');
