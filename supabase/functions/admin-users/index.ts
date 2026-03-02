@@ -97,12 +97,17 @@ Deno.serve(async (req) => {
           });
         }
 
-        // List MFA factors for the target user
-        const { data: factorsData, error: factorsError } = await supabaseAdmin.auth.admin.mfa.listFactors({ userId });
-        if (factorsError) throw factorsError;
-
-        const factors = factorsData?.factors || [];
-        if (factors.length === 0) {
+        // List MFA factors for the target user via GoTrue Admin REST API
+        const listRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}/factors`, {
+          headers: { 'Authorization': `Bearer ${supabaseServiceKey}`, 'apikey': supabaseServiceKey }
+        });
+        if (!listRes.ok) {
+          const err = await listRes.text();
+          throw new Error(`Failed to list factors: ${err}`);
+        }
+        const factors = await listRes.json();
+        
+        if (!Array.isArray(factors) || factors.length === 0) {
           return new Response(JSON.stringify({ error: 'Usuário não possui MFA ativo' }), {
             status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
@@ -110,8 +115,14 @@ Deno.serve(async (req) => {
 
         // Delete all MFA factors
         for (const factor of factors) {
-          const { error: delError } = await supabaseAdmin.auth.admin.mfa.deleteFactor({ userId, factorId: factor.id });
-          if (delError) throw delError;
+          const delRes = await fetch(`${supabaseUrl}/auth/v1/admin/users/${userId}/factors/${factor.id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${supabaseServiceKey}`, 'apikey': supabaseServiceKey }
+          });
+          if (!delRes.ok) {
+            const err = await delRes.text();
+            throw new Error(`Failed to delete factor: ${err}`);
+          }
         }
 
         // Log MFA disable
