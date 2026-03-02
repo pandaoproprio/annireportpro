@@ -81,6 +81,56 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
 
+    // ===== MFA MANAGEMENT =====
+    if (action === 'disable-mfa') {
+      if (callerRole !== 'super_admin') {
+        return new Response(JSON.stringify({ error: 'Forbidden: Super Admin access required' }), {
+          status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      if (req.method === 'POST') {
+        const { userId } = await req.json();
+        if (!userId) {
+          return new Response(JSON.stringify({ error: 'userId is required' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // List MFA factors for the target user
+        const { data: factorsData, error: factorsError } = await supabaseAdmin.auth.admin.mfa.listFactors({ userId });
+        if (factorsError) throw factorsError;
+
+        const factors = factorsData?.factors || [];
+        if (factors.length === 0) {
+          return new Response(JSON.stringify({ error: 'Usuário não possui MFA ativo' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+
+        // Delete all MFA factors
+        for (const factor of factors) {
+          const { error: delError } = await supabaseAdmin.auth.admin.mfa.deleteFactor({ userId, factorId: factor.id });
+          if (delError) throw delError;
+        }
+
+        // Log MFA disable
+        await supabaseAdmin.from('system_logs').insert([{
+          user_id: callingUser.id,
+          action: 'mfa_disabled_by_admin',
+          entity_type: 'user',
+          entity_id: userId,
+          new_data: { factors_removed: factors.length },
+          ip_address: req.headers.get('x-forwarded-for') || null,
+          user_agent: req.headers.get('user-agent') || null,
+        }]);
+
+        return new Response(JSON.stringify({ success: true, factorsRemoved: factors.length }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     // ===== PERMISSIONS MANAGEMENT =====
     if (action === 'permissions') {
       // Only super_admin can manage permissions
