@@ -7,14 +7,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, CheckCircle, XCircle, RefreshCw, Download } from 'lucide-react';
+import { Loader2, CheckCircle, XCircle, RefreshCw, Download, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAppData } from '@/contexts/AppDataContext';
 
 export const AsanaConfigPanel: React.FC = () => {
   const { user } = useAuth();
   const { config, isLoading, saveConfig } = useAsanaConfig();
-  const { testConnection, listWorkspaces, listProjects, importTasks } = useAsanaActions();
+  const { testConnection, listWorkspaces, listProjects, importTasks, backfillTeamReports } = useAsanaActions();
   const { activeProject } = useAppData();
 
   const [workspaceGid, setWorkspaceGid] = useState('');
@@ -254,6 +254,27 @@ export const AsanaConfigPanel: React.FC = () => {
             </Button>
             <span className="text-xs text-muted-foreground">
               Importa até 50 tarefas para o projeto atual
+            </span>
+          </div>
+        )}
+
+        {/* Backfill team reports */}
+        {enableCreate && (
+          <div className="flex items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={() => backfillTeamReports.mutate()}
+              disabled={backfillTeamReports.isPending}
+            >
+              {backfillTeamReports.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Upload className="w-4 h-4 mr-2" />
+              )}
+              Sincronizar Relatórios Existentes
+            </Button>
+            <span className="text-xs text-muted-foreground">
+              Envia ao Asana todos os relatórios de equipe já publicados
             </span>
           </div>
         )}
