@@ -377,6 +377,81 @@ serve(async (req) => {
         return jsonResponse({ success: true });
       }
 
+      // ── Backfill: sync existing published team reports to Asana ──
+      case "backfill_team_reports": {
+        if (!config?.enable_create_tasks) {
+          return jsonResponse({ error: "Criar tarefas no Asana está desativado" }, 403);
+        }
+        const targetProject = config.project_gid;
+        if (!targetProject) {
+          return jsonResponse({ error: "Project GID do Asana não configurado" }, 400);
+        }
+
+        // Find "📥 Publicado" section
+        const bfSections = await getSectionMap(targetProject);
+        const bfPublishedGid = bfSections["📥 Publicado"];
+
+        // Get all published (non-draft, non-deleted) team reports
+        const { data: publishedReports, error: prError } = await supabase
+          .from("team_reports")
+          .select("id, provider_name, function_role, responsible_name, period_start, period_end, project_id")
+          .eq("is_draft", false)
+          .is("deleted_at", null);
+
+        if (prError) throw prError;
+
+        // Get existing mappings for team_report type
+        const { data: existingMappings } = await supabase
+          .from("asana_task_mappings")
+          .select("entity_id")
+          .eq("entity_type", "team_report");
+
+        const mappedIds = new Set((existingMappings || []).map((m: any) => m.entity_id));
+
+        const reportsToSync = (publishedReports || []).filter((r: any) => !mappedIds.has(r.id));
+
+        let synced = 0;
+        for (const report of reportsToSync) {
+          const taskData: Record<string, unknown> = {
+            name: `[Relatório Equipe] ${report.provider_name} - ${report.period_start} a ${report.period_end}`,
+            notes: `Função: ${report.function_role}\nResponsável: ${report.responsible_name}`,
+            projects: [targetProject],
+          };
+
+          if (bfPublishedGid) {
+            taskData.memberships = [
+              { project: targetProject, section: bfPublishedGid },
+            ];
+          }
+
+          try {
+            const result = await asanaFetch("/tasks", {
+              method: "POST",
+              body: JSON.stringify({ data: taskData }),
+            });
+
+            await supabase.from("asana_task_mappings").upsert({
+              asana_task_gid: result.data.gid,
+              entity_type: "team_report",
+              entity_id: report.id,
+              project_id: report.project_id,
+              user_id: userId,
+            }, { onConflict: "entity_type,entity_id" });
+
+            synced++;
+          } catch (taskErr) {
+            console.error(`Failed to sync report ${report.id}:`, taskErr);
+          }
+        }
+
+        return jsonResponse({
+          success: true,
+          synced_count: synced,
+          total_published: (publishedReports || []).length,
+          already_mapped: mappedIds.size,
+        });
+      }
+
       // ── Import tasks from Asana as activities ──
       case "import_tasks": {
         if (!config?.enable_import_tasks) {

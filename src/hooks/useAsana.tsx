@@ -136,6 +136,13 @@ export function useAsanaActions() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const backfillTeamReports = useMutation({
+    mutationFn: () => callAsana('backfill_team_reports'),
+    onSuccess: (data) =>
+      toast.success(`${data.synced_count} relatórios sincronizados ao Asana (${data.already_mapped} já existiam)`),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return {
     testConnection,
     listWorkspaces,
@@ -144,5 +151,6 @@ export function useAsanaActions() {
     syncStatus,
     notify,
     importTasks,
+    backfillTeamReports,
   };
 }
