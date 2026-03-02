@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useAppData } from '@/contexts/AppDataContext';
+import { useMfa } from '@/hooks/useMfa';
 import { Goal, TeamMember } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
-  Database, LogOut, Edit, Save, Plus, Trash2, X, Loader2, FolderCog, List 
+  Database, LogOut, Edit, Save, Plus, Trash2, X, Loader2, FolderCog, List, ShieldCheck, ShieldOff 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { BatchDeleteProjects } from '@/components/BatchDeleteProjects';
@@ -17,17 +18,44 @@ import { TrashBin } from '@/components/TrashBin';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SlaConfigPanel } from '@/components/sla/SlaConfigPanel';
 import { AsanaConfigPanel } from '@/components/asana/AsanaConfigPanel';
+import { MfaSetupDialog } from '@/components/MfaSetupDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 export const Settings: React.FC = () => {
-  const { signOut } = useAuth();
+  const { signOut, user, role } = useAuth();
   const { isAdmin, isSuperAdmin, hasPermission } = usePermissions();
   const { activeProject, updateProject, removeProject, isLoadingProjects } = useAppData();
+  const { isEnrolled, refreshMfa } = useMfa(user?.id);
   
   const [isEditingProject, setIsEditingProject] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showBatchDelete, setShowBatchDelete] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [showMfaSetup, setShowMfaSetup] = useState(false);
+  const [showMfaDisableConfirm, setShowMfaDisableConfirm] = useState(false);
+  const [isDisablingMfa, setIsDisablingMfa] = useState(false);
+
+  const isAdminRole = role === 'ADMIN' || role === 'SUPER_ADMIN';
+
+  const handleDisableMfa = async () => {
+    setIsDisablingMfa(true);
+    try {
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const verifiedFactor = factors?.totp?.find(f => f.status === 'verified');
+      if (verifiedFactor) {
+        const { error } = await supabase.auth.mfa.unenroll({ factorId: verifiedFactor.id });
+        if (error) throw error;
+        toast.success('MFA desativado com sucesso.');
+        await refreshMfa();
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao desativar MFA');
+    } finally {
+      setIsDisablingMfa(false);
+      setShowMfaDisableConfirm(false);
+    }
+  };
   
   // Form states
   const [formData, setFormData] = useState({
@@ -439,6 +467,62 @@ export const Settings: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* MFA Settings */}
+      <Card className="border-l-4 border-l-primary">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-4">
+            <div className="bg-primary/10 p-3 rounded-full">
+              <ShieldCheck className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-lg font-semibold text-foreground">Autenticação em Duas Etapas (MFA)</h3>
+              <p className="text-sm text-muted-foreground mb-4 mt-1">
+                {isEnrolled 
+                  ? 'MFA está ativo. Sua conta está protegida com autenticação em duas etapas.'
+                  : 'Adicione uma camada extra de segurança à sua conta usando um aplicativo autenticador.'
+                }
+                {isAdminRole && !isEnrolled && (
+                  <span className="block mt-1 text-destructive font-medium">
+                    Como administrador, a ativação do MFA é obrigatória.
+                  </span>
+                )}
+              </p>
+              
+              {isEnrolled ? (
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowMfaDisableConfirm(true)}
+                  disabled={isAdminRole}
+                  title={isAdminRole ? 'Administradores não podem desativar o MFA' : undefined}
+                >
+                  <ShieldOff className="w-4 h-4 mr-2" /> Desativar MFA
+                </Button>
+              ) : (
+                <Button onClick={() => setShowMfaSetup(true)}>
+                  <ShieldCheck className="w-4 h-4 mr-2" /> Configurar MFA
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <MfaSetupDialog 
+        open={showMfaSetup} 
+        onOpenChange={setShowMfaSetup}
+        onSuccess={refreshMfa}
+      />
+
+      <ConfirmDialog
+        open={showMfaDisableConfirm}
+        onOpenChange={setShowMfaDisableConfirm}
+        title="Desativar MFA"
+        description="Tem certeza que deseja desativar a autenticação em duas etapas? Sua conta ficará menos protegida."
+        confirmLabel={isDisablingMfa ? 'Desativando...' : 'Desativar'}
+        variant="destructive"
+        onConfirm={handleDisableMfa}
+      />
 
       <Card className="border-l-4 border-l-warning">
         <CardContent className="pt-6">

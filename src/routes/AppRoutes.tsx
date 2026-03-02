@@ -51,6 +51,7 @@ const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'));
 const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'));
 const ReportV2Page = lazy(() => import('@/modules/reports-v2/ReportV2Page'));
 const InstallGuide = lazy(() => import('@/pages/InstallGuide').then(m => ({ default: m.InstallGuide })));
+const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m.MfaVerify })));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -308,6 +309,11 @@ export const AppRoutes: React.FC = () => {
         <Route path="/change-password" element={
           <ProtectedRoute>
             <ForcePasswordChange />
+          </ProtectedRoute>
+        } />
+        <Route path="/mfa-verify" element={
+          <ProtectedRoute>
+            <MfaVerify />
           </ProtectedRoute>
         } />
         <Route path="/diario/*" element={
