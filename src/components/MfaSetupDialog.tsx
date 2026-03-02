@@ -46,12 +46,25 @@ export const MfaSetupDialog: React.FC<MfaSetupDialogProps> = ({
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
         friendlyName: 'GIRA Relatórios',
+        issuer: 'GIRA Relatórios - relatorios.giraerp.com.br',
       });
 
       if (error) throw error;
 
       setFactorId(data.id);
-      setQrCode(data.totp.qr_code);
+      // The QR code URI may contain the Lovable domain as issuer.
+      // We replace it so the authenticator app shows the custom domain.
+      const uri = data.totp.uri;
+      const fixedUri = uri
+        ?.replace(/issuer=[^&]+/, 'issuer=GIRA%20Relat%C3%B3rios')
+        ?.replace(/annireportpro\.lovable\.app/g, 'relatorios.giraerp.com.br');
+
+      // Re-generate QR code with corrected URI using a public QR API
+      if (fixedUri && fixedUri !== uri) {
+        setQrCode(`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(fixedUri)}`);
+      } else {
+        setQrCode(data.totp.qr_code);
+      }
       setSecret(data.totp.secret);
       setStep('qr');
     } catch (err: any) {
