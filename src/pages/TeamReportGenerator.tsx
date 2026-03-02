@@ -22,7 +22,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save, Trash2, FileEdit, Loader2, PenTool, FolderPlus, FolderMinus, CheckSquare } from 'lucide-react';
+import { CalendarIcon, Image as ImageIcon, Eye, ArrowLeft, FileDown, Users, Save, Trash2, FileEdit, Loader2, PenTool, FolderPlus, FolderMinus, CheckSquare, Send } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { DateRangePickers } from '@/components/DateRangePickers';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
@@ -369,6 +370,49 @@ export const TeamReportGenerator: React.FC = () => {
     }
   };
 
+  const handlePublish = async (draftId?: string) => {
+    const targetId = draftId || currentDraftId;
+
+    // Validate from current form state if publishing from editor
+    if (!targetId) {
+      if (!periodStart || !periodEnd || !responsibleName || !executionReport) {
+        toast.error('Preencha todos os campos obrigatórios antes de publicar');
+        return;
+      }
+      const savedId = await saveDraft({
+        projectId: project.id,
+        teamMemberId: selectedMemberId,
+        providerName, providerDocument, responsibleName, functionRole,
+        periodStart: periodStart.toISOString().split('T')[0],
+        periodEnd: periodEnd.toISOString().split('T')[0],
+        executionReport,
+        photos: photosWithCaptions.map(p => p.url),
+        photoCaptions: photosWithCaptions,
+        reportTitle, executionReportTitle, attachmentsTitle,
+        additionalSections, footerText,
+        isDraft: false,
+      });
+      if (savedId) {
+        setCurrentDraftId(savedId);
+        toast.success('Relatório publicado com sucesso!');
+      }
+      return;
+    }
+
+    const draft = drafts.find(d => d.id === targetId);
+    if (!draft) return;
+
+    if (!draft.responsibleName || !draft.periodStart || !draft.periodEnd || !draft.executionReport) {
+      toast.error('Preencha todos os campos obrigatórios antes de publicar');
+      return;
+    }
+
+    const savedId = await saveDraft({ ...draft, id: targetId, isDraft: false });
+    if (savedId) {
+      toast.success('Relatório publicado com sucesso!');
+    }
+  };
+
   const handleExportDocx = async () => {
     if (!periodStart || !periodEnd) {
       toast.error('Preencha o período de referência');
@@ -521,10 +565,20 @@ export const TeamReportGenerator: React.FC = () => {
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         Atualizado em {format(new Date(draft.updatedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                        {draft.isDraft && <span className="ml-2 text-amber-600 font-medium">• Rascunho</span>}
+                        {draft.isDraft ? (
+                          <Badge variant="outline" className="ml-2 text-amber-600 border-amber-300">Rascunho</Badge>
+                        ) : (
+                          <Badge className="ml-2 bg-emerald-600 hover:bg-emerald-600">Publicado</Badge>
+                        )}
                       </p>
                     </div>
                     <div className="flex gap-2">
+                      {draft.isDraft && (
+                        <Button size="sm" onClick={() => handlePublish(draft.id)} disabled={isSaving} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                          {isSaving ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : <Send className="w-4 h-4 mr-1" />}
+                          Publicar
+                        </Button>
+                      )}
                       <Button variant="outline" size="sm" onClick={() => loadDraft(draft)}>
                         <FileEdit className="w-4 h-4 mr-1" />
                         Editar
@@ -595,6 +649,14 @@ export const TeamReportGenerator: React.FC = () => {
                 <Save className="w-4 h-4 mr-2" />
               )}
               Salvar Rascunho
+            </Button>
+            <Button 
+              onClick={() => handlePublish()} 
+              disabled={isSaving}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+              Publicar
             </Button>
           </div>
         </div>
