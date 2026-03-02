@@ -31,6 +31,7 @@ import { exportTeamReportToDocx } from '@/lib/teamReportDocxExport';
 import { exportTeamReportToPdf } from '@/lib/teamReportPdfExport';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { maskCpfCnpj } from '@/lib/masks';
 import { fetchCnpjData } from '@/lib/cnpjLookup';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
@@ -454,6 +455,16 @@ export const TeamReportGenerator: React.FC = () => {
 
       await exportTeamReportToDocx({ project, report: reportData, visualConfig: vc.config });
       toast.success('Relatório DOCX exportado com sucesso!');
+
+      if (project?.id) {
+        createAsanaTaskOnPublish({
+          entityType: 'team_report',
+          entityId: reportData.id,
+          projectId: project.id,
+          name: `[Relatório Equipe DOCX] ${providerName} - ${format(periodStart, 'yyyy-MM-dd')} a ${format(periodEnd, 'yyyy-MM-dd')}`,
+          notes: `Função: ${functionRole}\nResponsável: ${responsibleName}\nExportado em DOCX`,
+        });
+      }
     } catch (error) {
       console.error('Erro ao exportar DOCX:', error);
       toast.error('Erro ao exportar relatório');
@@ -503,6 +514,16 @@ export const TeamReportGenerator: React.FC = () => {
 
       await exportTeamReportToPdf({ project, report: reportData, visualConfig: vc.config, hideInstitutionalFooter: !showInstitutionalFooter });
       toast.success('Relatório PDF exportado com sucesso!');
+
+      if (project?.id) {
+        createAsanaTaskOnPublish({
+          entityType: 'team_report',
+          entityId: reportData.id,
+          projectId: project.id,
+          name: `[Relatório Equipe PDF] ${providerName} - ${format(periodStart, 'yyyy-MM-dd')} a ${format(periodEnd, 'yyyy-MM-dd')}`,
+          notes: `Função: ${functionRole}\nResponsável: ${responsibleName}\nExportado em PDF`,
+        });
+      }
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);
       toast.error('Erro ao exportar relatório PDF');
