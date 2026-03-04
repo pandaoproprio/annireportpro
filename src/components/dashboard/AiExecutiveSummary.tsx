@@ -27,9 +27,10 @@ interface ProjectData {
 
 interface AiExecutiveSummaryProps {
   projectData: ProjectData;
+  onNarrativeChange?: (narrative: string | null) => void;
 }
 
-export const AiExecutiveSummary: React.FC<AiExecutiveSummaryProps> = ({ projectData }) => {
+export const AiExecutiveSummary: React.FC<AiExecutiveSummaryProps> = ({ projectData, onNarrativeChange }) => {
   const [narrative, setNarrative] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -53,6 +54,7 @@ export const AiExecutiveSummary: React.FC<AiExecutiveSummaryProps> = ({ projectD
       }
 
       setNarrative(data.narrative);
+      onNarrativeChange?.(data.narrative);
       toast.success('Resumo executivo gerado com sucesso!');
     } catch (e) {
       console.error(e);

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target, BarChart3 } from 'lucide-react';
+import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target, BarChart3, Download } from 'lucide-react';
 import { ActivitiesByMonthChart } from '@/components/dashboard/ActivitiesByMonthChart';
 import { ActivityTypesChart } from '@/components/dashboard/ActivityTypesChart';
 import { AttendeesByGoalChart } from '@/components/dashboard/AttendeesByGoalChart';
@@ -20,6 +20,10 @@ import { PerformanceDashboard } from '@/components/performance/PerformanceDashbo
 import { WipAlertBanner } from '@/components/performance/WipAlertBanner';
 import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
 import { AiExecutiveSummary } from '@/components/dashboard/AiExecutiveSummary';
+import { exportDashboardToPdf } from '@/lib/dashboardPdfExport';
+import { format, parseISO, startOfMonth, eachMonthOfInterval } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const DashboardSkeleton = () => (
   <div className="space-y-6 animate-fadeIn">
@@ -184,6 +188,7 @@ interface DashboardPanelContentProps {
 const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
   stats, slaSummary, activities, project, activitiesLoading, role, showAiSummary,
 }) => {
+  const [aiNarrative, setAiNarrative] = useState<string | null>(null);
   const activitiesByType = activities.reduce<Record<string, number>>((acc, a) => {
     acc[a.type] = (acc[a.type] || 0) + 1;
     return acc;
@@ -218,10 +223,71 @@ const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
     draftsCount: activities.filter((a: any) => a.isDraft).length,
   };
 
+  const activitiesByMonth: Record<string, number> = {};
+  if (activities.length > 0) {
+    const start = project.startDate ? parseISO(project.startDate) : parseISO(activities[activities.length - 1]?.date);
+    const end = project.endDate ? parseISO(project.endDate) : new Date();
+    try {
+      const months = eachMonthOfInterval({ start: startOfMonth(start), end: startOfMonth(end) });
+      months.forEach(month => {
+        const key = format(month, 'yyyy-MM');
+        const label = format(month, 'MMM/yy', { locale: ptBR });
+        const count = activities.filter((a: any) => format(parseISO(a.date), 'yyyy-MM') === key).length;
+        activitiesByMonth[label] = count;
+      });
+    } catch {}
+  }
+
+  const handleExportPdf = () => {
+    try {
+      exportDashboardToPdf({
+        projectName: project.name,
+        organization: project.organizationName,
+        fomento: project.fomentoNumber,
+        funder: project.funder,
+        startDate: project.startDate,
+        endDate: project.endDate,
+        daysRemaining,
+        totalActivities: activities.length,
+        totalAttendees: activities.reduce((a: number, c: any) => a + (c.attendeesCount || 0), 0),
+        goalsCount: project.goals.length,
+        activitiesByType,
+        activitiesByGoal,
+        activitiesByMonth,
+        aiNarrative,
+        slaOnTime: 0,
+        slaOverdue: 0,
+        draftsCount: activities.filter((a: any) => a.isDraft).length,
+        goals: project.goals.map((g: any) => ({
+          title: g.title,
+          activityCount: activities.filter((a: any) => a.goalId === g.id).length,
+        })),
+        recentActivities: activities.slice(0, 10).map((a: any) => ({
+          date: new Date(a.date).toLocaleDateString('pt-BR'),
+          description: a.description,
+        })),
+      });
+      toast.success('PDF do Dashboard exportado com sucesso!');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao exportar PDF');
+    }
+  };
+
   return (
     <div className="space-y-6 mt-4">
-      {/* AI Executive Summary */}
-      {showAiSummary && <AiExecutiveSummary projectData={aiProjectData} />}
+      {/* Export + AI Summary */}
+      {showAiSummary && (
+        <div className="space-y-3">
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={handleExportPdf} className="gap-2">
+              <Download className="w-4 h-4" />
+              Exportar Dashboard PDF
+            </Button>
+          </div>
+          <AiExecutiveSummary projectData={aiProjectData} onNarrativeChange={setAiNarrative} />
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
