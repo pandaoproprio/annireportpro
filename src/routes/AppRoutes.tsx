@@ -51,6 +51,7 @@ const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'));
 const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'));
 const ReportV2Page = lazy(() => import('@/modules/reports-v2/ReportV2Page'));
 const InstallGuide = lazy(() => import('@/pages/InstallGuide').then(m => ({ default: m.InstallGuide })));
+const ValuationReport = lazy(() => import('@/pages/ValuationReport'));
 const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m.MfaVerify })));
 
 const PageFallback = () => (
@@ -297,6 +298,7 @@ export const AppRoutes: React.FC = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/instalar" element={<InstallGuide />} />
+        <Route path="/valuation" element={<Suspense fallback={<PageFallback />}><ValuationReport /></Suspense>} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/lgpd" element={<PrivacyPolicy />} />
         <Route path="/licenca" element={<TermsOfUse />} />
