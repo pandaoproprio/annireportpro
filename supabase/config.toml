@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.asana-integration]
 verify_jwt = false
+
+[functions.classify-activity]
+verify_jwt = false

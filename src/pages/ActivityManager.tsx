@@ -46,6 +46,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { SpeechToTextButton } from '@/components/SpeechToTextButton';
+import { Sparkles } from 'lucide-react';
 
 export const ActivityManager: React.FC = () => {
   const { activeProject: project, activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useAppData();
@@ -79,6 +80,8 @@ export const ActivityManager: React.FC = () => {
     prevActivityCount.current = activities.length;
   }, [activities.length]);
 
+  const [isClassifying, setIsClassifying] = useState(false);
+
   // Form State
   const [newActivity, setNewActivity] = useState<Partial<Activity>>({
     date: new Date().toISOString().split('T')[0],
@@ -96,6 +99,30 @@ export const ActivityManager: React.FC = () => {
     attendanceFiles: [],
     expenseRecords: [],
   });
+
+  const classifyActivity = async () => {
+    const desc = newActivity.description?.trim();
+    if (!desc || desc.length < 5) {
+      toast.info('Digite uma descrição com pelo menos 5 caracteres para classificar.');
+      return;
+    }
+    setIsClassifying(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('classify-activity', {
+        body: { description: desc },
+      });
+      if (error) throw error;
+      if (data?.type) {
+        setNewActivity(prev => ({ ...prev, type: data.type as ActivityType }));
+        toast.success(`Tipo sugerido pela IA: ${data.type}`);
+      }
+    } catch (err: any) {
+      console.error('Classify error:', err);
+      toast.error('Erro ao classificar atividade.');
+    } finally {
+      setIsClassifying(false);
+    }
+  };
 
   // Filtered Activities
   const draftCount = useMemo(() => activities.filter(a => a.isDraft).length, [activities]);
@@ -396,7 +423,21 @@ export const ActivityManager: React.FC = () => {
                   <Input type="date" min={newActivity.date} value={newActivity.endDate || ''} onChange={e => setNewActivity({...newActivity, endDate: e.target.value})} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Tipo de Atividade</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Tipo de Atividade</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={classifyActivity}
+                      disabled={isClassifying || !newActivity.description?.trim()}
+                      className="text-xs gap-1 h-7 text-primary hover:text-primary"
+                      title="Classificar automaticamente com IA"
+                    >
+                      {isClassifying ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                      Auto IA
+                    </Button>
+                  </div>
                   <Select value={newActivity.type} onValueChange={(value) => setNewActivity({...newActivity, type: value as ActivityType})}>
                     <SelectTrigger>
                       <SelectValue />
