@@ -198,7 +198,16 @@ export const useActivities = (projectId: string | null) => {
     },
     onSuccess: (newActivity, variables) => {
       invalidate();
-      logAction({ action: 'activity_created', entityType: 'activity', entityId: newActivity.id, newData: { description: newActivity.description, type: newActivity.type } });
+      if (user) {
+        logUnified({
+          userId: user.id,
+          action: 'activity_created',
+          entityType: 'activity',
+          entityId: newActivity.id,
+          entityName: newActivity.description?.substring(0, 60),
+          newData: { description: newActivity.description, type: newActivity.type },
+        });
+      }
       if (!variables.isDraft) {
         createAsanaTaskOnPublish({
           entityType: 'activity',

@@ -114,6 +114,14 @@ export const useJustificationReports = (projectId?: string) => {
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
+      if (user) {
+        logUnified({
+          userId: user.id,
+          action: 'justification_deleted',
+          entityType: 'justification_reports',
+          entityId: id,
+        });
+      }
       toast.success('Justificativa excluída');
       await fetchDrafts();
     } catch (error) {
