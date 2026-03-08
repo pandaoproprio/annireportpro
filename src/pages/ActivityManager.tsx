@@ -147,6 +147,27 @@ export const ActivityManager: React.FC = () => {
     });
   }, [activities, searchTerm, filterType, filterGoal, filterDraft, filterAuthor, filterDateStart, filterDateEnd]);
 
+  // Kanban-specific visual filtering (applied on top of main filters)
+  const kanbanActivities = useMemo(() => {
+    return filteredActivities.filter(act => {
+      const matchesType = kanbanTypeFilters.length === 0 || kanbanTypeFilters.includes(act.type);
+      const matchesAuthor = !kanbanAuthorFilter || (act.authorEmail || act.authorName) === kanbanAuthorFilter;
+      return matchesType && matchesAuthor;
+    });
+  }, [filteredActivities, kanbanTypeFilters, kanbanAuthorFilter]);
+
+  const kanbanTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredActivities.forEach(a => { counts[a.type] = (counts[a.type] || 0) + 1; });
+    return counts;
+  }, [filteredActivities]);
+
+  const toggleKanbanType = (type: string) => {
+    setKanbanTypeFilters(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
+
   const resetForm = () => {
     setNewActivity({
       date: new Date().toISOString().split('T')[0], endDate: '', type: ActivityType.EXECUCAO,
