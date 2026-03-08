@@ -185,12 +185,15 @@ export const ActivityManager: React.FC = () => {
     const editCheck = canEditActivity(activity.createdAt, isAdmin, activity.isLinkedToReport);
     if (!editCheck.allowed) {
       toast.error(editCheck.reason || 'Edição não permitida');
-      logAction({
-        action: 'edit_attempt_blocked',
-        entityType: 'activity',
-        entityId: activity.id,
-        newData: { reason: editCheck.reason },
-      });
+      if (profile) {
+        logUnified({
+          userId: profile.user_id,
+          action: 'edit_attempt_blocked',
+          entityType: 'activity',
+          entityId: activity.id,
+          newData: { reason: editCheck.reason },
+        });
+      }
       return;
     }
     setNewActivity({ ...activity });
