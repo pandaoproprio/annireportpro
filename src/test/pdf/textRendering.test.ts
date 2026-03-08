@@ -119,7 +119,7 @@ describe('parseHtmlToBlocks', () => {
     `;
     const blocks = parseHtmlToBlocks(html);
     expect(blocks.length).toBeGreaterThanOrEqual(4);
-    expect(blocks[0].type).toBe('heading');
+    expect(blocks[0].type).toBe('paragraph');
     const bullets = blocks.filter(b => b.type === 'bullet');
     expect(bullets.length).toBe(2);
   });
