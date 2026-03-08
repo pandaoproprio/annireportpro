@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { JustificationReport, JustificationReportDraft } from '@/types/justificationReport';
 import { toast } from 'sonner';
+import { logUnified } from '@/lib/unifiedLog';
 
 export const useJustificationReports = (projectId?: string) => {
   const { user } = useAuth();
