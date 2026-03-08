@@ -285,7 +285,25 @@ export const ActivityManager: React.FC = () => {
         <TabsContent value="diario" className="space-y-6 mt-4">
           {/* New Activity Button */}
           {!isFormOpen && (
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted/50">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-3"
+                  onClick={() => setViewMode('list')}
+                >
+                  <LayoutList className="w-4 h-4 mr-1.5" /> Lista
+                </Button>
+                <Button
+                  variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-3"
+                  onClick={() => setViewMode('kanban')}
+                >
+                  <Columns3 className="w-4 h-4 mr-1.5" /> Kanban
+                </Button>
+              </div>
               <Button onClick={() => setIsFormOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" /> Nova Atividade
               </Button>
