@@ -569,8 +569,17 @@ export const ActivityManager: React.FC = () => {
               removingId={removingId}
             />
           ) : (
-            <ActivityKanbanBoard
-              activities={filteredActivities}
+            <div className="space-y-4">
+              <KanbanFilters
+                activeTypes={kanbanTypeFilters}
+                onToggleType={toggleKanbanType}
+                activeAuthor={kanbanAuthorFilter}
+                onSetAuthor={setKanbanAuthorFilter}
+                authors={uniqueAuthors}
+                typeCounts={kanbanTypeCounts}
+              />
+              <ActivityKanbanBoard
+                activities={kanbanActivities}
               isAdmin={isAdmin}
               onEdit={handleEdit}
               onDelete={handleDelete}
