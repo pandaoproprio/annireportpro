@@ -60,6 +60,7 @@ export const ActivityManager: React.FC = () => {
   const [filterAuthor, setFilterAuthor] = useState<string>('all');
   const [filterDateStart, setFilterDateStart] = useState<string>('');
   const [filterDateEnd, setFilterDateEnd] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   useEffect(() => {
     if (prevActivityCount.current === 0 && activities.length === 1) {
