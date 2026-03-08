@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { 
   Image as ImageIcon, Plus, X, FolderGit2, Loader2, FileEdit, Save,
-  FileText, Paperclip
+  FileText, Paperclip, LayoutList, Columns3
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamContributionDashboard } from '@/components/dashboard/TeamContributionDashboard';
