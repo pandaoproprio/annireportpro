@@ -462,7 +462,18 @@ export const ActivityManager: React.FC = () => {
 
                   {/* Attendance */}
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><FileText className="w-4 h-4" /> Lista de Presença</Label>
+                    <div className="flex items-center justify-between">
+                      <Label className="flex items-center gap-2"><FileText className="w-4 h-4" /> Lista de Presença</Label>
+                      <OcrAttendanceButton
+                        onNamesExtracted={(names) => {
+                          setNewActivity(prev => ({
+                            ...prev,
+                            teamInvolved: [...new Set([...(prev.teamInvolved || []), ...names])],
+                            attendeesCount: Math.max(prev.attendeesCount || 0, (prev.teamInvolved || []).length + names.length),
+                          }));
+                        }}
+                      />
+                    </div>
                     <Input type="file" accept="image/*,.pdf" onChange={async (e) => {
                       if (!e.target.files?.[0] || !project) return;
                       const file = e.target.files[0];
