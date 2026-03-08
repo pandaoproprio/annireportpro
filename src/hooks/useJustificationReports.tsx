@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { JustificationReport, JustificationReportDraft } from '@/types/justificationReport';
 import { toast } from 'sonner';
+import { logUnified } from '@/lib/unifiedLog';
 
 export const useJustificationReports = (projectId?: string) => {
   const { user } = useAuth();
@@ -71,6 +72,13 @@ export const useJustificationReports = (projectId?: string) => {
           .update(payload)
           .eq('id', draft.id);
         if (error) throw error;
+        logUnified({
+          userId: user.id,
+          action: draft.isDraft ? 'justification_updated' : 'justification_published',
+          entityType: 'justification_reports',
+          entityId: draft.id,
+          entityName: draft.objectSection?.substring(0, 60),
+        });
         await fetchDrafts();
         return draft.id;
       } else {
@@ -80,6 +88,13 @@ export const useJustificationReports = (projectId?: string) => {
           .select('id')
           .single();
         if (error) throw error;
+        logUnified({
+          userId: user.id,
+          action: 'justification_created',
+          entityType: 'justification_reports',
+          entityId: data.id,
+          entityName: draft.objectSection?.substring(0, 60),
+        });
         await fetchDrafts();
         return data.id;
       }
@@ -99,6 +114,14 @@ export const useJustificationReports = (projectId?: string) => {
         .update({ deleted_at: new Date().toISOString() })
         .eq('id', id);
       if (error) throw error;
+      if (user) {
+        logUnified({
+          userId: user.id,
+          action: 'justification_deleted',
+          entityType: 'justification_reports',
+          entityId: id,
+        });
+      }
       toast.success('Justificativa excluída');
       await fetchDrafts();
     } catch (error) {
