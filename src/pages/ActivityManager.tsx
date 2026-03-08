@@ -36,6 +36,7 @@ import { ActivityFilters } from '@/components/activity/ActivityFilters';
 import { ActivityList } from '@/components/activity/ActivityList';
 import { ActivityDetailDialog } from '@/components/activity/ActivityDetailDialog';
 import { ActivityKanbanBoard, type KanbanStatus } from '@/components/activity/ActivityKanbanBoard';
+import { OcrAttendanceButton } from '@/components/activity/OcrAttendanceButton';
 
 export const ActivityManager: React.FC = () => {
   const { activeProject: project, activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useAppData();
