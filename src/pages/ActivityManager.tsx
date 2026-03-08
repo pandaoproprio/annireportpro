@@ -6,7 +6,7 @@ import { AiTextToolbar } from '@/components/report/AiTextToolbar';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
 import { canEditActivity, isWithinEditWindow, deriveSetor } from '@/lib/diaryEditRules';
-import { logAction } from '@/lib/systemLog';
+import { logUnified } from '@/lib/unifiedLog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
