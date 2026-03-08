@@ -72,6 +72,13 @@ export const useJustificationReports = (projectId?: string) => {
           .update(payload)
           .eq('id', draft.id);
         if (error) throw error;
+        logUnified({
+          userId: user.id,
+          action: draft.isDraft ? 'justification_updated' : 'justification_published',
+          entityType: 'justification_reports',
+          entityId: draft.id,
+          entityName: draft.objectSection?.substring(0, 60),
+        });
         await fetchDrafts();
         return draft.id;
       } else {
@@ -81,6 +88,13 @@ export const useJustificationReports = (projectId?: string) => {
           .select('id')
           .single();
         if (error) throw error;
+        logUnified({
+          userId: user.id,
+          action: 'justification_created',
+          entityType: 'justification_reports',
+          entityId: data.id,
+          entityName: draft.objectSection?.substring(0, 60),
+        });
         await fetchDrafts();
         return data.id;
       }
