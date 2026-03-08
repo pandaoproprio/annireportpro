@@ -36,6 +36,7 @@ import { ActivityFilters } from '@/components/activity/ActivityFilters';
 import { ActivityList } from '@/components/activity/ActivityList';
 import { ActivityDetailDialog } from '@/components/activity/ActivityDetailDialog';
 import { ActivityKanbanBoard, type KanbanStatus } from '@/components/activity/ActivityKanbanBoard';
+import { KanbanFilters } from '@/components/activity/KanbanFilters';
 import { OcrAttendanceButton } from '@/components/activity/OcrAttendanceButton';
 
 export const ActivityManager: React.FC = () => {
@@ -62,6 +63,8 @@ export const ActivityManager: React.FC = () => {
   const [filterDateStart, setFilterDateStart] = useState<string>('');
   const [filterDateEnd, setFilterDateEnd] = useState<string>('');
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [kanbanTypeFilters, setKanbanTypeFilters] = useState<string[]>([]);
+  const [kanbanAuthorFilter, setKanbanAuthorFilter] = useState<string | null>(null);
 
   useEffect(() => {
     if (prevActivityCount.current === 0 && activities.length === 1) {
@@ -143,6 +146,27 @@ export const ActivityManager: React.FC = () => {
       return matchesSearch && matchesType && matchesGoal && matchesDraft && matchesAuthor && matchesPeriodStart && matchesPeriodEnd;
     });
   }, [activities, searchTerm, filterType, filterGoal, filterDraft, filterAuthor, filterDateStart, filterDateEnd]);
+
+  // Kanban-specific visual filtering (applied on top of main filters)
+  const kanbanActivities = useMemo(() => {
+    return filteredActivities.filter(act => {
+      const matchesType = kanbanTypeFilters.length === 0 || kanbanTypeFilters.includes(act.type);
+      const matchesAuthor = !kanbanAuthorFilter || (act.authorEmail || act.authorName) === kanbanAuthorFilter;
+      return matchesType && matchesAuthor;
+    });
+  }, [filteredActivities, kanbanTypeFilters, kanbanAuthorFilter]);
+
+  const kanbanTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredActivities.forEach(a => { counts[a.type] = (counts[a.type] || 0) + 1; });
+    return counts;
+  }, [filteredActivities]);
+
+  const toggleKanbanType = (type: string) => {
+    setKanbanTypeFilters(prev =>
+      prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
+    );
+  };
 
   const resetForm = () => {
     setNewActivity({
@@ -545,8 +569,17 @@ export const ActivityManager: React.FC = () => {
               removingId={removingId}
             />
           ) : (
-            <ActivityKanbanBoard
-              activities={filteredActivities}
+            <div className="space-y-4">
+              <KanbanFilters
+                activeTypes={kanbanTypeFilters}
+                onToggleType={toggleKanbanType}
+                activeAuthor={kanbanAuthorFilter}
+                onSetAuthor={setKanbanAuthorFilter}
+                authors={uniqueAuthors}
+                typeCounts={kanbanTypeCounts}
+              />
+              <ActivityKanbanBoard
+                activities={kanbanActivities}
               isAdmin={isAdmin}
               onEdit={handleEdit}
               onDelete={handleDelete}
@@ -558,7 +591,8 @@ export const ActivityManager: React.FC = () => {
                   newStatus === 'draft' ? 'Movido para Rascunho' : 'Publicado com sucesso'
                 );
               }}
-            />
+              />
+            </div>
           )}
 
           <FirstActivityCelebration
