@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
 import { logUnified } from '@/lib/unifiedLog';
-import { logAction } from '@/lib/systemLog';
 import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { Database } from '@/integrations/supabase/types';
 
