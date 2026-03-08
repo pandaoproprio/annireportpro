@@ -522,16 +522,32 @@ export const ActivityManager: React.FC = () => {
             draftCount={draftCount} uniqueAuthors={uniqueAuthors} project={project}
           />
 
-          {/* List */}
-          <ActivityList
-            activities={filteredActivities}
-            isAdmin={isAdmin}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onView={setViewingActivity}
-            onPhotoClick={setLightboxPhoto}
-            removingId={removingId}
-          />
+          {viewMode === 'list' ? (
+            <ActivityList
+              activities={filteredActivities}
+              isAdmin={isAdmin}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onView={setViewingActivity}
+              onPhotoClick={setLightboxPhoto}
+              removingId={removingId}
+            />
+          ) : (
+            <ActivityKanbanBoard
+              activities={filteredActivities}
+              isAdmin={isAdmin}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onView={setViewingActivity}
+              onStatusChange={async (activity, newStatus) => {
+                const updated = { ...activity, isDraft: newStatus === 'draft' };
+                await updateActivity(updated);
+                toast.success(
+                  newStatus === 'draft' ? 'Movido para Rascunho' : 'Publicado com sucesso'
+                );
+              }}
+            />
+          )}
 
           <FirstActivityCelebration
             open={showCelebration}
