@@ -591,7 +591,7 @@ export const ActivityManager: React.FC = () => {
                   newStatus === 'draft' ? 'Movido para Rascunho' : 'Publicado com sucesso'
                 );
               }}
-            />
+            </div>
           )}
 
           <FirstActivityCelebration
