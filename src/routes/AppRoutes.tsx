@@ -302,6 +302,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/instalar" element={<InstallGuide />} />
         <Route path="/valuation" element={<Suspense fallback={<PageFallback />}><ValuationReport /></Suspense>} />
         <Route path="/ai-audit" element={<Suspense fallback={<PageFallback />}><AiAuditReport /></Suspense>} />
+        <Route path="/maturity-audit" element={<Suspense fallback={<PageFallback />}><MaturityAuditReport /></Suspense>} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/lgpd" element={<PrivacyPolicy />} />
         <Route path="/licenca" element={<TermsOfUse />} />
