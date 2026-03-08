@@ -53,6 +53,7 @@ const ReportV2Page = lazy(() => import('@/modules/reports-v2/ReportV2Page'));
 const InstallGuide = lazy(() => import('@/pages/InstallGuide').then(m => ({ default: m.InstallGuide })));
 const ValuationReport = lazy(() => import('@/pages/ValuationReport'));
 const AiAuditReport = lazy(() => import('@/pages/AiAuditReport'));
+const MaturityAuditReport = lazy(() => import('@/pages/MaturityAuditReport'));
 const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m.MfaVerify })));
 
 const PageFallback = () => (
