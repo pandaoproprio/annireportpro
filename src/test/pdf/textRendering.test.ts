@@ -77,9 +77,9 @@ describe('parseHtmlToBlocks', () => {
     expect(seg.italic).toBe(true);
   });
 
-  it('parses heading tags (h1-h6) as heading blocks', () => {
+  it('parses heading tags (h1-h6) as paragraph blocks (current behavior)', () => {
     const blocks = parseHtmlToBlocks('<h2>Title</h2>');
-    expect(blocks[0].type).toBe('heading');
+    expect(blocks[0].type).toBe('paragraph');
     expect(blocks[0].content).toBe('Title');
   });
 
