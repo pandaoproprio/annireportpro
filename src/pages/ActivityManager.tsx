@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/select';
 import { 
   Image as ImageIcon, Plus, X, FolderGit2, Loader2, FileEdit, Save,
-  FileText, Paperclip
+  FileText, Paperclip, LayoutList, Columns3
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TeamContributionDashboard } from '@/components/dashboard/TeamContributionDashboard';
@@ -35,6 +35,7 @@ import { Sparkles } from 'lucide-react';
 import { ActivityFilters } from '@/components/activity/ActivityFilters';
 import { ActivityList } from '@/components/activity/ActivityList';
 import { ActivityDetailDialog } from '@/components/activity/ActivityDetailDialog';
+import { ActivityKanbanBoard, type KanbanStatus } from '@/components/activity/ActivityKanbanBoard';
 
 export const ActivityManager: React.FC = () => {
   const { activeProject: project, activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useAppData();
@@ -59,6 +60,7 @@ export const ActivityManager: React.FC = () => {
   const [filterAuthor, setFilterAuthor] = useState<string>('all');
   const [filterDateStart, setFilterDateStart] = useState<string>('');
   const [filterDateEnd, setFilterDateEnd] = useState<string>('');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
 
   useEffect(() => {
     if (prevActivityCount.current === 0 && activities.length === 1) {
@@ -283,7 +285,25 @@ export const ActivityManager: React.FC = () => {
         <TabsContent value="diario" className="space-y-6 mt-4">
           {/* New Activity Button */}
           {!isFormOpen && (
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-1 border rounded-md p-0.5 bg-muted/50">
+                <Button
+                  variant={viewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-3"
+                  onClick={() => setViewMode('list')}
+                >
+                  <LayoutList className="w-4 h-4 mr-1.5" /> Lista
+                </Button>
+                <Button
+                  variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-8 px-3"
+                  onClick={() => setViewMode('kanban')}
+                >
+                  <Columns3 className="w-4 h-4 mr-1.5" /> Kanban
+                </Button>
+              </div>
               <Button onClick={() => setIsFormOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" /> Nova Atividade
               </Button>
@@ -502,16 +522,32 @@ export const ActivityManager: React.FC = () => {
             draftCount={draftCount} uniqueAuthors={uniqueAuthors} project={project}
           />
 
-          {/* List */}
-          <ActivityList
-            activities={filteredActivities}
-            isAdmin={isAdmin}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onView={setViewingActivity}
-            onPhotoClick={setLightboxPhoto}
-            removingId={removingId}
-          />
+          {viewMode === 'list' ? (
+            <ActivityList
+              activities={filteredActivities}
+              isAdmin={isAdmin}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onView={setViewingActivity}
+              onPhotoClick={setLightboxPhoto}
+              removingId={removingId}
+            />
+          ) : (
+            <ActivityKanbanBoard
+              activities={filteredActivities}
+              isAdmin={isAdmin}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              onView={setViewingActivity}
+              onStatusChange={async (activity, newStatus) => {
+                const updated = { ...activity, isDraft: newStatus === 'draft' };
+                await updateActivity(updated);
+                toast.success(
+                  newStatus === 'draft' ? 'Movido para Rascunho' : 'Publicado com sucesso'
+                );
+              }}
+            />
+          )}
 
           <FirstActivityCelebration
             open={showCelebration}
