@@ -164,7 +164,7 @@ export const Dashboard: React.FC = () => {
           role={role}
         />
       )}
-    </div>
+    </PageTransition>
   );
 };
 
