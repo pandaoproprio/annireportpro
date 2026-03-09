@@ -6,6 +6,7 @@ import { useForms, useFormFields } from './hooks/useForms';
 import { FormFieldEditor } from './components/FormFieldEditor';
 import { FormResponsesTab } from './components/FormResponsesTab';
 import { FormDashboardTab } from './components/FormDashboardTab';
+import { FormDesignEditor } from './components/FormDesignEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
