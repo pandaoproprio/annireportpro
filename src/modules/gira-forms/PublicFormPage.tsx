@@ -571,6 +571,7 @@ export default function PublicFormPage() {
               ))}
             </div>
           </div>
+          </div>
         </div>
 
         {/* Step Title */}
