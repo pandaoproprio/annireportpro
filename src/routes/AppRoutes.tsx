@@ -257,7 +257,7 @@ const Layout: React.FC = () => {
             <Menu className="w-6 h-6" />
           </button>
           <img src={logoGira} alt="GIRA Relatórios" className="h-8" />
-          <div className="w-10" />
+          <NotificationBell />
         </header>
 
         {/* Page Content */}
