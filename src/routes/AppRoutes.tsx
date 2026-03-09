@@ -55,6 +55,8 @@ const ValuationReport = lazy(() => import('@/pages/ValuationReport'));
 const AiAuditReport = lazy(() => import('@/pages/AiAuditReport'));
 const MaturityAuditReport = lazy(() => import('@/pages/MaturityAuditReport'));
 const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m.MfaVerify })));
+const FormsListPage = lazy(() => import('@/modules/gira-forms/FormsListPage'));
+const FormBuilderPage = lazy(() => import('@/modules/gira-forms/FormBuilderPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
