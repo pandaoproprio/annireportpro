@@ -52,7 +52,8 @@ function detectSmartType(field: FormField): 'cep' | 'cpf' | 'cnpj' | 'cpf_cnpj' 
   const label = field.label.toLowerCase();
   if (/^cep$/i.test(field.label.trim()) || /\bcep\b/.test(label)) return 'cep';
   if (/\bcpf\b.*\bcnpj\b|\bcnpj\b.*\bcpf\b/.test(label)) return 'cpf_cnpj';
-  if (/\bcpf\b/.test(label) && !/cnpj/.test(label)) return 'cpf_cnpj';
+  if (/\bcpf\b/.test(label) && !/cnpj/.test(label)) return 'cpf';
+  if (/\bcnpj\b/.test(label) && !/cpf/.test(label)) return 'cnpj';
   if (/\bcelular\b|\btelefone\b|\bfone\b|\bwhatsapp\b/.test(label)) return 'phone';
   if (/\be-?mail\b/.test(label) && !/social/.test(label)) return 'email';
   return null;
