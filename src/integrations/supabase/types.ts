@@ -1239,6 +1239,11 @@ export type Database = {
         | "settings_edit"
         | "project_create"
         | "project_delete"
+        | "forms_view"
+        | "forms_create"
+        | "forms_edit"
+        | "forms_delete"
+        | "forms_export"
       app_role:
         | "user"
         | "admin"
@@ -1410,6 +1415,11 @@ export const Constants = {
         "settings_edit",
         "project_create",
         "project_delete",
+        "forms_view",
+        "forms_create",
+        "forms_edit",
+        "forms_delete",
+        "forms_export",
       ],
       app_role: [
         "user",
