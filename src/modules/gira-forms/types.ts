@@ -31,6 +31,13 @@ export interface FieldCondition {
   value?: string;
 }
 
+export type ConditionLogic = 'AND' | 'OR';
+
+export interface FieldConditionGroup {
+  logic: ConditionLogic;
+  conditions: FieldCondition[];
+}
+
 export interface FormField {
   id: string;
   form_id: string;
