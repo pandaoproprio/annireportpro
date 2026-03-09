@@ -2,13 +2,16 @@ import React, { useState, useCallback } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useAppData } from '@/contexts/AppDataContext';
+import { useProjectData } from '@/contexts/ProjectContext';
+import { useActivityData } from '@/contexts/ActivityContext';
 import { StatCard } from '@/components/StatCard';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target, BarChart3, Download } from 'lucide-react';
+import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/page-transition';
+import { StatCardSkeleton, CardSkeleton } from '@/components/ui/content-skeleton';
 import { ActivitiesByMonthChart } from '@/components/dashboard/ActivitiesByMonthChart';
 import { ActivityTypesChart } from '@/components/dashboard/ActivityTypesChart';
 import { AttendeesByGoalChart } from '@/components/dashboard/AttendeesByGoalChart';
@@ -26,26 +29,16 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 const DashboardSkeleton = () => (
-  <div className="space-y-6 animate-fadeIn">
+  <div className="space-y-6">
     <Skeleton className="h-8 w-64" />
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="bg-card p-6 rounded-lg border border-border">
-          <Skeleton className="h-4 w-24 mb-3" />
-          <Skeleton className="h-9 w-16" />
-        </div>
+        <StaggerItem key={i}><StatCardSkeleton /></StaggerItem>
       ))}
-    </div>
+    </StaggerContainer>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {[...Array(2)].map((_, i) => (
-        <Card key={i}>
-          <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
-          <CardContent className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-          </CardContent>
-        </Card>
+        <FadeIn key={i} delay={0.2 + i * 0.1}><CardSkeleton /></FadeIn>
       ))}
     </div>
   </div>
@@ -54,7 +47,8 @@ const DashboardSkeleton = () => (
 export const Dashboard: React.FC = () => {
   const { profile, role } = useAuth();
   const { hasPermission } = usePermissions();
-  const { activeProject: project, projects, isLoadingProjects: projectsLoading, activities, isLoadingActivities: activitiesLoading } = useAppData();
+  const { activeProject: project, projects, isLoadingProjects: projectsLoading } = useProjectData();
+  const { activities, isLoadingActivities: activitiesLoading } = useActivityData();
   const canCreateProject = role === 'SUPER_ADMIN' || role === 'ADMIN';
   const isAdminUser = role === 'SUPER_ADMIN' || role === 'ADMIN';
   const { getSummary, getOverdueTrackings, refreshStatuses } = useSlaTracking(project?.id);
@@ -113,7 +107,7 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <PageTransition className="space-y-6">
       {/* SLA Overdue Banner */}
       <SlaOverdueBanner overdueItems={overdueItems} />
       {/* WIP Alert Banner */}
@@ -170,7 +164,7 @@ export const Dashboard: React.FC = () => {
           role={role}
         />
       )}
-    </div>
+    </PageTransition>
   );
 };
 
