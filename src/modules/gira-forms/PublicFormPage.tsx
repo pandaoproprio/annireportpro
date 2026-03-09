@@ -240,7 +240,7 @@ export default function PublicFormPage() {
           </div>
 
           {/* Fields */}
-          {fields.map((field, i) => (
+          {visibleFields.map((field, i) => (
             <motion.div key={field.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
               {field.type === 'section_header' ? (
                 <div
