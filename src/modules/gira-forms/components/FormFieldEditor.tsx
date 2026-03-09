@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GripVertical, Trash2, ChevronDown, ChevronUp, PlusCircle, X, SeparatorHorizontal, Info, GitBranch } from 'lucide-react';
-import { FIELD_TYPE_LABELS, type FormField, type FieldType, type FieldCondition } from '../types';
+import { FIELD_TYPE_LABELS, type FormField, type FieldType, type FieldCondition, type FieldConditionGroup, type ConditionLogic } from '../types';
 
 interface Props {
   field: FormField;
