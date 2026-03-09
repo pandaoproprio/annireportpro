@@ -84,7 +84,9 @@ export default function FormBuilderPage() {
     reorderFields.mutate(updates);
   };
 
-  const publicUrl = `${window.location.origin}/f/${id}`;
+  const CUSTOM_DOMAIN = 'https://relatorios.giraerp.com.br';
+  const slugOrId = publicSlug || id;
+  const publicUrl = `${CUSTOM_DOMAIN}/f/${slugOrId}`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(publicUrl);
