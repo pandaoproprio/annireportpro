@@ -68,7 +68,7 @@ export default function PublicFormPage() {
     mutationFn: async () => {
       // Insert the response
       const { data: responseData, error } = await supabase.from('form_responses').insert({
-        form_id: id!,
+        form_id: formId!,
         respondent_name: respondentName || null,
         respondent_email: respondentEmail || null,
         answers: { ...answers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
