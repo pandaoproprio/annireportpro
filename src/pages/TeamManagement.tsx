@@ -405,7 +405,7 @@ export const TeamManagement: React.FC = () => {
                     {projectMembersList.map(m => (
                       <TableRow key={m.id}>
                         <TableCell className="font-medium">{m.name}</TableCell>
-                        <TableCell><Badge variant="secondary">{m.function_role}</Badge></TableCell>
+                        <TableCell><RoleBadge role={m.function_role} /></TableCell>
                         <TableCell className="text-sm text-muted-foreground">{m.document || '—'}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {m.email && <div>{m.email}</div>}
