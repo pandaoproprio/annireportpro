@@ -161,6 +161,7 @@ export default function FormBuilderPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="editor">Editor</TabsTrigger>
+          <TabsTrigger value="preview">Visualizar</TabsTrigger>
           <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="responses">Respostas</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
