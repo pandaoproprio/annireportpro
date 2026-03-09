@@ -9,7 +9,11 @@ export type FieldType =
   | 'scale'
   | 'file_upload'
   | 'section_header'
-  | 'info_text';
+  | 'info_text'
+  | 'cep'
+  | 'cpf_cnpj'
+  | 'phone'
+  | 'email';
 
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   short_text: 'Texto Curto',
@@ -23,6 +27,10 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   file_upload: 'Upload de Arquivo',
   section_header: 'Cabeçalho de Seção',
   info_text: 'Texto Informativo',
+  cep: 'CEP (com busca automática)',
+  cpf_cnpj: 'CPF / CNPJ',
+  phone: 'Telefone',
+  email: 'E-mail',
 };
 
 export interface FieldCondition {
