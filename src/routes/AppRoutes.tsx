@@ -183,7 +183,7 @@ const Layout: React.FC = () => {
                 {hasPermission('report_team') && <SidebarLink to="/justificativa" icon={<FileText className="w-5 h-5" />} label="Justificativa Prorrogação" onClick={closeSidebar} />}
                 {hasPermission('report_object') && <SidebarLink to="/report-v2" icon={<BarChart3 className="w-5 h-5" />} label="Relatório V2" onClick={closeSidebar} />}
                 {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />}
-                <SidebarLink to="/forms" icon={<ClipboardList className="w-5 h-5" />} label="GIRA Forms" onClick={closeSidebar} />
+                {hasPermission('forms_view' as any) && <SidebarLink to="/forms" icon={<ClipboardList className="w-5 h-5" />} label="GIRA Forms" onClick={closeSidebar} />}
               </div>
             </div>
 
@@ -280,8 +280,8 @@ const Layout: React.FC = () => {
                 <Route path="/wysiwyg/:id" element={<WysiwygEditorPage />} />
                 <Route path="/wysiwyg" element={<WysiwygEditorPage />} />
                 <Route path="/report-v2" element={<PermissionGuard permission="report_object"><ReportV2Page /></PermissionGuard>} />
-                <Route path="/forms" element={<FormsListPage />} />
-                <Route path="/forms/:id" element={<FormBuilderPage />} />
+                <Route path="/forms" element={<PermissionGuard permission={'forms_view' as any}><FormsListPage /></PermissionGuard>} />
+                <Route path="/forms/:id" element={<PermissionGuard permission={'forms_view' as any}><FormBuilderPage /></PermissionGuard>} />
               </Routes>
             </Suspense>
           </ErrorBoundary>

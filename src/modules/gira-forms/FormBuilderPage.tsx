@@ -6,6 +6,7 @@ import { useForms, useFormFields } from './hooks/useForms';
 import { FormFieldEditor } from './components/FormFieldEditor';
 import { FormResponsesTab } from './components/FormResponsesTab';
 import { FormDashboardTab } from './components/FormDashboardTab';
+import { FormDesignEditor } from './components/FormDesignEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -15,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink } from 'lucide-react';
-import { FIELD_TYPE_LABELS, CATEGORIES, type Form, type FormField, type FieldType } from './types';
+import { FIELD_TYPE_LABELS, CATEGORIES, type Form, type FormField, type FieldType, type FormDesignSettings } from './types';
 import { motion, Reorder } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -139,13 +140,13 @@ export default function FormBuilderPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="editor">Editor</TabsTrigger>
+          <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="responses">Respostas</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
         </TabsList>
 
         <TabsContent value="editor" className="mt-4">
           <div className="grid lg:grid-cols-[1fr_300px] gap-6">
-            {/* Fields area */}
             <div className="space-y-4">
               <Card>
                 <CardContent className="p-4 space-y-3">
@@ -191,7 +192,6 @@ export default function FormBuilderPage() {
               )}
             </div>
 
-            {/* Sidebar */}
             <div className="space-y-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Adicionar Campo</h3>
               <div className="grid grid-cols-1 gap-2">
@@ -203,6 +203,18 @@ export default function FormBuilderPage() {
                 ))}
               </div>
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="design" className="mt-4">
+          <div className="max-w-2xl">
+            <FormDesignEditor
+              settings={(form.settings || {}) as FormDesignSettings}
+              onSave={async (newSettings) => {
+                await updateForm.mutateAsync({ id: id!, settings: newSettings as any });
+                formQuery.refetch();
+              }}
+            />
           </div>
         </TabsContent>
 

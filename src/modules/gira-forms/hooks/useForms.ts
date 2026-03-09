@@ -47,8 +47,14 @@ export function useForms() {
   });
 
   const updateForm = useMutation({
-    mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; category?: string; status?: string }) => {
-      const { error } = await supabase.from('forms').update(updates).eq('id', id);
+    mutationFn: async ({ id, ...updates }: { id: string; title?: string; description?: string; category?: string; status?: string; settings?: Record<string, unknown> }) => {
+      const payload: Record<string, unknown> = {};
+      if (updates.title !== undefined) payload.title = updates.title;
+      if (updates.description !== undefined) payload.description = updates.description;
+      if (updates.category !== undefined) payload.category = updates.category;
+      if (updates.status !== undefined) payload.status = updates.status;
+      if (updates.settings !== undefined) payload.settings = updates.settings;
+      const { error } = await supabase.from('forms').update(payload).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
