@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useForms, useFormFields } from './hooks/useForms';
 import { FormFieldEditor } from './components/FormFieldEditor';
 import { FormResponsesTab } from './components/FormResponsesTab';
+import { FormDashboardTab } from './components/FormDashboardTab';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
