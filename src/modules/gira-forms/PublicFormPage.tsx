@@ -13,7 +13,7 @@ import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   CheckCircle2, ClipboardList, AlertCircle, ShieldCheck, MapPin, Loader2,
-  Sparkles, User, Mail, ChevronRight, ChevronLeft, Send, Eye, ArrowUp
+  Sparkles, ChevronRight, ChevronLeft, Send, Eye
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -43,49 +43,49 @@ function maskCep(value: string): string {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
-// ─── Address keyword matching for CEP auto-fill ─────────────
-const ADDRESS_KEYWORDS: Record<string, RegExp> = {
-  street: /rua|logradouro|endere[çc]o/i,
-  neighborhood: /bairro/i,
-  city: /cidade|munic[ií]pio/i,
-  state: /estado|uf/i,
-};
-
-function findAddressFieldIds(fields: FormField[]): Record<string, string> {
-  const map: Record<string, string> = {};
-  for (const f of fields) {
-    if (f.type === 'section_header' || f.type === 'info_text') continue;
-    const label = f.label.toLowerCase();
-    for (const [key, regex] of Object.entries(ADDRESS_KEYWORDS)) {
-      if (!map[key] && regex.test(label)) {
-        map[key] = f.id;
-      }
-    }
+// ─── Smart label detection ──────────────────────────────────
+function detectSmartType(field: FormField): 'cep' | 'cpf' | 'cnpj' | 'cpf_cnpj' | 'phone' | 'email' | null {
+  if (field.type === 'cep' || field.type === 'cpf_cnpj' || field.type === 'phone' || field.type === 'email') {
+    return field.type as any;
   }
-  return map;
+  if (field.type !== 'short_text') return null;
+  const label = field.label.toLowerCase();
+  if (/^cep$/i.test(field.label.trim()) || /\bcep\b/.test(label)) return 'cep';
+  if (/\bcpf\b.*\bcnpj\b|\bcnpj\b.*\bcpf\b/.test(label)) return 'cpf_cnpj';
+  if (/\bcpf\b/.test(label) && !/cnpj/.test(label)) return 'cpf_cnpj';
+  if (/\bcelular\b|\btelefone\b|\bfone\b|\bwhatsapp\b/.test(label)) return 'phone';
+  if (/\be-?mail\b/.test(label) && !/social/.test(label)) return 'email';
+  return null;
+}
+
+function isAddressField(label: string): boolean {
+  return /endere[çc]o|logradouro|rua|munic[ií]pio.*uf|cidade.*estado|bairro/i.test(label);
+}
+
+function isNameField(label: string): boolean {
+  return /^nome\s*(completo)?$/i.test(label.trim()) || /^nome$/i.test(label.trim());
+}
+
+function isEmailField(label: string): boolean {
+  return /e-?mail\s*(de\s*contato)?$/i.test(label.trim());
 }
 
 // ─── Step interface ─────────────────────────────────────────
 interface Step {
   title: string;
   description?: string;
-  icon?: React.ReactNode;
   fields: FormField[];
-  type: 'identification' | 'section' | 'lgpd_review';
+  type: 'section' | 'lgpd_review';
 }
 
 // ─── Main Component ─────────────────────────────────────────
 export default function PublicFormPage() {
   const { id } = useParams<{ id: string }>();
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
-  const [respondentName, setRespondentName] = useState('');
-  const [respondentEmail, setRespondentEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [lgpdError, setLgpdError] = useState(false);
-  const [nameError, setNameError] = useState('');
-  const [emailError, setEmailError] = useState('');
   const [currentStep, setCurrentStep] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -125,34 +125,49 @@ export default function PublicFormPage() {
     enabled: !!formId,
   });
 
+  const form = formQuery.data;
+  const fields = fieldsQuery.data || [];
+  const design: FormDesignSettings = (form?.settings || {}) as FormDesignSettings;
+
+  // ─── Find the respondent name/email fields ────────────────
+  const nameFieldId = useMemo(() => fields.find(f => isNameField(f.label))?.id, [fields]);
+  const emailFieldId = useMemo(() => fields.find(f => isEmailField(f.label))?.id, [fields]);
+
   const submitMutation = useMutation({
     mutationFn: async () => {
+      const respondentName = nameFieldId ? String(answers[nameFieldId] || '').trim() : '';
+      const respondentEmail = emailFieldId ? String(answers[emailFieldId] || '').trim() : '';
+
       const { data: responseData, error } = await supabase.from('form_responses').insert({
         form_id: formId!,
-        respondent_name: respondentName.trim(),
-        respondent_email: respondentEmail.trim(),
+        respondent_name: respondentName,
+        respondent_email: respondentEmail,
         answers: { ...answers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
       }).select('id').single();
       if (error) throw error;
 
+      // Non-blocking notification
       if (form?.user_id && responseData?.id) {
-        await supabase.from('form_notifications').insert({
-          form_id: formId!,
-          form_response_id: responseData.id,
-          recipient_user_id: form.user_id,
-          form_title: form.title,
-          respondent_name: respondentName.trim(),
-          respondent_email: respondentEmail.trim(),
-        } as any).single();
+        try {
+          await supabase.from('form_notifications').insert({
+            form_id: formId!,
+            form_response_id: responseData.id,
+            recipient_user_id: form.user_id,
+            form_title: form.title,
+            respondent_name: respondentName,
+            respondent_email: respondentEmail,
+          } as any);
+        } catch {
+          // Notification is non-critical, don't block submission
+        }
       }
     },
     onSuccess: () => setSubmitted(true),
-    onError: () => toast.error('Erro ao enviar. Tente novamente.'),
+    onError: (err) => {
+      console.error('Submit error:', err);
+      toast.error('Erro ao enviar. Tente novamente.');
+    },
   });
-
-  const form = formQuery.data;
-  const fields = fieldsQuery.data || [];
-  const design: FormDesignSettings = (form?.settings || {}) as FormDesignSettings;
 
   // Evaluate conditions
   const evalCondition = (cond: FieldCondition): boolean => {
@@ -181,34 +196,79 @@ export default function PublicFormPage() {
 
   const visibleFields = fields.filter(isFieldVisible);
 
-  // Address field mapping for CEP auto-fill
-  const addressFieldIds = useMemo(() => findAddressFieldIds(visibleFields), [visibleFields]);
+  // ─── Reorder: move CEP before address fields in each section ──
+  const reorderedFields = useMemo(() => {
+    const result: FormField[] = [];
+    let buffer: FormField[] = [];
+
+    const flushBuffer = () => {
+      if (buffer.length === 0) return;
+      // Find CEP and address fields in buffer
+      const cepFields: FormField[] = [];
+      const addressFields: FormField[] = [];
+      const otherFields: FormField[] = [];
+
+      for (const f of buffer) {
+        const smart = detectSmartType(f);
+        if (smart === 'cep') {
+          cepFields.push(f);
+        } else if (isAddressField(f.label)) {
+          addressFields.push(f);
+        } else {
+          otherFields.push(f);
+        }
+      }
+
+      // Put CEP before address fields
+      result.push(...otherFields.filter(f => {
+        // Put non-address, non-cep fields that come before address fields
+        const idx = buffer.indexOf(f);
+        const firstAddrIdx = buffer.findIndex(b => isAddressField(b.label));
+        const firstCepIdx = buffer.findIndex(b => detectSmartType(b) === 'cep');
+        const firstSpecialIdx = Math.min(
+          firstAddrIdx >= 0 ? firstAddrIdx : Infinity,
+          firstCepIdx >= 0 ? firstCepIdx : Infinity
+        );
+        return idx < firstSpecialIdx;
+      }));
+      result.push(...cepFields);
+      result.push(...addressFields);
+      result.push(...otherFields.filter(f => {
+        const idx = buffer.indexOf(f);
+        const firstAddrIdx = buffer.findIndex(b => isAddressField(b.label));
+        const firstCepIdx = buffer.findIndex(b => detectSmartType(b) === 'cep');
+        const firstSpecialIdx = Math.min(
+          firstAddrIdx >= 0 ? firstAddrIdx : Infinity,
+          firstCepIdx >= 0 ? firstCepIdx : Infinity
+        );
+        return idx >= firstSpecialIdx;
+      }));
+
+      buffer = [];
+    };
+
+    for (const f of visibleFields) {
+      if (f.type === 'section_header') {
+        flushBuffer();
+        result.push(f);
+      } else {
+        buffer.push(f);
+      }
+    }
+    flushBuffer();
+    return result;
+  }, [visibleFields]);
 
   // ─── Build multi-step structure ───────────────────────────
   const steps = useMemo<Step[]>(() => {
     const result: Step[] = [];
-
-    // Step 0: Identification
-    result.push({
-      title: 'Identificação',
-      description: 'Seus dados pessoais',
-      icon: <User className="w-4 h-4" />,
-      fields: [],
-      type: 'identification',
-    });
-
-    // Group fields by section_header
     let currentFields: FormField[] = [];
     let currentTitle = 'Informações';
 
-    for (const field of visibleFields) {
+    for (const field of reorderedFields) {
       if (field.type === 'section_header') {
         if (currentFields.length > 0) {
-          result.push({
-            title: currentTitle,
-            fields: currentFields,
-            type: 'section',
-          });
+          result.push({ title: currentTitle, fields: currentFields, type: 'section' });
         }
         currentTitle = field.label;
         currentFields = [];
@@ -217,33 +277,23 @@ export default function PublicFormPage() {
       }
     }
 
-    // Push remaining fields
     if (currentFields.length > 0) {
-      result.push({
-        title: currentTitle,
-        fields: currentFields,
-        type: 'section',
-      });
+      result.push({ title: currentTitle, fields: currentFields, type: 'section' });
     }
 
     // Final step: LGPD + Review
     result.push({
       title: 'Revisão e Envio',
       description: 'Confira suas respostas antes de enviar',
-      icon: <Eye className="w-4 h-4" />,
       fields: [],
       type: 'lgpd_review',
     });
 
     return result;
-  }, [visibleFields]);
+  }, [reorderedFields]);
 
   const totalSteps = steps.length;
-
-  // ─── Progress ─────────────────────────────────────────────
-  const progress = useMemo(() => {
-    return Math.round(((currentStep + 1) / totalSteps) * 100);
-  }, [currentStep, totalSteps]);
+  const progress = useMemo(() => Math.round(((currentStep + 1) / totalSteps) * 100), [currentStep, totalSteps]);
 
   const isDark = design.theme === 'dark';
   const isFullWidth = design.pageLayout === 'full';
@@ -258,51 +308,80 @@ export default function PublicFormPage() {
     fontFamily: design.fontFamily || 'Inter, sans-serif',
   } as React.CSSProperties), [design, isDark]);
 
+  // ─── CEP auto-fill: fill address/city/state fields ────────
+  const handleCepAutoFill = useCallback((cepData: CepData, cepFieldId: string) => {
+    const updates: Record<string, string> = {};
+    for (const f of reorderedFields) {
+      if (f.id === cepFieldId) continue;
+      const label = f.label.toLowerCase();
+      if (/endere[çc]o.*completo|rua.*n[°ºo].*bairro/i.test(f.label)) {
+        // Full address field
+        const parts = [cepData.street, cepData.neighborhood].filter(Boolean);
+        if (parts.length > 0) updates[f.id] = parts.join(', ');
+      } else if (/munic[ií]pio.*uf|cidade.*estado/i.test(f.label)) {
+        updates[f.id] = `${cepData.city} / ${cepData.state}`;
+      } else if (/\brua\b|\blogradouro\b/.test(label) && !/completo/.test(label)) {
+        if (cepData.street) updates[f.id] = cepData.street;
+      } else if (/\bbairro\b/.test(label)) {
+        if (cepData.neighborhood) updates[f.id] = cepData.neighborhood;
+      } else if (/\bcidade\b|\bmunic[ií]pio\b/.test(label) && !/uf|estado/.test(label)) {
+        if (cepData.city) updates[f.id] = cepData.city;
+      } else if (/\bestado\b|\buf\b/.test(label)) {
+        if (cepData.state) updates[f.id] = cepData.state;
+      }
+    }
+    if (Object.keys(updates).length > 0) {
+      setAnswers(prev => ({ ...prev, ...updates }));
+    }
+  }, [reorderedFields]);
+
   // ─── Validation per step ──────────────────────────────────
   const validateStep = (stepIndex: number): boolean => {
     const step = steps[stepIndex];
     if (!step) return true;
-
-    if (step.type === 'identification') {
-      let valid = true;
-      if (!respondentName.trim()) { setNameError('Nome é obrigatório'); valid = false; } else setNameError('');
-      if (!respondentEmail.trim()) { setEmailError('E-mail é obrigatório'); valid = false; }
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(respondentEmail.trim())) { setEmailError('E-mail inválido'); valid = false; }
-      else setEmailError('');
-      return valid;
-    }
 
     if (step.type === 'lgpd_review') {
       if (!lgpdConsent) { setLgpdError(true); return false; }
       return true;
     }
 
-    // Validate section fields
     const errors: Record<string, string> = {};
-    const inputFieldsInStep = step.fields.filter(f => f.type !== 'info_text');
-    for (const field of inputFieldsInStep) {
+    const inputFields = step.fields.filter(f => f.type !== 'info_text' && f.type !== 'section_header');
+
+    for (const field of inputFields) {
+      const smart = detectSmartType(field);
+      const val = answers[field.id];
+
       if (field.required) {
-        const val = answers[field.id];
         if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
           errors[field.id] = 'Campo obrigatório';
+          continue;
         }
       }
-      if (field.type === 'email' && answers[field.id]) {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(answers[field.id]))) errors[field.id] = 'E-mail inválido';
+
+      if (!val) continue;
+
+      if (smart === 'email' || field.type === 'email') {
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val))) errors[field.id] = 'E-mail inválido';
       }
-      if (field.type === 'cpf_cnpj' && answers[field.id]) {
-        const digits = String(answers[field.id]).replace(/\D/g, '');
+      if (smart === 'cpf_cnpj' || field.type === 'cpf_cnpj') {
+        const digits = String(val).replace(/\D/g, '');
         if (digits.length !== 11 && digits.length !== 14) errors[field.id] = 'CPF (11) ou CNPJ (14) dígitos';
       }
-      if (field.type === 'phone' && answers[field.id]) {
-        if (String(answers[field.id]).replace(/\D/g, '').length < 10) errors[field.id] = 'Telefone inválido';
-      }
-      if (field.type === 'cep' && answers[field.id]) {
-        const cepObj = answers[field.id] as any;
-        if ((cepObj?.cep || '').replace(/\D/g, '').length !== 8) errors[field.id] = 'CEP deve ter 8 dígitos';
+      if (smart === 'phone') {
+        if (String(val).replace(/\D/g, '').length < 10) errors[field.id] = 'Telefone inválido';
       }
     }
-    setValidationErrors(prev => ({ ...prev, ...errors }));
+
+    setValidationErrors(prev => {
+      const cleaned = { ...prev };
+      // Clear errors for fields in this step
+      for (const field of inputFields) {
+        if (!errors[field.id]) delete cleaned[field.id];
+      }
+      return { ...cleaned, ...errors };
+    });
+
     if (Object.keys(errors).length > 0) {
       toast.error('Preencha os campos obrigatórios desta etapa.');
       return false;
@@ -331,7 +410,6 @@ export default function PublicFormPage() {
   };
 
   const goToStep = (idx: number) => {
-    // Allow going back freely, going forward only if current step valid
     if (idx < currentStep) {
       setCurrentStep(idx);
       scrollToTop();
@@ -356,18 +434,6 @@ export default function PublicFormPage() {
       return prev;
     });
   }, []);
-
-  // CEP auto-fill handler
-  const handleCepAutoFill = useCallback((cepData: CepData) => {
-    const updates: Record<string, string> = {};
-    if (addressFieldIds.street && cepData.street) updates[addressFieldIds.street] = cepData.street;
-    if (addressFieldIds.neighborhood && cepData.neighborhood) updates[addressFieldIds.neighborhood] = cepData.neighborhood;
-    if (addressFieldIds.city && cepData.city) updates[addressFieldIds.city] = cepData.city;
-    if (addressFieldIds.state && cepData.state) updates[addressFieldIds.state] = cepData.state;
-    if (Object.keys(updates).length > 0) {
-      setAnswers(prev => ({ ...prev, ...updates }));
-    }
-  }, [addressFieldIds]);
 
   // ─── Loading ──────────────────────────────────────────────
   if (formQuery.isLoading || fieldsQuery.isLoading) {
@@ -409,7 +475,7 @@ export default function PublicFormPage() {
             <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
               <button
-                onClick={() => { setSubmitted(false); setAnswers({}); setRespondentName(''); setRespondentEmail(''); setLgpdConsent(false); setCurrentStep(0); }}
+                onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); }}
                 className="px-4 py-2 rounded-lg border text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)' }}
               >
@@ -425,9 +491,6 @@ export default function PublicFormPage() {
   const activeStep = steps[currentStep];
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
-
-  // Get all input fields for review
-  const allInputFields = visibleFields.filter(f => f.type !== 'section_header' && f.type !== 'info_text');
 
   return (
     <div className="min-h-screen py-6 px-4" ref={containerRef} style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
@@ -531,48 +594,6 @@ export default function PublicFormPage() {
             transition={{ duration: 0.25 }}
             className="space-y-4"
           >
-            {/* ─── Identification Step ─────────────────────────────── */}
-            {activeStep.type === 'identification' && (
-              <div
-                className="rounded-xl p-5 shadow-sm space-y-4"
-                style={{
-                  background: 'var(--form-card-bg)',
-                  ...((nameError || emailError) ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
-                }}
-              >
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-sm font-medium">Nome completo <span style={{ color: '#ef4444' }}>*</span></Label>
-                    <Input
-                      value={respondentName}
-                      onChange={e => { setRespondentName(e.target.value); if (nameError) setNameError(''); }}
-                      placeholder="Seu nome completo"
-                      className="mt-1"
-                      maxLength={100}
-                      autoFocus
-                      style={nameError ? { boxShadow: '0 0 0 1px #ef4444' } : {}}
-                    />
-                    {nameError && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{nameError}</p>}
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium flex items-center gap-1">
-                      <Mail className="w-3 h-3" /> E-mail <span style={{ color: '#ef4444' }}>*</span>
-                    </Label>
-                    <Input
-                      type="email"
-                      value={respondentEmail}
-                      onChange={e => { setRespondentEmail(e.target.value); if (emailError) setEmailError(''); }}
-                      placeholder="seu@email.com"
-                      className="mt-1"
-                      maxLength={255}
-                      style={emailError ? { boxShadow: '0 0 0 1px #ef4444' } : {}}
-                    />
-                    {emailError && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{emailError}</p>}
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* ─── Section Fields Step ─────────────────────────────── */}
             {activeStep.type === 'section' && activeStep.fields.map((field, i) => (
               <motion.div
@@ -609,7 +630,7 @@ export default function PublicFormPage() {
                       field={field}
                       value={answers[field.id]}
                       onChange={val => updateAnswer(field.id, val)}
-                      onCepAutoFill={handleCepAutoFill}
+                      onCepAutoFill={(data) => handleCepAutoFill(data, field.id)}
                       isDark={isDark}
                     />
                     {validationErrors[field.id] && (
@@ -625,7 +646,6 @@ export default function PublicFormPage() {
             {/* ─── Review & LGPD Step ─────────────────────────────── */}
             {activeStep.type === 'lgpd_review' && (
               <>
-                {/* Review summary */}
                 <div className="rounded-xl p-5 shadow-sm space-y-4" style={{ background: 'var(--form-card-bg)' }}>
                   <h3 className="font-semibold text-sm flex items-center gap-2">
                     <Eye className="w-4 h-4" style={{ color: 'var(--form-primary)' }} />
@@ -633,14 +653,6 @@ export default function PublicFormPage() {
                   </h3>
 
                   <div className="space-y-3">
-                    {/* Identity */}
-                    <div className="rounded-lg p-3" style={{ background: isDark ? '#1e293b' : '#f8fafc' }}>
-                      <p className="text-xs font-medium mb-1" style={{ color: 'var(--form-muted)' }}>Identificação</p>
-                      <p className="text-sm font-medium">{respondentName || '—'}</p>
-                      <p className="text-sm" style={{ color: 'var(--form-muted)' }}>{respondentEmail || '—'}</p>
-                    </div>
-
-                    {/* Field answers grouped by section */}
                     {steps.filter(s => s.type === 'section').map((section, sIdx) => {
                       const sectionInputs = section.fields.filter(f => f.type !== 'info_text');
                       if (sectionInputs.length === 0) return null;
@@ -664,9 +676,7 @@ export default function PublicFormPage() {
                             const val = answers[field.id];
                             let displayVal = '—';
                             if (val !== undefined && val !== null && val !== '') {
-                              if (typeof val === 'object' && (val as any)?.cep) {
-                                displayVal = (val as any).endereco || (val as any).cep;
-                              } else if (Array.isArray(val)) {
+                              if (Array.isArray(val)) {
                                 displayVal = val.join(', ') || '—';
                               } else if (typeof val === 'boolean') {
                                 displayVal = val ? 'Sim' : 'Não';
@@ -800,7 +810,30 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
   isDark?: boolean;
 }) {
   const options = field.options || [];
+  const smartType = detectSmartType(field);
 
+  // Render by smart type first (overrides stored type for short_text fields)
+  if (smartType === 'cep') {
+    return <CepField value={(value as string) || ''} onChange={onChange} onAutoFill={onCepAutoFill} isDark={isDark} />;
+  }
+  if (smartType === 'cpf_cnpj') {
+    return <CpfCnpjField value={(value as string) || ''} onChange={onChange} />;
+  }
+  if (smartType === 'phone') {
+    return (
+      <Input
+        value={(value as string) || ''}
+        onChange={e => onChange(maskPhone(e.target.value))}
+        placeholder="(00) 00000-0000"
+        maxLength={15}
+      />
+    );
+  }
+  if (smartType === 'email') {
+    return <Input type="email" value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="exemplo@email.com" maxLength={255} />;
+  }
+
+  // Standard field types
   switch (field.type) {
     case 'short_text':
       return <Input value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="Sua resposta" maxLength={500} />;
@@ -831,7 +864,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
     case 'cpf_cnpj':
       return <CpfCnpjField value={(value as string) || ''} onChange={onChange} />;
     case 'cep':
-      return <CepField value={value as any} onChange={onChange} onAutoFill={onCepAutoFill} isDark={isDark} />;
+      return <CepField value={(value as string) || ''} onChange={onChange} onAutoFill={onCepAutoFill} isDark={isDark} />;
     case 'single_select':
       return (
         <RadioGroup value={(value as string) || ''} onValueChange={onChange}>
@@ -928,19 +961,18 @@ function CpfCnpjField({ value, onChange }: { value: string; onChange: (v: string
 
 // ─── CEP Field with BrasilAPI auto-fill ─────────────────────
 function CepField({ value, onChange, onAutoFill, isDark }: {
-  value: any;
-  onChange: (v: any) => void;
+  value: string;
+  onChange: (v: unknown) => void;
   onAutoFill?: (data: CepData) => void;
   isDark?: boolean;
 }) {
-  const [cepInput, setCepInput] = useState((value?.cep as string) || '');
   const [loading, setLoading] = useState(false);
-  const [cepData, setCepData] = useState<CepData | null>(value?.data || null);
+  const [cepData, setCepData] = useState<CepData | null>(null);
   const [error, setError] = useState('');
 
   const handleCepChange = async (raw: string) => {
     const masked = maskCep(raw);
-    setCepInput(masked);
+    onChange(masked);
     setError('');
 
     const digits = masked.replace(/\D/g, '');
@@ -949,19 +981,16 @@ function CepField({ value, onChange, onAutoFill, isDark }: {
       try {
         const data = await fetchCepData(digits);
         setCepData(data);
-        onChange({ cep: masked, data, endereco: `${data.street}, ${data.neighborhood}, ${data.city} - ${data.state}` });
         onAutoFill?.(data);
-        toast.success('Endereço encontrado automaticamente!');
+        toast.success('Endereço encontrado! Campos preenchidos automaticamente.');
       } catch {
         setError('CEP não encontrado');
         setCepData(null);
-        onChange({ cep: masked, data: null, endereco: '' });
       } finally {
         setLoading(false);
       }
     } else {
       setCepData(null);
-      onChange({ cep: masked, data: null, endereco: '' });
     }
   };
 
@@ -969,7 +998,7 @@ function CepField({ value, onChange, onAutoFill, isDark }: {
     <div className="space-y-3">
       <div className="relative">
         <Input
-          value={cepInput}
+          value={(value as string) || ''}
           onChange={e => handleCepChange(e.target.value)}
           placeholder="00000-000"
           maxLength={9}
@@ -993,10 +1022,10 @@ function CepField({ value, onChange, onAutoFill, isDark }: {
           >
             <div className="flex items-center gap-1.5 font-medium text-xs" style={{ color: 'var(--form-primary)' }}>
               <MapPin className="w-3.5 h-3.5" />
-              Endereço preenchido automaticamente
+              Endereço encontrado
             </div>
             {cepData.street && <p className="text-xs">{cepData.street}</p>}
-            <p className="text-xs">{cepData.neighborhood}</p>
+            {cepData.neighborhood && <p className="text-xs">{cepData.neighborhood}</p>}
             <p className="text-xs font-medium">{cepData.city} - {cepData.state}</p>
           </motion.div>
         )}
