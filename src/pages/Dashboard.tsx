@@ -47,7 +47,8 @@ const DashboardSkeleton = () => (
 export const Dashboard: React.FC = () => {
   const { profile, role } = useAuth();
   const { hasPermission } = usePermissions();
-  const { activeProject: project, projects, isLoadingProjects: projectsLoading, activities, isLoadingActivities: activitiesLoading } = useAppData();
+  const { activeProject: project, projects, isLoadingProjects: projectsLoading } = useProjectData();
+  const { activities, isLoadingActivities: activitiesLoading } = useActivityData();
   const canCreateProject = role === 'SUPER_ADMIN' || role === 'ADMIN';
   const isAdminUser = role === 'SUPER_ADMIN' || role === 'ADMIN';
   const { getSummary, getOverdueTrackings, refreshStatuses } = useSlaTracking(project?.id);
