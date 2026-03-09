@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForms } from './hooks/useForms';
 import { useAppData } from '@/contexts/AppDataContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,11 +12,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Search, FileText, Trash2, Pencil, ClipboardList } from 'lucide-react';
+import { PlusCircle, Search, FileText, Trash2, Pencil, ClipboardList, LayoutTemplate, CheckCircle2 } from 'lucide-react';
 import { CATEGORIES } from './types';
+import { FORM_TEMPLATES, type FormTemplate } from './templates';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
 
 export default function FormsListPage() {
   const { forms, isLoading, createForm, deleteForm } = useForms();
@@ -26,25 +29,77 @@ export default function FormsListPage() {
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newCategory, setNewCategory] = useState('geral');
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('em_branco');
+  const [isCreating, setIsCreating] = useState(false);
 
   const filtered = forms.filter(f =>
     f.title.toLowerCase().includes(search.toLowerCase()) ||
     f.description.toLowerCase().includes(search.toLowerCase())
   );
 
+  const activeTemplate = FORM_TEMPLATES.find(t => t.id === selectedTemplate);
+
+  const handleSelectTemplate = (tpl: FormTemplate) => {
+    setSelectedTemplate(tpl.id);
+    if (tpl.id !== 'em_branco') {
+      if (!newTitle.trim()) setNewTitle(tpl.name);
+      if (!newDesc.trim()) setNewDesc(tpl.description);
+      setNewCategory(tpl.category);
+    }
+  };
+
   const handleCreate = async () => {
     if (!newTitle.trim()) return;
-    const result = await createForm.mutateAsync({
-      title: newTitle,
-      description: newDesc,
-      category: newCategory,
-      project_id: activeProjectId || null,
-    });
-    setShowCreate(false);
-    setNewTitle('');
-    setNewDesc('');
-    setNewCategory('geral');
-    navigate(`/forms/${result.id}`);
+    setIsCreating(true);
+    try {
+      const result = await createForm.mutateAsync({
+        title: newTitle,
+        description: newDesc,
+        category: newCategory,
+        project_id: activeProjectId || null,
+      });
+
+      // Insert template fields if any
+      if (activeTemplate && activeTemplate.fields.length > 0) {
+        const fieldsToInsert = activeTemplate.fields.map((f, i) => ({
+          form_id: result.id,
+          type: f.type,
+          label: f.label,
+          description: f.description,
+          required: f.required,
+          options: f.options as any,
+          settings: f.settings as any,
+          sort_order: i,
+        }));
+
+        const { error } = await supabase.from('form_fields').insert(fieldsToInsert);
+        if (error) {
+          console.error('Error inserting template fields:', error);
+          toast.error('Formulário criado, mas houve erro ao aplicar o template.');
+        }
+      }
+
+      setShowCreate(false);
+      setNewTitle('');
+      setNewDesc('');
+      setNewCategory('geral');
+      setSelectedTemplate('em_branco');
+      navigate(`/forms/${result.id}`);
+    } catch {
+      // error handled by mutation
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const resetDialog = (open: boolean) => {
+    setShowCreate(open);
+    if (!open) {
+      setNewTitle('');
+      setNewDesc('');
+      setNewCategory('geral');
+      setSelectedTemplate('em_branco');
+    }
   };
 
   return (
@@ -58,7 +113,7 @@ export default function FormsListPage() {
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Crie e gerencie formulários online configuráveis</p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="gap-2">
+        <Button onClick={() => resetDialog(true)} className="gap-2">
           <PlusCircle className="w-4 h-4" /> Novo Formulário
         </Button>
       </div>
@@ -123,19 +178,52 @@ export default function FormsListPage() {
       )}
 
       {/* Create Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent>
+      <Dialog open={showCreate} onOpenChange={resetDialog}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Novo Formulário</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Template selector */}
+            <div>
+              <Label className="flex items-center gap-1.5 mb-2">
+                <LayoutTemplate className="w-4 h-4 text-primary" />
+                Modelo
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                {FORM_TEMPLATES.map(tpl => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => handleSelectTemplate(tpl)}
+                    className={`text-left p-3 rounded-lg border-2 transition-all hover:shadow-sm ${
+                      selectedTemplate === tpl.id
+                        ? 'border-primary bg-primary/5'
+                        : 'border-border hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-1">
+                      <span className="font-medium text-sm text-foreground leading-tight">{tpl.name}</span>
+                      {selectedTemplate === tpl.id && (
+                        <CheckCircle2 className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{tpl.description}</p>
+                    {tpl.fields.length > 0 && (
+                      <span className="text-xs text-primary/70 mt-1 inline-block">{tpl.fields.length} campos</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div>
               <Label>Título *</Label>
               <Input value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Nome do formulário" />
             </div>
             <div>
               <Label>Descrição</Label>
-              <Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Descreva o objetivo..." rows={3} />
+              <Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Descreva o objetivo..." rows={2} />
             </div>
             <div>
               <Label>Categoria</Label>
@@ -148,9 +236,9 @@ export default function FormsListPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreate(false)}>Cancelar</Button>
-            <Button onClick={handleCreate} disabled={!newTitle.trim() || createForm.isPending}>
-              {createForm.isPending ? 'Criando...' : 'Criar Formulário'}
+            <Button variant="outline" onClick={() => resetDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCreate} disabled={!newTitle.trim() || isCreating}>
+              {isCreating ? 'Criando...' : 'Criar Formulário'}
             </Button>
           </DialogFooter>
         </DialogContent>
