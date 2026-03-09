@@ -29,26 +29,16 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 const DashboardSkeleton = () => (
-  <div className="space-y-6 animate-fadeIn">
+  <div className="space-y-6">
     <Skeleton className="h-8 w-64" />
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       {[...Array(4)].map((_, i) => (
-        <div key={i} className="bg-card p-6 rounded-lg border border-border">
-          <Skeleton className="h-4 w-24 mb-3" />
-          <Skeleton className="h-9 w-16" />
-        </div>
+        <StaggerItem key={i}><StatCardSkeleton /></StaggerItem>
       ))}
-    </div>
+    </StaggerContainer>
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {[...Array(2)].map((_, i) => (
-        <Card key={i}>
-          <CardHeader><Skeleton className="h-5 w-40" /></CardHeader>
-          <CardContent className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
-          </CardContent>
-        </Card>
+        <FadeIn key={i} delay={0.2 + i * 0.1}><CardSkeleton /></FadeIn>
       ))}
     </div>
   </div>
