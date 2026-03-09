@@ -57,6 +57,7 @@ const MaturityAuditReport = lazy(() => import('@/pages/MaturityAuditReport'));
 const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m.MfaVerify })));
 const FormsListPage = lazy(() => import('@/modules/gira-forms/FormsListPage'));
 const FormBuilderPage = lazy(() => import('@/modules/gira-forms/FormBuilderPage'));
+const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -312,6 +313,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/lgpd" element={<PrivacyPolicy />} />
         <Route path="/licenca" element={<TermsOfUse />} />
         <Route path="/diario/login" element={<DiaryLogin />} />
+        <Route path="/f/:id" element={<Suspense fallback={<PageFallback />}><PublicFormPage /></Suspense>} />
         <Route path="/consentimento" element={
           <ProtectedRoute>
             <LgpdConsent />
