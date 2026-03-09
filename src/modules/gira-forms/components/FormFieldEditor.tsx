@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GripVertical, Trash2, ChevronDown, ChevronUp, PlusCircle, X, SeparatorHorizontal, Info, GitBranch } from 'lucide-react';
-import { FIELD_TYPE_LABELS, type FormField, type FieldType, type FieldCondition } from '../types';
+import { FIELD_TYPE_LABELS, type FormField, type FieldType, type FieldCondition, type FieldConditionGroup, type ConditionLogic } from '../types';
 
 interface Props {
   field: FormField;
@@ -27,32 +27,34 @@ const CONDITION_OPERATORS: { value: FieldCondition['operator']; label: string }[
   { value: 'is_empty', label: 'Está vazio' },
 ];
 
+function parseLegacyCondition(raw: unknown): FieldConditionGroup | null {
+  if (!raw) return null;
+  if ((raw as any).conditions) return raw as FieldConditionGroup;
+  if ((raw as any).field_id) return { logic: 'AND', conditions: [raw as FieldCondition] };
+  return null;
+}
+
 export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdit, onUpdate, onDelete, allFields = [] }) => {
   const [label, setLabel] = useState(field.label);
   const [description, setDescription] = useState(field.description);
   const [required, setRequired] = useState(field.required);
   const [type, setType] = useState<FieldType>(field.type as FieldType);
   const [options, setOptions] = useState<string[]>(field.options || []);
-  const [condition, setCondition] = useState<FieldCondition | null>(
-    (field.settings?.condition as FieldCondition) || null
+  const [conditionGroup, setConditionGroup] = useState<FieldConditionGroup | null>(
+    () => parseLegacyCondition(field.settings?.condition)
   );
 
   const hasOptions = ['single_select', 'multi_select', 'checkbox'].includes(type);
   const isNonInput = NON_INPUT_TYPES.includes(type);
 
-  // Fields that can be used as condition source (before this field, input types only)
   const conditionSourceFields = allFields.filter(
     f => f.sort_order < field.sort_order && !NON_INPUT_TYPES.includes(f.type as FieldType)
   );
 
-  const conditionSourceField = conditionSourceFields.find(f => f.id === condition?.field_id);
-  const conditionHasValueField = condition && !['not_empty', 'is_empty'].includes(condition.operator);
-  const conditionSourceOptions = conditionSourceField?.options || [];
-
   const handleSave = async () => {
     const newSettings = { ...field.settings };
-    if (condition && condition.field_id) {
-      newSettings.condition = condition;
+    if (conditionGroup && conditionGroup.conditions.length > 0 && conditionGroup.conditions.some(c => c.field_id)) {
+      newSettings.condition = conditionGroup;
     } else {
       delete newSettings.condition;
     }
@@ -66,16 +68,41 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     setRequired(field.required);
     setType(field.type as FieldType);
     setOptions(field.options || []);
-    setCondition((field.settings?.condition as FieldCondition) || null);
+    setConditionGroup(parseLegacyCondition(field.settings?.condition));
   }, [field]);
 
   const getIcon = () => {
     if (type === 'section_header') return <SeparatorHorizontal className="w-4 h-4 text-primary" />;
-    if (type === 'info_text') return <Info className="w-4 h-4 text-blue-500" />;
+    if (type === 'info_text') return <Info className="w-4 h-4 text-primary" />;
     return null;
   };
 
-  const hasCondition = !!(field.settings?.condition as FieldCondition)?.field_id;
+  const hasCondition = !!(parseLegacyCondition(field.settings?.condition))?.conditions?.some(c => c.field_id);
+
+  const updateCondition = (index: number, updates: Partial<FieldCondition>) => {
+    if (!conditionGroup) return;
+    const next = [...conditionGroup.conditions];
+    next[index] = { ...next[index], ...updates };
+    setConditionGroup({ ...conditionGroup, conditions: next });
+  };
+
+  const addCondition = () => {
+    if (!conditionGroup) {
+      setConditionGroup({ logic: 'AND', conditions: [{ field_id: '', operator: 'equals', value: '' }] });
+    } else {
+      setConditionGroup({ ...conditionGroup, conditions: [...conditionGroup.conditions, { field_id: '', operator: 'equals', value: '' }] });
+    }
+  };
+
+  const removeCondition = (index: number) => {
+    if (!conditionGroup) return;
+    const next = conditionGroup.conditions.filter((_, i) => i !== index);
+    if (next.length === 0) {
+      setConditionGroup(null);
+    } else {
+      setConditionGroup({ ...conditionGroup, conditions: next });
+    }
+  };
 
   return (
     <Card className={`transition-all ${isEditing ? 'ring-2 ring-primary/30' : 'hover:shadow-sm'} ${isNonInput ? 'border-l-4 border-l-primary/40' : ''}`}>
@@ -94,7 +121,7 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
                   {required && !isNonInput && <span className="text-destructive text-xs">*</span>}
                   <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{FIELD_TYPE_LABELS[type]}</span>
                   {hasCondition && (
-                    <span className="text-xs text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded flex items-center gap-0.5">
+                    <span className="text-xs text-accent-foreground bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5">
                       <GitBranch className="w-3 h-3" /> Condicional
                     </span>
                   )}
@@ -158,67 +185,111 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
                   </div>
                 )}
 
-                {/* Conditional Logic */}
+                {/* Conditional Logic - Multiple conditions with AND/OR */}
                 {conditionSourceFields.length > 0 && (
-                  <div className="border rounded-lg p-3 space-y-2 bg-amber-50/50">
+                  <div className="border rounded-lg p-3 space-y-2 bg-accent/30">
                     <div className="flex items-center justify-between">
                       <Label className="text-xs font-semibold flex items-center gap-1">
-                        <GitBranch className="w-3.5 h-3.5 text-amber-600" /> Lógica Condicional
+                        <GitBranch className="w-3.5 h-3.5 text-primary" /> Lógica Condicional
                       </Label>
-                      {condition ? (
-                        <Button size="sm" variant="ghost" className="h-6 text-xs text-destructive" onClick={() => setCondition(null)}>
-                          Remover
+                      {conditionGroup ? (
+                        <Button size="sm" variant="ghost" className="h-6 text-xs text-destructive" onClick={() => setConditionGroup(null)}>
+                          Remover tudo
                         </Button>
                       ) : (
-                        <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={() => setCondition({ field_id: '', operator: 'equals', value: '' })}>
+                        <Button size="sm" variant="ghost" className="h-6 text-xs" onClick={addCondition}>
                           Adicionar
                         </Button>
                       )}
                     </div>
-                    {condition && (
-                      <div className="space-y-2">
-                        <div>
-                          <Label className="text-xs">Mostrar este campo quando</Label>
-                          <Select value={condition.field_id} onValueChange={v => setCondition({ ...condition, field_id: v, value: '' })}>
-                            <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue placeholder="Selecione um campo..." /></SelectTrigger>
-                            <SelectContent>
-                              {conditionSourceFields.map(f => (
-                                <SelectItem key={f.id} value={f.id} className="text-xs">{f.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Select value={condition.operator} onValueChange={v => setCondition({ ...condition, operator: v as FieldCondition['operator'] })}>
-                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {CONDITION_OPERATORS.map(op => (
-                                <SelectItem key={op.value} value={op.value} className="text-xs">{op.label}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        {conditionHasValueField && (
-                          <div>
-                            {conditionSourceOptions.length > 0 ? (
-                              <Select value={condition.value || ''} onValueChange={v => setCondition({ ...condition, value: v })}>
-                                <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione o valor..." /></SelectTrigger>
-                                <SelectContent>
-                                  {conditionSourceOptions.map((opt, i) => (
-                                    <SelectItem key={i} value={opt} className="text-xs">{opt}</SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            ) : (
-                              <Input
-                                value={condition.value || ''}
-                                onChange={e => setCondition({ ...condition, value: e.target.value })}
-                                placeholder="Valor esperado"
-                                className="h-8 text-xs"
-                              />
-                            )}
+                    {conditionGroup && (
+                      <div className="space-y-3">
+                        {/* AND/OR toggle */}
+                        {conditionGroup.conditions.length > 1 && (
+                          <div className="flex items-center gap-2">
+                            <Label className="text-xs">Combinar com:</Label>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant={conditionGroup.logic === 'AND' ? 'default' : 'outline'}
+                                className="h-6 text-xs px-2"
+                                onClick={() => setConditionGroup({ ...conditionGroup, logic: 'AND' })}
+                              >
+                                E (todas)
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant={conditionGroup.logic === 'OR' ? 'default' : 'outline'}
+                                className="h-6 text-xs px-2"
+                                onClick={() => setConditionGroup({ ...conditionGroup, logic: 'OR' })}
+                              >
+                                OU (qualquer)
+                              </Button>
+                            </div>
                           </div>
                         )}
+
+                        {conditionGroup.conditions.map((cond, idx) => {
+                          const sourceField = conditionSourceFields.find(f => f.id === cond.field_id);
+                          const sourceOptions = sourceField?.options || [];
+                          const needsValue = cond.operator && !['not_empty', 'is_empty'].includes(cond.operator);
+
+                          return (
+                            <div key={idx} className="space-y-1.5 border rounded p-2 bg-background relative">
+                              {idx > 0 && (
+                                <div className="absolute -top-3 left-3 bg-accent text-accent-foreground text-[10px] px-1.5 py-0.5 rounded font-semibold">
+                                  {conditionGroup.logic === 'AND' ? 'E' : 'OU'}
+                                </div>
+                              )}
+                              <div className="flex items-start gap-1">
+                                <div className="flex-1 space-y-1.5">
+                                  <Select value={cond.field_id} onValueChange={v => updateCondition(idx, { field_id: v, value: '' })}>
+                                    <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione um campo..." /></SelectTrigger>
+                                    <SelectContent>
+                                      {conditionSourceFields.map(f => (
+                                        <SelectItem key={f.id} value={f.id} className="text-xs">{f.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  <Select value={cond.operator} onValueChange={v => updateCondition(idx, { operator: v as FieldCondition['operator'] })}>
+                                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                      {CONDITION_OPERATORS.map(op => (
+                                        <SelectItem key={op.value} value={op.value} className="text-xs">{op.label}</SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {needsValue && (
+                                    sourceOptions.length > 0 ? (
+                                      <Select value={cond.value || ''} onValueChange={v => updateCondition(idx, { value: v })}>
+                                        <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Selecione o valor..." /></SelectTrigger>
+                                        <SelectContent>
+                                          {sourceOptions.map((opt, i) => (
+                                            <SelectItem key={i} value={opt} className="text-xs">{opt}</SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                    ) : (
+                                      <Input
+                                        value={cond.value || ''}
+                                        onChange={e => updateCondition(idx, { value: e.target.value })}
+                                        placeholder="Valor esperado"
+                                        className="h-8 text-xs"
+                                      />
+                                    )
+                                  )}
+                                </div>
+                                <Button size="icon" variant="ghost" className="h-7 w-7 shrink-0 text-destructive" onClick={() => removeCondition(idx)}>
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={addCondition}>
+                          <PlusCircle className="w-3 h-3" /> Adicionar condição
+                        </Button>
                       </div>
                     )}
                   </div>
