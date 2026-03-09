@@ -161,6 +161,7 @@ export default function FormBuilderPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="editor">Editor</TabsTrigger>
+          <TabsTrigger value="preview">Visualizar</TabsTrigger>
           <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="responses">Respostas</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
@@ -225,6 +226,17 @@ export default function FormBuilderPage() {
                 ))}
               </div>
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="preview" className="mt-4">
+          <div className="border rounded-lg overflow-hidden bg-background" style={{ height: 'calc(100vh - 220px)' }}>
+            <iframe
+              key={activeTab === 'preview' ? 'preview-active' : 'preview-idle'}
+              src={`${window.location.origin}/f/${slugOrId}`}
+              className="w-full h-full border-0"
+              title="Pré-visualização do formulário"
+            />
           </div>
         </TabsContent>
 
