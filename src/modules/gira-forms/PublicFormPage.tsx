@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { maskPhone, maskCpfCnpj } from '@/lib/masks';
+import { maskPhone, maskCpfCnpj, maskCpf, maskCnpj } from '@/lib/masks';
 import type { Form, FormField, FormDesignSettings, FieldCondition, FieldConditionGroup } from './types';
 
 // ─── CEP API ────────────────────────────────────────────────
@@ -52,7 +52,8 @@ function detectSmartType(field: FormField): 'cep' | 'cpf' | 'cnpj' | 'cpf_cnpj' 
   const label = field.label.toLowerCase();
   if (/^cep$/i.test(field.label.trim()) || /\bcep\b/.test(label)) return 'cep';
   if (/\bcpf\b.*\bcnpj\b|\bcnpj\b.*\bcpf\b/.test(label)) return 'cpf_cnpj';
-  if (/\bcpf\b/.test(label) && !/cnpj/.test(label)) return 'cpf_cnpj';
+  if (/\bcpf\b/.test(label) && !/cnpj/.test(label)) return 'cpf';
+  if (/\bcnpj\b/.test(label) && !/cpf/.test(label)) return 'cnpj';
   if (/\bcelular\b|\btelefone\b|\bfone\b|\bwhatsapp\b/.test(label)) return 'phone';
   if (/\be-?mail\b/.test(label) && !/social/.test(label)) return 'email';
   return null;
@@ -367,6 +368,14 @@ export default function PublicFormPage() {
       if (smart === 'cpf_cnpj' || field.type === 'cpf_cnpj') {
         const digits = String(val).replace(/\D/g, '');
         if (digits.length !== 11 && digits.length !== 14) errors[field.id] = 'CPF (11) ou CNPJ (14) dígitos';
+      }
+      if (smart === 'cpf') {
+        const digits = String(val).replace(/\D/g, '');
+        if (digits.length !== 11) errors[field.id] = 'CPF deve ter 11 dígitos';
+      }
+      if (smart === 'cnpj') {
+        const digits = String(val).replace(/\D/g, '');
+        if (digits.length !== 14) errors[field.id] = 'CNPJ deve ter 14 dígitos';
       }
       if (smart === 'phone') {
         if (String(val).replace(/\D/g, '').length < 10) errors[field.id] = 'Telefone inválido';
@@ -819,6 +828,12 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
   if (smartType === 'cpf_cnpj') {
     return <CpfCnpjField value={(value as string) || ''} onChange={onChange} />;
   }
+  if (smartType === 'cpf') {
+    return <CpfOnlyField value={(value as string) || ''} onChange={onChange} />;
+  }
+  if (smartType === 'cnpj') {
+    return <CnpjOnlyField value={(value as string) || ''} onChange={onChange} />;
+  }
   if (smartType === 'phone') {
     return (
       <Input
@@ -955,6 +970,50 @@ function CpfCnpjField({ value, onChange }: { value: string; onChange: (v: string
           </motion.span>
         )}
       </div>
+    </div>
+  );
+}
+
+// ─── CPF Only Field ─────────────────────────────────────────
+function CpfOnlyField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const digits = value.replace(/\D/g, '');
+  const isComplete = digits.length === 11;
+
+  return (
+    <div className="space-y-1">
+      <Input
+        value={value}
+        onChange={e => onChange(maskCpf(e.target.value))}
+        placeholder="000.000.000-00"
+        maxLength={14}
+      />
+      {isComplete && (
+        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px]" style={{ color: 'var(--form-primary)' }}>
+          ✓ CPF válido
+        </motion.span>
+      )}
+    </div>
+  );
+}
+
+// ─── CNPJ Only Field ────────────────────────────────────────
+function CnpjOnlyField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const digits = value.replace(/\D/g, '');
+  const isComplete = digits.length === 14;
+
+  return (
+    <div className="space-y-1">
+      <Input
+        value={value}
+        onChange={e => onChange(maskCnpj(e.target.value))}
+        placeholder="00.000.000/0001-00"
+        maxLength={18}
+      />
+      {isComplete && (
+        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px]" style={{ color: 'var(--form-primary)' }}>
+          ✓ CNPJ válido
+        </motion.span>
+      )}
     </div>
   );
 }
