@@ -62,7 +62,9 @@ export default function FormBuilderPage() {
 
   const handleSaveForm = async () => {
     if (!id) return;
-    await updateForm.mutateAsync({ id, title, description, category, status });
+    const slugToSave = publicSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || undefined;
+    await updateForm.mutateAsync({ id, title, description, category, status, public_slug: slugToSave });
+    if (slugToSave) setPublicSlug(slugToSave);
   };
 
   const handleAddField = async (type: FieldType) => {
