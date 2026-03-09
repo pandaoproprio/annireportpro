@@ -140,13 +140,13 @@ export default function FormBuilderPage() {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="editor">Editor</TabsTrigger>
+          <TabsTrigger value="design">Design</TabsTrigger>
           <TabsTrigger value="responses">Respostas</TabsTrigger>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
         </TabsList>
 
         <TabsContent value="editor" className="mt-4">
           <div className="grid lg:grid-cols-[1fr_300px] gap-6">
-            {/* Fields area */}
             <div className="space-y-4">
               <Card>
                 <CardContent className="p-4 space-y-3">
@@ -192,7 +192,6 @@ export default function FormBuilderPage() {
               )}
             </div>
 
-            {/* Sidebar */}
             <div className="space-y-3">
               <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Adicionar Campo</h3>
               <div className="grid grid-cols-1 gap-2">
@@ -204,6 +203,18 @@ export default function FormBuilderPage() {
                 ))}
               </div>
             </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="design" className="mt-4">
+          <div className="max-w-2xl">
+            <FormDesignEditor
+              settings={(form.settings || {}) as FormDesignSettings}
+              onSave={async (newSettings) => {
+                await updateForm.mutateAsync({ id: id!, settings: newSettings as any });
+                formQuery.refetch();
+              }}
+            />
           </div>
         </TabsContent>
 
