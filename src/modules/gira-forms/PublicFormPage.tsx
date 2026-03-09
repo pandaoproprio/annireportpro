@@ -515,7 +515,7 @@ export default function PublicFormPage() {
         {/* Form Header Card */}
         <div className="rounded-xl p-5 shadow-md" style={{ background: 'var(--form-card-bg)', borderTop: `4px solid var(--form-primary)` }}>
           {design.headerImageUrl && (
-            <img src={design.headerImageUrl} alt="" className="w-full h-20 object-contain mb-3" />
+            <img src={design.headerImageUrl} alt="" className="w-full max-h-48 object-contain mb-4" />
           )}
           <div className="flex items-start gap-3">
             {design.logoUrl && (
