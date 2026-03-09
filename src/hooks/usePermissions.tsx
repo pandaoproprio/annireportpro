@@ -64,6 +64,11 @@ export const RBAC_MODULES = [
     label: 'Excluir Projetos',
     actions: [] as const,
   },
+  {
+    key: 'forms',
+    label: 'GIRA Forms',
+    actions: ['create', 'edit', 'delete', 'export'] as const,
+  },
 ] as const;
 
 export const usePermissions = () => {
