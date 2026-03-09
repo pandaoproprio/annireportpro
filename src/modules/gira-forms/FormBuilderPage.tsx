@@ -140,6 +140,7 @@ export default function FormBuilderPage() {
         <TabsList>
           <TabsTrigger value="editor">Editor</TabsTrigger>
           <TabsTrigger value="responses">Respostas</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
         </TabsList>
 
         <TabsContent value="editor" className="mt-4">
@@ -206,7 +207,11 @@ export default function FormBuilderPage() {
         </TabsContent>
 
         <TabsContent value="responses" className="mt-4">
-          <FormResponsesTab formId={id!} fields={fields} />
+          <FormResponsesTab formId={id!} form={form} fields={fields} />
+        </TabsContent>
+
+        <TabsContent value="dashboard" className="mt-4">
+          <FormDashboardTab formId={id!} fields={fields} />
         </TabsContent>
       </Tabs>
     </motion.div>
