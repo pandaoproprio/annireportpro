@@ -26,15 +26,19 @@ export default function PublicFormPage() {
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [lgpdError, setLgpdError] = useState(false);
 
+  // Detect if param is UUID or slug
+  const isUuid = id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) : false;
+
   const formQuery = useQuery({
     queryKey: ['public-form', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('forms')
-        .select('*')
-        .eq('id', id!)
-        .eq('status', 'ativo')
-        .single();
+      let query = supabase.from('forms').select('*').eq('status', 'ativo');
+      if (isUuid) {
+        query = query.eq('id', id!);
+      } else {
+        query = query.eq('public_slug' as any, id!);
+      }
+      const { data, error } = await query.single();
       if (error) throw error;
       return data as unknown as Form;
     },
