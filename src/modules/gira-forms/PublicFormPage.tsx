@@ -513,10 +513,13 @@ export default function PublicFormPage() {
         )}
 
         {/* Form Header Card */}
-        <div className="rounded-xl p-5 shadow-md" style={{ background: 'var(--form-card-bg)', borderTop: `4px solid var(--form-primary)` }}>
+        <div className="rounded-xl overflow-hidden shadow-md" style={{ background: 'var(--form-card-bg)', borderTop: `4px solid var(--form-primary)` }}>
           {design.headerImageUrl && (
-            <img src={design.headerImageUrl} alt="" className="w-full max-h-48 object-contain mb-4" />
+            <div className="w-full h-40 -mt-0">
+              <img src={design.headerImageUrl} alt="" className="w-full h-full object-cover" />
+            </div>
           )}
+          <div className="p-5">
           <div className="flex items-start gap-3">
             {design.logoUrl && (
               <img src={design.logoUrl} alt="Logo" className="h-10 w-10 object-contain rounded" />
@@ -567,6 +570,7 @@ export default function PublicFormPage() {
                 />
               ))}
             </div>
+          </div>
           </div>
         </div>
 
