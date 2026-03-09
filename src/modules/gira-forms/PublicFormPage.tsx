@@ -32,13 +32,16 @@ export default function PublicFormPage() {
   const formQuery = useQuery({
     queryKey: ['public-form', id],
     queryFn: async () => {
-      let query = supabase.from('forms').select('*').eq('status', 'ativo');
+      let data: any;
+      let error: any;
       if (isUuid) {
-        query = query.eq('id', id!);
+        const res = await supabase.from('forms').select('*').eq('status', 'ativo').eq('id', id!).single();
+        data = res.data; error = res.error;
       } else {
-        query = query.eq('public_slug' as any, id!);
+        // Query by slug using raw filter to avoid deep type instantiation
+        const res = await supabase.from('forms').select('*').eq('status', 'ativo').filter('public_slug', 'eq', id!).single();
+        data = res.data; error = res.error;
       }
-      const { data, error } = await query.single();
       if (error) throw error;
       return data as unknown as Form;
     },
