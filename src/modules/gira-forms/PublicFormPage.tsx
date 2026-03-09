@@ -73,22 +73,32 @@ export default function PublicFormPage() {
   const fields = fieldsQuery.data || [];
   const design: FormDesignSettings = (form?.settings || {}) as FormDesignSettings;
 
-  // Evaluate field conditions
-  const isFieldVisible = (field: FormField): boolean => {
-    const condition = field.settings?.condition as FieldCondition | undefined;
-    if (!condition || !condition.field_id) return true;
-    
-    const answer = answers[condition.field_id];
+  // Evaluate a single condition
+  const evalCondition = (cond: FieldCondition): boolean => {
+    if (!cond.field_id) return true;
+    const answer = answers[cond.field_id];
     const strVal = answer == null ? '' : Array.isArray(answer) ? answer.join(', ') : String(answer);
-    
-    switch (condition.operator) {
-      case 'equals': return strVal === condition.value;
-      case 'not_equals': return strVal !== condition.value;
-      case 'contains': return strVal.toLowerCase().includes((condition.value || '').toLowerCase());
+    switch (cond.operator) {
+      case 'equals': return strVal === cond.value;
+      case 'not_equals': return strVal !== cond.value;
+      case 'contains': return strVal.toLowerCase().includes((cond.value || '').toLowerCase());
       case 'not_empty': return strVal !== '';
       case 'is_empty': return strVal === '';
       default: return true;
     }
+  };
+
+  // Evaluate field conditions (supports legacy single + new group format)
+  const isFieldVisible = (field: FormField): boolean => {
+    const raw = field.settings?.condition;
+    if (!raw) return true;
+    // Legacy single condition
+    if ((raw as any).field_id) return evalCondition(raw as FieldCondition);
+    // Group format
+    const group = raw as FieldConditionGroup;
+    if (!group.conditions || group.conditions.length === 0) return true;
+    if (group.logic === 'OR') return group.conditions.some(evalCondition);
+    return group.conditions.every(evalCondition);
   };
 
   const visibleFields = fields.filter(isFieldVisible);
