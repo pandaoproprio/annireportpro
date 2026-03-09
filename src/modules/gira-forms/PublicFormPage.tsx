@@ -974,6 +974,50 @@ function CpfCnpjField({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
+// ─── CPF Only Field ─────────────────────────────────────────
+function CpfOnlyField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const digits = value.replace(/\D/g, '');
+  const isComplete = digits.length === 11;
+
+  return (
+    <div className="space-y-1">
+      <Input
+        value={value}
+        onChange={e => onChange(maskCpf(e.target.value))}
+        placeholder="000.000.000-00"
+        maxLength={14}
+      />
+      {isComplete && (
+        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px]" style={{ color: 'var(--form-primary)' }}>
+          ✓ CPF válido
+        </motion.span>
+      )}
+    </div>
+  );
+}
+
+// ─── CNPJ Only Field ────────────────────────────────────────
+function CnpjOnlyField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const digits = value.replace(/\D/g, '');
+  const isComplete = digits.length === 14;
+
+  return (
+    <div className="space-y-1">
+      <Input
+        value={value}
+        onChange={e => onChange(maskCnpj(e.target.value))}
+        placeholder="00.000.000/0001-00"
+        maxLength={18}
+      />
+      {isComplete && (
+        <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[10px]" style={{ color: 'var(--form-primary)' }}>
+          ✓ CNPJ válido
+        </motion.span>
+      )}
+    </div>
+  );
+}
+
 // ─── CEP Field with BrasilAPI auto-fill ─────────────────────
 function CepField({ value, onChange, onAutoFill, isDark }: {
   value: string;
