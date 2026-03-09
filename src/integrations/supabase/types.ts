@@ -430,6 +430,7 @@ export type Database = {
           description: string
           id: string
           project_id: string | null
+          public_slug: string | null
           settings: Json
           status: string
           title: string
@@ -442,6 +443,7 @@ export type Database = {
           description?: string
           id?: string
           project_id?: string | null
+          public_slug?: string | null
           settings?: Json
           status?: string
           title?: string
@@ -454,6 +456,7 @@ export type Database = {
           description?: string
           id?: string
           project_id?: string | null
+          public_slug?: string | null
           settings?: Json
           status?: string
           title?: string

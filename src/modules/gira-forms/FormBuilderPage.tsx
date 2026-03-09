@@ -41,6 +41,7 @@ export default function FormBuilderPage() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('geral');
   const [status, setStatus] = useState<'ativo' | 'inativo'>('ativo');
+  const [publicSlug, setPublicSlug] = useState('');
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [localFields, setLocalFields] = useState<FormField[]>([]);
   const [activeTab, setActiveTab] = useState('editor');
@@ -51,6 +52,7 @@ export default function FormBuilderPage() {
       setDescription(form.description);
       setCategory(form.category);
       setStatus(form.status);
+      setPublicSlug((form as any).public_slug || '');
     }
   }, [form]);
 
@@ -60,7 +62,9 @@ export default function FormBuilderPage() {
 
   const handleSaveForm = async () => {
     if (!id) return;
-    await updateForm.mutateAsync({ id, title, description, category, status });
+    const slugToSave = publicSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || undefined;
+    await updateForm.mutateAsync({ id, title, description, category, status, public_slug: slugToSave });
+    if (slugToSave) setPublicSlug(slugToSave);
   };
 
   const handleAddField = async (type: FieldType) => {
@@ -80,7 +84,9 @@ export default function FormBuilderPage() {
     reorderFields.mutate(updates);
   };
 
-  const publicUrl = `${window.location.origin}/f/${id}`;
+  const CUSTOM_DOMAIN = 'https://relatorios.giraerp.com.br';
+  const slugOrId = publicSlug || id;
+  const publicUrl = `${CUSTOM_DOMAIN}/f/${slugOrId}`;
 
   const copyLink = () => {
     navigator.clipboard.writeText(publicUrl);
@@ -123,17 +129,32 @@ export default function FormBuilderPage() {
 
       {/* Share bar */}
       <Card>
-        <CardContent className="p-3 flex items-center gap-2">
-          <span className="text-xs text-muted-foreground shrink-0">Link público:</span>
-          <Input value={publicUrl} readOnly className="h-8 text-xs bg-muted/50 font-mono" />
-          <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={copyLink}>
-            <Copy className="w-3.5 h-3.5" />
-          </Button>
-          <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" asChild>
-            <a href={publicUrl} target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </Button>
+        <CardContent className="p-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Link público:</span>
+            <Input value={publicUrl} readOnly className="h-8 text-xs bg-muted/50 font-mono" />
+            <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={copyLink}>
+              <Copy className="w-3.5 h-3.5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" asChild>
+              <a href={`${window.location.origin}/f/${slugOrId}`} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Slug personalizado:</span>
+            <div className="flex items-center gap-1 flex-1">
+              <span className="text-xs text-muted-foreground font-mono">{CUSTOM_DOMAIN}/f/</span>
+              <Input
+                value={publicSlug}
+                onChange={e => setPublicSlug(e.target.value)}
+                placeholder="meu-formulario"
+                className="h-8 text-xs font-mono flex-1"
+              />
+            </div>
+            <span className="text-[10px] text-muted-foreground italic">Salve para aplicar</span>
+          </div>
         </CardContent>
       </Card>
 

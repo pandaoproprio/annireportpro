@@ -26,40 +26,49 @@ export default function PublicFormPage() {
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [lgpdError, setLgpdError] = useState(false);
 
+  // Detect if param is UUID or slug
+  const isUuid = id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) : false;
+
   const formQuery = useQuery({
     queryKey: ['public-form', id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('forms')
-        .select('*')
-        .eq('id', id!)
-        .eq('status', 'ativo')
-        .single();
+      let data: any;
+      let error: any;
+      if (isUuid) {
+        const res = await supabase.from('forms').select('*').eq('status', 'ativo').eq('id', id!).single();
+        data = res.data; error = res.error;
+      } else {
+        // Query by slug using raw filter to avoid deep type instantiation
+        const res = await supabase.from('forms').select('*').eq('status', 'ativo').filter('public_slug', 'eq', id!).single();
+        data = res.data; error = res.error;
+      }
       if (error) throw error;
       return data as unknown as Form;
     },
     enabled: !!id,
   });
 
+  const formId = formQuery.data?.id;
+
   const fieldsQuery = useQuery({
-    queryKey: ['public-form-fields', id],
+    queryKey: ['public-form-fields', formId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('form_fields')
         .select('*')
-        .eq('form_id', id!)
+        .eq('form_id', formId!)
         .order('sort_order');
       if (error) throw error;
       return (data || []) as unknown as FormField[];
     },
-    enabled: !!id,
+    enabled: !!formId,
   });
 
   const submitMutation = useMutation({
     mutationFn: async () => {
       // Insert the response
       const { data: responseData, error } = await supabase.from('form_responses').insert({
-        form_id: id!,
+        form_id: formId!,
         respondent_name: respondentName || null,
         respondent_email: respondentEmail || null,
         answers: { ...answers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
@@ -69,7 +78,7 @@ export default function PublicFormPage() {
       // Create in-app notification for form owner
       if (form?.user_id && responseData?.id) {
         await supabase.from('form_notifications').insert({
-          form_id: id!,
+          form_id: formId!,
           form_response_id: responseData.id,
           recipient_user_id: form.user_id,
           form_title: form.title,
