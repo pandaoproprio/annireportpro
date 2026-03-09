@@ -279,6 +279,8 @@ const Layout: React.FC = () => {
                 <Route path="/wysiwyg/:id" element={<WysiwygEditorPage />} />
                 <Route path="/wysiwyg" element={<WysiwygEditorPage />} />
                 <Route path="/report-v2" element={<PermissionGuard permission="report_object"><ReportV2Page /></PermissionGuard>} />
+                <Route path="/forms" element={<FormsListPage />} />
+                <Route path="/forms/:id" element={<FormBuilderPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
