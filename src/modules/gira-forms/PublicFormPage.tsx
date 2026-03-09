@@ -48,18 +48,20 @@ export default function PublicFormPage() {
     enabled: !!id,
   });
 
+  const formId = formQuery.data?.id;
+
   const fieldsQuery = useQuery({
-    queryKey: ['public-form-fields', id],
+    queryKey: ['public-form-fields', formId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('form_fields')
         .select('*')
-        .eq('form_id', id!)
+        .eq('form_id', formId!)
         .order('sort_order');
       if (error) throw error;
       return (data || []) as unknown as FormField[];
     },
-    enabled: !!id,
+    enabled: !!formId,
   });
 
   const submitMutation = useMutation({
