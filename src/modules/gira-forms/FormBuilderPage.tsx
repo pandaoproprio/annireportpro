@@ -229,6 +229,17 @@ export default function FormBuilderPage() {
           </div>
         </TabsContent>
 
+        <TabsContent value="preview" className="mt-4">
+          <div className="border rounded-lg overflow-hidden bg-background" style={{ height: 'calc(100vh - 220px)' }}>
+            <iframe
+              key={activeTab === 'preview' ? 'preview-active' : 'preview-idle'}
+              src={`${window.location.origin}/f/${slugOrId}`}
+              className="w-full h-full border-0"
+              title="Pré-visualização do formulário"
+            />
+          </div>
+        </TabsContent>
+
         <TabsContent value="design" className="mt-4">
           <div className="max-w-2xl">
             <FormDesignEditor
