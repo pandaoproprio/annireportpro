@@ -313,6 +313,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/lgpd" element={<PrivacyPolicy />} />
         <Route path="/licenca" element={<TermsOfUse />} />
         <Route path="/diario/login" element={<DiaryLogin />} />
+        <Route path="/f/:id" element={<Suspense fallback={<PageFallback />}><PublicFormPage /></Suspense>} />
         <Route path="/consentimento" element={
           <ProtectedRoute>
             <LgpdConsent />
