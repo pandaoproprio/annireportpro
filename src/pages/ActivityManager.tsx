@@ -41,7 +41,8 @@ import { KanbanFilters } from '@/components/activity/KanbanFilters';
 import { OcrAttendanceButton } from '@/components/activity/OcrAttendanceButton';
 
 export const ActivityManager: React.FC = () => {
-  const { activeProject: project, activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useAppData();
+  const { activeProject: project } = useProjectData();
+  const { activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useActivityData();
   const { profile, role } = useAuth();
   const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
   
