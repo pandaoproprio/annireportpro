@@ -27,8 +27,9 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell
 } from 'lucide-react';
+import { NotificationBell } from '@/components/NotificationBell';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 
 // Lazy-loaded pages
@@ -232,13 +233,16 @@ const Layout: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={handleLogout}
-                className="text-sidebar-foreground/70 hover:text-sidebar-primary p-2 rounded-lg hover:bg-sidebar-accent transition-colors"
-                title="Sair"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <NotificationBell />
+                <button 
+                  onClick={handleLogout}
+                  className="text-sidebar-foreground/70 hover:text-sidebar-primary p-2 rounded-lg hover:bg-sidebar-accent transition-colors"
+                  title="Sair"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <InstallPrompt />
           </div>
@@ -256,7 +260,7 @@ const Layout: React.FC = () => {
             <Menu className="w-6 h-6" />
           </button>
           <img src={logoGira} alt="GIRA Relatórios" className="h-8" />
-          <div className="w-10" />
+          <NotificationBell />
         </header>
 
         {/* Page Content */}
