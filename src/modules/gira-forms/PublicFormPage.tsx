@@ -828,6 +828,12 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
   if (smartType === 'cpf_cnpj') {
     return <CpfCnpjField value={(value as string) || ''} onChange={onChange} />;
   }
+  if (smartType === 'cpf') {
+    return <CpfOnlyField value={(value as string) || ''} onChange={onChange} />;
+  }
+  if (smartType === 'cnpj') {
+    return <CnpjOnlyField value={(value as string) || ''} onChange={onChange} />;
+  }
   if (smartType === 'phone') {
     return (
       <Input
