@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useForms, useFormFields } from './hooks/useForms';
 import { FormFieldEditor } from './components/FormFieldEditor';
 import { FormResponsesTab } from './components/FormResponsesTab';
+import { FormDashboardTab } from './components/FormDashboardTab';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -139,6 +140,7 @@ export default function FormBuilderPage() {
         <TabsList>
           <TabsTrigger value="editor">Editor</TabsTrigger>
           <TabsTrigger value="responses">Respostas</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
         </TabsList>
 
         <TabsContent value="editor" className="mt-4">
@@ -205,7 +207,11 @@ export default function FormBuilderPage() {
         </TabsContent>
 
         <TabsContent value="responses" className="mt-4">
-          <FormResponsesTab formId={id!} fields={fields} />
+          <FormResponsesTab formId={id!} form={form} fields={fields} />
+        </TabsContent>
+
+        <TabsContent value="dashboard" className="mt-4">
+          <FormDashboardTab formId={id!} fields={fields} />
         </TabsContent>
       </Tabs>
     </motion.div>
