@@ -284,6 +284,138 @@ export type Database = {
           },
         ]
       }
+      form_fields: {
+        Row: {
+          created_at: string
+          description: string
+          form_id: string
+          id: string
+          label: string
+          options: Json
+          required: boolean
+          settings: Json
+          sort_order: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          form_id: string
+          id?: string
+          label?: string
+          options?: Json
+          required?: boolean
+          settings?: Json
+          sort_order?: number
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          form_id?: string
+          id?: string
+          label?: string
+          options?: Json
+          required?: boolean
+          settings?: Json
+          sort_order?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_fields_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      form_responses: {
+        Row: {
+          answers: Json
+          form_id: string
+          id: string
+          respondent_email: string | null
+          respondent_name: string | null
+          submitted_at: string
+        }
+        Insert: {
+          answers?: Json
+          form_id: string
+          id?: string
+          respondent_email?: string | null
+          respondent_name?: string | null
+          submitted_at?: string
+        }
+        Update: {
+          answers?: Json
+          form_id?: string
+          id?: string
+          respondent_email?: string | null
+          respondent_name?: string | null
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_responses_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          category: string
+          created_at: string
+          description: string
+          id: string
+          project_id: string | null
+          settings: Json
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          project_id?: string | null
+          settings?: Json
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          description?: string
+          id?: string
+          project_id?: string | null
+          settings?: Json
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forms_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       justification_reports: {
         Row: {
           attachment_files: Json
