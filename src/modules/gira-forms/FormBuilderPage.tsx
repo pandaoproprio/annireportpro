@@ -185,6 +185,7 @@ export default function FormBuilderPage() {
                         onDelete={() => {
                           if (confirm('Remover este campo?')) deleteField.mutate(field.id);
                         }}
+                        allFields={localFields}
                       />
                     </Reorder.Item>
                   ))}

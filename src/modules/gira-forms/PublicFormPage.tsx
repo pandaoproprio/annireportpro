@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CheckCircle2, ClipboardList, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import type { Form, FormField, FormDesignSettings } from './types';
+import type { Form, FormField, FormDesignSettings, FieldCondition } from './types';
 
 export default function PublicFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -73,8 +73,28 @@ export default function PublicFormPage() {
   const fields = fieldsQuery.data || [];
   const design: FormDesignSettings = (form?.settings || {}) as FormDesignSettings;
 
-  // Filter out non-input fields for validation
-  const inputFields = fields.filter(f => f.type !== 'section_header' && f.type !== 'info_text');
+  // Evaluate field conditions
+  const isFieldVisible = (field: FormField): boolean => {
+    const condition = field.settings?.condition as FieldCondition | undefined;
+    if (!condition || !condition.field_id) return true;
+    
+    const answer = answers[condition.field_id];
+    const strVal = answer == null ? '' : Array.isArray(answer) ? answer.join(', ') : String(answer);
+    
+    switch (condition.operator) {
+      case 'equals': return strVal === condition.value;
+      case 'not_equals': return strVal !== condition.value;
+      case 'contains': return strVal.toLowerCase().includes((condition.value || '').toLowerCase());
+      case 'not_empty': return strVal !== '';
+      case 'is_empty': return strVal === '';
+      default: return true;
+    }
+  };
+
+  const visibleFields = fields.filter(isFieldVisible);
+
+  // Filter out non-input fields for validation (only visible ones)
+  const inputFields = visibleFields.filter(f => f.type !== 'section_header' && f.type !== 'info_text');
 
   const isDark = design.theme === 'dark';
   const isFullWidth = design.pageLayout === 'full';
@@ -220,7 +240,7 @@ export default function PublicFormPage() {
           </div>
 
           {/* Fields */}
-          {fields.map((field, i) => (
+          {visibleFields.map((field, i) => (
             <motion.div key={field.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
               {field.type === 'section_header' ? (
                 <div
