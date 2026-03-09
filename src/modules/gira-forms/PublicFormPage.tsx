@@ -57,13 +57,26 @@ export default function PublicFormPage() {
 
   const submitMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('form_responses').insert({
+      // Insert the response
+      const { data: responseData, error } = await supabase.from('form_responses').insert({
         form_id: id!,
         respondent_name: respondentName || null,
         respondent_email: respondentEmail || null,
         answers: { ...answers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
-      });
+      }).select('id').single();
       if (error) throw error;
+
+      // Create in-app notification for form owner
+      if (form?.user_id && responseData?.id) {
+        await supabase.from('form_notifications').insert({
+          form_id: id!,
+          form_response_id: responseData.id,
+          recipient_user_id: form.user_id,
+          form_title: form.title,
+          respondent_name: respondentName || null,
+          respondent_email: respondentEmail || null,
+        } as any).single();
+      }
     },
     onSuccess: () => setSubmitted(true),
     onError: () => toast.error('Erro ao enviar. Tente novamente.'),
