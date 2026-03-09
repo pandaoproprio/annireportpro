@@ -6,13 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CheckCircle2, ClipboardList, Loader2, AlertCircle } from 'lucide-react';
+import { CheckCircle2, ClipboardList, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import type { Form, FormField, FormDesignSettings } from './types';
@@ -24,6 +23,8 @@ export default function PublicFormPage() {
   const [respondentEmail, setRespondentEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [lgpdConsent, setLgpdConsent] = useState(false);
+  const [lgpdError, setLgpdError] = useState(false);
 
   const formQuery = useQuery({
     queryKey: ['public-form', id],
@@ -60,7 +61,7 @@ export default function PublicFormPage() {
         form_id: id!,
         respondent_name: respondentName || null,
         respondent_email: respondentEmail || null,
-        answers: answers as any,
+        answers: { ...answers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
       });
       if (error) throw error;
     },
@@ -71,6 +72,9 @@ export default function PublicFormPage() {
   const form = formQuery.data;
   const fields = fieldsQuery.data || [];
   const design: FormDesignSettings = (form?.settings || {}) as FormDesignSettings;
+
+  // Filter out non-input fields for validation
+  const inputFields = fields.filter(f => f.type !== 'section_header' && f.type !== 'info_text');
 
   const isDark = design.theme === 'dark';
   const isFullWidth = design.pageLayout === 'full';
@@ -87,7 +91,7 @@ export default function PublicFormPage() {
 
   const validate = () => {
     const errors: Record<string, string> = {};
-    for (const field of fields) {
+    for (const field of inputFields) {
       if (field.required) {
         const val = answers[field.id];
         if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
@@ -96,13 +100,18 @@ export default function PublicFormPage() {
       }
     }
     setValidationErrors(errors);
-    return Object.keys(errors).length === 0;
+
+    if (!lgpdConsent) {
+      setLgpdError(true);
+    }
+
+    return Object.keys(errors).length === 0 && lgpdConsent;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) {
-      toast.error('Preencha os campos obrigatórios.');
+      toast.error('Preencha os campos obrigatórios e aceite os termos de privacidade.');
       return;
     }
     submitMutation.mutate();
@@ -140,7 +149,7 @@ export default function PublicFormPage() {
     );
   }
 
-  const successMsg = design.successMessage || 'Obrigado por preencher o formulário.';
+  const successMsg = design.successMessage || 'Obrigado por preencher o formulário. Suas informações foram registradas com segurança.';
 
   if (submitted) {
     return (
@@ -151,7 +160,7 @@ export default function PublicFormPage() {
             <h2 className="text-2xl font-bold">Resposta enviada!</h2>
             <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
             <button
-              onClick={() => { setSubmitted(false); setAnswers({}); setRespondentName(''); setRespondentEmail(''); }}
+              onClick={() => { setSubmitted(false); setAnswers({}); setRespondentName(''); setRespondentEmail(''); setLgpdConsent(false); }}
               className="px-4 py-2 rounded-lg border text-sm font-medium hover:opacity-80 transition-opacity"
               style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)' }}
             >
@@ -165,7 +174,7 @@ export default function PublicFormPage() {
 
   return (
     <div className="min-h-screen py-8 px-4" style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`mx-auto space-y-6 ${isFullWidth ? 'max-w-4xl' : 'max-w-2xl'}`}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`mx-auto space-y-4 ${isFullWidth ? 'max-w-4xl' : 'max-w-2xl'}`}>
 
         {/* Cover image */}
         {design.coverImageUrl && (
@@ -176,7 +185,6 @@ export default function PublicFormPage() {
 
         {/* Form Header Card */}
         <div className="rounded-xl p-6 shadow-md" style={{ background: 'var(--form-card-bg)', borderTop: `4px solid var(--form-primary)` }}>
-          {/* Header image */}
           {design.headerImageUrl && (
             <img src={design.headerImageUrl} alt="" className="w-full h-24 object-contain mb-4" />
           )}
@@ -213,26 +221,87 @@ export default function PublicFormPage() {
 
           {/* Fields */}
           {fields.map((field, i) => (
-            <motion.div key={field.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }}>
-              <div
-                className="rounded-xl p-5 shadow-sm space-y-3"
-                style={{
-                  background: 'var(--form-card-bg)',
-                  ...(validationErrors[field.id] ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
-                }}
-              >
-                <div>
-                  <Label className="text-sm font-medium">
-                    {field.label}
-                    {field.required && <span className="ml-1" style={{ color: '#ef4444' }}>*</span>}
-                  </Label>
-                  {field.description && <p className="text-xs mt-0.5" style={{ color: 'var(--form-muted)' }}>{field.description}</p>}
+            <motion.div key={field.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.02 }}>
+              {field.type === 'section_header' ? (
+                <div
+                  className="rounded-xl overflow-hidden shadow-sm"
+                  style={{ background: 'var(--form-primary)' }}
+                >
+                  <div className="px-5 py-3">
+                    <h2 className="text-lg font-bold text-white">{field.label}</h2>
+                  </div>
                 </div>
-                <FieldInput field={field} value={answers[field.id]} onChange={val => updateAnswer(field.id, val)} />
-                {validationErrors[field.id] && <p className="text-xs" style={{ color: '#ef4444' }}>{validationErrors[field.id]}</p>}
-              </div>
+              ) : field.type === 'info_text' ? (
+                <div
+                  className="rounded-xl p-5 shadow-sm"
+                  style={{ background: 'var(--form-card-bg)' }}
+                >
+                  {field.label && <h3 className="font-semibold mb-2">{field.label}</h3>}
+                  {field.description && (
+                    <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--form-text)' }}>
+                      {renderFormattedText(field.description)}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div
+                  className="rounded-xl p-5 shadow-sm space-y-3"
+                  style={{
+                    background: 'var(--form-card-bg)',
+                    ...(validationErrors[field.id] ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
+                  }}
+                >
+                  <div>
+                    <Label className="text-sm font-medium">
+                      {field.label}
+                      {field.required && <span className="ml-1" style={{ color: '#ef4444' }}>*</span>}
+                    </Label>
+                    {field.description && <p className="text-xs mt-0.5" style={{ color: 'var(--form-muted)' }}>{field.description}</p>}
+                  </div>
+                  <FieldInput field={field} value={answers[field.id]} onChange={val => updateAnswer(field.id, val)} />
+                  {validationErrors[field.id] && <p className="text-xs" style={{ color: '#ef4444' }}>{validationErrors[field.id]}</p>}
+                </div>
+              )}
             </motion.div>
           ))}
+
+          {/* LGPD Consent */}
+          <div
+            className="rounded-xl p-5 shadow-sm space-y-3"
+            style={{
+              background: 'var(--form-card-bg)',
+              ...(lgpdError && !lgpdConsent ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
+            }}
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <ShieldCheck className="w-5 h-5" style={{ color: 'var(--form-primary)' }} />
+              <h3 className="font-semibold text-sm">Proteção de Dados (LGPD)</h3>
+            </div>
+            <p className="text-xs leading-relaxed" style={{ color: 'var(--form-muted)' }}>
+              De acordo com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), informamos que os dados coletados
+              neste formulário serão utilizados exclusivamente para os fins descritos neste formulário.
+              Seus dados serão tratados com sigilo e segurança, não sendo compartilhados com terceiros sem seu
+              consentimento, exceto quando exigido por lei. Você pode solicitar a exclusão dos seus dados a qualquer
+              momento entrando em contato com a organização responsável.
+            </p>
+            <div className="flex items-start gap-2 pt-2">
+              <Checkbox
+                id="lgpd-consent"
+                checked={lgpdConsent}
+                onCheckedChange={(checked) => {
+                  setLgpdConsent(!!checked);
+                  if (checked) setLgpdError(false);
+                }}
+              />
+              <Label htmlFor="lgpd-consent" className="text-sm font-normal cursor-pointer leading-snug">
+                Li e concordo com os termos de proteção de dados e autorizo o uso das informações fornecidas para os fins descritos.
+                <span className="ml-1" style={{ color: '#ef4444' }}>*</span>
+              </Label>
+            </div>
+            {lgpdError && !lgpdConsent && (
+              <p className="text-xs" style={{ color: '#ef4444' }}>Você precisa aceitar os termos para enviar o formulário.</p>
+            )}
+          </div>
 
           <button
             type="submit"
@@ -250,6 +319,17 @@ export default function PublicFormPage() {
       </motion.div>
     </div>
   );
+}
+
+/** Simple markdown-like bold text renderer for info_text descriptions */
+function renderFormattedText(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
 }
 
 function FieldInput({ field, value, onChange }: { field: FormField; value: unknown; onChange: (v: unknown) => void }) {
@@ -278,6 +358,19 @@ function FieldInput({ field, value, onChange }: { field: FormField; value: unkno
     case 'multi_select':
     case 'checkbox': {
       const selected = (value as string[]) || [];
+      if (options.length === 0) {
+        // Single checkbox without options (boolean)
+        return (
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={field.id}
+              checked={!!value}
+              onCheckedChange={(checked) => onChange(!!checked)}
+            />
+            <Label htmlFor={field.id} className="text-sm font-normal cursor-pointer">{field.label}</Label>
+          </div>
+        );
+      }
       return (
         <div className="space-y-2">
           {options.map((opt, i) => (
@@ -297,11 +390,13 @@ function FieldInput({ field, value, onChange }: { field: FormField; value: unkno
     }
     case 'scale': {
       const numVal = typeof value === 'number' ? value : 5;
+      const min = (field.settings?.min as number) || 1;
+      const max = (field.settings?.max as number) || 10;
       return (
         <div className="space-y-2">
-          <Slider value={[numVal]} onValueChange={([v]) => onChange(v)} min={1} max={10} step={1} />
+          <Slider value={[numVal]} onValueChange={([v]) => onChange(v)} min={min} max={max} step={1} />
           <div className="flex justify-between text-xs" style={{ color: 'var(--form-muted)' }}>
-            <span>1</span><span className="font-medium">{numVal}</span><span>10</span>
+            <span>{min}</span><span className="font-medium">{numVal}</span><span>{max}</span>
           </div>
         </div>
       );
