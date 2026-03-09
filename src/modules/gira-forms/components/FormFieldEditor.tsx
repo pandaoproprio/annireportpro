@@ -33,9 +33,15 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
   const [required, setRequired] = useState(field.required);
   const [type, setType] = useState<FieldType>(field.type as FieldType);
   const [options, setOptions] = useState<string[]>(field.options || []);
-  const [condition, setCondition] = useState<FieldCondition | null>(
-    (field.settings?.condition as FieldCondition) || null
-  );
+  const [conditionGroup, setConditionGroup] = useState<FieldConditionGroup | null>(() => {
+    const raw = field.settings?.condition;
+    if (!raw) return null;
+    // Migrate legacy single condition to group format
+    if ((raw as any).field_id) {
+      return { logic: 'AND' as ConditionLogic, conditions: [raw as FieldCondition] };
+    }
+    return raw as FieldConditionGroup;
+  });
 
   const hasOptions = ['single_select', 'multi_select', 'checkbox'].includes(type);
   const isNonInput = NON_INPUT_TYPES.includes(type);
