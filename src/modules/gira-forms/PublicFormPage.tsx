@@ -14,7 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { CheckCircle2, ClipboardList, AlertCircle, ShieldCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
-import type { Form, FormField, FormDesignSettings } from './types';
+import type { Form, FormField, FormDesignSettings, FieldCondition } from './types';
 
 export default function PublicFormPage() {
   const { id } = useParams<{ id: string }>();

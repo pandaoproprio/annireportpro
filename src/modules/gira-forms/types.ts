@@ -25,6 +25,12 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   info_text: 'Texto Informativo',
 };
 
+export interface FieldCondition {
+  field_id: string;
+  operator: 'equals' | 'not_equals' | 'contains' | 'not_empty' | 'is_empty';
+  value?: string;
+}
+
 export interface FormField {
   id: string;
   form_id: string;
