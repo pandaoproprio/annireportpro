@@ -4,18 +4,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Inbox } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Inbox, Download, FileText, FileSpreadsheet, File } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import type { FormField, FormResponse } from '../types';
+import { exportToCsv, exportToExcel, exportToPdf } from '../utils/exportResponses';
+import type { Form, FormField, FormResponse } from '../types';
 
 interface Props {
   formId: string;
+  form: Form;
   fields: FormField[];
 }
 
-export const FormResponsesTab: React.FC<Props> = ({ formId, fields }) => {
+export const FormResponsesTab: React.FC<Props> = ({ formId, form, fields }) => {
   const { data: responses, isLoading } = useQuery({
     queryKey: ['gira-form-responses', formId],
     queryFn: async () => {
@@ -46,6 +50,25 @@ export const FormResponsesTab: React.FC<Props> = ({ formId, fields }) => {
         <Badge variant="secondary" className="text-sm">
           {responses.length} resposta{responses.length !== 1 ? 's' : ''}
         </Badge>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <Download className="w-3.5 h-3.5" /> Exportar
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => exportToCsv(form, fields, responses)}>
+              <File className="w-4 h-4 mr-2" /> CSV
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportToExcel(form, fields, responses)}>
+              <FileSpreadsheet className="w-4 h-4 mr-2" /> Excel
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => exportToPdf(form, fields, responses)}>
+              <FileText className="w-4 h-4 mr-2" /> PDF
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <Card>
