@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,8 +11,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Slider } from '@/components/ui/slider';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, ClipboardList, AlertCircle, ShieldCheck, MapPin, Loader2, Sparkles, User, Mail } from 'lucide-react';
+import {
+  CheckCircle2, ClipboardList, AlertCircle, ShieldCheck, MapPin, Loader2,
+  Sparkles, User, Mail, ChevronRight, ChevronLeft, Send, Eye, ArrowUp
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { maskPhone, maskCpfCnpj } from '@/lib/masks';
@@ -41,6 +43,37 @@ function maskCep(value: string): string {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
+// ─── Address keyword matching for CEP auto-fill ─────────────
+const ADDRESS_KEYWORDS: Record<string, RegExp> = {
+  street: /rua|logradouro|endere[çc]o/i,
+  neighborhood: /bairro/i,
+  city: /cidade|munic[ií]pio/i,
+  state: /estado|uf/i,
+};
+
+function findAddressFieldIds(fields: FormField[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const f of fields) {
+    if (f.type === 'section_header' || f.type === 'info_text') continue;
+    const label = f.label.toLowerCase();
+    for (const [key, regex] of Object.entries(ADDRESS_KEYWORDS)) {
+      if (!map[key] && regex.test(label)) {
+        map[key] = f.id;
+      }
+    }
+  }
+  return map;
+}
+
+// ─── Step interface ─────────────────────────────────────────
+interface Step {
+  title: string;
+  description?: string;
+  icon?: React.ReactNode;
+  fields: FormField[];
+  type: 'identification' | 'section' | 'lgpd_review';
+}
+
 // ─── Main Component ─────────────────────────────────────────
 export default function PublicFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,8 +86,8 @@ export default function PublicFormPage() {
   const [lgpdError, setLgpdError] = useState(false);
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
-  const [currentStep, setCurrentStep] = useState(0); // For sectioned navigation
-  const formRef = useRef<HTMLFormElement>(null);
+  const [currentStep, setCurrentStep] = useState(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const isUuid = id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) : false;
 
@@ -147,46 +180,70 @@ export default function PublicFormPage() {
   };
 
   const visibleFields = fields.filter(isFieldVisible);
-  const inputFields = visibleFields.filter(f => f.type !== 'section_header' && f.type !== 'info_text');
 
-  // ─── Progress calculation ─────────────────────────────────
-  const progress = useMemo(() => {
-    if (inputFields.length === 0) return 0;
-    let filled = 0;
-    // Count name + email as 2 items
-    const total = inputFields.length + 2;
-    if (respondentName.trim()) filled++;
-    if (respondentEmail.trim()) filled++;
-    for (const field of inputFields) {
-      const val = answers[field.id];
-      if (val !== undefined && val !== null && val !== '' && !(Array.isArray(val) && val.length === 0)) {
-        filled++;
-      }
-    }
-    return Math.round((filled / total) * 100);
-  }, [answers, inputFields, respondentName, respondentEmail]);
+  // Address field mapping for CEP auto-fill
+  const addressFieldIds = useMemo(() => findAddressFieldIds(visibleFields), [visibleFields]);
 
-  // ─── Sections for step navigation ────────────────────────
-  const sections = useMemo(() => {
-    const result: { header?: FormField; fields: FormField[] }[] = [];
-    let current: { header?: FormField; fields: FormField[] } = { fields: [] };
+  // ─── Build multi-step structure ───────────────────────────
+  const steps = useMemo<Step[]>(() => {
+    const result: Step[] = [];
+
+    // Step 0: Identification
+    result.push({
+      title: 'Identificação',
+      description: 'Seus dados pessoais',
+      icon: <User className="w-4 h-4" />,
+      fields: [],
+      type: 'identification',
+    });
+
+    // Group fields by section_header
+    let currentFields: FormField[] = [];
+    let currentTitle = 'Informações';
+
     for (const field of visibleFields) {
       if (field.type === 'section_header') {
-        if (current.fields.length > 0 || current.header) {
-          result.push(current);
+        if (currentFields.length > 0) {
+          result.push({
+            title: currentTitle,
+            fields: currentFields,
+            type: 'section',
+          });
         }
-        current = { header: field, fields: [] };
+        currentTitle = field.label;
+        currentFields = [];
       } else {
-        current.fields.push(field);
+        currentFields.push(field);
       }
     }
-    if (current.fields.length > 0 || current.header) {
-      result.push(current);
+
+    // Push remaining fields
+    if (currentFields.length > 0) {
+      result.push({
+        title: currentTitle,
+        fields: currentFields,
+        type: 'section',
+      });
     }
+
+    // Final step: LGPD + Review
+    result.push({
+      title: 'Revisão e Envio',
+      description: 'Confira suas respostas antes de enviar',
+      icon: <Eye className="w-4 h-4" />,
+      fields: [],
+      type: 'lgpd_review',
+    });
+
     return result;
   }, [visibleFields]);
 
-  const hasSections = sections.length > 1;
+  const totalSteps = steps.length;
+
+  // ─── Progress ─────────────────────────────────────────────
+  const progress = useMemo(() => {
+    return Math.round(((currentStep + 1) / totalSteps) * 100);
+  }, [currentStep, totalSteps]);
 
   const isDark = design.theme === 'dark';
   const isFullWidth = design.pageLayout === 'full';
@@ -201,77 +258,90 @@ export default function PublicFormPage() {
     fontFamily: design.fontFamily || 'Inter, sans-serif',
   } as React.CSSProperties), [design, isDark]);
 
-  const validate = () => {
+  // ─── Validation per step ──────────────────────────────────
+  const validateStep = (stepIndex: number): boolean => {
+    const step = steps[stepIndex];
+    if (!step) return true;
+
+    if (step.type === 'identification') {
+      let valid = true;
+      if (!respondentName.trim()) { setNameError('Nome é obrigatório'); valid = false; } else setNameError('');
+      if (!respondentEmail.trim()) { setEmailError('E-mail é obrigatório'); valid = false; }
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(respondentEmail.trim())) { setEmailError('E-mail inválido'); valid = false; }
+      else setEmailError('');
+      return valid;
+    }
+
+    if (step.type === 'lgpd_review') {
+      if (!lgpdConsent) { setLgpdError(true); return false; }
+      return true;
+    }
+
+    // Validate section fields
     const errors: Record<string, string> = {};
-    let hasNameErr = false;
-    let hasEmailErr = false;
-
-    // Name is required
-    if (!respondentName.trim()) {
-      setNameError('Nome é obrigatório');
-      hasNameErr = true;
-    } else {
-      setNameError('');
-    }
-
-    // Email is required and must be valid
-    if (!respondentEmail.trim()) {
-      setEmailError('E-mail é obrigatório');
-      hasEmailErr = true;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(respondentEmail.trim())) {
-      setEmailError('E-mail inválido');
-      hasEmailErr = true;
-    } else {
-      setEmailError('');
-    }
-
-    for (const field of inputFields) {
+    const inputFieldsInStep = step.fields.filter(f => f.type !== 'info_text');
+    for (const field of inputFieldsInStep) {
       if (field.required) {
         const val = answers[field.id];
         if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
           errors[field.id] = 'Campo obrigatório';
         }
       }
-      // Smart validations
       if (field.type === 'email' && answers[field.id]) {
-        const email = String(answers[field.id]);
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-          errors[field.id] = 'E-mail inválido';
-        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(answers[field.id]))) errors[field.id] = 'E-mail inválido';
       }
       if (field.type === 'cpf_cnpj' && answers[field.id]) {
         const digits = String(answers[field.id]).replace(/\D/g, '');
-        if (digits.length !== 11 && digits.length !== 14) {
-          errors[field.id] = 'CPF deve ter 11 dígitos ou CNPJ 14 dígitos';
-        }
+        if (digits.length !== 11 && digits.length !== 14) errors[field.id] = 'CPF (11) ou CNPJ (14) dígitos';
       }
       if (field.type === 'phone' && answers[field.id]) {
-        const digits = String(answers[field.id]).replace(/\D/g, '');
-        if (digits.length < 10) {
-          errors[field.id] = 'Telefone inválido';
-        }
+        if (String(answers[field.id]).replace(/\D/g, '').length < 10) errors[field.id] = 'Telefone inválido';
       }
       if (field.type === 'cep' && answers[field.id]) {
         const cepObj = answers[field.id] as any;
-        const cepDigits = (cepObj?.cep || '').replace(/\D/g, '');
-        if (cepDigits.length !== 8) {
-          errors[field.id] = 'CEP deve ter 8 dígitos';
-        }
+        if ((cepObj?.cep || '').replace(/\D/g, '').length !== 8) errors[field.id] = 'CEP deve ter 8 dígitos';
       }
     }
-    setValidationErrors(errors);
-
-    if (!lgpdConsent) setLgpdError(true);
-
-    return Object.keys(errors).length === 0 && lgpdConsent && !hasNameErr && !hasEmailErr;
+    setValidationErrors(prev => ({ ...prev, ...errors }));
+    if (Object.keys(errors).length > 0) {
+      toast.error('Preencha os campos obrigatórios desta etapa.');
+      return false;
+    }
+    return true;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) {
-      toast.error('Preencha todos os campos obrigatórios.');
-      return;
+  const scrollToTop = () => {
+    containerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const goNext = () => {
+    if (!validateStep(currentStep)) return;
+    if (currentStep < totalSteps - 1) {
+      setCurrentStep(prev => prev + 1);
+      scrollToTop();
     }
+  };
+
+  const goPrev = () => {
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+      scrollToTop();
+    }
+  };
+
+  const goToStep = (idx: number) => {
+    // Allow going back freely, going forward only if current step valid
+    if (idx < currentStep) {
+      setCurrentStep(idx);
+      scrollToTop();
+    } else if (idx === currentStep + 1) {
+      goNext();
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!validateStep(currentStep)) return;
     submitMutation.mutate();
   };
 
@@ -287,6 +357,19 @@ export default function PublicFormPage() {
     });
   }, []);
 
+  // CEP auto-fill handler
+  const handleCepAutoFill = useCallback((cepData: CepData) => {
+    const updates: Record<string, string> = {};
+    if (addressFieldIds.street && cepData.street) updates[addressFieldIds.street] = cepData.street;
+    if (addressFieldIds.neighborhood && cepData.neighborhood) updates[addressFieldIds.neighborhood] = cepData.neighborhood;
+    if (addressFieldIds.city && cepData.city) updates[addressFieldIds.city] = cepData.city;
+    if (addressFieldIds.state && cepData.state) updates[addressFieldIds.state] = cepData.state;
+    if (Object.keys(updates).length > 0) {
+      setAnswers(prev => ({ ...prev, ...updates }));
+    }
+  }, [addressFieldIds]);
+
+  // ─── Loading ──────────────────────────────────────────────
   if (formQuery.isLoading || fieldsQuery.isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
@@ -326,7 +409,7 @@ export default function PublicFormPage() {
             <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
               <button
-                onClick={() => { setSubmitted(false); setAnswers({}); setRespondentName(''); setRespondentEmail(''); setLgpdConsent(false); }}
+                onClick={() => { setSubmitted(false); setAnswers({}); setRespondentName(''); setRespondentEmail(''); setLgpdConsent(false); setCurrentStep(0); }}
                 className="px-4 py-2 rounded-lg border text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)' }}
               >
@@ -339,41 +422,49 @@ export default function PublicFormPage() {
     );
   }
 
+  const activeStep = steps[currentStep];
+  const isLastStep = currentStep === totalSteps - 1;
+  const isFirstStep = currentStep === 0;
+
+  // Get all input fields for review
+  const allInputFields = visibleFields.filter(f => f.type !== 'section_header' && f.type !== 'info_text');
+
   return (
-    <div className="min-h-screen py-8 px-4" style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
+    <div className="min-h-screen py-6 px-4" ref={containerRef} style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`mx-auto space-y-4 ${isFullWidth ? 'max-w-4xl' : 'max-w-2xl'}`}>
 
         {/* Cover image */}
         {design.coverImageUrl && (
           <div className="rounded-xl overflow-hidden shadow-md">
-            <img src={design.coverImageUrl} alt="" className="w-full h-48 object-cover" />
+            <img src={design.coverImageUrl} alt="" className="w-full h-40 object-cover" />
           </div>
         )}
 
         {/* Form Header Card */}
-        <div className="rounded-xl p-6 shadow-md" style={{ background: 'var(--form-card-bg)', borderTop: `4px solid var(--form-primary)` }}>
+        <div className="rounded-xl p-5 shadow-md" style={{ background: 'var(--form-card-bg)', borderTop: `4px solid var(--form-primary)` }}>
           {design.headerImageUrl && (
-            <img src={design.headerImageUrl} alt="" className="w-full h-24 object-contain mb-4" />
+            <img src={design.headerImageUrl} alt="" className="w-full h-20 object-contain mb-3" />
           )}
           <div className="flex items-start gap-3">
             {design.logoUrl && (
-              <img src={design.logoUrl} alt="Logo" className="h-12 w-12 object-contain rounded" />
+              <img src={design.logoUrl} alt="Logo" className="h-10 w-10 object-contain rounded" />
             )}
             <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2" style={{ color: 'var(--form-primary)' }}>
-                {!design.logoUrl && <ClipboardList className="w-5 h-5" />}
-                <span className="text-xs font-medium uppercase tracking-wider">GIRA Forms</span>
+              <div className="flex items-center gap-2 mb-1" style={{ color: 'var(--form-primary)' }}>
+                {!design.logoUrl && <ClipboardList className="w-4 h-4" />}
+                <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Forms</span>
               </div>
-              <h1 className="text-2xl font-bold">{form.title}</h1>
-              {form.description && <p className="mt-2" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
+              <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
+              {form.description && <p className="mt-1 text-sm" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
             </div>
           </div>
 
           {/* Progress Bar */}
-          <div className="mt-4 space-y-1">
+          <div className="mt-4 space-y-1.5">
             <div className="flex justify-between items-center">
               <span className="text-xs font-medium flex items-center gap-1" style={{ color: 'var(--form-muted)' }}>
-                <Sparkles className="w-3 h-3" /> Progresso
+                <Sparkles className="w-3 h-3" />
+                Etapa {currentStep + 1} de {totalSteps}
               </span>
               <span className="text-xs font-bold" style={{ color: progress === 100 ? 'var(--form-primary)' : 'var(--form-muted)' }}>
                 {progress}%
@@ -383,76 +474,114 @@ export default function PublicFormPage() {
               <motion.div
                 className="h-full rounded-full"
                 style={{ background: 'var(--form-primary)' }}
-                initial={{ width: 0 }}
                 animate={{ width: `${progress}%` }}
                 transition={{ duration: 0.4, ease: 'easeOut' }}
               />
             </div>
+
+            {/* Step indicators */}
+            <div className="flex gap-1 pt-1">
+              {steps.map((step, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => goToStep(idx)}
+                  className="flex-1 h-1.5 rounded-full transition-all"
+                  title={step.title}
+                  style={{
+                    background: idx <= currentStep ? 'var(--form-primary)' : isDark ? '#333' : '#e5e7eb',
+                    opacity: idx <= currentStep ? 1 : 0.5,
+                    cursor: idx <= currentStep ? 'pointer' : 'default',
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
 
-        <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
-          {/* Respondent info - REQUIRED */}
-          <div
-            className="rounded-xl p-5 shadow-sm space-y-4"
-            style={{
-              background: 'var(--form-card-bg)',
-              ...((nameError || emailError) ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
-            }}
+        {/* Step Title */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.2 }}
           >
-            <h3 className="font-medium text-sm flex items-center gap-2">
-              <User className="w-4 h-4" style={{ color: 'var(--form-primary)' }} />
-              Identificação <span style={{ color: '#ef4444' }}>*</span>
-            </h3>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <Label className="text-sm font-medium">Nome <span style={{ color: '#ef4444' }}>*</span></Label>
-                <Input
-                  value={respondentName}
-                  onChange={e => { setRespondentName(e.target.value); if (nameError) setNameError(''); }}
-                  placeholder="Seu nome completo"
-                  className="mt-1"
-                  maxLength={100}
-                  style={nameError ? { boxShadow: '0 0 0 1px #ef4444' } : {}}
-                />
-                {nameError && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{nameError}</p>}
-              </div>
-              <div>
-                <Label className="text-sm font-medium flex items-center gap-1">
-                  <Mail className="w-3 h-3" /> E-mail <span style={{ color: '#ef4444' }}>*</span>
-                </Label>
-                <Input
-                  type="email"
-                  value={respondentEmail}
-                  onChange={e => { setRespondentEmail(e.target.value); if (emailError) setEmailError(''); }}
-                  placeholder="seu@email.com"
-                  className="mt-1"
-                  maxLength={255}
-                  style={emailError ? { boxShadow: '0 0 0 1px #ef4444' } : {}}
-                />
-                {emailError && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{emailError}</p>}
+            <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: 'var(--form-primary)' }}>
+              <div className="px-5 py-3 flex items-center justify-between">
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-white">{activeStep.title}</h2>
+                  {activeStep.description && (
+                    <p className="text-xs text-white/70 mt-0.5">{activeStep.description}</p>
+                  )}
+                </div>
+                <span className="text-sm text-white/60 font-mono">{currentStep + 1}/{totalSteps}</span>
               </div>
             </div>
-          </div>
+          </motion.div>
+        </AnimatePresence>
 
-          {/* Fields */}
-          <AnimatePresence mode="popLayout">
-            {visibleFields.map((field, i) => (
+        {/* Step Content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -15 }}
+            transition={{ duration: 0.25 }}
+            className="space-y-4"
+          >
+            {/* ─── Identification Step ─────────────────────────────── */}
+            {activeStep.type === 'identification' && (
+              <div
+                className="rounded-xl p-5 shadow-sm space-y-4"
+                style={{
+                  background: 'var(--form-card-bg)',
+                  ...((nameError || emailError) ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
+                }}
+              >
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Nome completo <span style={{ color: '#ef4444' }}>*</span></Label>
+                    <Input
+                      value={respondentName}
+                      onChange={e => { setRespondentName(e.target.value); if (nameError) setNameError(''); }}
+                      placeholder="Seu nome completo"
+                      className="mt-1"
+                      maxLength={100}
+                      autoFocus
+                      style={nameError ? { boxShadow: '0 0 0 1px #ef4444' } : {}}
+                    />
+                    {nameError && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{nameError}</p>}
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium flex items-center gap-1">
+                      <Mail className="w-3 h-3" /> E-mail <span style={{ color: '#ef4444' }}>*</span>
+                    </Label>
+                    <Input
+                      type="email"
+                      value={respondentEmail}
+                      onChange={e => { setRespondentEmail(e.target.value); if (emailError) setEmailError(''); }}
+                      placeholder="seu@email.com"
+                      className="mt-1"
+                      maxLength={255}
+                      style={emailError ? { boxShadow: '0 0 0 1px #ef4444' } : {}}
+                    />
+                    {emailError && <p className="text-xs mt-1" style={{ color: '#ef4444' }}>{emailError}</p>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ─── Section Fields Step ─────────────────────────────── */}
+            {activeStep.type === 'section' && activeStep.fields.map((field, i) => (
               <motion.div
                 key={field.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ delay: i * 0.02 }}
-                layout
+                transition={{ delay: i * 0.03 }}
               >
-                {field.type === 'section_header' ? (
-                  <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: 'var(--form-primary)' }}>
-                    <div className="px-5 py-3">
-                      <h2 className="text-lg font-bold text-white">{field.label}</h2>
-                    </div>
-                  </div>
-                ) : field.type === 'info_text' ? (
+                {field.type === 'info_text' ? (
                   <div className="rounded-xl p-5 shadow-sm" style={{ background: 'var(--form-card-bg)' }}>
                     {field.label && <h3 className="font-semibold mb-2">{field.label}</h3>}
                     {field.description && (
@@ -476,9 +605,15 @@ export default function PublicFormPage() {
                       </Label>
                       {field.description && <p className="text-xs mt-0.5" style={{ color: 'var(--form-muted)' }}>{field.description}</p>}
                     </div>
-                    <SmartFieldInput field={field} value={answers[field.id]} onChange={val => updateAnswer(field.id, val)} allAnswers={answers} />
+                    <SmartFieldInput
+                      field={field}
+                      value={answers[field.id]}
+                      onChange={val => updateAnswer(field.id, val)}
+                      onCepAutoFill={handleCepAutoFill}
+                      isDark={isDark}
+                    />
                     {validationErrors[field.id] && (
-                      <motion.p initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-xs" style={{ color: '#ef4444' }}>
+                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs" style={{ color: '#ef4444' }}>
                         {validationErrors[field.id]}
                       </motion.p>
                     )}
@@ -486,63 +621,156 @@ export default function PublicFormPage() {
                 )}
               </motion.div>
             ))}
-          </AnimatePresence>
 
-          {/* LGPD Consent */}
-          <div
-            className="rounded-xl p-5 shadow-sm space-y-3"
-            style={{
-              background: 'var(--form-card-bg)',
-              ...(lgpdError && !lgpdConsent ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
-            }}
-          >
-            <div className="flex items-center gap-2 mb-2">
-              <ShieldCheck className="w-5 h-5" style={{ color: 'var(--form-primary)' }} />
-              <h3 className="font-semibold text-sm">Proteção de Dados (LGPD)</h3>
-            </div>
-            <p className="text-xs leading-relaxed" style={{ color: 'var(--form-muted)' }}>
-              De acordo com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), informamos que os dados coletados
-              neste formulário serão utilizados exclusivamente para os fins descritos neste formulário.
-              Seus dados serão tratados com sigilo e segurança, não sendo compartilhados com terceiros sem seu
-              consentimento, exceto quando exigido por lei. Você pode solicitar a exclusão dos seus dados a qualquer
-              momento entrando em contato com a organização responsável.
-            </p>
-            <div className="flex items-start gap-2 pt-2">
-              <Checkbox
-                id="lgpd-consent"
-                checked={lgpdConsent}
-                onCheckedChange={(checked) => {
-                  setLgpdConsent(!!checked);
-                  if (checked) setLgpdError(false);
-                }}
-              />
-              <Label htmlFor="lgpd-consent" className="text-sm font-normal cursor-pointer leading-snug">
-                Li e concordo com os termos de proteção de dados e autorizo o uso das informações fornecidas para os fins descritos.
-                <span className="ml-1" style={{ color: '#ef4444' }}>*</span>
-              </Label>
-            </div>
-            {lgpdError && !lgpdConsent && (
-              <p className="text-xs" style={{ color: '#ef4444' }}>Você precisa aceitar os termos para enviar o formulário.</p>
-            )}
-          </div>
+            {/* ─── Review & LGPD Step ─────────────────────────────── */}
+            {activeStep.type === 'lgpd_review' && (
+              <>
+                {/* Review summary */}
+                <div className="rounded-xl p-5 shadow-sm space-y-4" style={{ background: 'var(--form-card-bg)' }}>
+                  <h3 className="font-semibold text-sm flex items-center gap-2">
+                    <Eye className="w-4 h-4" style={{ color: 'var(--form-primary)' }} />
+                    Resumo das suas respostas
+                  </h3>
 
-          <motion.button
-            type="submit"
-            disabled={submitMutation.isPending}
-            className="w-full py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50"
-            style={{ background: 'var(--form-button)' }}
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.98 }}
-          >
-            {submitMutation.isPending ? (
-              <span className="flex items-center justify-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin" /> Enviando...
-              </span>
-            ) : (
-              'Enviar Resposta'
+                  <div className="space-y-3">
+                    {/* Identity */}
+                    <div className="rounded-lg p-3" style={{ background: isDark ? '#1e293b' : '#f8fafc' }}>
+                      <p className="text-xs font-medium mb-1" style={{ color: 'var(--form-muted)' }}>Identificação</p>
+                      <p className="text-sm font-medium">{respondentName || '—'}</p>
+                      <p className="text-sm" style={{ color: 'var(--form-muted)' }}>{respondentEmail || '—'}</p>
+                    </div>
+
+                    {/* Field answers grouped by section */}
+                    {steps.filter(s => s.type === 'section').map((section, sIdx) => {
+                      const sectionInputs = section.fields.filter(f => f.type !== 'info_text');
+                      if (sectionInputs.length === 0) return null;
+                      return (
+                        <div key={sIdx} className="rounded-lg p-3" style={{ background: isDark ? '#1e293b' : '#f8fafc' }}>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-medium" style={{ color: 'var(--form-muted)' }}>{section.title}</p>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const idx = steps.findIndex(s => s === section);
+                                if (idx >= 0) { setCurrentStep(idx); scrollToTop(); }
+                              }}
+                              className="text-[10px] font-medium underline"
+                              style={{ color: 'var(--form-primary)' }}
+                            >
+                              Editar
+                            </button>
+                          </div>
+                          {sectionInputs.map(field => {
+                            const val = answers[field.id];
+                            let displayVal = '—';
+                            if (val !== undefined && val !== null && val !== '') {
+                              if (typeof val === 'object' && (val as any)?.cep) {
+                                displayVal = (val as any).endereco || (val as any).cep;
+                              } else if (Array.isArray(val)) {
+                                displayVal = val.join(', ') || '—';
+                              } else if (typeof val === 'boolean') {
+                                displayVal = val ? 'Sim' : 'Não';
+                              } else {
+                                displayVal = String(val);
+                              }
+                            }
+                            return (
+                              <div key={field.id} className="flex justify-between gap-4 py-1 border-b last:border-0" style={{ borderColor: isDark ? '#334155' : '#e2e8f0' }}>
+                                <span className="text-xs" style={{ color: 'var(--form-muted)' }}>{field.label}</span>
+                                <span className="text-xs font-medium text-right max-w-[60%] break-words">{displayVal}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* LGPD Consent */}
+                <div
+                  className="rounded-xl p-5 shadow-sm space-y-3"
+                  style={{
+                    background: 'var(--form-card-bg)',
+                    ...(lgpdError && !lgpdConsent ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
+                  }}
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <ShieldCheck className="w-5 h-5" style={{ color: 'var(--form-primary)' }} />
+                    <h3 className="font-semibold text-sm">Proteção de Dados (LGPD)</h3>
+                  </div>
+                  <p className="text-xs leading-relaxed" style={{ color: 'var(--form-muted)' }}>
+                    De acordo com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), informamos que os dados coletados
+                    neste formulário serão utilizados exclusivamente para os fins descritos. Seus dados serão tratados com
+                    sigilo e segurança, não sendo compartilhados com terceiros sem seu consentimento, exceto quando exigido
+                    por lei. Você pode solicitar a exclusão dos seus dados a qualquer momento.
+                  </p>
+                  <div className="flex items-start gap-2 pt-2">
+                    <Checkbox
+                      id="lgpd-consent"
+                      checked={lgpdConsent}
+                      onCheckedChange={(checked) => {
+                        setLgpdConsent(!!checked);
+                        if (checked) setLgpdError(false);
+                      }}
+                    />
+                    <Label htmlFor="lgpd-consent" className="text-sm font-normal cursor-pointer leading-snug">
+                      Li e concordo com os termos de proteção de dados.
+                      <span className="ml-1" style={{ color: '#ef4444' }}>*</span>
+                    </Label>
+                  </div>
+                  {lgpdError && !lgpdConsent && (
+                    <p className="text-xs" style={{ color: '#ef4444' }}>Você precisa aceitar os termos para enviar.</p>
+                  )}
+                </div>
+              </>
             )}
-          </motion.button>
-        </form>
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Navigation Buttons */}
+        <div className="flex gap-3 pt-2 pb-4">
+          {!isFirstStep && (
+            <motion.button
+              type="button"
+              onClick={goPrev}
+              className="flex-1 py-3 rounded-lg font-semibold text-sm border-2 hover:opacity-80 transition-all flex items-center justify-center gap-2"
+              style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)', background: 'var(--form-card-bg)' }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <ChevronLeft className="w-4 h-4" /> Anterior
+            </motion.button>
+          )}
+
+          {isLastStep ? (
+            <motion.button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitMutation.isPending}
+              className="flex-1 py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{ background: 'var(--form-button)' }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {submitMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+              ) : (
+                <><Send className="w-4 h-4" /> Enviar Resposta</>
+              )}
+            </motion.button>
+          ) : (
+            <motion.button
+              type="button"
+              onClick={goNext}
+              className="flex-1 py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
+              style={{ background: 'var(--form-button)' }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              Próxima Etapa <ChevronRight className="w-4 h-4" />
+            </motion.button>
+          )}
+        </div>
 
         <p className="text-center text-xs pb-4" style={{ color: 'var(--form-muted)' }}>
           Powered by <span className="font-semibold">GIRA Forms</span>
@@ -564,11 +792,12 @@ function renderFormattedText(text: string) {
 }
 
 // ─── Smart Field Input ──────────────────────────────────────
-function SmartFieldInput({ field, value, onChange, allAnswers }: {
+function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
   field: FormField;
   value: unknown;
   onChange: (v: unknown) => void;
-  allAnswers: Record<string, unknown>;
+  onCepAutoFill?: (data: CepData) => void;
+  isDark?: boolean;
 }) {
   const options = field.options || [];
 
@@ -600,11 +829,9 @@ function SmartFieldInput({ field, value, onChange, allAnswers }: {
         />
       );
     case 'cpf_cnpj':
-      return (
-        <CpfCnpjField value={(value as string) || ''} onChange={onChange} />
-      );
+      return <CpfCnpjField value={(value as string) || ''} onChange={onChange} />;
     case 'cep':
-      return <CepField value={value as any} onChange={onChange} />;
+      return <CepField value={value as any} onChange={onChange} onAutoFill={onCepAutoFill} isDark={isDark} />;
     case 'single_select':
       return (
         <RadioGroup value={(value as string) || ''} onValueChange={onChange}>
@@ -668,7 +895,7 @@ function SmartFieldInput({ field, value, onChange, allAnswers }: {
   }
 }
 
-// ─── CPF/CNPJ Field with smart detection ────────────────────
+// ─── CPF/CNPJ Field ─────────────────────────────────────────
 function CpfCnpjField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const digits = value.replace(/\D/g, '');
   const docType = digits.length <= 11 ? 'CPF' : 'CNPJ';
@@ -700,7 +927,12 @@ function CpfCnpjField({ value, onChange }: { value: string; onChange: (v: string
 }
 
 // ─── CEP Field with BrasilAPI auto-fill ─────────────────────
-function CepField({ value, onChange }: { value: any; onChange: (v: any) => void }) {
+function CepField({ value, onChange, onAutoFill, isDark }: {
+  value: any;
+  onChange: (v: any) => void;
+  onAutoFill?: (data: CepData) => void;
+  isDark?: boolean;
+}) {
   const [cepInput, setCepInput] = useState((value?.cep as string) || '');
   const [loading, setLoading] = useState(false);
   const [cepData, setCepData] = useState<CepData | null>(value?.data || null);
@@ -718,7 +950,8 @@ function CepField({ value, onChange }: { value: any; onChange: (v: any) => void 
         const data = await fetchCepData(digits);
         setCepData(data);
         onChange({ cep: masked, data, endereco: `${data.street}, ${data.neighborhood}, ${data.city} - ${data.state}` });
-        toast.success('Endereço encontrado!');
+        onAutoFill?.(data);
+        toast.success('Endereço encontrado automaticamente!');
       } catch {
         setError('CEP não encontrado');
         setCepData(null);
@@ -756,11 +989,11 @@ function CepField({ value, onChange }: { value: any; onChange: (v: any) => void 
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
             className="rounded-lg p-3 space-y-1 text-sm"
-            style={{ background: isDarkMode() ? '#1e293b' : '#f0fdf4', border: '1px solid', borderColor: 'var(--form-primary)' }}
+            style={{ background: isDark ? '#1e293b' : '#f0fdf4', border: '1px solid', borderColor: 'var(--form-primary)' }}
           >
             <div className="flex items-center gap-1.5 font-medium text-xs" style={{ color: 'var(--form-primary)' }}>
               <MapPin className="w-3.5 h-3.5" />
-              Endereço encontrado automaticamente
+              Endereço preenchido automaticamente
             </div>
             {cepData.street && <p className="text-xs">{cepData.street}</p>}
             <p className="text-xs">{cepData.neighborhood}</p>
@@ -770,8 +1003,4 @@ function CepField({ value, onChange }: { value: any; onChange: (v: any) => void 
       </AnimatePresence>
     </div>
   );
-}
-
-function isDarkMode() {
-  return document.documentElement.style.getPropertyValue('--form-bg')?.includes('1a') || false;
 }
