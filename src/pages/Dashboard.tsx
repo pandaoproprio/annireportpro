@@ -107,7 +107,7 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <PageTransition className="space-y-6">
       {/* SLA Overdue Banner */}
       <SlaOverdueBanner overdueItems={overdueItems} />
       {/* WIP Alert Banner */}
