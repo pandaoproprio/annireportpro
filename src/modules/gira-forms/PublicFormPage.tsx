@@ -369,6 +369,14 @@ export default function PublicFormPage() {
         const digits = String(val).replace(/\D/g, '');
         if (digits.length !== 11 && digits.length !== 14) errors[field.id] = 'CPF (11) ou CNPJ (14) dígitos';
       }
+      if (smart === 'cpf') {
+        const digits = String(val).replace(/\D/g, '');
+        if (digits.length !== 11) errors[field.id] = 'CPF deve ter 11 dígitos';
+      }
+      if (smart === 'cnpj') {
+        const digits = String(val).replace(/\D/g, '');
+        if (digits.length !== 14) errors[field.id] = 'CNPJ deve ter 14 dígitos';
+      }
       if (smart === 'phone') {
         if (String(val).replace(/\D/g, '').length < 10) errors[field.id] = 'Telefone inválido';
       }
