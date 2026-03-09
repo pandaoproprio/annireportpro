@@ -7,7 +7,9 @@ export type FieldType =
   | 'multi_select'
   | 'checkbox'
   | 'scale'
-  | 'file_upload';
+  | 'file_upload'
+  | 'section_header'
+  | 'info_text';
 
 export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   short_text: 'Texto Curto',
@@ -19,6 +21,8 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   checkbox: 'Checkbox',
   scale: 'Escala',
   file_upload: 'Upload de Arquivo',
+  section_header: 'Cabeçalho de Seção',
+  info_text: 'Texto Informativo',
 };
 
 export interface FormField {

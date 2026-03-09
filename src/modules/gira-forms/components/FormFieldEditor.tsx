@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GripVertical, Trash2, ChevronDown, ChevronUp, PlusCircle, X } from 'lucide-react';
+import { GripVertical, Trash2, ChevronDown, ChevronUp, PlusCircle, X, SeparatorHorizontal, Info } from 'lucide-react';
 import { FIELD_TYPE_LABELS, type FormField, type FieldType } from '../types';
 
 interface Props {
@@ -17,6 +17,8 @@ interface Props {
   onDelete: () => void;
 }
 
+const NON_INPUT_TYPES: FieldType[] = ['section_header', 'info_text'];
+
 export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdit, onUpdate, onDelete }) => {
   const [label, setLabel] = useState(field.label);
   const [description, setDescription] = useState(field.description);
@@ -25,9 +27,10 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
   const [options, setOptions] = useState<string[]>(field.options || []);
 
   const hasOptions = ['single_select', 'multi_select', 'checkbox'].includes(type);
+  const isNonInput = NON_INPUT_TYPES.includes(type);
 
   const handleSave = async () => {
-    await onUpdate({ label, description, required, type, options });
+    await onUpdate({ label, description, required: isNonInput ? false : required, type, options });
     onToggleEdit();
   };
 
@@ -39,8 +42,14 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     setOptions(field.options || []);
   }, [field]);
 
+  const getIcon = () => {
+    if (type === 'section_header') return <SeparatorHorizontal className="w-4 h-4 text-primary" />;
+    if (type === 'info_text') return <Info className="w-4 h-4 text-blue-500" />;
+    return null;
+  };
+
   return (
-    <Card className={`transition-all ${isEditing ? 'ring-2 ring-primary/30' : 'hover:shadow-sm'}`}>
+    <Card className={`transition-all ${isEditing ? 'ring-2 ring-primary/30' : 'hover:shadow-sm'} ${isNonInput ? 'border-l-4 border-l-primary/40' : ''}`}>
       <CardContent className="p-4">
         <div className="flex items-start gap-2">
           <div className="cursor-grab pt-1 text-muted-foreground hover:text-foreground">
@@ -51,21 +60,22 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
             {!isEditing ? (
               <div className="cursor-pointer" onClick={onToggleEdit}>
                 <div className="flex items-center gap-2">
+                  {getIcon()}
                   <span className="font-medium text-sm">{label || 'Sem título'}</span>
-                  {required && <span className="text-destructive text-xs">*</span>}
+                  {required && !isNonInput && <span className="text-destructive text-xs">*</span>}
                   <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">{FIELD_TYPE_LABELS[type]}</span>
                 </div>
-                {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+                {description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{description}</p>}
               </div>
             ) : (
               <div className="space-y-3">
                 <div>
-                  <Label className="text-xs">Título do Campo</Label>
+                  <Label className="text-xs">{type === 'section_header' ? 'Título da Seção' : type === 'info_text' ? 'Título do Bloco' : 'Título do Campo'}</Label>
                   <Input value={label} onChange={e => setLabel(e.target.value)} className="mt-1" />
                 </div>
                 <div>
-                  <Label className="text-xs">Descrição</Label>
-                  <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className="mt-1 resize-none" />
+                  <Label className="text-xs">{type === 'info_text' ? 'Conteúdo (use **texto** para negrito)' : 'Descrição'}</Label>
+                  <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={type === 'info_text' ? 6 : 2} className="mt-1 resize-none" />
                 </div>
                 <div>
                   <Label className="text-xs">Tipo</Label>
@@ -107,10 +117,12 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
                   </div>
                 )}
 
-                <div className="flex items-center gap-2">
-                  <Switch checked={required} onCheckedChange={setRequired} />
-                  <Label className="text-xs">Obrigatório</Label>
-                </div>
+                {!isNonInput && (
+                  <div className="flex items-center gap-2">
+                    <Switch checked={required} onCheckedChange={setRequired} />
+                    <Label className="text-xs">Obrigatório</Label>
+                  </div>
+                )}
 
                 <div className="flex gap-2 pt-2 border-t">
                   <Button size="sm" onClick={handleSave}>Salvar</Button>
