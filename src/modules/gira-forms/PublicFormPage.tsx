@@ -78,7 +78,7 @@ export default function PublicFormPage() {
       // Create in-app notification for form owner
       if (form?.user_id && responseData?.id) {
         await supabase.from('form_notifications').insert({
-          form_id: id!,
+          form_id: formId!,
           form_response_id: responseData.id,
           recipient_user_id: form.user_id,
           form_title: form.title,
