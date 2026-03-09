@@ -73,8 +73,28 @@ export default function PublicFormPage() {
   const fields = fieldsQuery.data || [];
   const design: FormDesignSettings = (form?.settings || {}) as FormDesignSettings;
 
-  // Filter out non-input fields for validation
-  const inputFields = fields.filter(f => f.type !== 'section_header' && f.type !== 'info_text');
+  // Evaluate field conditions
+  const isFieldVisible = (field: FormField): boolean => {
+    const condition = field.settings?.condition as FieldCondition | undefined;
+    if (!condition || !condition.field_id) return true;
+    
+    const answer = answers[condition.field_id];
+    const strVal = answer == null ? '' : Array.isArray(answer) ? answer.join(', ') : String(answer);
+    
+    switch (condition.operator) {
+      case 'equals': return strVal === condition.value;
+      case 'not_equals': return strVal !== condition.value;
+      case 'contains': return strVal.toLowerCase().includes((condition.value || '').toLowerCase());
+      case 'not_empty': return strVal !== '';
+      case 'is_empty': return strVal === '';
+      default: return true;
+    }
+  };
+
+  const visibleFields = fields.filter(isFieldVisible);
+
+  // Filter out non-input fields for validation (only visible ones)
+  const inputFields = visibleFields.filter(f => f.type !== 'section_header' && f.type !== 'info_text');
 
   const isDark = design.theme === 'dark';
   const isFullWidth = design.pageLayout === 'full';
