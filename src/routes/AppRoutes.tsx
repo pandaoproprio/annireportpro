@@ -27,7 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 
@@ -55,6 +55,8 @@ const ValuationReport = lazy(() => import('@/pages/ValuationReport'));
 const AiAuditReport = lazy(() => import('@/pages/AiAuditReport'));
 const MaturityAuditReport = lazy(() => import('@/pages/MaturityAuditReport'));
 const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m.MfaVerify })));
+const FormsListPage = lazy(() => import('@/modules/gira-forms/FormsListPage'));
+const FormBuilderPage = lazy(() => import('@/modules/gira-forms/FormBuilderPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -180,6 +182,7 @@ const Layout: React.FC = () => {
                 {hasPermission('report_team') && <SidebarLink to="/justificativa" icon={<FileText className="w-5 h-5" />} label="Justificativa Prorrogação" onClick={closeSidebar} />}
                 {hasPermission('report_object') && <SidebarLink to="/report-v2" icon={<BarChart3 className="w-5 h-5" />} label="Relatório V2" onClick={closeSidebar} />}
                 {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />}
+                <SidebarLink to="/forms" icon={<ClipboardList className="w-5 h-5" />} label="GIRA Forms" onClick={closeSidebar} />
               </div>
             </div>
 
@@ -276,6 +279,8 @@ const Layout: React.FC = () => {
                 <Route path="/wysiwyg/:id" element={<WysiwygEditorPage />} />
                 <Route path="/wysiwyg" element={<WysiwygEditorPage />} />
                 <Route path="/report-v2" element={<PermissionGuard permission="report_object"><ReportV2Page /></PermissionGuard>} />
+                <Route path="/forms" element={<FormsListPage />} />
+                <Route path="/forms/:id" element={<FormBuilderPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
