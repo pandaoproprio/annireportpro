@@ -233,13 +233,16 @@ const Layout: React.FC = () => {
                   </p>
                 </div>
               </div>
-              <button 
-                onClick={handleLogout}
-                className="text-sidebar-foreground/70 hover:text-sidebar-primary p-2 rounded-lg hover:bg-sidebar-accent transition-colors"
-                title="Sair"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-1">
+                <NotificationBell />
+                <button 
+                  onClick={handleLogout}
+                  className="text-sidebar-foreground/70 hover:text-sidebar-primary p-2 rounded-lg hover:bg-sidebar-accent transition-colors"
+                  title="Sair"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
             </div>
             <InstallPrompt />
           </div>
