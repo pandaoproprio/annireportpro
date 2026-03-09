@@ -72,6 +72,7 @@ export interface FormResponse {
 
 export const CATEGORIES = [
   { value: 'geral', label: 'Geral' },
+  { value: 'inscricao_eventos', label: 'Inscrição em Eventos ou Oficinas' },
   { value: 'pesquisa', label: 'Pesquisa' },
   { value: 'prestacao_contas', label: 'Prestação de Contas' },
   { value: 'registro_campo', label: 'Registro de Campo' },
