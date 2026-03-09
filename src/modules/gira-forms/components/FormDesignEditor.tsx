@@ -36,9 +36,9 @@ export const FormDesignEditor: React.FC<Props> = ({ settings: initial, onSave })
     try {
       const ext = file.name.split('.').pop();
       const path = `form-assets/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from('document-images').upload(path, file);
+      const { error } = await supabase.storage.from('team-report-photos').upload(path, file);
       if (error) throw error;
-      const { data } = supabase.storage.from('document-images').getPublicUrl(path);
+      const { data } = supabase.storage.from('team-report-photos').getPublicUrl(path);
       update({ [field]: data.publicUrl });
       toast.success('Imagem enviada!');
     } catch {
