@@ -41,6 +41,7 @@ export default function FormBuilderPage() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('geral');
   const [status, setStatus] = useState<'ativo' | 'inativo'>('ativo');
+  const [publicSlug, setPublicSlug] = useState('');
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [localFields, setLocalFields] = useState<FormField[]>([]);
   const [activeTab, setActiveTab] = useState('editor');
