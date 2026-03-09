@@ -35,6 +35,19 @@ export interface FormField {
   updated_at: string;
 }
 
+export interface FormDesignSettings {
+  logoUrl?: string;
+  coverImageUrl?: string;
+  headerImageUrl?: string;
+  primaryColor?: string;
+  buttonColor?: string;
+  backgroundColor?: string;
+  fontFamily?: string;
+  theme?: 'light' | 'dark';
+  pageLayout?: 'centered' | 'full';
+  successMessage?: string;
+}
+
 export interface Form {
   id: string;
   project_id: string | null;
@@ -43,7 +56,7 @@ export interface Form {
   description: string;
   category: string;
   status: 'ativo' | 'inativo';
-  settings: Record<string, unknown>;
+  settings: FormDesignSettings;
   created_at: string;
   updated_at: string;
 }
