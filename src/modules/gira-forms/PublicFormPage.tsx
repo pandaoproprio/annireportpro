@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { maskPhone, maskCpfCnpj } from '@/lib/masks';
+import { maskPhone, maskCpfCnpj, maskCpf, maskCnpj } from '@/lib/masks';
 import type { Form, FormField, FormDesignSettings, FieldCondition, FieldConditionGroup } from './types';
 
 // ─── CEP API ────────────────────────────────────────────────
