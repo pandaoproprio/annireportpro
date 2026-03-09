@@ -334,6 +334,60 @@ export type Database = {
           },
         ]
       }
+      form_notifications: {
+        Row: {
+          created_at: string
+          email_sent: boolean
+          form_id: string
+          form_response_id: string
+          form_title: string
+          id: string
+          is_read: boolean
+          recipient_user_id: string
+          respondent_email: string | null
+          respondent_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_sent?: boolean
+          form_id: string
+          form_response_id: string
+          form_title?: string
+          id?: string
+          is_read?: boolean
+          recipient_user_id: string
+          respondent_email?: string | null
+          respondent_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_sent?: boolean
+          form_id?: string
+          form_response_id?: string
+          form_title?: string
+          id?: string
+          is_read?: boolean
+          recipient_user_id?: string
+          respondent_email?: string | null
+          respondent_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_notifications_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_notifications_form_response_id_fkey"
+            columns: ["form_response_id"]
+            isOneToOne: false
+            referencedRelation: "form_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_responses: {
         Row: {
           answers: Json
