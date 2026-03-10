@@ -139,20 +139,24 @@ export default function PublicFormPage() {
       const respondentName = nameFieldId ? String(answers[nameFieldId] || '').trim() : '';
       const respondentEmail = emailFieldId ? String(answers[emailFieldId] || '').trim() : '';
 
-      const { data: responseData, error } = await supabase.from('form_responses').insert({
+      // Generate a client-side ID so we can reference it for notifications
+      const responseId = crypto.randomUUID();
+
+      const { error } = await supabase.from('form_responses').insert({
+        id: responseId,
         form_id: formId!,
         respondent_name: respondentName,
         respondent_email: respondentEmail,
         answers: { ...answers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
-      }).select('id').single();
+      });
       if (error) throw error;
 
       // Non-blocking notification
-      if (form?.user_id && responseData?.id) {
+      if (form?.user_id) {
         try {
           await supabase.from('form_notifications').insert({
             form_id: formId!,
-            form_response_id: responseData.id,
+            form_response_id: responseId,
             recipient_user_id: form.user_id,
             form_title: form.title,
             respondent_name: respondentName,
