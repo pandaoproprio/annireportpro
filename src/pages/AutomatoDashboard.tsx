@@ -179,6 +179,10 @@ export default function AutomatoDashboard() {
                 <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0">{unreadCount}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="workflows" className="gap-1.5">
+              <GitBranch className="w-4 h-4" />
+              Workflows
+            </TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5">
               <History className="w-4 h-4" />
               Histórico
