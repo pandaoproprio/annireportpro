@@ -108,7 +108,7 @@ const BenchmarkingDashboard: React.FC = () => {
                 <span className="text-lg font-bold text-muted-foreground w-8">{i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}</span>
                 <div className="flex-1">
                   <p className="font-medium text-foreground">{p.name}</p>
-                  <p className="text-xs text-muted-foreground">{p.organization_name}</p>
+                  <p className="text-xs text-muted-foreground">{p.organizationName}</p>
                 </div>
                 <Badge variant="outline">Projeto</Badge>
               </div>

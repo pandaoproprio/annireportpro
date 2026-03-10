@@ -223,10 +223,11 @@ const RetrospectivesPage: React.FC = () => {
 
         <ConfirmDialog
           open={!!deleteId}
+          onOpenChange={(open) => { if (!open) setDeleteId(null); }}
           title="Excluir Retrospectiva"
           description="Deseja realmente excluir esta retrospectiva?"
           onConfirm={handleDelete}
-          onCancel={() => setDeleteId(null)}
+          variant="destructive"
         />
       </div>
     </PageTransition>
