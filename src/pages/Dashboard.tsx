@@ -23,6 +23,7 @@ import { PerformanceDashboard } from '@/components/performance/PerformanceDashbo
 import { WipAlertBanner } from '@/components/performance/WipAlertBanner';
 import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
 import { AiExecutiveSummary } from '@/components/dashboard/AiExecutiveSummary';
+import { ProactiveSummaryCard } from '@/components/dashboard/ProactiveSummaryCard';
 import { exportDashboardToPdf } from '@/lib/dashboardPdfExport';
 import { format, parseISO, startOfMonth, eachMonthOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -282,6 +283,9 @@ const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
           <AiExecutiveSummary projectData={aiProjectData} onNarrativeChange={setAiNarrative} />
         </div>
       )}
+
+      {/* Proactive AI Summary - always visible when project exists */}
+      <ProactiveSummaryCard projectId={project?.id} />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
