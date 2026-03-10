@@ -16,6 +16,8 @@ import { ActivitiesByMonthChart } from '@/components/dashboard/ActivitiesByMonth
 import { ActivityTypesChart } from '@/components/dashboard/ActivityTypesChart';
 import { AttendeesByGoalChart } from '@/components/dashboard/AttendeesByGoalChart';
 import { PendingActivitiesBanner } from '@/components/PendingActivitiesBanner';
+import { ActivityHeatmap } from '@/components/dashboard/ActivityHeatmap';
+import { CrossProjectChart } from '@/components/dashboard/CrossProjectChart';
 import { useSlaTracking } from '@/hooks/useSlaTracking';
 import { SlaDashboardCards } from '@/components/sla/SlaDashboardCards';
 import { SlaOverdueBanner } from '@/components/sla/SlaOverdueBanner';
