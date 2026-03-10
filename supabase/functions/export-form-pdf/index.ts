@@ -266,11 +266,12 @@ Deno.serve(async (req) => {
 
     const pdfBuffer = await browserlessResponse.arrayBuffer();
 
+    const safeFilename = encodeURIComponent(`${form.title} - Respostas.pdf`);
     return new Response(pdfBuffer, {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${form.title} - Respostas.pdf"`,
+        "Content-Disposition": `attachment; filename*=UTF-8''${safeFilename}`,
       },
     });
   } catch (err) {
