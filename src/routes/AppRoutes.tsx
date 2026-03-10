@@ -195,8 +195,8 @@ const Layout: React.FC = () => {
                 {hasPermission('report_team') && <SidebarLink to="/justificativa" icon={<FileText className="w-5 h-5" />} label="Justificativa Prorrogação" onClick={closeSidebar} />}
                 {hasPermission('report_object') && <SidebarLink to="/report-v2" icon={<BarChart3 className="w-5 h-5" />} label="Relatório V2" onClick={closeSidebar} />}
                 {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />}
-                <SidebarLink to="/forms" icon={<ClipboardList className="w-5 h-5" />} label="GIRA Forms" onClick={closeSidebar} />
-                <SidebarLink to="/eventos" icon={<CalendarDays className="w-5 h-5" />} label="GIRA Eventos" onClick={closeSidebar} />
+                {hasPermission('forms_view') && <SidebarLink to="/forms" icon={<ClipboardList className="w-5 h-5" />} label="GIRA Forms" onClick={closeSidebar} />}
+                {hasPermission('events_view' as any) && <SidebarLink to="/eventos" icon={<CalendarDays className="w-5 h-5" />} label="GIRA Eventos" onClick={closeSidebar} />}
                 <SidebarLink to="/invoices" icon={<Receipt className="w-5 h-5" />} label="Notas Fiscais" onClick={closeSidebar} />
                 <SidebarLink to="/messaging" icon={<MessageSquare className="w-5 h-5" />} label="Mensagens" onClick={closeSidebar} />
               </div>
@@ -317,10 +317,10 @@ const Layout: React.FC = () => {
                 <Route path="/wysiwyg/:id" element={<WysiwygEditorPage />} />
                 <Route path="/wysiwyg" element={<WysiwygEditorPage />} />
                 <Route path="/report-v2" element={<PermissionGuard permission="report_object"><ReportV2Page /></PermissionGuard>} />
-                <Route path="/forms" element={<FormsListPage />} />
-                <Route path="/forms/:id" element={<FormBuilderPage />} />
-                <Route path="/eventos" element={<EventsListPage />} />
-                <Route path="/eventos/:id" element={<EventDetailPage />} />
+                <Route path="/forms" element={<PermissionGuard permission={'forms_view' as any}><FormsListPage /></PermissionGuard>} />
+                <Route path="/forms/:id" element={<PermissionGuard permission={'forms_view' as any}><FormBuilderPage /></PermissionGuard>} />
+                <Route path="/eventos" element={<PermissionGuard permission={'events_view' as any}><EventsListPage /></PermissionGuard>} />
+                <Route path="/eventos/:id" element={<PermissionGuard permission={'events_view' as any}><EventDetailPage /></PermissionGuard>} />
                 <Route path="/automato" element={<PermissionGuard permission="system_logs"><AutomatoDashboard /></PermissionGuard>} />
                 <Route path="/risks" element={<RiskManagement />} />
                 <Route path="/budget" element={<BudgetDashboard />} />
