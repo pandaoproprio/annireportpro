@@ -72,65 +72,76 @@ function buildHtml(
     })
     .join("\n");
 
+  // Dynamic font sizing based on column count
+  const totalCols = fields.length + 3; // Data, Respondente, E-mail + fields
+  const baseFontTh = totalCols > 12 ? 6.5 : totalCols > 8 ? 7.5 : 9;
+  const baseFontTd = totalCols > 12 ? 7 : totalCols > 8 ? 8 : 9.5;
+  const cellPad = totalCols > 12 ? '3px 4px' : totalCols > 8 ? '4px 5px' : '5px 8px';
+
   return `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8"/>
 <style>
-  @page { size: A4 landscape; margin: 12mm; }
+  @page { size: A4 landscape; margin: 8mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', Arial, sans-serif;
     color: #1a1a1a;
-    font-size: 11px;
-    line-height: 1.4;
+    font-size: 9px;
+    line-height: 1.3;
     padding: 0;
+    width: 100%;
   }
   .header {
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
     border-bottom: 3px solid #0DA3E7;
-    padding-bottom: 10px;
-    margin-bottom: 16px;
+    padding-bottom: 8px;
+    margin-bottom: 10px;
   }
   .header h1 {
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 700;
     color: #0DA3E7;
     text-transform: uppercase;
-    max-width: 70%;
+    max-width: 75%;
+    line-height: 1.2;
   }
   .header .meta {
     text-align: right;
-    font-size: 10px;
+    font-size: 8px;
     color: #666;
+    white-space: nowrap;
   }
   .meta span { display: block; }
   table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: auto;
+    table-layout: fixed;
     word-wrap: break-word;
   }
   th {
     background: #0DA3E7;
     color: #fff;
     font-weight: 600;
-    font-size: 10px;
+    font-size: ${baseFontTh}px;
     text-transform: uppercase;
-    padding: 6px 8px;
+    padding: ${cellPad};
     text-align: left;
-    white-space: nowrap;
     border: 1px solid #0b8ec9;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    hyphens: auto;
   }
   td {
-    padding: 5px 8px;
+    padding: ${cellPad};
     border: 1px solid #e0e0e0;
-    font-size: 10.5px;
+    font-size: ${baseFontTd}px;
     vertical-align: top;
-    max-width: 200px;
     overflow-wrap: break-word;
+    word-break: break-word;
   }
   tr:nth-child(even) { background: #f7fafc; }
   tr:hover { background: #eef6fb; }
