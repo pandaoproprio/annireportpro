@@ -974,6 +974,47 @@ export type Database = {
         }
         Relationships: []
       }
+      project_budget_lines: {
+        Row: {
+          category: Database["public"]["Enums"]["budget_category"]
+          created_at: string
+          description: string
+          id: string
+          planned_amount: number
+          project_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["budget_category"]
+          created_at?: string
+          description?: string
+          id?: string
+          planned_amount?: number
+          project_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["budget_category"]
+          created_at?: string
+          description?: string
+          id?: string
+          planned_amount?: number
+          project_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_budget_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_collaborators: {
         Row: {
           added_by: string
@@ -999,6 +1040,76 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "project_collaborators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_expenses: {
+        Row: {
+          activity_id: string | null
+          amount: number
+          budget_line_id: string | null
+          category: Database["public"]["Enums"]["budget_category"]
+          created_at: string
+          description: string
+          expense_date: string
+          id: string
+          notes: string | null
+          project_id: string
+          receipt_url: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id?: string | null
+          amount?: number
+          budget_line_id?: string | null
+          category?: Database["public"]["Enums"]["budget_category"]
+          created_at?: string
+          description: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          project_id: string
+          receipt_url?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string | null
+          amount?: number
+          budget_line_id?: string | null
+          category?: Database["public"]["Enums"]["budget_category"]
+          created_at?: string
+          description?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          project_id?: string
+          receipt_url?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_expenses_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_expenses_budget_line_id_fkey"
+            columns: ["budget_line_id"]
+            isOneToOne: false
+            referencedRelation: "project_budget_lines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_expenses_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
@@ -1885,6 +1996,17 @@ export type Database = {
         | "analista"
         | "usuario"
         | "coordenador"
+      budget_category:
+        | "pessoal"
+        | "material"
+        | "servicos"
+        | "infraestrutura"
+        | "comunicacao"
+        | "transporte"
+        | "alimentacao"
+        | "capacitacao"
+        | "equipamentos"
+        | "outros"
       risk_category:
         | "financeiro"
         | "operacional"
@@ -2096,6 +2218,18 @@ export const Constants = {
         "analista",
         "usuario",
         "coordenador",
+      ],
+      budget_category: [
+        "pessoal",
+        "material",
+        "servicos",
+        "infraestrutura",
+        "comunicacao",
+        "transporte",
+        "alimentacao",
+        "capacitacao",
+        "equipamentos",
+        "outros",
       ],
       risk_category: [
         "financeiro",
