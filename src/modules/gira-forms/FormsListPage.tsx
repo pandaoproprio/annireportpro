@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Search, FileText, Trash2, Pencil, ClipboardList, LayoutTemplate, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, Search, FileText, Trash2, Pencil, ClipboardList, LayoutTemplate, CheckCircle2, Copy } from 'lucide-react';
 import { CATEGORIES } from './types';
 import { FORM_TEMPLATES, type FormTemplate } from './templates';
 import { format } from 'date-fns';
