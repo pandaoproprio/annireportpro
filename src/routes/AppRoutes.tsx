@@ -290,6 +290,8 @@ const Layout: React.FC = () => {
                 <Route path="/report-v2" element={<PermissionGuard permission="report_object"><ReportV2Page /></PermissionGuard>} />
                 <Route path="/forms" element={<PermissionGuard permission={'forms_view' as any}><FormsListPage /></PermissionGuard>} />
                 <Route path="/forms/:id" element={<PermissionGuard permission={'forms_view' as any}><FormBuilderPage /></PermissionGuard>} />
+                <Route path="/eventos" element={<EventsListPage />} />
+                <Route path="/eventos/:id" element={<EventDetailPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
