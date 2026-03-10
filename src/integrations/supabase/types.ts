@@ -106,6 +106,71 @@ export type Database = {
           },
         ]
       }
+      activity_narratives: {
+        Row: {
+          activity_id: string
+          ai_model: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          edited_at: string | null
+          edited_by: string | null
+          generation_prompt_summary: string | null
+          id: string
+          metadata: Json | null
+          narrative_text: string
+          project_id: string
+          status: string
+          target_reports: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id: string
+          ai_model?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          generation_prompt_summary?: string | null
+          id?: string
+          metadata?: Json | null
+          narrative_text?: string
+          project_id: string
+          status?: string
+          target_reports?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string
+          ai_model?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          edited_at?: string | null
+          edited_by?: string | null
+          generation_prompt_summary?: string | null
+          id?: string
+          metadata?: Json | null
+          narrative_text?: string
+          project_id?: string
+          status?: string
+          target_reports?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activity_narratives_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: true
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       asana_config: {
         Row: {
           created_at: string
