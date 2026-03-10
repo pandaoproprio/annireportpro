@@ -14,12 +14,14 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
   sla_overdue: 'SLA Vencido',
   stale_draft: 'Rascunho Estagnado',
   project_inactivity: 'Projeto Inativo',
+  workflow_stuck: 'Workflow Parado',
 };
 
 const ALERT_TYPE_ICONS: Record<string, React.ReactNode> = {
   sla_overdue: <Clock className="w-4 h-4" />,
   stale_draft: <FileText className="w-4 h-4" />,
   project_inactivity: <Activity className="w-4 h-4" />,
+  workflow_stuck: <Zap className="w-4 h-4" />,
 };
 
 const SEVERITY_STYLES: Record<string, string> = {

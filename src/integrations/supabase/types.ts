@@ -1217,6 +1217,95 @@ export type Database = {
         }
         Relationships: []
       }
+      report_workflow_history: {
+        Row: {
+          changed_by: string
+          created_at: string
+          from_status: Database["public"]["Enums"]["workflow_status"] | null
+          id: string
+          notes: string | null
+          to_status: Database["public"]["Enums"]["workflow_status"]
+          workflow_id: string
+        }
+        Insert: {
+          changed_by: string
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["workflow_status"] | null
+          id?: string
+          notes?: string | null
+          to_status: Database["public"]["Enums"]["workflow_status"]
+          workflow_id: string
+        }
+        Update: {
+          changed_by?: string
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["workflow_status"] | null
+          id?: string
+          notes?: string | null
+          to_status?: Database["public"]["Enums"]["workflow_status"]
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_workflow_history_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "report_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_workflows: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          escalated_at: string | null
+          escalation_level: number
+          id: string
+          notes: string | null
+          project_id: string
+          report_id: string
+          report_type: Database["public"]["Enums"]["sla_report_type"]
+          status: Database["public"]["Enums"]["workflow_status"]
+          status_changed_at: string
+          status_changed_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          escalated_at?: string | null
+          escalation_level?: number
+          id?: string
+          notes?: string | null
+          project_id: string
+          report_id: string
+          report_type: Database["public"]["Enums"]["sla_report_type"]
+          status?: Database["public"]["Enums"]["workflow_status"]
+          status_changed_at?: string
+          status_changed_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          escalated_at?: string | null
+          escalation_level?: number
+          id?: string
+          notes?: string | null
+          project_id?: string
+          report_id?: string
+          report_type?: Database["public"]["Enums"]["sla_report_type"]
+          status?: Database["public"]["Enums"]["workflow_status"]
+          status_changed_at?: string
+          status_changed_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_logs: {
         Row: {
           action: string
@@ -1465,6 +1554,14 @@ export type Database = {
         }
         Returns: undefined
       }
+      validate_workflow_transition: {
+        Args: {
+          _current_status: Database["public"]["Enums"]["workflow_status"]
+          _new_status: Database["public"]["Enums"]["workflow_status"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
       activity_type:
@@ -1515,6 +1612,12 @@ export type Database = {
         | "coordenador"
       sla_report_type: "report_object" | "report_team" | "justification"
       sla_status: "no_prazo" | "atencao" | "atrasado" | "bloqueado"
+      workflow_status:
+        | "rascunho"
+        | "em_revisao"
+        | "aprovado"
+        | "publicado"
+        | "devolvido"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1693,6 +1796,13 @@ export const Constants = {
       ],
       sla_report_type: ["report_object", "report_team", "justification"],
       sla_status: ["no_prazo", "atencao", "atrasado", "bloqueado"],
+      workflow_status: [
+        "rascunho",
+        "em_revisao",
+        "aprovado",
+        "publicado",
+        "devolvido",
+      ],
     },
   },
 } as const

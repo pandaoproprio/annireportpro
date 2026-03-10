@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 export interface AutomationAlert {
   id: string;
   run_id: string;
-  alert_type: string;
+  alert_type: 'sla_overdue' | 'stale_draft' | 'project_inactivity' | 'workflow_stuck' | string;
   severity: string;
   title: string;
   description: string;
