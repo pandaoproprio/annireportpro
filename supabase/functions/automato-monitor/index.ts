@@ -338,6 +338,8 @@ serve(async (req) => {
     }
 
     // ── 8. Finalize run record ──
+    const emailsSent = 0; // Email sending pending transactional email setup
+    
     await supabase
       .from("automation_runs")
       .update({
