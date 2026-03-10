@@ -23,6 +23,7 @@ import { PerformanceDashboard } from '@/components/performance/PerformanceDashbo
 import { WipAlertBanner } from '@/components/performance/WipAlertBanner';
 import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
 import { AiExecutiveSummary } from '@/components/dashboard/AiExecutiveSummary';
+import { ProactiveSummaryCard } from '@/components/dashboard/ProactiveSummaryCard';
 import { exportDashboardToPdf } from '@/lib/dashboardPdfExport';
 import { format, parseISO, startOfMonth, eachMonthOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
