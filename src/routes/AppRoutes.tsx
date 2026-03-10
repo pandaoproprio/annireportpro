@@ -27,7 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays, Bot
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays, Bot, ShieldCheck, Brain, TrendingUp
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import logoGira from '@/assets/logo-gira-relatorios.png';
@@ -201,6 +201,18 @@ const Layout: React.FC = () => {
                   <SidebarLink to="/templates" icon={<Layers className="w-5 h-5" />} label="Templates de Relatórios" onClick={closeSidebar} />
                   <SidebarLink to="/editor" icon={<FileCode2 className="w-5 h-5" />} label="Editor de Documentos" onClick={closeSidebar} />
                   <SidebarLink to="/wysiwyg" icon={<PenTool className="w-5 h-5" />} label="Editor WYSIWYG" onClick={closeSidebar} />
+                </div>
+              </div>
+            )}
+
+            {/* Estratégico */}
+            {isAdmin && (
+              <div>
+                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Estratégico</p>
+                <div className="space-y-0.5">
+                  <SidebarLink to="/maturity-audit" icon={<ShieldCheck className="w-5 h-5" />} label="Auditoria de Maturidade" onClick={closeSidebar} />
+                  <SidebarLink to="/ai-audit" icon={<Brain className="w-5 h-5" />} label="Auditoria de IA" onClick={closeSidebar} />
+                  <SidebarLink to="/valuation" icon={<TrendingUp className="w-5 h-5" />} label="Valuation Report" onClick={closeSidebar} />
                 </div>
               </div>
             )}
