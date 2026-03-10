@@ -59,6 +59,9 @@ const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m
 const FormsListPage = lazy(() => import('@/modules/gira-forms/FormsListPage'));
 const FormBuilderPage = lazy(() => import('@/modules/gira-forms/FormBuilderPage'));
 const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'));
+const EventsListPage = lazy(() => import('@/modules/gira-eventos/EventsListPage'));
+const EventDetailPage = lazy(() => import('@/modules/gira-eventos/EventDetailPage'));
+const PublicEventPage = lazy(() => import('@/modules/gira-eventos/PublicEventPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
