@@ -211,6 +211,104 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          description: string
+          email_error: string | null
+          email_sent: boolean
+          entity_id: string | null
+          entity_type: string | null
+          id: string
+          is_read: boolean
+          project_id: string | null
+          run_id: string | null
+          severity: string
+          target_email: string | null
+          target_user_id: string
+          title: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          description?: string
+          email_error?: string | null
+          email_sent?: boolean
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean
+          project_id?: string | null
+          run_id?: string | null
+          severity?: string
+          target_email?: string | null
+          target_user_id: string
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          description?: string
+          email_error?: string | null
+          email_sent?: boolean
+          entity_id?: string | null
+          entity_type?: string | null
+          id?: string
+          is_read?: boolean
+          project_id?: string | null
+          run_id?: string | null
+          severity?: string
+          target_email?: string | null
+          target_user_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_alerts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "automation_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_runs: {
+        Row: {
+          alerts_generated: number
+          emails_sent: number
+          errors: string[] | null
+          finished_at: string | null
+          id: string
+          metadata: Json | null
+          run_type: string
+          started_at: string
+          status: string
+        }
+        Insert: {
+          alerts_generated?: number
+          emails_sent?: number
+          errors?: string[] | null
+          finished_at?: string | null
+          id?: string
+          metadata?: Json | null
+          run_type?: string
+          started_at?: string
+          status?: string
+        }
+        Update: {
+          alerts_generated?: number
+          emails_sent?: number
+          errors?: string[] | null
+          finished_at?: string | null
+          id?: string
+          metadata?: Json | null
+          run_type?: string
+          started_at?: string
+          status?: string
+        }
+        Relationships: []
+      }
       document_versions: {
         Row: {
           content_snapshot: Json
