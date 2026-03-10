@@ -1,18 +1,24 @@
-import jsPDF from 'jspdf';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import type { Form, FormField, FormResponse } from '../types';
 
+function getDataFields(fields: FormField[]) {
+  return fields.filter(f => f.type !== 'section_header' && f.type !== 'info_text');
+}
+
 function getHeaders(fields: FormField[]) {
-  return ['Data', 'Respondente', 'E-mail', ...fields.map(f => f.label)];
+  return ['Data', 'Respondente', 'E-mail', ...getDataFields(fields).map(f => f.label)];
 }
 
 function getRows(responses: FormResponse[], fields: FormField[]) {
+  const dataFields = getDataFields(fields);
   return responses.map(r => [
     format(new Date(r.submitted_at), 'dd/MM/yyyy HH:mm', { locale: ptBR }),
     r.respondent_name || '',
     r.respondent_email || '',
-    ...fields.map(f => {
+    ...dataFields.map(f => {
       const val = r.answers?.[f.id];
       return Array.isArray(val) ? val.join(', ') : String(val ?? '');
     }),
@@ -38,12 +44,10 @@ export function exportToExcel(form: Form, fields: FormField[], responses: FormRe
   xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
   xml += '<Worksheet ss:Name="Respostas"><Table>\n';
 
-  // Header row
   xml += '<Row>';
   headers.forEach(h => { xml += `<Cell><Data ss:Type="String">${escapeXml(h)}</Data></Cell>`; });
   xml += '</Row>\n';
 
-  // Data rows
   rows.forEach(row => {
     xml += '<Row>';
     row.forEach(cell => { xml += `<Cell><Data ss:Type="String">${escapeXml(cell)}</Data></Cell>`; });
@@ -56,48 +60,42 @@ export function exportToExcel(form: Form, fields: FormField[], responses: FormRe
   downloadBlob(blob, `${form.title} - Respostas.xls`);
 }
 
-export function exportToPdf(form: Form, fields: FormField[], responses: FormResponse[]) {
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-  const pageW = doc.internal.pageSize.getWidth();
+export async function exportToPdf(form: Form, _fields: FormField[], _responses: FormResponse[]) {
+  toast.info('Gerando PDF via servidor...');
 
-  // Title
-  doc.setFontSize(16);
-  doc.text(form.title, 14, 20);
-  doc.setFontSize(10);
-  doc.text(`${responses.length} resposta(s) | Exportado em ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: ptBR })}`, 14, 28);
-
-  const headers = getHeaders(fields);
-  const rows = getRows(responses, fields);
-  const colCount = headers.length;
-  const colW = Math.min(45, (pageW - 28) / colCount);
-  const startX = 14;
-  let y = 36;
-
-  // Header
-  doc.setFillColor(240, 240, 240);
-  doc.rect(startX, y - 4, colCount * colW, 7, 'F');
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  headers.forEach((h, i) => {
-    doc.text(h.substring(0, 20), startX + i * colW + 1, y, { maxWidth: colW - 2 });
-  });
-  y += 8;
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(6.5);
-
-  rows.forEach(row => {
-    if (y > doc.internal.pageSize.getHeight() - 15) {
-      doc.addPage();
-      y = 15;
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const token = sessionData?.session?.access_token;
+    if (!token) {
+      toast.error('Sessão expirada. Faça login novamente.');
+      return;
     }
-    row.forEach((cell, i) => {
-      doc.text(cell.substring(0, 25), startX + i * colW + 1, y, { maxWidth: colW - 2 });
-    });
-    y += 6;
-  });
 
-  doc.save(`${form.title} - Respostas.pdf`);
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const url = `https://${projectId}.supabase.co/functions/v1/export-form-pdf`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      },
+      body: JSON.stringify({ formId: form.id }),
+    });
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ error: 'Erro desconhecido' }));
+      throw new Error(err.error || 'Erro ao gerar PDF');
+    }
+
+    const blob = await response.blob();
+    downloadBlob(blob, `${form.title} - Respostas.pdf`);
+    toast.success('PDF exportado com sucesso!');
+  } catch (e: any) {
+    console.error('PDF export error:', e);
+    toast.error(e.message || 'Erro ao exportar PDF');
+  }
 }
 
 function escapeXml(s: string) {
