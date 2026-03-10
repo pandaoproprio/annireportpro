@@ -27,7 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays, Bot, ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign, Zap, ListChecks
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays, Bot, ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign, Zap, ListChecks, Receipt, MessageSquare
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import logoGira from '@/assets/logo-gira-relatorios.png';
