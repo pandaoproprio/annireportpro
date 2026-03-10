@@ -216,8 +216,11 @@ const Layout: React.FC = () => {
                   {hasPermission('user_management') && (
                     <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
                   )}
-                  {hasPermission('system_logs') && (
+                   {hasPermission('system_logs') && (
                     <SidebarLink to="/logs" icon={<ScrollText className="w-5 h-5" />} label="Logs do Sistema" onClick={closeSidebar} />
+                  )}
+                  {isAdmin && (
+                    <SidebarLink to="/automato" icon={<Bot className="w-5 h-5" />} label="Automato" onClick={closeSidebar} />
                   )}
                 </div>
               </div>
