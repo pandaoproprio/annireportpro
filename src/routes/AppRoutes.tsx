@@ -34,6 +34,7 @@ import logoGira from '@/assets/logo-gira-relatorios.png';
 
 // Lazy-loaded pages
 const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const GuiaAulaPage = lazy(() => import('@/pages/GuiaAulaPage'));
 const ActivityManager = lazy(() => import('@/pages/ActivityManager').then(m => ({ default: m.ActivityManager })));
 const ReportGenerator = lazy(() => import('@/pages/ReportGenerator').then(m => ({ default: m.ReportGenerator })));
 const TeamReportGenerator = lazy(() => import('@/pages/TeamReportGenerator').then(m => ({ default: m.TeamReportGenerator })));
