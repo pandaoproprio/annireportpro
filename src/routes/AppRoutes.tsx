@@ -197,6 +197,8 @@ const Layout: React.FC = () => {
                 {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />}
                 <SidebarLink to="/forms" icon={<ClipboardList className="w-5 h-5" />} label="GIRA Forms" onClick={closeSidebar} />
                 <SidebarLink to="/eventos" icon={<CalendarDays className="w-5 h-5" />} label="GIRA Eventos" onClick={closeSidebar} />
+                <SidebarLink to="/invoices" icon={<Receipt className="w-5 h-5" />} label="Notas Fiscais" onClick={closeSidebar} />
+                <SidebarLink to="/messaging" icon={<MessageSquare className="w-5 h-5" />} label="Mensagens" onClick={closeSidebar} />
               </div>
             </div>
 
