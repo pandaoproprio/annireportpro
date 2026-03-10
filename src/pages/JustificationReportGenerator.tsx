@@ -18,6 +18,7 @@ import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfig
 import { JustificationEditSection } from '@/components/justification/JustificationEditSection';
 import { JustificationPreviewSection } from '@/components/justification/JustificationPreviewSection';
 import { JustificationDraftsList } from '@/components/justification/JustificationDraftsList';
+import { WorkflowPanel } from '@/components/workflow/WorkflowPanel';
 
 export const JustificationReportGenerator: React.FC = () => {
   const state = useJustificationReportState();
@@ -164,6 +165,15 @@ export const JustificationReportGenerator: React.FC = () => {
         onExportDocx={handleExportDocx}
         onOpenWysiwyg={() => navigate('/wysiwyg')}
       />
+
+      {/* Workflow Panel */}
+      {currentDraftId && (
+        <WorkflowPanel
+          reportId={currentDraftId}
+          reportType="justification"
+          projectId={project.id}
+        />
+      )}
 
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">

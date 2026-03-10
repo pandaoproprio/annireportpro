@@ -34,6 +34,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { maskCpfCnpj } from '@/lib/masks';
 import { fetchCnpjData } from '@/lib/cnpjLookup';
+import { WorkflowPanel } from '@/components/workflow/WorkflowPanel';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
   DndContext,
@@ -681,6 +682,15 @@ export const TeamReportGenerator: React.FC = () => {
             </Button>
           </div>
         </div>
+
+        {/* Workflow Panel */}
+        {currentDraftId && (
+          <WorkflowPanel
+            reportId={currentDraftId}
+            reportType="report_team"
+            projectId={project.id}
+          />
+        )}
 
         {/* Project Info Card */}
         <Card>

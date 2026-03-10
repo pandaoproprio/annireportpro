@@ -15,6 +15,7 @@ import { ReportEditSection } from '@/components/report/ReportEditSection';
 import { ReportPreviewSection } from '@/components/report/ReportPreviewSection';
 import { DiaryReportLinkDialog } from '@/components/report/DiaryReportLinkDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { WorkflowPanel } from '@/components/workflow/WorkflowPanel';
 import { toast } from 'sonner';
 import { mmToPx, a4PageStyle, MR, ML, MB } from '@/lib/previewConstants';
 
@@ -235,6 +236,13 @@ export const ReportGenerator: React.FC = () => {
   return (
     <div className="space-y-6 pb-20 animate-fadeIn">
       <ReportToolbar mode={mode} setMode={setMode} isExporting={isExporting} exportType={exportType} onExportPdf={exportToPdf} onExportDocx={handleExportDocx} onOpenWysiwyg={() => navigate('/wysiwyg')} />
+
+      {/* Workflow Panel */}
+      <WorkflowPanel
+        reportId={project.id}
+        reportType="report_object"
+        projectId={project.id}
+      />
 
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
