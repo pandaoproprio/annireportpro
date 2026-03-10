@@ -50,6 +50,7 @@ const EventDetailPage: React.FC = () => {
         max_participants: data.max_participants ? Number(data.max_participants) : null,
         event_date: new Date(data.event_date).toISOString(),
         event_end_date: data.event_end_date ? new Date(data.event_end_date).toISOString() : null,
+        cover_image_url: data.cover_image_url || null,
       },
       { onSuccess: () => setEditing(false) }
     );

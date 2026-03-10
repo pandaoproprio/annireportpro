@@ -36,7 +36,7 @@ const EventsListPage: React.FC = () => {
         event_date: new Date(data.event_date).toISOString(),
         event_end_date: data.event_end_date ? new Date(data.event_end_date).toISOString() : null,
         settings: {},
-        cover_image_url: null,
+        cover_image_url: data.cover_image_url || null,
       },
       { onSuccess: () => setShowCreate(false) }
     );
