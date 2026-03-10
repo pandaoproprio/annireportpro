@@ -27,7 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import logoGira from '@/assets/logo-gira-relatorios.png';
@@ -59,6 +59,9 @@ const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m
 const FormsListPage = lazy(() => import('@/modules/gira-forms/FormsListPage'));
 const FormBuilderPage = lazy(() => import('@/modules/gira-forms/FormBuilderPage'));
 const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'));
+const EventsListPage = lazy(() => import('@/modules/gira-eventos/EventsListPage'));
+const EventDetailPage = lazy(() => import('@/modules/gira-eventos/EventDetailPage'));
+const PublicEventPage = lazy(() => import('@/modules/gira-eventos/PublicEventPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -185,6 +188,7 @@ const Layout: React.FC = () => {
                 {hasPermission('report_object') && <SidebarLink to="/report-v2" icon={<BarChart3 className="w-5 h-5" />} label="Relatório V2" onClick={closeSidebar} />}
                 {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />}
                 <SidebarLink to="/forms" icon={<ClipboardList className="w-5 h-5" />} label="GIRA Forms" onClick={closeSidebar} />
+                <SidebarLink to="/eventos" icon={<CalendarDays className="w-5 h-5" />} label="GIRA Eventos" onClick={closeSidebar} />
               </div>
             </div>
 
@@ -286,6 +290,8 @@ const Layout: React.FC = () => {
                 <Route path="/report-v2" element={<PermissionGuard permission="report_object"><ReportV2Page /></PermissionGuard>} />
                 <Route path="/forms" element={<PermissionGuard permission={'forms_view' as any}><FormsListPage /></PermissionGuard>} />
                 <Route path="/forms/:id" element={<PermissionGuard permission={'forms_view' as any}><FormBuilderPage /></PermissionGuard>} />
+                <Route path="/eventos" element={<EventsListPage />} />
+                <Route path="/eventos/:id" element={<EventDetailPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
@@ -318,6 +324,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/licenca" element={<TermsOfUse />} />
         <Route path="/diario/login" element={<DiaryLogin />} />
         <Route path="/f/:id" element={<Suspense fallback={<PageFallback />}><PublicFormPage /></Suspense>} />
+        <Route path="/e/:id" element={<Suspense fallback={<PageFallback />}><PublicEventPage /></Suspense>} />
         <Route path="/consentimento" element={
           <ProtectedRoute>
             <LgpdConsent />

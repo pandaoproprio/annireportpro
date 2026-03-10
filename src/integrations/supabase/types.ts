@@ -284,6 +284,112 @@ export type Database = {
           },
         ]
       }
+      event_registrations: {
+        Row: {
+          document: string | null
+          email: string | null
+          event_id: string
+          id: string
+          name: string
+          phone: string | null
+          registered_at: string
+          status: string
+          user_id: string | null
+        }
+        Insert: {
+          document?: string | null
+          email?: string | null
+          event_id: string
+          id?: string
+          name: string
+          phone?: string | null
+          registered_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Update: {
+          document?: string | null
+          email?: string | null
+          event_id?: string
+          id?: string
+          name?: string
+          phone?: string | null
+          registered_at?: string
+          status?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_registrations_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      events: {
+        Row: {
+          category: string
+          cover_image_url: string | null
+          created_at: string
+          description: string
+          event_date: string
+          event_end_date: string | null
+          id: string
+          location: string
+          max_participants: number | null
+          project_id: string | null
+          settings: Json
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string
+          event_date: string
+          event_end_date?: string | null
+          id?: string
+          location?: string
+          max_participants?: number | null
+          project_id?: string | null
+          settings?: Json
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          cover_image_url?: string | null
+          created_at?: string
+          description?: string
+          event_date?: string
+          event_end_date?: string | null
+          id?: string
+          location?: string
+          max_participants?: number | null
+          project_id?: string | null
+          settings?: Json
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_fields: {
         Row: {
           created_at: string
