@@ -10,7 +10,8 @@ export type AppPermission =
   | 'system_logs'
   | 'settings_edit'
   | 'project_create' | 'project_delete'
-  | 'forms_view' | 'forms_create' | 'forms_edit' | 'forms_delete' | 'forms_export';
+  | 'forms_view' | 'forms_create' | 'forms_edit' | 'forms_delete' | 'forms_export'
+  | 'events_view' | 'events_create' | 'events_edit' | 'events_delete';
 
 /** Modules shown in the RBAC matrix */
 export const RBAC_MODULES = [
