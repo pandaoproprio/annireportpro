@@ -311,6 +311,7 @@ const Layout: React.FC = () => {
                 <Route path="/eventos" element={<EventsListPage />} />
                 <Route path="/eventos/:id" element={<EventDetailPage />} />
                 <Route path="/automato" element={<PermissionGuard permission="system_logs"><AutomatoDashboard /></PermissionGuard>} />
+                <Route path="/risks" element={<RiskManagement />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
