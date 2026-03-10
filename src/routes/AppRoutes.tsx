@@ -205,6 +205,18 @@ const Layout: React.FC = () => {
               </div>
             )}
 
+            {/* Estratégico */}
+            {isAdmin && (
+              <div>
+                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Estratégico</p>
+                <div className="space-y-0.5">
+                  <SidebarLink to="/maturity-audit" icon={<ShieldCheck className="w-5 h-5" />} label="Auditoria de Maturidade" onClick={closeSidebar} />
+                  <SidebarLink to="/ai-audit" icon={<Brain className="w-5 h-5" />} label="Auditoria de IA" onClick={closeSidebar} />
+                  <SidebarLink to="/valuation" icon={<TrendingUp className="w-5 h-5" />} label="Valuation Report" onClick={closeSidebar} />
+                </div>
+              </div>
+            )}
+
             {/* Administração */}
             {(hasPermission('settings_edit') || hasPermission('user_management') || hasPermission('system_logs')) && (
               <div>
