@@ -96,10 +96,10 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
       {projects && projects.length > 0 && (
         <div>
           <Label>Projeto vinculado</Label>
-          <Select value={projectId} onValueChange={v => setValue('project_id', v)}>
+          <Select value={projectId || '__none__'} onValueChange={v => setValue('project_id', v === '__none__' ? '' : v)}>
             <SelectTrigger><SelectValue placeholder="Nenhum (opcional)" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Nenhum</SelectItem>
+              <SelectItem value="__none__">Nenhum</SelectItem>
               {projects.map(p => (
                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
               ))}
