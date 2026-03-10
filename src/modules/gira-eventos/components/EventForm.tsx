@@ -35,6 +35,7 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
   const category = watch('category');
   const status = watch('status');
   const projectId = watch('project_id');
+  const [coverUrl, setCoverUrl] = useState<string | null>(defaultValues?.cover_image_url ?? null);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
