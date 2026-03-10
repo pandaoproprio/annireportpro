@@ -4,10 +4,27 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
-import { PlusCircle, Trash2, Upload, X, ImagePlus, Play } from 'lucide-react';
+import { PlusCircle, Trash2, Upload, X, ImagePlus, Play, GripVertical, Type, Minus, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { ReportV2Data, ReportV2Activity, ReportV2Header, MediaItem } from './types';
+import type { ReportV2Data, ReportV2Activity, ReportV2Header, MediaItem, ReportV2Section } from './types';
+import { createDefaultSection } from './types';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface ReportFormProps {
   data: ReportV2Data;
@@ -17,9 +34,66 @@ interface ReportFormProps {
 
 const BUCKET = 'team-report-photos';
 
+/* ─── Sortable Section Card ─── */
+const SortableSectionCard: React.FC<{
+  section: ReportV2Section;
+  onUpdate: (patch: Partial<ReportV2Section>) => void;
+  onRemove: () => void;
+}> = ({ section, onUpdate, onRemove }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: section.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <Card className="border-border">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground">
+              <GripVertical className="w-4 h-4" />
+            </button>
+            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+              {section.type === 'text' && 'Texto'}
+              {section.type === 'divider' && 'Divisor'}
+              {section.type === 'custom' && 'Seção Livre'}
+            </span>
+            <div className="flex-1" />
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRemove}>
+              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+            </Button>
+          </div>
+
+          {section.type === 'divider' ? (
+            <div className="border-t-2 border-border my-2" />
+          ) : (
+            <div className="space-y-3">
+              <Input
+                value={section.title}
+                onChange={(e) => onUpdate({ title: e.target.value })}
+                placeholder="Título da seção"
+                className="font-semibold"
+              />
+              <Textarea
+                value={section.content}
+                onChange={(e) => onUpdate({ content: e.target.value })}
+                placeholder="Conteúdo da seção..."
+                rows={5}
+              />
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, projectId }) => {
   const mediaInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const logoInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const updateField = <K extends keyof ReportV2Data>(key: K, value: ReportV2Data[K]) => {
     onChange({ ...data, [key]: value });
@@ -71,7 +145,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, projectId }) =>
     updateField('activities', data.activities.filter((_, i) => i !== index));
   };
 
-  // Media upload (image + video)
+  // Media upload
   const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>, activityIndex: number) => {
     if (!e.target.files?.length || !projectId) return;
     const activity = data.activities[activityIndex];
@@ -80,10 +154,7 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, projectId }) =>
     for (const file of Array.from(e.target.files)) {
       const isVideo = file.type.startsWith('video/');
       const isImage = file.type.startsWith('image/');
-      if (!isVideo && !isImage) {
-        toast.error(`Tipo não suportado: ${file.name}`);
-        continue;
-      }
+      if (!isVideo && !isImage) { toast.error(`Tipo não suportado: ${file.name}`); continue; }
       try {
         const id = crypto.randomUUID();
         const ext = file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
@@ -103,6 +174,33 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, projectId }) =>
   const removeMedia = (activityIndex: number, mediaIndex: number) => {
     const activity = data.activities[activityIndex];
     updateActivity(activityIndex, { media: activity.media.filter((_, i) => i !== mediaIndex) });
+  };
+
+  // Sections
+  const sections = data.sections || [];
+
+  const addSection = (type: ReportV2Section['type']) => {
+    const newSection = createDefaultSection(type, sections.length);
+    updateField('sections', [...sections, newSection]);
+  };
+
+  const updateSection = (id: string, patch: Partial<ReportV2Section>) => {
+    updateField('sections', sections.map(s => s.id === id ? { ...s, ...patch } : s));
+  };
+
+  const removeSection = (id: string) => {
+    updateField('sections', sections.filter(s => s.id !== id));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sections.findIndex(s => s.id === active.id);
+    const newIndex = sections.findIndex(s => s.id === over.id);
+    const newSections = [...sections];
+    const [moved] = newSections.splice(oldIndex, 1);
+    newSections.splice(newIndex, 0, moved);
+    updateField('sections', newSections.map((s, i) => ({ ...s, sortOrder: i })));
   };
 
   const logoPositions: { key: keyof ReportV2Header; label: string }[] = [
@@ -156,6 +254,47 @@ const ReportForm: React.FC<ReportFormProps> = ({ data, onChange, projectId }) =>
       <div className="space-y-2">
         <Label htmlFor="summary" className="text-base font-semibold">Resumo</Label>
         <Textarea id="summary" value={data.summary} onChange={(e) => updateField('summary', e.target.value)} placeholder="Resumo executivo do relatório..." rows={4} />
+      </div>
+
+      {/* Rodapé */}
+      <div className="space-y-2">
+        <Label htmlFor="footer" className="text-base font-semibold">Rodapé</Label>
+        <Input id="footer" value={data.footer || ''} onChange={(e) => updateField('footer' as any, e.target.value)} placeholder="Texto do rodapé (ex: nome da organização)" />
+      </div>
+
+      {/* Seções dinâmicas (drag & drop) */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-base font-semibold text-foreground">Seções Personalizadas</h3>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => addSection('text')}>
+              <Type className="w-4 h-4 mr-1" /> Texto
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => addSection('custom')}>
+              <FileText className="w-4 h-4 mr-1" /> Livre
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => addSection('divider')}>
+              <Minus className="w-4 h-4 mr-1" /> Divisor
+            </Button>
+          </div>
+        </div>
+
+        {sections.length > 0 && (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-3">
+                {sections.map(section => (
+                  <SortableSectionCard
+                    key={section.id}
+                    section={section}
+                    onUpdate={(patch) => updateSection(section.id, patch)}
+                    onRemove={() => removeSection(section.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        )}
       </div>
 
       {/* Atividades dinâmicas */}

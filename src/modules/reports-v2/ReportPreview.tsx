@@ -6,7 +6,7 @@ interface ReportPreviewProps {
 }
 
 const ReportPreview: React.FC<ReportPreviewProps> = ({ data }) => {
-  const { header, activities } = data;
+  const { header, activities, sections = [] } = data;
   const hasLogos = header.logoLeft || header.logoCenter || header.logoRight;
 
   return (
@@ -27,13 +27,13 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ data }) => {
         {hasLogos && (
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #1a1a1a', paddingBottom: '12px', marginBottom: '24px' }}>
             <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-start' }}>
-              {header.logoLeft && <img src={header.logoLeft} alt="Logo esquerda" style={{ height: '60px', objectFit: 'contain' }} />}
+              {header.logoLeft && <img src={header.logoLeft} alt="Logo esquerda" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />}
             </div>
             <div style={{ flex: 1, display: 'flex', justifyContent: 'center' }}>
-              {header.logoCenter && <img src={header.logoCenter} alt="Logo central" style={{ height: '60px', objectFit: 'contain' }} />}
+              {header.logoCenter && <img src={header.logoCenter} alt="Logo central" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />}
             </div>
             <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
-              {header.logoRight && <img src={header.logoRight} alt="Logo direita" style={{ height: '60px', objectFit: 'contain' }} />}
+              {header.logoRight && <img src={header.logoRight} alt="Logo direita" crossOrigin="anonymous" style={{ height: '60px', objectFit: 'contain' }} />}
             </div>
           </div>
         )}
@@ -61,6 +61,24 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ data }) => {
           </div>
         )}
 
+        {/* Seções personalizadas */}
+        {sections.map((section) => {
+          if (section.type === 'divider') {
+            return <hr key={section.id} style={{ border: 'none', borderTop: '2px solid #e5e7eb', margin: '24px 0' }} />;
+          }
+          if (!section.title && !section.content) return null;
+          return (
+            <div key={section.id} style={{ marginBottom: '24px' }}>
+              {section.title && (
+                <h2 style={{ fontSize: '16px', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '8px' }}>{section.title}</h2>
+              )}
+              {section.content && (
+                <p style={{ fontSize: '14px', textAlign: 'justify', lineHeight: '1.6', margin: 0, whiteSpace: 'pre-wrap' }}>{section.content}</p>
+              )}
+            </div>
+          );
+        })}
+
         {/* Atividades */}
         {activities.map((act) => {
           if (!act.title && !act.description && act.media.length === 0) return null;
@@ -79,7 +97,7 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ data }) => {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', marginTop: '8px' }}>
                   {act.media.map((m, idx) =>
                     m.type === 'image' ? (
-                      <img key={idx} src={m.url} alt={`Foto ${idx + 1}`} style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '6px' }} />
+                      <img key={idx} src={m.url} alt={`Foto ${idx + 1}`} crossOrigin="anonymous" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '6px' }} />
                     ) : (
                       <video key={idx} src={m.url} controls muted style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '6px', background: '#000' }} />
                     )
@@ -89,6 +107,13 @@ const ReportPreview: React.FC<ReportPreviewProps> = ({ data }) => {
             </div>
           );
         })}
+
+        {/* Rodapé */}
+        {data.footer && (
+          <div style={{ borderTop: '1px solid #d1d5db', paddingTop: '12px', marginTop: '40px', textAlign: 'center' }}>
+            <p style={{ fontSize: '11px', color: '#6b7280', margin: 0 }}>{data.footer}</p>
+          </div>
+        )}
       </div>
     </div>
   );
