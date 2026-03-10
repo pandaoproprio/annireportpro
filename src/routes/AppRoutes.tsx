@@ -345,6 +345,7 @@ export const AppRoutes: React.FC = () => {
     <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/guia-aula" element={<Suspense fallback={<PageFallback />}><GuiaAulaPage /></Suspense>} />
         <Route path="/instalar" element={<InstallGuide />} />
         <Route path="/valuation" element={<Suspense fallback={<PageFallback />}><ValuationReport /></Suspense>} />
         <Route path="/ai-audit" element={<Suspense fallback={<PageFallback />}><AiAuditReport /></Suspense>} />
