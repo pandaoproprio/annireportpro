@@ -27,7 +27,7 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
       category: defaultValues?.category ?? 'geral',
       max_participants: defaultValues?.max_participants ?? '',
       project_id: defaultValues?.project_id ?? '',
-      status: defaultValues?.status ?? 'ativo',
+      status: defaultValues?.status ?? 'ativo' as 'ativo' | 'encerrado' | 'cancelado',
     },
   });
 

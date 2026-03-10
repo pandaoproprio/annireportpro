@@ -88,7 +88,7 @@ const PublicEventPage: React.FC = () => {
         <CardContent>
           {submitted ? (
             <div className="text-center py-8 space-y-2">
-              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
+              <CheckCircle2 className="w-12 h-12 text-primary mx-auto" />
               <p className="font-semibold text-foreground">Inscrição confirmada!</p>
               <p className="text-sm text-muted-foreground">Sua inscrição foi registrada com sucesso.</p>
             </div>
