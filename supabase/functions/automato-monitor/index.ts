@@ -290,8 +290,68 @@ serve(async (req) => {
         }
       }
     }
+    // ── 4. Workflow escalation ──
+    console.log(`[automato-monitor] Run ${runId}: Checking workflow escalation...`);
+    const ESCALATION_THRESHOLD_HOURS = 48;
+    const escalationCutoff = new Date(Date.now() - ESCALATION_THRESHOLD_HOURS * 60 * 60 * 1000).toISOString();
 
-    // ── 4. Deduplicate: skip alerts already sent in last 24h ──
+    const { data: stuckWorkflows, error: wfError } = await supabase
+      .from("report_workflows")
+      .select("*")
+      .in("status", ["em_revisao", "aprovado"])
+      .lt("status_changed_at", escalationCutoff);
+
+    if (wfError) {
+      errors.push(`Workflow query error: ${wfError.message}`);
+    } else if (stuckWorkflows && stuckWorkflows.length > 0) {
+      console.log(`[automato-monitor] Found ${stuckWorkflows.length} stuck workflows to escalate`);
+      for (const wf of stuckWorkflows) {
+        const hoursSince = Math.round((Date.now() - new Date(wf.status_changed_at).getTime()) / (1000 * 60 * 60));
+        const newLevel = wf.escalation_level + 1;
+
+        // Update escalation level
+        await supabase
+          .from("report_workflows")
+          .update({
+            escalation_level: newLevel,
+            escalated_at: new Date().toISOString(),
+          })
+          .eq("id", wf.id);
+
+        const statusLabel = wf.status === "em_revisao" ? "Em Revisão" : "Aprovado";
+        const typeLabel =
+          wf.report_type === "report_object" ? "Relatório do Objeto" :
+          wf.report_type === "report_team" ? "Relatório da Equipe" : "Justificativa";
+
+        // Alert the report owner
+        allAlerts.push({
+          alert_type: "workflow_stuck",
+          severity: newLevel >= 3 ? "critical" : "warning",
+          title: `Workflow parado: ${typeLabel} — ${statusLabel}`,
+          description: `O relatório está no status "${statusLabel}" há ${hoursSince}h sem avanço. Escalação nível ${newLevel}.`,
+          target_user_id: wf.user_id,
+          entity_type: wf.report_type,
+          entity_id: wf.report_id,
+          project_id: wf.project_id,
+        });
+
+        // If assigned_to exists, alert them too
+        if (wf.assigned_to && wf.assigned_to !== wf.user_id) {
+          allAlerts.push({
+            alert_type: "workflow_stuck",
+            severity: newLevel >= 3 ? "critical" : "warning",
+            title: `Ação necessária: ${typeLabel} aguardando sua revisão`,
+            description: `Este relatório aguarda sua ação há ${hoursSince}h. Escalação nível ${newLevel}.`,
+            target_user_id: wf.assigned_to,
+            entity_type: wf.report_type,
+            entity_id: wf.report_id,
+            project_id: wf.project_id,
+          });
+        }
+      }
+    }
+
+    // ── 5. Deduplicate: skip alerts already sent in last 24h ──
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { data: recentAlerts } = await supabase
       .from("automation_alerts")
