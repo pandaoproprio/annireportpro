@@ -181,6 +181,11 @@ export const ActivityDetailDialog: React.FC<ActivityDetailDialogProps> = ({ acti
                 </div>
               </div>
             )}
+
+            {/* Narrative Panel */}
+            {!activity.isDraft && activity.projectId && (
+              <ActivityNarrativePanel activity={activity} projectId={activity.projectId} />
+            )}
           </div>
         )}
       </DialogContent>
