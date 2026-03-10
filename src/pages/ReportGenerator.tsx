@@ -248,7 +248,17 @@ export const ReportGenerator: React.FC = () => {
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
           {/* Diary Link Button */}
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <NarrativeInsertDialog
+              projectId={project.id}
+              reportType="report_object"
+              onInsert={(text) => {
+                const current = summary || '';
+                setSummary(current ? `${current}\n\n${text}` : text);
+                toast.success('Narrativas inseridas no resumo do relatório');
+              }}
+              triggerLabel="Inserir Narrativas CEAP"
+            />
             <Button variant="outline" onClick={() => setShowDiaryLinkDialog(true)}>
               <Link2 className="w-4 h-4 mr-2" />
               Vincular Diário ({diaryLinks.linkedActivityIds.size})
