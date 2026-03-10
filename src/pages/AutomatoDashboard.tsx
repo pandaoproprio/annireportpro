@@ -14,6 +14,7 @@ const ALERT_TYPE_LABELS: Record<string, string> = {
   sla_overdue: 'SLA Vencido',
   stale_draft: 'Rascunho Estagnado',
   project_inactivity: 'Projeto Inativo',
+  workflow_stuck: 'Workflow Parado',
 };
 
 const ALERT_TYPE_ICONS: Record<string, React.ReactNode> = {
