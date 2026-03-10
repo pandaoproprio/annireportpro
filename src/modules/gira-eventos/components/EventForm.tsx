@@ -101,7 +101,7 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
       {defaultValues?.id && (
         <div>
           <Label>Status</Label>
-          <Select value={status} onValueChange={v => setValue('status', v)}>
+          <Select value={status} onValueChange={v => setValue('status', v as 'ativo' | 'encerrado' | 'cancelado')}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="ativo">Ativo</SelectItem>
