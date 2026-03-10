@@ -772,6 +772,54 @@ export type Database = {
         }
         Relationships: []
       }
+      performance_snapshots: {
+        Row: {
+          avg_cycle_time_hours: number | null
+          avg_lead_time_hours: number | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          project_id: string
+          rejection_rate: number | null
+          sla_compliance_rate: number | null
+          snapshot_month: string
+          total_activities: number
+          total_reports: number
+          workflows_completed: number
+          workflows_pending: number
+        }
+        Insert: {
+          avg_cycle_time_hours?: number | null
+          avg_lead_time_hours?: number | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          project_id: string
+          rejection_rate?: number | null
+          sla_compliance_rate?: number | null
+          snapshot_month: string
+          total_activities?: number
+          total_reports?: number
+          workflows_completed?: number
+          workflows_pending?: number
+        }
+        Update: {
+          avg_cycle_time_hours?: number | null
+          avg_lead_time_hours?: number | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+          rejection_rate?: number | null
+          sla_compliance_rate?: number | null
+          snapshot_month?: string
+          total_activities?: number
+          total_reports?: number
+          workflows_completed?: number
+          workflows_pending?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

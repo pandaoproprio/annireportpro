@@ -156,12 +156,12 @@ export function useReportWorkflow(reportId?: string, reportType?: string) {
       qc.invalidateQueries({ queryKey: ['report-workflow-history'] });
       toast.success(`Status alterado para: ${STATUS_LABELS[vars.newStatus]}`);
 
-      // Asana integration: create task on workflow transitions
       if (workflowQuery.data) {
         const wf = workflowQuery.data;
         const typeLabel = wf.report_type === 'report_object' ? 'Relatório Objeto'
           : wf.report_type === 'report_team' ? 'Relatório Equipe' : 'Justificativa';
 
+        // Asana integration
         createAsanaTaskOnPublish({
           entityType: wf.report_type === 'report_team' ? 'team_report'
             : wf.report_type === 'justification' ? 'justification' : 'activity',
@@ -170,6 +170,17 @@ export function useReportWorkflow(reportId?: string, reportType?: string) {
           name: `[Workflow] ${typeLabel} → ${STATUS_LABELS[vars.newStatus]}`,
           notes: vars.notes || `Status alterado de ${STATUS_LABELS[wf.status]} para ${STATUS_LABELS[vars.newStatus]}`,
         });
+
+        // Transactional email notification (fire-and-forget)
+        supabase.functions.invoke('send-workflow-email', {
+          body: {
+            workflow_id: wf.id,
+            from_status: wf.status,
+            to_status: vars.newStatus,
+            changed_by: user?.id,
+            notes: vars.notes || null,
+          },
+        }).catch(err => console.warn('[workflow-email] Failed:', err));
       }
     },
     onError: (e) => {
