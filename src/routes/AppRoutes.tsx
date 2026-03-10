@@ -326,6 +326,8 @@ const Layout: React.FC = () => {
                 <Route path="/budget" element={<BudgetDashboard />} />
                 <Route path="/sprints" element={<SprintDashboard />} />
                 <Route path="/retrospectives" element={<RetrospectivesPage />} />
+                <Route path="/invoices" element={<InvoicesPage />} />
+                <Route path="/messaging" element={<MessagingPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
