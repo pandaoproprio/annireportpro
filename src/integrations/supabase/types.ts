@@ -1515,6 +1515,59 @@ export type Database = {
         }
         Relationships: []
       }
+      workflow_notifications: {
+        Row: {
+          changed_by_name: string | null
+          created_at: string
+          from_status: string | null
+          id: string
+          is_read: boolean
+          notes: string | null
+          project_id: string
+          recipient_user_id: string
+          report_id: string
+          report_type: string
+          to_status: string
+          workflow_id: string
+        }
+        Insert: {
+          changed_by_name?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          is_read?: boolean
+          notes?: string | null
+          project_id: string
+          recipient_user_id: string
+          report_id: string
+          report_type: string
+          to_status: string
+          workflow_id: string
+        }
+        Update: {
+          changed_by_name?: string | null
+          created_at?: string
+          from_status?: string | null
+          id?: string
+          is_read?: boolean
+          notes?: string | null
+          project_id?: string
+          recipient_user_id?: string
+          report_id?: string
+          report_type?: string
+          to_status?: string
+          workflow_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_notifications_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "report_workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
