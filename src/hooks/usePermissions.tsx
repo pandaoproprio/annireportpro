@@ -81,7 +81,7 @@ export const usePermissions = () => {
   const { role, permissions } = useAuth();
 
   const hasPermission = (permission: AppPermission): boolean => {
-    if (role === 'SUPER_ADMIN') return true;
+    if (role === 'SUPER_ADMIN' || role === 'ADMIN') return true;
     return permissions.includes(permission);
   };
 
