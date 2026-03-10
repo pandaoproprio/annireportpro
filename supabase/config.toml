@@ -1,28 +1,23 @@
 project_id = "pmexspghvnabwxcnrstr"
 
-[functions.admin-users]
-verify_jwt = false
-
-[functions.send-password-reset]
-verify_jwt = false
-
-[functions.migrate-base64-photos]
-verify_jwt = false
-
-[functions.generate-narrative]
-verify_jwt = false
-
-[functions.gerar-pdf-relatorio]
-verify_jwt = false
-
-[functions.asana-integration]
-verify_jwt = false
-
-[functions.classify-activity]
-verify_jwt = false
-
-[functions.generate-dashboard-summary]
-verify_jwt = false
-
-[functions.ocr-attendance]
-verify_jwt = false
+[functions]
+  [functions.admin-users]
+    verify_jwt = false
+  [functions.asana-integration]
+    verify_jwt = false
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.classify-activity]
+    verify_jwt = false
+  [functions.generate-dashboard-summary]
+    verify_jwt = false
+  [functions.generate-narrative]
+    verify_jwt = false
+  [functions.gerar-pdf-relatorio]
+    verify_jwt = false
+  [functions.migrate-base64-photos]
+    verify_jwt = false
+  [functions.ocr-attendance]
+    verify_jwt = false
+  [functions.send-password-reset]
+    verify_jwt = false
