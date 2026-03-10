@@ -284,6 +284,9 @@ const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
         </div>
       )}
 
+      {/* Proactive AI Summary - always visible when project exists */}
+      <ProactiveSummaryCard projectId={project?.id} />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} />
