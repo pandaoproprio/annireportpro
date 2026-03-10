@@ -161,6 +161,14 @@ export const Dashboard: React.FC = () => {
           </TabsContent>
           <TabsContent value="analytics">
             <div className="space-y-6 mt-4">
+              {project && (
+                <PredictiveAnalysisDashboard
+                  activities={activities}
+                  projectEndDate={project.endDate}
+                  projectStartDate={project.startDate}
+                  projectName={project.name}
+                />
+              )}
               <ActivityHeatmap activities={activities} />
               {projects.length >= 2 && (
                 <CrossProjectChart
@@ -168,6 +176,7 @@ export const Dashboard: React.FC = () => {
                   activitiesByProject={{ [project.id]: activities }}
                 />
               )}
+              <BenchmarkingDashboard />
             </div>
           </TabsContent>
           <TabsContent value="performance">
