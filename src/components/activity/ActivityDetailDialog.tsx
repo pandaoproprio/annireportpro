@@ -1,5 +1,6 @@
 import React from 'react';
 import { Activity, ActivityType, Project } from '@/types';
+import { ActivityNarrativePanel } from './ActivityNarrativePanel';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
