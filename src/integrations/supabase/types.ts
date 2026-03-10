@@ -1054,6 +1054,74 @@ export type Database = {
           },
         ]
       }
+      project_risks: {
+        Row: {
+          category: Database["public"]["Enums"]["risk_category"]
+          contingency_plan: string
+          created_at: string
+          description: string
+          due_date: string | null
+          id: string
+          impact: Database["public"]["Enums"]["risk_impact"]
+          metadata: Json | null
+          mitigation_plan: string
+          probability: Database["public"]["Enums"]["risk_probability"]
+          project_id: string
+          resolved_at: string | null
+          responsible: string | null
+          status: Database["public"]["Enums"]["risk_status"]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["risk_category"]
+          contingency_plan?: string
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          impact?: Database["public"]["Enums"]["risk_impact"]
+          metadata?: Json | null
+          mitigation_plan?: string
+          probability?: Database["public"]["Enums"]["risk_probability"]
+          project_id: string
+          resolved_at?: string | null
+          responsible?: string | null
+          status?: Database["public"]["Enums"]["risk_status"]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["risk_category"]
+          contingency_plan?: string
+          created_at?: string
+          description?: string
+          due_date?: string | null
+          id?: string
+          impact?: Database["public"]["Enums"]["risk_impact"]
+          metadata?: Json | null
+          mitigation_plan?: string
+          probability?: Database["public"]["Enums"]["risk_probability"]
+          project_id?: string
+          resolved_at?: string | null
+          responsible?: string | null
+          status?: Database["public"]["Enums"]["risk_status"]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_risks_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_team_members: {
         Row: {
           added_by: string
@@ -1817,6 +1885,34 @@ export type Database = {
         | "analista"
         | "usuario"
         | "coordenador"
+      risk_category:
+        | "financeiro"
+        | "operacional"
+        | "cronograma"
+        | "equipe"
+        | "externo"
+        | "legal"
+        | "tecnico"
+        | "outro"
+      risk_impact:
+        | "insignificante"
+        | "menor"
+        | "moderado"
+        | "maior"
+        | "catastrofico"
+      risk_probability:
+        | "muito_baixa"
+        | "baixa"
+        | "media"
+        | "alta"
+        | "muito_alta"
+      risk_status:
+        | "identificado"
+        | "em_analise"
+        | "mitigando"
+        | "aceito"
+        | "resolvido"
+        | "materializado"
       sla_report_type: "report_object" | "report_team" | "justification"
       sla_status: "no_prazo" | "atencao" | "atrasado" | "bloqueado"
       workflow_status:
@@ -2000,6 +2096,32 @@ export const Constants = {
         "analista",
         "usuario",
         "coordenador",
+      ],
+      risk_category: [
+        "financeiro",
+        "operacional",
+        "cronograma",
+        "equipe",
+        "externo",
+        "legal",
+        "tecnico",
+        "outro",
+      ],
+      risk_impact: [
+        "insignificante",
+        "menor",
+        "moderado",
+        "maior",
+        "catastrofico",
+      ],
+      risk_probability: ["muito_baixa", "baixa", "media", "alta", "muito_alta"],
+      risk_status: [
+        "identificado",
+        "em_analise",
+        "mitigando",
+        "aceito",
+        "resolvido",
+        "materializado",
       ],
       sla_report_type: ["report_object", "report_team", "justification"],
       sla_status: ["no_prazo", "atencao", "atrasado", "bloqueado"],
