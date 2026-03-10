@@ -21,7 +21,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function FormsListPage() {
-  const { forms, isLoading, createForm, deleteForm } = useForms();
+  const { forms, isLoading, createForm, deleteForm, duplicateForm } = useForms();
   const { activeProjectId } = useAppData();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
