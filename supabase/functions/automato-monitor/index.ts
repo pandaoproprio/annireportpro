@@ -1,8 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { renderAsync } from "npm:@react-email/components@0.0.22";
-import * as React from "npm:react@18.3.1";
-import { sendLovableEmail } from "npm:@lovable.dev/email-js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,69 +16,54 @@ const FROM_ADDRESS = `${SITE_NAME} <automato@${FROM_DOMAIN}>`;
 const STALE_DRAFT_THRESHOLD_HOURS = 168; // 7 days
 const INACTIVITY_THRESHOLD_DAYS = 7;
 
-// ────────────── Email Template ──────────────
-function AlertEmailTemplate({ alerts, userName }: { alerts: Alert[]; userName: string }) {
-  return React.createElement("div", {
-    style: { fontFamily: "'DM Sans', Arial, sans-serif", backgroundColor: "#ffffff", padding: "32px" }
-  },
-    React.createElement("div", {
-      style: { maxWidth: "600px", margin: "0 auto", backgroundColor: "#f8fafc", borderRadius: "12px", padding: "32px" }
-    },
-      // Header
-      React.createElement("div", {
-        style: { textAlign: "center" as const, marginBottom: "24px" }
-      },
-        React.createElement("h1", {
-          style: { color: "#0DA3E7", fontSize: "24px", margin: "0 0 8px 0" }
-        }, "🤖 Automato GIRA"),
-        React.createElement("p", {
-          style: { color: "#64748b", fontSize: "14px", margin: 0 }
-        }, "Monitoramento Automático do Sistema")
-      ),
-      // Greeting
-      React.createElement("p", {
-        style: { color: "#1e293b", fontSize: "16px", marginBottom: "16px" }
-      }, `Olá, ${userName}!`),
-      React.createElement("p", {
-        style: { color: "#475569", fontSize: "14px", marginBottom: "24px" }
-      }, `O sistema detectou ${alerts.length} alerta(s) que requerem sua atenção:`),
-      // Alerts list
-      ...alerts.map((alert, i) =>
-        React.createElement("div", {
-          key: i,
-          style: {
-            backgroundColor: alert.severity === "critical" ? "#fef2f2" : "#fffbeb",
-            border: `1px solid ${alert.severity === "critical" ? "#fecaca" : "#fed7aa"}`,
-            borderRadius: "8px",
-            padding: "16px",
-            marginBottom: "12px",
-          }
-        },
-          React.createElement("div", {
-            style: { display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }
-          },
-            React.createElement("span", {
-              style: { fontSize: "16px" }
-            }, alert.severity === "critical" ? "🔴" : "⚠️"),
-            React.createElement("strong", {
-              style: { color: "#1e293b", fontSize: "14px" }
-            }, alert.title)
-          ),
-          React.createElement("p", {
-            style: { color: "#475569", fontSize: "13px", margin: 0 }
-          }, alert.description)
-        )
-      ),
-      // Footer
-      React.createElement("div", {
-        style: { marginTop: "32px", paddingTop: "16px", borderTop: "1px solid #e2e8f0", textAlign: "center" as const }
-      },
-        React.createElement("p", {
-          style: { color: "#94a3b8", fontSize: "12px", margin: 0 }
-        }, `Este é um email automático do sistema ${SITE_NAME}. Acesse o sistema para tomar as ações necessárias.`)
-      )
-    )
-  );
+// ────────────── Email HTML Builder ──────────────
+function buildAlertEmailHtml(alerts: Alert[], userName: string): string {
+  const alertCards = alerts.map(alert => {
+    const bgColor = alert.severity === "critical" ? "#fef2f2" : "#fffbeb";
+    const borderColor = alert.severity === "critical" ? "#fecaca" : "#fed7aa";
+    const icon = alert.severity === "critical" ? "🔴" : "⚠️";
+    return `
+      <div style="background-color:${bgColor};border:1px solid ${borderColor};border-radius:8px;padding:16px;margin-bottom:12px;">
+        <div style="margin-bottom:8px;">
+          <span style="font-size:16px;">${icon}</span>
+          <strong style="color:#1e293b;font-size:14px;margin-left:6px;">${escapeHtml(alert.title)}</strong>
+        </div>
+        <p style="color:#475569;font-size:13px;margin:0;">${escapeHtml(alert.description)}</p>
+      </div>`;
+  }).join("");
+
+  return `<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;font-family:'DM Sans',Arial,sans-serif;background-color:#ffffff;">
+  <div style="max-width:600px;margin:0 auto;padding:32px;">
+    <div style="background-color:#f8fafc;border-radius:12px;padding:32px;">
+      <div style="text-align:center;margin-bottom:24px;">
+        <h1 style="color:#0DA3E7;font-size:24px;margin:0 0 8px 0;">🤖 Automato GIRA</h1>
+        <p style="color:#64748b;font-size:14px;margin:0;">Monitoramento Automático do Sistema</p>
+      </div>
+      <p style="color:#1e293b;font-size:16px;margin-bottom:16px;">Olá, ${escapeHtml(userName)}!</p>
+      <p style="color:#475569;font-size:14px;margin-bottom:24px;">O sistema detectou <strong>${alerts.length} alerta(s)</strong> que requerem sua atenção:</p>
+      ${alertCards}
+      <div style="margin-top:32px;text-align:center;">
+        <a href="https://relatorios.giraerp.com.br/automato" style="display:inline-block;background-color:#0DA3E7;color:#ffffff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;">Ver Alertas no Sistema</a>
+      </div>
+      <div style="margin-top:32px;padding-top:16px;border-top:1px solid #e2e8f0;text-align:center;">
+        <p style="color:#94a3b8;font-size:12px;margin:0;">Este é um email automático do sistema ${SITE_NAME}.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>`;
+}
+
+function buildAlertEmailText(alerts: Alert[], userName: string): string {
+  const alertLines = alerts.map(a => `[${a.severity === "critical" ? "CRÍTICO" : "AVISO"}] ${a.title}\n${a.description}`).join("\n\n");
+  return `Olá, ${userName}!\n\nO sistema detectou ${alerts.length} alerta(s):\n\n${alertLines}\n\nAcesse: https://relatorios.giraerp.com.br/automato`;
+}
+
+function escapeHtml(str: string): string {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 // ────────────── Types ──────────────
@@ -102,6 +84,46 @@ interface UserAlerts {
   email: string;
   name: string;
   alerts: Alert[];
+}
+
+// ────────────── Email Sending ──────────────
+async function sendTransactionalEmail(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+  apiKey: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch("https://email-api.lovable.dev/v1/send", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        to,
+        from: FROM_ADDRESS,
+        sender_domain: SENDER_DOMAIN,
+        subject,
+        html,
+        text,
+        purpose: "transactional",
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.text();
+      console.error(`[automato-email] Failed to send to ${to}: ${res.status} ${body}`);
+      return { success: false, error: `HTTP ${res.status}: ${body}` };
+    }
+
+    return { success: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : "Unknown error";
+    console.error(`[automato-email] Exception sending to ${to}: ${msg}`);
+    return { success: false, error: msg };
+  }
 }
 
 serve(async (req) => {
@@ -144,7 +166,6 @@ serve(async (req) => {
 
     if (slaError) {
       errors.push(`SLA query error: ${slaError.message}`);
-      console.error("SLA query error:", slaError);
     } else if (overdueSlAs && overdueSlAs.length > 0) {
       console.log(`[automato-monitor] Found ${overdueSlAs.length} overdue SLAs`);
       for (const sla of overdueSlAs) {
@@ -170,7 +191,6 @@ serve(async (req) => {
     // ── 2. Check stale drafts ──
     console.log(`[automato-monitor] Run ${runId}: Checking stale drafts...`);
 
-    // Fetch config for threshold
     const { data: perfConfig } = await supabase
       .from("performance_config")
       .select("stale_draft_threshold_hours")
@@ -242,7 +262,6 @@ serve(async (req) => {
           .gte("created_at", inactivityCutoff);
 
         if (count === 0) {
-          // Check last activity date
           const { data: lastActivity } = await supabase
             .from("activities")
             .select("date")
@@ -297,7 +316,6 @@ serve(async (req) => {
 
     const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
 
-    // Enrich alerts with emails
     for (const alert of newAlerts) {
       const profile = profileMap.get(alert.target_user_id);
       alert.target_email = profile?.email || undefined;
@@ -323,23 +341,76 @@ serve(async (req) => {
         );
       if (insertError) {
         errors.push(`Alert insert error: ${insertError.message}`);
-        console.error("Alert insert error:", insertError);
       }
     }
 
     // ── 7. Send email alerts (grouped by user) ──
     let emailsSent = 0;
 
-    // Note: Email sending via sendLovableEmail requires auth hook context (run_id from Lovable).
-    // For standalone transactional emails, alerts are stored in DB and shown in-app.
-    // Email integration will be enabled when transactional email infrastructure is configured.
-    if (newAlerts.length > 0) {
-      console.log(`[automato-monitor] ${newAlerts.length} alerts stored in DB (in-app notifications)`);
+    if (lovableApiKey && newAlerts.length > 0) {
+      // Group alerts by user
+      const userAlertsMap = new Map<string, UserAlerts>();
+
+      for (const alert of newAlerts) {
+        const profile = profileMap.get(alert.target_user_id);
+        if (!profile?.email) continue;
+
+        if (!userAlertsMap.has(alert.target_user_id)) {
+          userAlertsMap.set(alert.target_user_id, {
+            user_id: alert.target_user_id,
+            email: profile.email,
+            name: profile.name || "Usuário",
+            alerts: [],
+          });
+        }
+        userAlertsMap.get(alert.target_user_id)!.alerts.push(alert);
+      }
+
+      console.log(`[automato-monitor] Sending emails to ${userAlertsMap.size} users...`);
+
+      for (const [userId, userAlerts] of userAlertsMap) {
+        const criticalCount = userAlerts.alerts.filter(a => a.severity === "critical").length;
+        const subject = criticalCount > 0
+          ? `🔴 ${criticalCount} alerta(s) crítico(s) — Automato GIRA`
+          : `⚠️ ${userAlerts.alerts.length} alerta(s) — Automato GIRA`;
+
+        const html = buildAlertEmailHtml(userAlerts.alerts, userAlerts.name);
+        const text = buildAlertEmailText(userAlerts.alerts, userAlerts.name);
+
+        const result = await sendTransactionalEmail(
+          userAlerts.email,
+          subject,
+          html,
+          text,
+          lovableApiKey
+        );
+
+        if (result.success) {
+          emailsSent++;
+          console.log(`[automato-monitor] Email sent to ${userAlerts.email}`);
+
+          // Mark alerts as email_sent
+          await supabase
+            .from("automation_alerts")
+            .update({ email_sent: true } as any)
+            .eq("run_id", runId)
+            .eq("target_user_id", userId);
+        } else {
+          errors.push(`Email to ${userAlerts.email}: ${result.error}`);
+
+          // Store error on alerts
+          await supabase
+            .from("automation_alerts")
+            .update({ email_error: result.error } as any)
+            .eq("run_id", runId)
+            .eq("target_user_id", userId);
+        }
+      }
+    } else if (!lovableApiKey) {
+      console.warn("[automato-monitor] LOVABLE_API_KEY not set, skipping email sending");
     }
 
     // ── 8. Finalize run record ──
-    const emailsSent = 0; // Email sending pending transactional email setup
-    
     await supabase
       .from("automation_runs")
       .update({
