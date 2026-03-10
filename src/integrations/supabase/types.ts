@@ -885,6 +885,47 @@ export type Database = {
         }
         Relationships: []
       }
+      proactive_summaries: {
+        Row: {
+          ai_model: string | null
+          created_at: string
+          generated_at: string
+          id: string
+          metadata: Json | null
+          project_id: string
+          summary_text: string
+          summary_type: string
+        }
+        Insert: {
+          ai_model?: string | null
+          created_at?: string
+          generated_at?: string
+          id?: string
+          metadata?: Json | null
+          project_id: string
+          summary_text: string
+          summary_type?: string
+        }
+        Update: {
+          ai_model?: string | null
+          created_at?: string
+          generated_at?: string
+          id?: string
+          metadata?: Json | null
+          project_id?: string
+          summary_text?: string
+          summary_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proactive_summaries_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
