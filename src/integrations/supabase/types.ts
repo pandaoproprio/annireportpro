@@ -2468,6 +2468,10 @@ export type Database = {
         | "forms_edit"
         | "forms_delete"
         | "forms_export"
+        | "events_view"
+        | "events_create"
+        | "events_edit"
+        | "events_delete"
       app_role:
         | "user"
         | "admin"
@@ -2691,6 +2695,10 @@ export const Constants = {
         "forms_edit",
         "forms_delete",
         "forms_export",
+        "events_view",
+        "events_create",
+        "events_edit",
+        "events_delete",
       ],
       app_role: [
         "user",
