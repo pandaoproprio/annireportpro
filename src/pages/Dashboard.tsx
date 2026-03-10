@@ -160,13 +160,12 @@ export const Dashboard: React.FC = () => {
           <TabsContent value="analytics">
             <div className="space-y-6 mt-4">
               <ActivityHeatmap activities={activities} />
-              <CrossProjectChart
-                projects={projects}
-                activitiesByProject={projects.reduce<Record<string, any[]>>((acc, p) => {
-                  acc[p.id] = activities.filter((a: any) => a.projectId === p.id);
-                  return acc;
-                }, {})}
-              />
+              {projects.length >= 2 && (
+                <CrossProjectChart
+                  projects={projects}
+                  activitiesByProject={{ [project.id]: activities }}
+                />
+              )}
             </div>
           </TabsContent>
           <TabsContent value="performance">
