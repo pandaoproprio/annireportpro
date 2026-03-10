@@ -27,7 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays, Bot
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import logoGira from '@/assets/logo-gira-relatorios.png';
@@ -62,6 +62,7 @@ const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'))
 const EventsListPage = lazy(() => import('@/modules/gira-eventos/EventsListPage'));
 const EventDetailPage = lazy(() => import('@/modules/gira-eventos/EventDetailPage'));
 const PublicEventPage = lazy(() => import('@/modules/gira-eventos/PublicEventPage'));
+const AutomatoDashboard = lazy(() => import('@/pages/AutomatoDashboard'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -215,8 +216,11 @@ const Layout: React.FC = () => {
                   {hasPermission('user_management') && (
                     <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={closeSidebar} />
                   )}
-                  {hasPermission('system_logs') && (
+                   {hasPermission('system_logs') && (
                     <SidebarLink to="/logs" icon={<ScrollText className="w-5 h-5" />} label="Logs do Sistema" onClick={closeSidebar} />
+                  )}
+                  {isAdmin && (
+                    <SidebarLink to="/automato" icon={<Bot className="w-5 h-5" />} label="Automato" onClick={closeSidebar} />
                   )}
                 </div>
               </div>
@@ -292,6 +296,7 @@ const Layout: React.FC = () => {
                 <Route path="/forms/:id" element={<PermissionGuard permission={'forms_view' as any}><FormBuilderPage /></PermissionGuard>} />
                 <Route path="/eventos" element={<EventsListPage />} />
                 <Route path="/eventos/:id" element={<EventDetailPage />} />
+                <Route path="/automato" element={<PermissionGuard permission="system_logs"><AutomatoDashboard /></PermissionGuard>} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
