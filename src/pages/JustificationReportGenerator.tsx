@@ -166,6 +166,15 @@ export const JustificationReportGenerator: React.FC = () => {
         onOpenWysiwyg={() => navigate('/wysiwyg')}
       />
 
+      {/* Workflow Panel */}
+      {currentDraftId && (
+        <WorkflowPanel
+          reportId={currentDraftId}
+          reportType="justification"
+          projectId={project.id}
+        />
+      )}
+
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
           <ReportStructureEditor

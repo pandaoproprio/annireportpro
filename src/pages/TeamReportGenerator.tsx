@@ -683,6 +683,15 @@ export const TeamReportGenerator: React.FC = () => {
           </div>
         </div>
 
+        {/* Workflow Panel */}
+        {currentDraftId && (
+          <WorkflowPanel
+            reportId={currentDraftId}
+            reportType="report_team"
+            projectId={project.id}
+          />
+        )}
+
         {/* Project Info Card */}
         <Card>
           <CardHeader>
