@@ -62,6 +62,7 @@ const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'))
 const EventsListPage = lazy(() => import('@/modules/gira-eventos/EventsListPage'));
 const EventDetailPage = lazy(() => import('@/modules/gira-eventos/EventDetailPage'));
 const PublicEventPage = lazy(() => import('@/modules/gira-eventos/PublicEventPage'));
+const AutomatoDashboard = lazy(() => import('@/pages/AutomatoDashboard'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
