@@ -68,6 +68,8 @@ const RiskManagement = lazy(() => import('@/pages/RiskManagement'));
 const BudgetDashboard = lazy(() => import('@/pages/BudgetDashboard'));
 const SprintDashboard = lazy(() => import('@/pages/SprintDashboard'));
 const RetrospectivesPage = lazy(() => import('@/pages/RetrospectivesPage'));
+const InvoicesPage = lazy(() => import('@/pages/InvoicesPage'));
+const MessagingPage = lazy(() => import('@/pages/MessagingPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
