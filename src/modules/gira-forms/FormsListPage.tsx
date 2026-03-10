@@ -162,6 +162,12 @@ export default function FormsListPage() {
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={e => { e.stopPropagation(); navigate(`/forms/${form.id}`); }}>
                         <Pencil className="w-3.5 h-3.5" />
                       </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title="Duplicar" onClick={e => {
+                        e.stopPropagation();
+                        duplicateForm.mutate(form.id);
+                      }}>
+                        <Copy className="w-3.5 h-3.5" />
+                      </Button>
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={e => {
                         e.stopPropagation();
                         if (confirm('Excluir este formulário?')) deleteForm.mutate(form.id);
