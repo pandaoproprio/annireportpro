@@ -18,6 +18,8 @@ import { AttendeesByGoalChart } from '@/components/dashboard/AttendeesByGoalChar
 import { PendingActivitiesBanner } from '@/components/PendingActivitiesBanner';
 import { ActivityHeatmap } from '@/components/dashboard/ActivityHeatmap';
 import { CrossProjectChart } from '@/components/dashboard/CrossProjectChart';
+import PredictiveAnalysisDashboard from '@/components/dashboard/PredictiveAnalysisDashboard';
+import BenchmarkingDashboard from '@/components/dashboard/BenchmarkingDashboard';
 import { useSlaTracking } from '@/hooks/useSlaTracking';
 import { SlaDashboardCards } from '@/components/sla/SlaDashboardCards';
 import { SlaOverdueBanner } from '@/components/sla/SlaOverdueBanner';
