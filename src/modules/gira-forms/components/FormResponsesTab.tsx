@@ -64,7 +64,7 @@ export const FormResponsesTab: React.FC<Props> = ({ formId, form, fields }) => {
             <DropdownMenuItem onClick={() => exportToExcel(form, fields, responses)}>
               <FileSpreadsheet className="w-4 h-4 mr-2" /> Excel
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => exportToPdf(form, fields, responses)}>
+            <DropdownMenuItem onClick={() => { exportToPdf(form, fields, responses); }}>
               <FileText className="w-4 h-4 mr-2" /> PDF
             </DropdownMenuItem>
           </DropdownMenuContent>
