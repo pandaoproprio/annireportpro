@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Search, FileText, Trash2, Pencil, ClipboardList, LayoutTemplate, CheckCircle2 } from 'lucide-react';
+import { PlusCircle, Search, FileText, Trash2, Pencil, ClipboardList, LayoutTemplate, CheckCircle2, Copy } from 'lucide-react';
 import { CATEGORIES } from './types';
 import { FORM_TEMPLATES, type FormTemplate } from './templates';
 import { format } from 'date-fns';
@@ -21,7 +21,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 
 export default function FormsListPage() {
-  const { forms, isLoading, createForm, deleteForm } = useForms();
+  const { forms, isLoading, createForm, deleteForm, duplicateForm } = useForms();
   const { activeProjectId } = useAppData();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
@@ -161,6 +161,12 @@ export default function FormsListPage() {
                     <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <Button size="icon" variant="ghost" className="h-7 w-7" onClick={e => { e.stopPropagation(); navigate(`/forms/${form.id}`); }}>
                         <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button size="icon" variant="ghost" className="h-7 w-7" title="Duplicar" onClick={e => {
+                        e.stopPropagation();
+                        duplicateForm.mutate(form.id);
+                      }}>
+                        <Copy className="w-3.5 h-3.5" />
                       </Button>
                       <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={e => {
                         e.stopPropagation();

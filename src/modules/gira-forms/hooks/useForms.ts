@@ -77,7 +77,59 @@ export function useForms() {
     onError: () => toast.error('Erro ao excluir'),
   });
 
-  return { forms: formsQuery.data || [], isLoading: formsQuery.isLoading, createForm, updateForm, deleteForm };
+  const duplicateForm = useMutation({
+    mutationFn: async (sourceId: string) => {
+      // 1. Fetch source form
+      const { data: src, error: srcErr } = await supabase.from('forms').select('*').eq('id', sourceId).single();
+      if (srcErr || !src) throw srcErr || new Error('Form not found');
+
+      // 2. Create copy
+      const { data: newForm, error: newErr } = await supabase
+        .from('forms')
+        .insert({
+          title: `${src.title} (cópia)`,
+          description: src.description,
+          category: src.category,
+          project_id: src.project_id,
+          user_id: user!.id,
+          settings: src.settings,
+          status: 'ativo',
+        })
+        .select()
+        .single();
+      if (newErr || !newForm) throw newErr || new Error('Failed to create copy');
+
+      // 3. Copy fields
+      const { data: fields } = await supabase
+        .from('form_fields')
+        .select('*')
+        .eq('form_id', sourceId)
+        .order('sort_order');
+
+      if (fields && fields.length > 0) {
+        const copies = fields.map(f => ({
+          form_id: newForm.id,
+          type: f.type,
+          label: f.label,
+          description: f.description,
+          required: f.required,
+          options: f.options,
+          sort_order: f.sort_order,
+          settings: f.settings,
+        }));
+        await supabase.from('form_fields').insert(copies);
+      }
+
+      return newForm as unknown as Form;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['gira-forms'] });
+      toast.success('Formulário duplicado!');
+    },
+    onError: () => toast.error('Erro ao duplicar formulário'),
+  });
+
+  return { forms: formsQuery.data || [], isLoading: formsQuery.isLoading, createForm, updateForm, deleteForm, duplicateForm };
 }
 
 export function useFormFields(formId: string | undefined) {
