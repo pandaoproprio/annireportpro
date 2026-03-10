@@ -330,79 +330,11 @@ serve(async (req) => {
     // ── 7. Send email alerts (grouped by user) ──
     let emailsSent = 0;
 
-    if (lovableApiKey && newAlerts.length > 0) {
-      // Group alerts by user
-      const userAlertsMap = new Map<string, UserAlerts>();
-      for (const alert of newAlerts) {
-        if (!alert.target_email) continue;
-        const profile = profileMap.get(alert.target_user_id);
-        if (!userAlertsMap.has(alert.target_user_id)) {
-          userAlertsMap.set(alert.target_user_id, {
-            user_id: alert.target_user_id,
-            email: alert.target_email,
-            name: profile?.name || "Usuário",
-            alerts: [],
-          });
-        }
-        userAlertsMap.get(alert.target_user_id)!.alerts.push(alert);
-      }
-
-      for (const [, userAlerts] of userAlertsMap) {
-        try {
-          const html = await renderAsync(
-            React.createElement(AlertEmailTemplate, {
-              alerts: userAlerts.alerts,
-              userName: userAlerts.name,
-            })
-          );
-
-          const text = userAlerts.alerts.map(a => `[${a.severity.toUpperCase()}] ${a.title}: ${a.description}`).join("\n\n");
-
-          const criticalCount = userAlerts.alerts.filter(a => a.severity === "critical").length;
-          const subject = criticalCount > 0
-            ? `🔴 ${criticalCount} alerta(s) crítico(s) — ${SITE_NAME}`
-            : `⚠️ ${userAlerts.alerts.length} alerta(s) — ${SITE_NAME}`;
-
-          await sendLovableEmail(
-            {
-              run_id: runId,
-              to: userAlerts.email,
-              from: FROM_ADDRESS,
-              sender_domain: SENDER_DOMAIN,
-              subject,
-              html,
-              text,
-              purpose: "transactional",
-            },
-            { apiKey: lovableApiKey }
-          );
-
-          emailsSent++;
-          console.log(`[automato-monitor] Email sent to ${userAlerts.email}`);
-
-          // Mark alerts as email_sent
-          await supabase
-            .from("automation_alerts")
-            .update({ email_sent: true })
-            .eq("run_id", runId)
-            .eq("target_user_id", userAlerts.user_id);
-
-        } catch (emailError) {
-          const errorMsg = emailError instanceof Error ? emailError.message : "Unknown email error";
-          errors.push(`Email to ${userAlerts.email}: ${errorMsg}`);
-          console.error(`[automato-monitor] Email failed for ${userAlerts.email}:`, emailError);
-
-          // Record email error on alerts
-          await supabase
-            .from("automation_alerts")
-            .update({ email_error: errorMsg })
-            .eq("run_id", runId)
-            .eq("target_user_id", userAlerts.user_id);
-        }
-      }
-    } else if (!lovableApiKey) {
-      console.warn("[automato-monitor] LOVABLE_API_KEY not configured, skipping emails");
-      errors.push("LOVABLE_API_KEY not configured — emails skipped");
+    // Note: Email sending via sendLovableEmail requires auth hook context (run_id from Lovable).
+    // For standalone transactional emails, alerts are stored in DB and shown in-app.
+    // Email integration will be enabled when transactional email infrastructure is configured.
+    if (newAlerts.length > 0) {
+      console.log(`[automato-monitor] ${newAlerts.length} alerts stored in DB (in-app notifications)`);
     }
 
     // ── 8. Finalize run record ──
