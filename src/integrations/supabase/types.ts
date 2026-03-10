@@ -1639,6 +1639,132 @@ export type Database = {
         }
         Relationships: []
       }
+      sprint_items: {
+        Row: {
+          activity_id: string | null
+          assignee_name: string | null
+          completed_at: string | null
+          created_at: string
+          description: string
+          id: string
+          project_id: string
+          sprint_id: string
+          status: Database["public"]["Enums"]["sprint_item_status"]
+          story_points: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_id?: string | null
+          assignee_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          project_id: string
+          sprint_id: string
+          status?: Database["public"]["Enums"]["sprint_item_status"]
+          story_points?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_id?: string | null
+          assignee_name?: string | null
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          id?: string
+          project_id?: string
+          sprint_id?: string
+          status?: Database["public"]["Enums"]["sprint_item_status"]
+          story_points?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprint_items_activity_id_fkey"
+            columns: ["activity_id"]
+            isOneToOne: false
+            referencedRelation: "activities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sprint_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sprint_items_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sprints: {
+        Row: {
+          created_at: string
+          end_date: string
+          goal: string
+          id: string
+          metadata: Json | null
+          name: string
+          project_id: string
+          start_date: string
+          status: Database["public"]["Enums"]["sprint_status"]
+          updated_at: string
+          user_id: string
+          velocity_completed: number
+          velocity_planned: number
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          goal?: string
+          id?: string
+          metadata?: Json | null
+          name: string
+          project_id: string
+          start_date: string
+          status?: Database["public"]["Enums"]["sprint_status"]
+          updated_at?: string
+          user_id: string
+          velocity_completed?: number
+          velocity_planned?: number
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          goal?: string
+          id?: string
+          metadata?: Json | null
+          name?: string
+          project_id?: string
+          start_date?: string
+          status?: Database["public"]["Enums"]["sprint_status"]
+          updated_at?: string
+          user_id?: string
+          velocity_completed?: number
+          velocity_planned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprints_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_logs: {
         Row: {
           action: string
@@ -2037,6 +2163,8 @@ export type Database = {
         | "materializado"
       sla_report_type: "report_object" | "report_team" | "justification"
       sla_status: "no_prazo" | "atencao" | "atrasado" | "bloqueado"
+      sprint_item_status: "todo" | "in_progress" | "done" | "blocked"
+      sprint_status: "planning" | "active" | "completed" | "cancelled"
       workflow_status:
         | "rascunho"
         | "em_revisao"
@@ -2259,6 +2387,8 @@ export const Constants = {
       ],
       sla_report_type: ["report_object", "report_team", "justification"],
       sla_status: ["no_prazo", "atencao", "atrasado", "bloqueado"],
+      sprint_item_status: ["todo", "in_progress", "done", "blocked"],
+      sprint_status: ["planning", "active", "completed", "cancelled"],
       workflow_status: [
         "rascunho",
         "em_revisao",

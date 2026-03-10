@@ -27,7 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays, Bot, ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays, Bot, ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign, Zap
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import logoGira from '@/assets/logo-gira-relatorios.png';
@@ -65,6 +65,7 @@ const PublicEventPage = lazy(() => import('@/modules/gira-eventos/PublicEventPag
 const AutomatoDashboard = lazy(() => import('@/pages/AutomatoDashboard'));
 const RiskManagement = lazy(() => import('@/pages/RiskManagement'));
 const BudgetDashboard = lazy(() => import('@/pages/BudgetDashboard'));
+const SprintDashboard = lazy(() => import('@/pages/SprintDashboard'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -214,6 +215,7 @@ const Layout: React.FC = () => {
                 <div className="space-y-0.5">
                   <SidebarLink to="/risks" icon={<ShieldAlert className="w-5 h-5" />} label="Gestão de Riscos" onClick={closeSidebar} />
                   <SidebarLink to="/budget" icon={<DollarSign className="w-5 h-5" />} label="Custos Consolidados" onClick={closeSidebar} />
+                  <SidebarLink to="/sprints" icon={<Zap className="w-5 h-5" />} label="Sprints & Velocity" onClick={closeSidebar} />
                   <SidebarLink to="/maturity-audit" icon={<ShieldCheck className="w-5 h-5" />} label="Auditoria de Maturidade" onClick={closeSidebar} />
                   <SidebarLink to="/ai-audit" icon={<Brain className="w-5 h-5" />} label="Auditoria de IA" onClick={closeSidebar} />
                   <SidebarLink to="/valuation" icon={<TrendingUp className="w-5 h-5" />} label="Valuation Report" onClick={closeSidebar} />
@@ -315,6 +317,7 @@ const Layout: React.FC = () => {
                 <Route path="/automato" element={<PermissionGuard permission="system_logs"><AutomatoDashboard /></PermissionGuard>} />
                 <Route path="/risks" element={<RiskManagement />} />
                 <Route path="/budget" element={<BudgetDashboard />} />
+                <Route path="/sprints" element={<SprintDashboard />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
