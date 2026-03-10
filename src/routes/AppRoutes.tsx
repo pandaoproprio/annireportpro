@@ -217,6 +217,7 @@ const Layout: React.FC = () => {
                   <SidebarLink to="/risks" icon={<ShieldAlert className="w-5 h-5" />} label="Gestão de Riscos" onClick={closeSidebar} />
                   <SidebarLink to="/budget" icon={<DollarSign className="w-5 h-5" />} label="Custos Consolidados" onClick={closeSidebar} />
                   <SidebarLink to="/sprints" icon={<Zap className="w-5 h-5" />} label="Sprints & Velocity" onClick={closeSidebar} />
+                  <SidebarLink to="/retrospectives" icon={<ListChecks className="w-5 h-5" />} label="Retrospectivas" onClick={closeSidebar} />
                   <SidebarLink to="/maturity-audit" icon={<ShieldCheck className="w-5 h-5" />} label="Auditoria de Maturidade" onClick={closeSidebar} />
                   <SidebarLink to="/ai-audit" icon={<Brain className="w-5 h-5" />} label="Auditoria de IA" onClick={closeSidebar} />
                   <SidebarLink to="/valuation" icon={<TrendingUp className="w-5 h-5" />} label="Valuation Report" onClick={closeSidebar} />
