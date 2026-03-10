@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { EVENT_CATEGORIES } from '../types';
 import type { GiraEvent } from '../types';
+import { EventCoverUpload } from './EventCoverUpload';
 
 interface EventFormProps {
   defaultValues?: Partial<GiraEvent>;
