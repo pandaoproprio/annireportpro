@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 
 export type WorkflowStatus = 'rascunho' | 'em_revisao' | 'aprovado' | 'publicado' | 'devolvido';
 
@@ -154,6 +155,22 @@ export function useReportWorkflow(reportId?: string, reportType?: string) {
       qc.invalidateQueries({ queryKey: ['report-workflow'] });
       qc.invalidateQueries({ queryKey: ['report-workflow-history'] });
       toast.success(`Status alterado para: ${STATUS_LABELS[vars.newStatus]}`);
+
+      // Asana integration: create task on workflow transitions
+      if (workflowQuery.data) {
+        const wf = workflowQuery.data;
+        const typeLabel = wf.report_type === 'report_object' ? 'Relatório Objeto'
+          : wf.report_type === 'report_team' ? 'Relatório Equipe' : 'Justificativa';
+
+        createAsanaTaskOnPublish({
+          entityType: wf.report_type === 'report_team' ? 'team_report'
+            : wf.report_type === 'justification' ? 'justification' : 'activity',
+          entityId: wf.report_id,
+          projectId: wf.project_id,
+          name: `[Workflow] ${typeLabel} → ${STATUS_LABELS[vars.newStatus]}`,
+          notes: vars.notes || `Status alterado de ${STATUS_LABELS[wf.status]} para ${STATUS_LABELS[vars.newStatus]}`,
+        });
+      }
     },
     onError: (e) => {
       toast.error(e instanceof Error ? e.message : 'Erro ao alterar status');

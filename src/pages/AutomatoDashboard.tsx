@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAutomationAlerts, type AutomationAlert, type AutomationRun } from '@/hooks/useAutomationAlerts';
-import { Bot, Bell, History, Play, CheckCheck, AlertTriangle, XCircle, Clock, Zap, FileText, Activity } from 'lucide-react';
+import { WorkflowDashboard } from '@/components/workflow/WorkflowDashboard';
+import { Bot, Bell, History, Play, CheckCheck, AlertTriangle, XCircle, Clock, Zap, FileText, Activity, GitBranch } from 'lucide-react';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -178,6 +179,10 @@ export default function AutomatoDashboard() {
                 <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0">{unreadCount}</Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger value="workflows" className="gap-1.5">
+              <GitBranch className="w-4 h-4" />
+              Workflows
+            </TabsTrigger>
             <TabsTrigger value="history" className="gap-1.5">
               <History className="w-4 h-4" />
               Histórico
@@ -209,6 +214,10 @@ export default function AutomatoDashboard() {
               )}
             </div>
           </ScrollArea>
+        </TabsContent>
+
+        <TabsContent value="workflows">
+          <WorkflowDashboard />
         </TabsContent>
 
         <TabsContent value="history">
