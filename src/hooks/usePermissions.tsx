@@ -70,6 +70,11 @@ export const RBAC_MODULES = [
     label: 'GIRA Forms',
     actions: ['create', 'edit', 'delete', 'export'] as const,
   },
+  {
+    key: 'events',
+    label: 'GIRA Eventos',
+    actions: ['create', 'edit', 'delete'] as const,
+  },
 ] as const;
 
 export const usePermissions = () => {

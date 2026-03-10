@@ -317,10 +317,10 @@ const Layout: React.FC = () => {
                 <Route path="/wysiwyg/:id" element={<WysiwygEditorPage />} />
                 <Route path="/wysiwyg" element={<WysiwygEditorPage />} />
                 <Route path="/report-v2" element={<PermissionGuard permission="report_object"><ReportV2Page /></PermissionGuard>} />
-                <Route path="/forms" element={<FormsListPage />} />
-                <Route path="/forms/:id" element={<FormBuilderPage />} />
-                <Route path="/eventos" element={<EventsListPage />} />
-                <Route path="/eventos/:id" element={<EventDetailPage />} />
+                <Route path="/forms" element={<PermissionGuard permission={'forms_view' as any}><FormsListPage /></PermissionGuard>} />
+                <Route path="/forms/:id" element={<PermissionGuard permission={'forms_view' as any}><FormBuilderPage /></PermissionGuard>} />
+                <Route path="/eventos" element={<PermissionGuard permission={'events_view' as any}><EventsListPage /></PermissionGuard>} />
+                <Route path="/eventos/:id" element={<PermissionGuard permission={'events_view' as any}><EventDetailPage /></PermissionGuard>} />
                 <Route path="/automato" element={<PermissionGuard permission="system_logs"><AutomatoDashboard /></PermissionGuard>} />
                 <Route path="/risks" element={<RiskManagement />} />
                 <Route path="/budget" element={<BudgetDashboard />} />
