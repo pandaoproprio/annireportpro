@@ -216,6 +216,11 @@ export const useActivities = (projectId: string | null) => {
           name: `[Atividade] ${newActivity.description?.substring(0, 80)}`,
           notes: `Tipo: ${newActivity.type}\nData: ${newActivity.date}\nLocal: ${newActivity.location || ''}`,
         });
+
+        // Auto-generate CEAP institutional narrative (fire-and-forget)
+        supabase.functions.invoke('generate-activity-narrative', {
+          body: { activity_id: newActivity.id },
+        }).catch(err => console.warn('[narrative] Auto-generation failed:', err));
       }
     },
   });

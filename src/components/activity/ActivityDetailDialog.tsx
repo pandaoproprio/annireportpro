@@ -1,5 +1,6 @@
 import React from 'react';
 import { Activity, ActivityType, Project } from '@/types';
+import { ActivityNarrativePanel } from './ActivityNarrativePanel';
 import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
@@ -179,6 +180,11 @@ export const ActivityDetailDialog: React.FC<ActivityDetailDialogProps> = ({ acti
                   ))}
                 </div>
               </div>
+            )}
+
+            {/* Narrative Panel */}
+            {!activity.isDraft && activity.projectId && (
+              <ActivityNarrativePanel activity={activity} projectId={activity.projectId} />
             )}
           </div>
         )}

@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileEdit, Link2 } from 'lucide-react';
+import { FileEdit, Link2, Sparkles } from 'lucide-react';
+import { NarrativeInsertDialog } from '@/components/report/NarrativeInsertDialog';
 import { exportReportToPdf } from '@/lib/reportPdfExport';
 import { exportToDocx } from '@/lib/docxExport';
 import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
@@ -247,7 +248,17 @@ export const ReportGenerator: React.FC = () => {
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
           {/* Diary Link Button */}
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <NarrativeInsertDialog
+              projectId={project.id}
+              reportType="report_object"
+              onInsert={(text) => {
+                const current = summary || '';
+                setSummary(current ? `${current}\n\n${text}` : text);
+                toast.success('Narrativas inseridas no resumo do relatório');
+              }}
+              triggerLabel="Inserir Narrativas CEAP"
+            />
             <Button variant="outline" onClick={() => setShowDiaryLinkDialog(true)}>
               <Link2 className="w-4 h-4 mr-2" />
               Vincular Diário ({diaryLinks.linkedActivityIds.size})
