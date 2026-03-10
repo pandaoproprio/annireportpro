@@ -171,6 +171,45 @@ export type Database = {
           },
         ]
       }
+      ai_feedback: {
+        Row: {
+          ai_model: string | null
+          ai_output: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          feedback: string
+          id: string
+          metadata: Json | null
+          user_correction: string | null
+          user_id: string
+        }
+        Insert: {
+          ai_model?: string | null
+          ai_output: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          feedback: string
+          id?: string
+          metadata?: Json | null
+          user_correction?: string | null
+          user_id: string
+        }
+        Update: {
+          ai_model?: string | null
+          ai_output?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          feedback?: string
+          id?: string
+          metadata?: Json | null
+          user_correction?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       asana_config: {
         Row: {
           created_at: string
@@ -1639,6 +1678,60 @@ export type Database = {
         }
         Relationships: []
       }
+      retrospectives: {
+        Row: {
+          action_items: Json
+          created_at: string
+          id: string
+          project_id: string
+          sprint_id: string | null
+          to_improve: string
+          type: string
+          updated_at: string
+          user_id: string
+          went_well: string
+        }
+        Insert: {
+          action_items?: Json
+          created_at?: string
+          id?: string
+          project_id: string
+          sprint_id?: string | null
+          to_improve?: string
+          type?: string
+          updated_at?: string
+          user_id: string
+          went_well?: string
+        }
+        Update: {
+          action_items?: Json
+          created_at?: string
+          id?: string
+          project_id?: string
+          sprint_id?: string | null
+          to_improve?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+          went_well?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retrospectives_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "retrospectives_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sprint_items: {
         Row: {
           activity_id: string | null
@@ -1973,6 +2066,91 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      webhook_config: {
+        Row: {
+          created_at: string
+          created_by: string
+          events: string[]
+          id: string
+          is_active: boolean
+          name: string
+          project_id: string | null
+          secret: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          events?: string[]
+          id?: string
+          is_active?: boolean
+          name: string
+          project_id?: string | null
+          secret?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          events?: string[]
+          id?: string
+          is_active?: boolean
+          name?: string
+          project_id?: string | null
+          secret?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_config_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhook_logs: {
+        Row: {
+          event: string
+          id: string
+          payload: Json | null
+          response_body: string | null
+          response_status: number | null
+          sent_at: string
+          webhook_id: string
+        }
+        Insert: {
+          event: string
+          id?: string
+          payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          sent_at?: string
+          webhook_id: string
+        }
+        Update: {
+          event?: string
+          id?: string
+          payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          sent_at?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhook_config"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workflow_notifications: {
         Row: {
