@@ -1,10 +1,11 @@
-import React from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import React, { lazy, Suspense, useState } from 'react';
+import { Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useAppData } from '@/contexts/AppDataContext';
 import { ActivityManager } from '@/pages/ActivityManager';
 import { PwaInstallBanner } from '@/components/PwaInstallBanner';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -12,13 +13,24 @@ import {
   SelectTrigger,
   SelectValue
 } from '@/components/ui/select';
-import { FileEdit, LogOut, Folder, Loader2 } from 'lucide-react';
+import { FileEdit, LogOut, Folder, Loader2, Receipt, MessageSquare } from 'lucide-react';
 import logoGira from '@/assets/logo-gira.png';
+
+const InvoicesPage = lazy(() => import('@/pages/InvoicesPage'));
+const MessagingPage = lazy(() => import('@/pages/MessagingPage'));
+
+const PageFallback = () => (
+  <div className="space-y-4 p-4">
+    <Skeleton className="h-8 w-48" />
+    <Skeleton className="h-64 w-full" />
+  </div>
+);
 
 export const DiaryLayout: React.FC = () => {
   const { signOut, profile } = useAuth();
   const { projects, activeProjectId, activeProject, switchProject, isLoadingProjects } = useAppData();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = async () => {
     await signOut();
@@ -49,6 +61,14 @@ export const DiaryLayout: React.FC = () => {
       </div>
     );
   }
+
+  const tabs = [
+    { path: '/diario', label: 'Atividades', icon: <FileEdit className="w-4 h-4" /> },
+    { path: '/diario/notas-fiscais', label: 'Notas Fiscais', icon: <Receipt className="w-4 h-4" /> },
+    { path: '/diario/mensagens', label: 'Mensagens', icon: <MessageSquare className="w-4 h-4" /> },
+  ];
+
+  const currentTab = location.pathname;
 
   return (
     <div className="h-[100dvh] bg-background flex flex-col overflow-hidden">
@@ -87,34 +107,53 @@ export const DiaryLayout: React.FC = () => {
         </div>
       </header>
 
-      {/* Breadcrumb */}
-      <div className="bg-accent/50 border-b border-border">
-        <div className="max-w-5xl mx-auto px-4 py-2">
-          <p className="text-sm text-muted-foreground">
-            <span className="font-semibold text-foreground">GIRA</span>
-            <span className="mx-1.5">›</span>
-            <span>Diário de Bordo</span>
-            <span className="mx-1.5">›</span>
-            <span>Projeto</span>
-            <span className="mx-1.5">›</span>
-            <span className="font-semibold text-foreground">{activeProject?.name}</span>
-          </p>
+      {/* Navigation Tabs */}
+      <div className="bg-card border-b border-border">
+        <div className="max-w-5xl mx-auto px-4 flex gap-1 overflow-x-auto">
+          {tabs.map(tab => {
+            const isActive = tab.path === '/diario'
+              ? currentTab === '/diario' || currentTab === '/diario/'
+              : currentTab.startsWith(tab.path);
+            return (
+              <Link
+                key={tab.path}
+                to={tab.path}
+                className={`flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                  isActive
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab.icon}
+                {tab.label}
+              </Link>
+            );
+          })}
         </div>
       </div>
 
       {/* Content */}
       <div className="flex-1 max-w-5xl mx-auto w-full p-4 md:p-6 overflow-y-auto">
-        {/* Welcome */}
         <PwaInstallBanner />
-        <div className="mb-6">
-          <h1 className="text-xl md:text-2xl font-bold text-foreground">
-            Bem-vindo ao Diário de Bordo, {profile?.name || 'Usuário'}! 👋
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Aqui você registra as atividades realizadas e acompanha o progresso do seu trabalho.
-          </p>
-        </div>
-        <ActivityManager />
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="/" element={
+              <>
+                <div className="mb-6">
+                  <h1 className="text-xl md:text-2xl font-bold text-foreground">
+                    Bem-vindo ao Diário de Bordo, {profile?.name || 'Usuário'}! 👋
+                  </h1>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Aqui você registra as atividades realizadas e acompanha o progresso do seu trabalho.
+                  </p>
+                </div>
+                <ActivityManager />
+              </>
+            } />
+            <Route path="/notas-fiscais" element={<InvoicesPage />} />
+            <Route path="/mensagens" element={<MessagingPage />} />
+          </Routes>
+        </Suspense>
       </div>
 
       {/* Footer */}

@@ -27,7 +27,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { 
   LayoutDashboard, FileEdit, FileText, Settings as SettingsIcon, 
-  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays, Bot, ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign, Zap, ListChecks
+  Menu, LogOut, PlusCircle, Folder, BarChart3, X, Users, Loader2, Crown, UsersRound, ScrollText, Layers, FileCode2, PenTool, ClipboardList, Bell, CalendarDays, Bot, ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign, Zap, ListChecks, Receipt, MessageSquare
 } from 'lucide-react';
 import { NotificationBell } from '@/components/NotificationBell';
 import logoGira from '@/assets/logo-gira-relatorios.png';
@@ -68,6 +68,8 @@ const RiskManagement = lazy(() => import('@/pages/RiskManagement'));
 const BudgetDashboard = lazy(() => import('@/pages/BudgetDashboard'));
 const SprintDashboard = lazy(() => import('@/pages/SprintDashboard'));
 const RetrospectivesPage = lazy(() => import('@/pages/RetrospectivesPage'));
+const InvoicesPage = lazy(() => import('@/pages/InvoicesPage'));
+const MessagingPage = lazy(() => import('@/pages/MessagingPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -195,6 +197,8 @@ const Layout: React.FC = () => {
                 {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={closeSidebar} />}
                 <SidebarLink to="/forms" icon={<ClipboardList className="w-5 h-5" />} label="GIRA Forms" onClick={closeSidebar} />
                 <SidebarLink to="/eventos" icon={<CalendarDays className="w-5 h-5" />} label="GIRA Eventos" onClick={closeSidebar} />
+                <SidebarLink to="/invoices" icon={<Receipt className="w-5 h-5" />} label="Notas Fiscais" onClick={closeSidebar} />
+                <SidebarLink to="/messaging" icon={<MessageSquare className="w-5 h-5" />} label="Mensagens" onClick={closeSidebar} />
               </div>
             </div>
 
@@ -322,6 +326,8 @@ const Layout: React.FC = () => {
                 <Route path="/budget" element={<BudgetDashboard />} />
                 <Route path="/sprints" element={<SprintDashboard />} />
                 <Route path="/retrospectives" element={<RetrospectivesPage />} />
+                <Route path="/invoices" element={<InvoicesPage />} />
+                <Route path="/messaging" element={<MessagingPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>

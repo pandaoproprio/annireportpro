@@ -413,6 +413,132 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_channel_members: {
+        Row: {
+          channel_id: string
+          id: string
+          joined_at: string
+          last_read_at: string | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          id?: string
+          joined_at?: string
+          last_read_at?: string | null
+          role?: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          id?: string
+          joined_at?: string
+          last_read_at?: string | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_channel_members_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "chat_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_channels: {
+        Row: {
+          channel_type: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_archived: boolean
+          name: string
+          project_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          channel_type?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          project_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          channel_type?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_archived?: boolean
+          name?: string
+          project_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_channels_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          channel_id: string
+          content: string
+          created_at: string
+          file_name: string | null
+          file_type: string | null
+          file_url: string | null
+          id: string
+          is_system: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel_id: string
+          content?: string
+          created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_system?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel_id?: string
+          content?: string
+          created_at?: string
+          file_name?: string | null
+          file_type?: string | null
+          file_url?: string | null
+          id?: string
+          is_system?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "chat_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_versions: {
         Row: {
           content_snapshot: Json
@@ -774,6 +900,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "forms_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          created_at: string
+          emission_date: string
+          file_name: string
+          file_url: string
+          id: string
+          observations: string | null
+          project_id: string
+          reference_month: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emission_date: string
+          file_name?: string
+          file_url: string
+          id?: string
+          observations?: string | null
+          project_id: string
+          reference_month: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emission_date?: string
+          file_name?: string
+          file_url?: string
+          id?: string
+          observations?: string | null
+          project_id?: string
+          reference_month?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
