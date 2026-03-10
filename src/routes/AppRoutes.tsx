@@ -320,6 +320,7 @@ const Layout: React.FC = () => {
                 <Route path="/risks" element={<RiskManagement />} />
                 <Route path="/budget" element={<BudgetDashboard />} />
                 <Route path="/sprints" element={<SprintDashboard />} />
+                <Route path="/retrospectives" element={<RetrospectivesPage />} />
               </Routes>
             </Suspense>
           </ErrorBoundary>
