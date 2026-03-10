@@ -137,6 +137,10 @@ export const Dashboard: React.FC = () => {
         <Tabs defaultValue="painel" className="w-full">
           <TabsList>
             <TabsTrigger value="painel">Painel</TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-1.5">
+              <Target className="w-4 h-4" />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="performance" className="flex items-center gap-1.5">
               <BarChart3 className="w-4 h-4" />
               Performance
@@ -152,6 +156,18 @@ export const Dashboard: React.FC = () => {
               role={role}
               showAiSummary={true}
             />
+          </TabsContent>
+          <TabsContent value="analytics">
+            <div className="space-y-6 mt-4">
+              <ActivityHeatmap activities={activities} />
+              <CrossProjectChart
+                projects={projects}
+                activitiesByProject={projects.reduce<Record<string, any[]>>((acc, p) => {
+                  acc[p.id] = activities.filter((a: any) => a.projectId === p.id);
+                  return acc;
+                }, {})}
+              />
+            </div>
           </TabsContent>
           <TabsContent value="performance">
             <PerformanceDashboard projectId={project?.id} />
