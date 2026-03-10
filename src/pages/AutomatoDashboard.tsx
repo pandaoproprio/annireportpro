@@ -216,6 +216,10 @@ export default function AutomatoDashboard() {
           </ScrollArea>
         </TabsContent>
 
+        <TabsContent value="workflows">
+          <WorkflowDashboard />
+        </TabsContent>
+
         <TabsContent value="history">
           <ScrollArea className="h-[500px]">
             <div className="space-y-3">
