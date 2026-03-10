@@ -18,6 +18,7 @@ import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfig
 import { JustificationEditSection } from '@/components/justification/JustificationEditSection';
 import { JustificationPreviewSection } from '@/components/justification/JustificationPreviewSection';
 import { JustificationDraftsList } from '@/components/justification/JustificationDraftsList';
+import { WorkflowPanel } from '@/components/workflow/WorkflowPanel';
 
 export const JustificationReportGenerator: React.FC = () => {
   const state = useJustificationReportState();
