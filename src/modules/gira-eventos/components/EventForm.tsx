@@ -37,8 +37,16 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
   const projectId = watch('project_id');
   const [coverUrl, setCoverUrl] = useState<string | null>(defaultValues?.cover_image_url ?? null);
 
+  const onFormSubmit = (data: any) => {
+    onSubmit({ ...data, cover_image_url: coverUrl });
+  };
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
+      <div>
+        <Label>Imagem de Capa</Label>
+        <EventCoverUpload value={coverUrl} onChange={setCoverUrl} />
+      </div>
       <div>
         <Label htmlFor="title">Título *</Label>
         <Input id="title" {...register('title', { required: 'Título obrigatório' })} placeholder="Nome do evento" />
