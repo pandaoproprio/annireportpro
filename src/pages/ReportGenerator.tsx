@@ -15,6 +15,7 @@ import { ReportEditSection } from '@/components/report/ReportEditSection';
 import { ReportPreviewSection } from '@/components/report/ReportPreviewSection';
 import { DiaryReportLinkDialog } from '@/components/report/DiaryReportLinkDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { WorkflowPanel } from '@/components/workflow/WorkflowPanel';
 import { toast } from 'sonner';
 import { mmToPx, a4PageStyle, MR, ML, MB } from '@/lib/previewConstants';
 
