@@ -66,6 +66,7 @@ const AutomatoDashboard = lazy(() => import('@/pages/AutomatoDashboard'));
 const RiskManagement = lazy(() => import('@/pages/RiskManagement'));
 const BudgetDashboard = lazy(() => import('@/pages/BudgetDashboard'));
 const SprintDashboard = lazy(() => import('@/pages/SprintDashboard'));
+const RetrospectivesPage = lazy(() => import('@/pages/RetrospectivesPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
