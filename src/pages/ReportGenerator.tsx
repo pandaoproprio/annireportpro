@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileEdit, Link2 } from 'lucide-react';
+import { FileEdit, Link2, Sparkles } from 'lucide-react';
+import { NarrativeInsertDialog } from '@/components/report/NarrativeInsertDialog';
 import { exportReportToPdf } from '@/lib/reportPdfExport';
 import { exportToDocx } from '@/lib/docxExport';
 import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
