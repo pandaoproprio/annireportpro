@@ -79,6 +79,7 @@ export const TeamManagement: React.FC = () => {
   const [accessPassword, setAccessPassword] = useState('');
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [permissionsUser, setPermissionsUser] = useState<AdminUser | null>(null);
+  const [filterProjectId, setFilterProjectId] = useState<string>('all');
 
   // Fetch admin users for RBAC management
   React.useEffect(() => {
