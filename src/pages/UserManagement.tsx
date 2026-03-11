@@ -97,10 +97,17 @@ export const UserManagement: React.FC = () => {
   const handleEdit = async () => {
     if (!editingUser) return;
     
-    const result = await updateUser(editingUser.id, {
+    const updates: { name: string; role: typeof selectedRole; email?: string } = {
       name,
       role: selectedRole
-    });
+    };
+    
+    // Only send email if it changed
+    if (editEmail && editEmail !== editingUser.email) {
+      updates.email = editEmail;
+    }
+    
+    const result = await updateUser(editingUser.id, updates);
     
     if (result.success) {
       setIsEditOpen(false);
