@@ -10,6 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const ROLE_COLORS: Record<string, string> = {};
+const PROJECT_COLORS: Record<string, string> = {};
 const COLOR_PALETTE = [
   'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-800',
   'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-300 dark:border-emerald-800',
@@ -23,6 +24,7 @@ const COLOR_PALETTE = [
   'bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-900/40 dark:text-pink-300 dark:border-pink-800',
 ];
 let colorIndex = 0;
+let projectColorIndex = 0;
 
 function getRoleColor(role: string): string {
   const key = role.toLowerCase().trim();
@@ -31,6 +33,14 @@ function getRoleColor(role: string): string {
     colorIndex++;
   }
   return ROLE_COLORS[key];
+}
+
+function getProjectColor(projectId: string): string {
+  if (!PROJECT_COLORS[projectId]) {
+    PROJECT_COLORS[projectId] = COLOR_PALETTE[projectColorIndex % COLOR_PALETTE.length];
+    projectColorIndex++;
+  }
+  return PROJECT_COLORS[projectId];
 }
 
 const RoleBadge: React.FC<{ role: string }> = ({ role }) => (
