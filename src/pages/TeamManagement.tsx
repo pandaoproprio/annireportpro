@@ -301,7 +301,7 @@ export const TeamManagement: React.FC = () => {
                             return (
                               <div className="flex flex-wrap gap-1">
                                 {memberProjects.map(mp => (
-                                  <Badge key={mp.project_id} variant="outline" className="text-xs">
+                                  <Badge key={mp.project_id} variant="outline" className={`text-xs ${getProjectColor(mp.project_id)}`}>
                                     {mp.project_name}
                                   </Badge>
                                 ))}
