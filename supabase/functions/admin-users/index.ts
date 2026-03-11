@@ -405,7 +405,7 @@ Deno.serve(async (req) => {
     // PATCH: Update user
     if (req.method === 'PATCH') {
       const body: UpdateUserRequest = await req.json();
-      const { userId, name, role, password, permissions } = body;
+      const { userId, name, email, role, password, permissions } = body;
 
       if (!userId) {
         return new Response(JSON.stringify({ error: 'userId is required' }), {
