@@ -46,6 +46,7 @@ export const UserManagement: React.FC = () => {
   
   // Form state
   const [email, setEmail] = useState('');
+  const [editEmail, setEditEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<AdminRole>('usuario');
