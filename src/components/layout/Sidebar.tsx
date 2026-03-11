@@ -44,11 +44,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
   const { profile, role } = useAuth();
   const { hasPermission, isAdmin, permissions } = usePermissions();
   const { projects, activeProjectId } = useAppData();
+  const isPrivileged = isAdmin || role === 'SUPER_ADMIN' || role === 'ADMIN';
 
   const shouldShowItem = (item: SidebarItemType): boolean => {
     return shouldShowSidebarItem(item, {
       role,
-      isAdmin,
+      isAdmin: isPrivileged,
       permissions,
       hasPermission,
     });
