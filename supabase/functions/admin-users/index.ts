@@ -19,6 +19,7 @@ interface CreateUserRequest {
 interface UpdateUserRequest {
   userId: string;
   name?: string;
+  email?: string;
   role?: AppRole;
   password?: string;
   permissions?: string[];
