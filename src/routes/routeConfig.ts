@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import type { AppPermission } from '@/hooks/usePermissions';
 
 // Lazy-loaded page components
 const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
@@ -30,7 +31,7 @@ const MessagingPage = lazy(() => import('@/pages/MessagingPage'));
 export interface RouteEntry {
   path: string;
   element: React.LazyExoticComponent<React.ComponentType<any>>;
-  permission?: string;
+  permission?: AppPermission;
 }
 
 /**
