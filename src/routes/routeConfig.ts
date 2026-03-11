@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import type { AppPermission } from '@/hooks/usePermissions';
 
 // Lazy-loaded page components
 const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
