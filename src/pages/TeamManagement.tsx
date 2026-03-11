@@ -274,7 +274,7 @@ export const TeamManagement: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {members.map(m => (
+                    {filteredMembers.map(m => (
                       <TableRow key={m.id}>
                         <TableCell className="font-medium">{m.name}</TableCell>
                         <TableCell><RoleBadge role={m.function_role} /></TableCell>
