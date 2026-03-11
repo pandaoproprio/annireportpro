@@ -437,6 +437,28 @@ Deno.serve(async (req) => {
         await supabaseAdmin.from('profiles').update({ name }).eq('user_id', userId);
       }
 
+      if (email) {
+        // Update email in auth system
+        const { error: emailError } = await supabaseAdmin.auth.admin.updateUserById(userId, { email, email_confirm: true });
+        if (emailError) {
+          return new Response(JSON.stringify({ error: emailError.message }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        // Update email in profiles table
+        await supabaseAdmin.from('profiles').update({ email }).eq('user_id', userId);
+        // Log email change
+        await supabaseAdmin.from('system_logs').insert([{
+          user_id: callingUser.id,
+          action: 'user_email_changed',
+          entity_type: 'user',
+          entity_id: userId,
+          new_data: { email },
+          ip_address: req.headers.get('x-forwarded-for') || null,
+          user_agent: req.headers.get('user-agent') || null,
+        }]);
+      }
+
       if (role) {
         // Get old role for logging
         const { data: oldRoleData } = await supabaseAdmin.from('user_roles').select('role').eq('user_id', userId).single();

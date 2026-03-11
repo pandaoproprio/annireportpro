@@ -410,6 +410,16 @@ export const UserManagement: React.FC = () => {
                 onChange={(e) => setName(e.target.value)}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">E-mail</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+              />
+            </div>
             
             <div className="space-y-2">
               <Label>Papel</Label>
