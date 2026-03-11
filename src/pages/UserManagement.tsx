@@ -134,6 +134,7 @@ export const UserManagement: React.FC = () => {
   const openEdit = (user: AdminUser) => {
     setEditingUser(user);
     setName(user.name);
+    setEditEmail(user.email);
     setSelectedRole(user.role);
     setIsEditOpen(true);
   };
