@@ -6,7 +6,6 @@ import { useAppData } from '@/contexts/AppDataContext';
 import { SidebarLink } from '@/components/SidebarLink';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { NotificationBell } from '@/components/NotificationBell';
-import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -22,6 +21,16 @@ import {
   ListChecks, Receipt, MessageSquare,
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
+import { sidebarSections, type SidebarItem as SidebarItemType } from '@/routes/sidebarConfig';
+
+// Map icon names to components
+const iconMap: Record<string, React.ElementType> = {
+  LayoutDashboard, FileEdit, FileText, Settings: SettingsIcon,
+  BarChart3, Users, Crown, UsersRound, ScrollText, Layers,
+  FileCode2, PenTool, ClipboardList, CalendarDays, Bot,
+  ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign,
+  Zap, ListChecks, Receipt, MessageSquare,
+};
 
 interface SidebarProps {
   open: boolean;
@@ -34,6 +43,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
   const { profile, role } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
   const { projects, activeProjectId } = useAppData();
+
+  const shouldShowItem = (item: SidebarItemType): boolean => {
+    if (item.adminOnly && !isAdmin) return false;
+    if (item.permission && !hasPermission(item.permission)) return false;
+    // Special label for Dashboard when OFICINEIRO
+    return true;
+  };
+
+  const renderIcon = (iconName: string) => {
+    const IconComponent = iconMap[iconName];
+    if (!IconComponent) return null;
+    return <IconComponent className="w-5 h-5" />;
+  };
 
   return (
     <aside
@@ -59,15 +81,28 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 space-y-4 overflow-auto">
-          {/* Visão Geral */}
-          {hasPermission('dashboard') && (
-            <div>
-              <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Visão Geral</p>
-              <div className="space-y-0.5">
-                <SidebarLink to="/" icon={<LayoutDashboard className="w-5 h-5" />} label={role === 'OFICINEIRO' ? 'Meu Resumo' : 'Dashboard'} onClick={onClose} />
+          {/* Render first section (Visão Geral) */}
+          {sidebarSections.filter(s => s.title === 'Visão Geral').map(section => {
+            if (section.permission && !hasPermission(section.permission)) return null;
+            const visibleItems = section.items.filter(shouldShowItem);
+            if (visibleItems.length === 0) return null;
+            return (
+              <div key={section.title}>
+                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">{section.title}</p>
+                <div className="space-y-0.5">
+                  {visibleItems.map(item => (
+                    <SidebarLink
+                      key={item.to}
+                      to={item.to}
+                      icon={renderIcon(item.iconName)}
+                      label={item.to === '/' && role === 'OFICINEIRO' ? 'Meu Resumo' : item.label}
+                      onClick={onClose}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })}
 
           {/* Projetos */}
           {projects.length > 0 && (
@@ -96,71 +131,41 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
             </div>
           )}
 
-          {/* Gestão */}
-          <div>
-            <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Gestão</p>
-            <div className="space-y-0.5">
-              {hasPermission('diary') && <SidebarLink to="/activities" icon={<FileEdit className="w-5 h-5" />} label="Diário de Bordo" onClick={onClose} />}
-              {hasPermission('report_object') && <SidebarLink to="/report" icon={<FileText className="w-5 h-5" />} label="Relatório do Objeto" onClick={onClose} />}
-              {hasPermission('report_team') && <SidebarLink to="/team-report" icon={<Users className="w-5 h-5" />} label="Relatório da Equipe" onClick={onClose} />}
-              {hasPermission('report_team') && <SidebarLink to="/justificativa" icon={<FileText className="w-5 h-5" />} label="Justificativa Prorrogação" onClick={onClose} />}
-              {hasPermission('report_object') && <SidebarLink to="/report-v2" icon={<BarChart3 className="w-5 h-5" />} label="Relatório V2" onClick={onClose} />}
-              {hasPermission('team_management') && <SidebarLink to="/team" icon={<UsersRound className="w-5 h-5" />} label="Gestão de Equipes" onClick={onClose} />}
-              {hasPermission('forms_view') && <SidebarLink to="/forms" icon={<ClipboardList className="w-5 h-5" />} label="GIRA Forms" onClick={onClose} />}
-              {hasPermission('events_view') && <SidebarLink to="/eventos" icon={<CalendarDays className="w-5 h-5" />} label="GIRA Eventos" onClick={onClose} />}
-              <SidebarLink to="/invoices" icon={<Receipt className="w-5 h-5" />} label="Notas Fiscais" onClick={onClose} />
-              <SidebarLink to="/messaging" icon={<MessageSquare className="w-5 h-5" />} label="Mensagens" onClick={onClose} />
-            </div>
-          </div>
+          {/* Remaining sections driven by config */}
+          {sidebarSections.filter(s => s.title !== 'Visão Geral').map(section => {
+            if (section.adminOnly && !isAdmin) return null;
+            if (section.permission && !hasPermission(section.permission)) return null;
 
-          {/* Templates */}
-          {isAdmin && (
-            <div>
-              <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Templates</p>
-              <div className="space-y-0.5">
-                <SidebarLink to="/templates" icon={<Layers className="w-5 h-5" />} label="Templates de Relatórios" onClick={onClose} />
-                <SidebarLink to="/editor" icon={<FileCode2 className="w-5 h-5" />} label="Editor de Documentos" onClick={onClose} />
-                <SidebarLink to="/wysiwyg" icon={<PenTool className="w-5 h-5" />} label="Editor WYSIWYG" onClick={onClose} />
-              </div>
-            </div>
-          )}
+            const visibleItems = section.items.filter(shouldShowItem);
+            if (visibleItems.length === 0) return null;
 
-          {/* Estratégico */}
-          {isAdmin && (
-            <div>
-              <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Estratégico</p>
-              <div className="space-y-0.5">
-                <SidebarLink to="/risks" icon={<ShieldAlert className="w-5 h-5" />} label="Gestão de Riscos" onClick={onClose} />
-                <SidebarLink to="/budget" icon={<DollarSign className="w-5 h-5" />} label="Custos Consolidados" onClick={onClose} />
-                <SidebarLink to="/sprints" icon={<Zap className="w-5 h-5" />} label="Sprints & Velocity" onClick={onClose} />
-                <SidebarLink to="/retrospectives" icon={<ListChecks className="w-5 h-5" />} label="Retrospectivas" onClick={onClose} />
-                <SidebarLink to="/maturity-audit" icon={<ShieldCheck className="w-5 h-5" />} label="Auditoria de Maturidade" onClick={onClose} />
-                <SidebarLink to="/ai-audit" icon={<Brain className="w-5 h-5" />} label="Auditoria de IA" onClick={onClose} />
-                <SidebarLink to="/valuation" icon={<TrendingUp className="w-5 h-5" />} label="Valuation Report" onClick={onClose} />
-              </div>
-            </div>
-          )}
+            // Administração section: only show if user has at least one permission
+            if (section.title === 'Administração') {
+              const hasAny = section.items.some(item => {
+                if (item.adminOnly) return isAdmin;
+                if (item.permission) return hasPermission(item.permission);
+                return true;
+              });
+              if (!hasAny) return null;
+            }
 
-          {/* Administração */}
-          {(hasPermission('settings_edit') || hasPermission('user_management') || hasPermission('system_logs')) && (
-            <div>
-              <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">Administração</p>
-              <div className="space-y-0.5">
-                {hasPermission('settings_edit') && (
-                  <SidebarLink to="/settings" icon={<SettingsIcon className="w-5 h-5" />} label="Configurações" onClick={onClose} />
-                )}
-                {hasPermission('user_management') && (
-                  <SidebarLink to="/users" icon={<Crown className="w-5 h-5" />} label="Gestão de Usuários" onClick={onClose} />
-                )}
-                {hasPermission('system_logs') && (
-                  <SidebarLink to="/logs" icon={<ScrollText className="w-5 h-5" />} label="Logs do Sistema" onClick={onClose} />
-                )}
-                {isAdmin && (
-                  <SidebarLink to="/automato" icon={<Bot className="w-5 h-5" />} label="Automato" onClick={onClose} />
-                )}
+            return (
+              <div key={section.title}>
+                <p className="px-3 mb-1 text-[11px] font-semibold uppercase tracking-wider text-sidebar-foreground/50">{section.title}</p>
+                <div className="space-y-0.5">
+                  {visibleItems.map(item => (
+                    <SidebarLink
+                      key={item.to}
+                      to={item.to}
+                      icon={renderIcon(item.iconName)}
+                      label={item.label}
+                      onClick={onClose}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })}
         </nav>
 
         {/* User Info */}
