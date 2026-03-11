@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 import { sidebarSections, type SidebarItem as SidebarItemType } from '@/routes/sidebarConfig';
+import { shouldShowSidebarItem } from '@/routes/sidebarVisibility';
 
 // Map icon names to components
 const iconMap: Record<string, React.ElementType> = {
@@ -41,14 +42,17 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onProjectChange }) => {
   const { profile, role } = useAuth();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isAdmin, permissions } = usePermissions();
   const { projects, activeProjectId } = useAppData();
+  const isPrivileged = isAdmin || role === 'SUPER_ADMIN' || role === 'ADMIN';
 
   const shouldShowItem = (item: SidebarItemType): boolean => {
-    if (item.adminOnly && !isAdmin) return false;
-    if (item.permission && !hasPermission(item.permission)) return false;
-    // Special label for Dashboard when OFICINEIRO
-    return true;
+    return shouldShowSidebarItem(item, {
+      role,
+      isAdmin: isPrivileged,
+      permissions,
+      hasPermission,
+    });
   };
 
   const renderIcon = (iconName: string) => {
