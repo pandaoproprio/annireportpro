@@ -49,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
     return shouldShowSidebarItem(item, {
       role,
       isAdmin,
-      permissions: permissions as AppPermission[],
+      permissions,
       hasPermission,
     });
   };
