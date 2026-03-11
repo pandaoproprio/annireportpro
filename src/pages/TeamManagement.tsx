@@ -79,6 +79,7 @@ export const TeamManagement: React.FC = () => {
   const [accessPassword, setAccessPassword] = useState('');
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [permissionsUser, setPermissionsUser] = useState<AdminUser | null>(null);
+  const [filterProjectId, setFilterProjectId] = useState<string>('all');
 
   // Fetch admin users for RBAC management
   React.useEffect(() => {
@@ -134,6 +135,12 @@ export const TeamManagement: React.FC = () => {
 
   const projectMembersList = members.filter(m => isMemberInProject(m.id));
   const availableForProject = members.filter(m => !isMemberInProject(m.id));
+
+  const filteredMembers = useMemo(() => {
+    if (filterProjectId === 'all') return members;
+    if (filterProjectId === 'none') return members.filter(m => getMemberProjects(m.id).length === 0);
+    return members.filter(m => allAssignments.some(a => a.team_member_id === m.id && a.project_id === filterProjectId));
+  }, [members, allAssignments, filterProjectId]);
 
   const renderMemberForm = (onSubmit: () => void, submitLabel: string, showProjectSelect?: boolean) => (
     <div className="space-y-4">
@@ -226,16 +233,34 @@ export const TeamManagement: React.FC = () => {
         <TabsContent value="all">
           <Card>
             <CardHeader>
-              <CardTitle>Membros Cadastrados</CardTitle>
-              <CardDescription>{members.length} membro{members.length !== 1 ? 's' : ''} no total</CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle>Membros Cadastrados</CardTitle>
+                  <CardDescription>{filteredMembers.length} de {members.length} membro{members.length !== 1 ? 's' : ''}</CardDescription>
+                </div>
+                <Select value={filterProjectId} onValueChange={setFilterProjectId}>
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue placeholder="Filtrar por projeto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os projetos</SelectItem>
+                    <SelectItem value="none">Sem projeto vinculado</SelectItem>
+                    {projects.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoading && members.length === 0 ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : members.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Nenhum membro cadastrado</p>
+              ) : filteredMembers.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  {filterProjectId !== 'all' ? 'Nenhum membro encontrado para este filtro' : 'Nenhum membro cadastrado'}
+                </p>
               ) : (
                 <Table>
                   <TableHeader>
@@ -249,7 +274,7 @@ export const TeamManagement: React.FC = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {members.map(m => (
+                    {filteredMembers.map(m => (
                       <TableRow key={m.id}>
                         <TableCell className="font-medium">{m.name}</TableCell>
                         <TableCell><RoleBadge role={m.function_role} /></TableCell>
