@@ -162,50 +162,227 @@ function buildSvgBarChart(label: string, data: Record<string, number>): string {
   </div>`;
 }
 
+// Build comprehensive data summary for AI — includes ALL responses, text analysis, correlations
+function buildComprehensiveDataSummary(formTitle: string, fields: Field[], responses: FormResponse[]) {
+  const chartData = buildChartData(fields, responses);
+
+  // Text field analysis (open-ended responses)
+  const textFields = fields.filter(f => ['short_text', 'long_text', 'textarea'].includes(f.type));
+  const textAnalysis: { field: string; totalFilled: number; sampleAnswers: string[]; avgLength: number }[] = [];
+  for (const f of textFields) {
+    const answers: string[] = [];
+    let totalLen = 0;
+    for (const r of responses) {
+      const val = r.answers?.[f.id];
+      if (val && typeof val === 'string' && val.trim()) {
+        answers.push(val.trim());
+        totalLen += val.trim().length;
+      }
+    }
+    if (answers.length > 0) {
+      // Send up to 30 unique text answers for richer analysis
+      const unique = [...new Set(answers)];
+      textAnalysis.push({
+        field: f.label,
+        totalFilled: answers.length,
+        sampleAnswers: unique.slice(0, 30),
+        avgLength: Math.round(totalLen / answers.length),
+      });
+    }
+  }
+
+  // Number field stats
+  const numberFields = fields.filter(f => ['number', 'scale'].includes(f.type));
+  const numberStats: { field: string; min: number; max: number; avg: number; median: number; count: number }[] = [];
+  for (const f of numberFields) {
+    const values: number[] = [];
+    for (const r of responses) {
+      const val = r.answers?.[f.id];
+      if (val !== null && val !== undefined && !isNaN(Number(val))) {
+        values.push(Number(val));
+      }
+    }
+    if (values.length > 0) {
+      values.sort((a, b) => a - b);
+      numberStats.push({
+        field: f.label,
+        min: values[0],
+        max: values[values.length - 1],
+        avg: Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100,
+        median: values[Math.floor(values.length / 2)],
+        count: values.length,
+      });
+    }
+  }
+
+  // Temporal analysis
+  const byDate: Record<string, number> = {};
+  const byWeekday: Record<string, number> = { 'Dom': 0, 'Seg': 0, 'Ter': 0, 'Qua': 0, 'Qui': 0, 'Sex': 0, 'Sáb': 0 };
+  const weekdays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  for (const r of responses) {
+    const d = new Date(r.submitted_at);
+    const dateKey = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}`;
+    byDate[dateKey] = (byDate[dateKey] || 0) + 1;
+    byWeekday[weekdays[d.getDay()]]++;
+  }
+
+  // Completion rate per field
+  const completionRates: { field: string; filled: number; total: number; rate: string }[] = [];
+  for (const f of fields) {
+    let filled = 0;
+    for (const r of responses) {
+      const val = r.answers?.[f.id];
+      if (val !== null && val !== undefined && val !== '' && !(Array.isArray(val) && val.length === 0)) {
+        filled++;
+      }
+    }
+    completionRates.push({
+      field: f.label,
+      filled,
+      total: responses.length,
+      rate: `${Math.round((filled / responses.length) * 100)}%`,
+    });
+  }
+
+  // Cross-field correlations (top 2 categorical fields)
+  const categoricalCharts = chartData.slice(0, 2);
+  const crossAnalysis: { fields: string[]; correlations: Record<string, Record<string, number>> }[] = [];
+  if (categoricalCharts.length >= 2) {
+    const f1 = fields.find(f => f.label === categoricalCharts[0].label);
+    const f2 = fields.find(f => f.label === categoricalCharts[1].label);
+    if (f1 && f2) {
+      const cross: Record<string, Record<string, number>> = {};
+      for (const r of responses) {
+        const v1 = r.answers?.[f1.id];
+        const v2 = r.answers?.[f2.id];
+        if (v1 && v2) {
+          const k1 = String(Array.isArray(v1) ? v1[0] : v1);
+          const k2 = String(Array.isArray(v2) ? v2[0] : v2);
+          if (!cross[k1]) cross[k1] = {};
+          cross[k1][k2] = (cross[k1][k2] || 0) + 1;
+        }
+      }
+      crossAnalysis.push({ fields: [f1.label, f2.label], correlations: cross });
+    }
+  }
+
+  return {
+    formTitle,
+    totalResponses: responses.length,
+    identifiedResponses: responses.filter(r => r.respondent_name).length,
+    fields: fields.map(f => ({ label: f.label, type: f.type })),
+    distributions: chartData.map(c => ({
+      field: c.label,
+      counts: c.data,
+      topAnswer: Object.entries(c.data).sort((a, b) => b[1] - a[1])[0]?.[0] || '',
+      diversity: Object.keys(c.data).length,
+    })),
+    textAnalysis,
+    numberStats,
+    temporalAnalysis: {
+      responsesPerDay: byDate,
+      responsesPerWeekday: byWeekday,
+      peakDay: Object.entries(byDate).sort((a, b) => b[1] - a[1])[0]?.[0] || '',
+      peakWeekday: Object.entries(byWeekday).sort((a, b) => b[1] - a[1])[0]?.[0] || '',
+    },
+    completionRates: completionRates.filter(c => c.rate !== '100%'),
+    crossAnalysis,
+    dateRange: responses.length > 0
+      ? { from: formatDate(responses[responses.length-1].submitted_at), to: formatDate(responses[0].submitted_at) }
+      : null,
+  };
+}
+
+function markdownToHtml(md: string): string {
+  let html = escapeHtml(md);
+  // Bold
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  // Headers
+  html = html.replace(/^#### (.+)$/gm, '<h5>$1</h5>');
+  html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+  html = html.replace(/^## (.+)$/gm, '<h3 class="section-title">$1</h3>');
+  html = html.replace(/^# (.+)$/gm, '<h3 class="section-title">$1</h3>');
+  // Lists
+  html = html.replace(/^[-•] (.+)$/gm, '<li>$1</li>');
+  html = html.replace(/^(\d+)\. (.+)$/gm, '<li><strong>$1.</strong> $2</li>');
+  // Wrap consecutive <li> in <ul>
+  html = html.replace(/((<li>.*?<\/li>\n?)+)/g, '<ul>$1</ul>');
+  // Paragraphs
+  html = html.replace(/\n\n/g, '</p><p>');
+  html = '<p>' + html + '</p>';
+  html = html.replace(/<p>\s*<(h[345]|ul)/g, '<$1');
+  html = html.replace(/<\/(h[345]|ul)>\s*<\/p>/g, '</$1>');
+  html = html.replace(/<p>\s*<\/p>/g, '');
+  return html;
+}
+
 function buildAiReportHtml(formTitle: string, fields: Field[], responses: FormResponse[], aiNarrative: string): string {
   const now = formatDate(new Date().toISOString());
   const charts = buildChartData(fields, responses);
   const chartsHtml = charts.map(c => buildSvgBarChart(c.label, c.data)).join('\n');
+  const narrativeHtml = markdownToHtml(aiNarrative);
 
-  // Summary stats
   const totalResps = responses.length;
   const withName = responses.filter(r => r.respondent_name).length;
   const dateRange = responses.length > 0
     ? `${formatDate(responses[responses.length-1].submitted_at)} — ${formatDate(responses[0].submitted_at)}`
     : '—';
+  
+  // Completion stats
+  const totalFields = fields.length;
+  const avgCompletion = fields.length > 0 ? Math.round(
+    fields.reduce((acc, f) => {
+      const filled = responses.filter(r => {
+        const v = r.answers?.[f.id];
+        return v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0);
+      }).length;
+      return acc + (filled / totalResps) * 100;
+    }, 0) / totalFields
+  ) : 0;
 
   return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
 @page{size:A4 portrait;margin:14mm}*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:11px;line-height:1.5}
-.cover{text-align:center;padding:60px 20px;page-break-after:always}
-.cover h1{font-size:24px;font-weight:700;color:#0DA3E7;text-transform:uppercase;margin-bottom:12px}
-.cover .subtitle{font-size:14px;color:#64748b;margin-bottom:40px}
-.cover .stats{display:flex;justify-content:center;gap:32px;margin-top:24px}
-.stat-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:16px 24px;text-align:center}
-.stat-box .num{font-size:28px;font-weight:700;color:#0DA3E7;display:block}
-.stat-box .lbl{font-size:10px;color:#64748b;text-transform:uppercase}
-h2{font-size:16px;font-weight:700;color:#0DA3E7;border-bottom:2px solid #0DA3E7;padding-bottom:6px;margin:24px 0 12px}
+body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:11px;line-height:1.6}
+.cover{text-align:center;padding:50px 20px 40px;page-break-after:always;position:relative}
+.cover::after{content:'';position:absolute;bottom:0;left:10%;right:10%;height:3px;background:linear-gradient(90deg,transparent,#0DA3E7,transparent)}
+.cover h1{font-size:26px;font-weight:800;color:#0DA3E7;text-transform:uppercase;margin-bottom:8px;letter-spacing:1px}
+.cover .subtitle{font-size:15px;color:#475569;margin-bottom:40px;font-weight:400}
+.cover .stats{display:flex;justify-content:center;gap:20px;margin-top:24px;flex-wrap:wrap}
+.stat-box{background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;border-radius:12px;padding:18px 24px;text-align:center;min-width:120px}
+.stat-box .num{font-size:30px;font-weight:800;color:#0DA3E7;display:block;line-height:1.1}
+.stat-box .lbl{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-top:4px}
+.cover .period{margin-top:24px;font-size:10px;color:#94a3b8;font-style:italic}
+h2{font-size:16px;font-weight:700;color:#0DA3E7;border-bottom:2px solid #0DA3E7;padding-bottom:6px;margin:28px 0 14px}
 .chart-block{margin-bottom:20px;break-inside:avoid}
 .chart-block h3{font-size:12px;font-weight:600;color:#334155;margin-bottom:6px}
-.narrative{background:#f8fafc;border-left:4px solid #0DA3E7;padding:16px 20px;border-radius:0 8px 8px 0;font-size:11px;line-height:1.6;white-space:pre-wrap}
+.narrative{font-size:11px;line-height:1.7;color:#1e293b}
+.narrative .section-title{font-size:13px;font-weight:700;color:#0DA3E7;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}
+.narrative h4{font-size:12px;font-weight:600;color:#334155;margin:14px 0 6px}
+.narrative h5{font-size:11px;font-weight:600;color:#475569;margin:10px 0 4px}
+.narrative p{margin-bottom:8px}
+.narrative ul{margin:6px 0 10px 20px;padding:0}
+.narrative li{margin-bottom:4px}
+.narrative strong{color:#0f172a}
+.insight-box{background:#f0f9ff;border-left:4px solid #0DA3E7;padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0;font-size:10.5px}
 .footer{margin-top:30px;text-align:center;font-size:8px;color:#999;border-top:1px solid #e2e8f0;padding-top:8px}
 </style></head><body>
 
 <div class="cover">
-  <h1>Relatório de Análise</h1>
+  <h1>📊 Relatório Analítico</h1>
   <div class="subtitle">${escapeHtml(formTitle)}</div>
   <div class="stats">
     <div class="stat-box"><span class="num">${totalResps}</span><span class="lbl">Respostas</span></div>
     <div class="stat-box"><span class="num">${withName}</span><span class="lbl">Identificados</span></div>
-    <div class="stat-box"><span class="num">${responses.length > 0 ? Math.round((withName/totalResps)*100) : 0}%</span><span class="lbl">Taxa Identificação</span></div>
+    <div class="stat-box"><span class="num">${responses.length > 0 ? Math.round((withName/totalResps)*100) : 0}%</span><span class="lbl">Identificação</span></div>
+    <div class="stat-box"><span class="num">${avgCompletion}%</span><span class="lbl">Preenchimento</span></div>
   </div>
-  <div style="margin-top:20px;font-size:10px;color:#94a3b8">Período: ${dateRange}</div>
+  <div class="period">Período: ${dateRange}</div>
 </div>
 
 ${charts.length > 0 ? `<h2>📊 Distribuição das Respostas</h2>${chartsHtml}` : ''}
 
-<h2>🤖 Análise Inteligente</h2>
-<div class="narrative">${escapeHtml(aiNarrative)}</div>
+<h2>🧠 Análise Inteligente</h2>
+<div class="narrative">${narrativeHtml}</div>
 
 <div class="footer">Relatório gerado com inteligência artificial pelo GIRA Forms — ${now}</div>
 </body></html>`;
@@ -250,7 +427,7 @@ Deno.serve(async (req) => {
 
     // Fetch form
     const { data: form, error: formErr } = await supabaseClient
-      .from("forms").select("id, title").eq("id", formId).single();
+      .from("forms").select("id, title, description").eq("id", formId).single();
     if (formErr || !form) {
       return new Response(JSON.stringify({ error: "Form not found" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -292,21 +469,8 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Prepare data summary for AI
-      const chartData = buildChartData(dataFields, resps);
-      const dataSummary = {
-        formTitle: form.title,
-        totalResponses: resps.length,
-        fields: dataFields.map(f => f.label),
-        distributions: chartData.map(c => ({ field: c.label, counts: c.data })),
-        sampleResponses: resps.slice(0, 5).map(r => ({
-          name: r.respondent_name || 'Anônimo',
-          date: formatDate(r.submitted_at),
-          answers: Object.fromEntries(
-            dataFields.map(f => [f.label, formatAnswer(r.answers?.[f.id])])
-          ),
-        })),
-      };
+      // Build comprehensive data summary with ALL responses
+      const dataSummary = buildComprehensiveDataSummary(form.title, dataFields, resps);
 
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -319,20 +483,49 @@ Deno.serve(async (req) => {
           messages: [
             {
               role: "system",
-              content: `Você é um analista de dados especializado em pesquisas e formulários. 
-Gere um relatório executivo em português brasileiro analisando as respostas do formulário.
+              content: `Você é um analista sênior de dados especializado em pesquisas sociais e formulários de campo.
+Gere um relatório analítico PROFUNDO e PROFISSIONAL em português brasileiro.
 
-Estruture assim:
-1. VISÃO GERAL — resumo quantitativo (total de respostas, período, taxa de participação)
-2. PADRÕES IDENTIFICADOS — principais tendências e concentrações nas respostas
-3. DESTAQUES — pontos que merecem atenção especial
-4. RECOMENDAÇÕES — sugestões baseadas nos dados
+DIRETRIZES DE QUALIDADE:
+- Use SEMPRE dados numéricos concretos, porcentagens e proporções
+- Identifique padrões não-óbvios e correlações entre campos
+- Compare subgrupos quando possível (ex: respostas por gênero, região, etc.)
+- Destaque anomalias, outliers e pontos de atenção
+- Faça inferências inteligentes baseadas nos dados
+- Se houver campos de texto aberto, identifique temas recorrentes e sentimentos
 
-Seja objetivo, use dados numéricos e porcentagens. Máximo 400 palavras.`,
+ESTRUTURA OBRIGATÓRIA (use ## para títulos de seção):
+
+## Sumário Executivo
+Síntese em 3-4 frases do que os dados revelam. Impacto principal.
+
+## Perfil dos Respondentes  
+Análise demográfica e de identificação. Quem respondeu? Padrões de participação temporal.
+
+## Análise das Respostas
+Para cada campo relevante, analise distribuição, concentração e significância.
+Cruze dados entre campos quando houver correlação.
+
+## Padrões e Tendências
+Insights não-óbvios. Correlações entre variáveis. Mudanças temporais se aplicável.
+
+## Campos de Texto — Análise Qualitativa
+(Se houver) Temas recorrentes, palavras-chave, sentimento geral.
+
+## Pontos de Atenção
+Alertas, riscos, campos com baixo preenchimento, inconsistências.
+
+## Recomendações Estratégicas
+5-7 recomendações acionáveis baseadas nos dados. Priorize por impacto.
+
+FORMATO: Use markdown com ## para seções, **negrito** para destaques, listas com - para itens.
+Escreva entre 600-900 palavras. Seja analítico, não descritivo.`,
             },
             {
               role: "user",
-              content: `Analise os dados do formulário "${form.title}":\n\n${JSON.stringify(dataSummary, null, 2)}`,
+              content: `Analise TODOS os dados do formulário "${form.title}"${form.description ? ` (${form.description})` : ''}:
+
+${JSON.stringify(dataSummary, null, 2)}`,
             },
           ],
         }),
