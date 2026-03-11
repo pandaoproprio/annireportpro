@@ -136,6 +136,12 @@ export const TeamManagement: React.FC = () => {
   const projectMembersList = members.filter(m => isMemberInProject(m.id));
   const availableForProject = members.filter(m => !isMemberInProject(m.id));
 
+  const filteredMembers = useMemo(() => {
+    if (filterProjectId === 'all') return members;
+    if (filterProjectId === 'none') return members.filter(m => getMemberProjects(m.id).length === 0);
+    return members.filter(m => allAssignments.some(a => a.team_member_id === m.id && a.project_id === filterProjectId));
+  }, [members, allAssignments, filterProjectId]);
+
   const renderMemberForm = (onSubmit: () => void, submitLabel: string, showProjectSelect?: boolean) => (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
