@@ -95,7 +95,7 @@ export const MainLayout: React.FC = () => {
                     path={path}
                     element={
                       permission ? (
-                        <PermissionGuard permission={permission as any}>
+                        <PermissionGuard permission={permission}>
                           <Element />
                         </PermissionGuard>
                       ) : (

@@ -30,7 +30,7 @@ const MessagingPage = lazy(() => import('@/pages/MessagingPage'));
 export interface RouteEntry {
   path: string;
   element: React.LazyExoticComponent<React.ComponentType<any>>;
-  permission?: string;
+  permission?: AppPermission;
 }
 
 /**
