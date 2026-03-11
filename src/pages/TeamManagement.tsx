@@ -257,8 +257,10 @@ export const TeamManagement: React.FC = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
                 </div>
-              ) : members.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">Nenhum membro cadastrado</p>
+              ) : filteredMembers.length === 0 ? (
+                <p className="text-center text-muted-foreground py-8">
+                  {filterProjectId !== 'all' ? 'Nenhum membro encontrado para este filtro' : 'Nenhum membro cadastrado'}
+                </p>
               ) : (
                 <Table>
                   <TableHeader>
