@@ -53,7 +53,7 @@ export const useAdminUsers = () => {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async ({ userId, ...updates }: { userId: string; name?: string; role?: AdminRole; password?: string; permissions?: string[] }) => {
+    mutationFn: async ({ userId, ...updates }: { userId: string; name?: string; email?: string; role?: AdminRole; password?: string; permissions?: string[] }) => {
       const { data, error } = await supabase.functions.invoke('admin-users', { method: 'PATCH', body: { userId, ...updates } });
       if (error) throw error;
       return { data, updates };

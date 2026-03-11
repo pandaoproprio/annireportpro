@@ -46,6 +46,7 @@ export const UserManagement: React.FC = () => {
   
   // Form state
   const [email, setEmail] = useState('');
+  const [editEmail, setEditEmail] = useState('');
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<AdminRole>('usuario');
@@ -97,10 +98,17 @@ export const UserManagement: React.FC = () => {
   const handleEdit = async () => {
     if (!editingUser) return;
     
-    const result = await updateUser(editingUser.id, {
+    const updates: { name: string; role: typeof selectedRole; email?: string } = {
       name,
       role: selectedRole
-    });
+    };
+    
+    // Only send email if it changed
+    if (editEmail && editEmail !== editingUser.email) {
+      updates.email = editEmail;
+    }
+    
+    const result = await updateUser(editingUser.id, updates);
     
     if (result.success) {
       setIsEditOpen(false);
@@ -126,6 +134,7 @@ export const UserManagement: React.FC = () => {
   const openEdit = (user: AdminUser) => {
     setEditingUser(user);
     setName(user.name);
+    setEditEmail(user.email);
     setSelectedRole(user.role);
     setIsEditOpen(true);
   };
@@ -399,6 +408,16 @@ export const UserManagement: React.FC = () => {
                 id="edit-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-email">E-mail</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
               />
             </div>
             
