@@ -233,8 +233,24 @@ export const TeamManagement: React.FC = () => {
         <TabsContent value="all">
           <Card>
             <CardHeader>
-              <CardTitle>Membros Cadastrados</CardTitle>
-              <CardDescription>{members.length} membro{members.length !== 1 ? 's' : ''} no total</CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle>Membros Cadastrados</CardTitle>
+                  <CardDescription>{filteredMembers.length} de {members.length} membro{members.length !== 1 ? 's' : ''}</CardDescription>
+                </div>
+                <Select value={filterProjectId} onValueChange={setFilterProjectId}>
+                  <SelectTrigger className="w-[220px]">
+                    <SelectValue placeholder="Filtrar por projeto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os projetos</SelectItem>
+                    <SelectItem value="none">Sem projeto vinculado</SelectItem>
+                    {projects.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoading && members.length === 0 ? (
