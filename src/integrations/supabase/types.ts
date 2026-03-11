@@ -2405,6 +2405,10 @@ export type Database = {
         Args: { _channel_id: string; _user_id: string }
         Returns: boolean
       }
+      is_channel_member: {
+        Args: { _channel_id: string; _user_id: string }
+        Returns: boolean
+      }
       is_project_collaborator: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
