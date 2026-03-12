@@ -25,6 +25,9 @@ const RiskManagement = lazy(() => import('@/pages/RiskManagement'));
 const BudgetDashboard = lazy(() => import('@/pages/BudgetDashboard'));
 const SprintDashboard = lazy(() => import('@/pages/SprintDashboard'));
 const RetrospectivesPage = lazy(() => import('@/pages/RetrospectivesPage'));
+const MaturityAuditReport = lazy(() => import('@/pages/MaturityAuditReport'));
+const AiAuditReport = lazy(() => import('@/pages/AiAuditReport'));
+const ValuationReport = lazy(() => import('@/pages/ValuationReport'));
 const InvoicesPage = lazy(() => import('@/pages/InvoicesPage'));
 const MessagingPage = lazy(() => import('@/pages/MessagingPage'));
 

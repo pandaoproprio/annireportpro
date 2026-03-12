@@ -11,12 +11,13 @@ import { MainLayout } from '@/components/layout/MainLayout';
 
 const GuiaAulaPage = lazy(() => import('@/pages/GuiaAulaPage'));
 const InstallGuide = lazy(() => import('@/pages/InstallGuide').then(m => ({ default: m.InstallGuide })));
-const ValuationReport = lazy(() => import('@/pages/ValuationReport'));
-const AiAuditReport = lazy(() => import('@/pages/AiAuditReport'));
-const MaturityAuditReport = lazy(() => import('@/pages/MaturityAuditReport'));
 const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m.MfaVerify })));
 const LgpdConsent = lazy(() => import('@/pages/LgpdConsent').then(m => ({ default: m.LgpdConsent })));
 const ForcePasswordChange = lazy(() => import('@/pages/ForcePasswordChange').then(m => ({ default: m.ForcePasswordChange })));
+const DiaryLayout = lazy(() => import('@/pages/DiaryLayout').then(m => ({ default: m.DiaryLayout })));
+const Onboarding = lazy(() => import('@/pages/Onboarding').then(m => ({ default: m.Onboarding })));
+const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'));
+const PublicEventPage = lazy(() => import('@/modules/gira-eventos/PublicEventPage'));
 const DiaryLayout = lazy(() => import('@/pages/DiaryLayout').then(m => ({ default: m.DiaryLayout })));
 const Onboarding = lazy(() => import('@/pages/Onboarding').then(m => ({ default: m.Onboarding })));
 const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'));
