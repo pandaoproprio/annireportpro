@@ -67,6 +67,9 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/budget', element: BudgetDashboard },
   { path: '/sprints', element: SprintDashboard },
   { path: '/retrospectives', element: RetrospectivesPage },
+  { path: '/maturity-audit', element: MaturityAuditReport },
+  { path: '/ai-audit', element: AiAuditReport },
+  { path: '/valuation', element: ValuationReport },
   { path: '/invoices', element: InvoicesPage },
   { path: '/messaging', element: MessagingPage },
 ];
