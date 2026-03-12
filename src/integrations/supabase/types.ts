@@ -718,6 +718,50 @@ export type Database = {
           },
         ]
       }
+      form_digest_config: {
+        Row: {
+          created_at: string
+          created_by: string
+          form_id: string
+          frequency: string
+          id: string
+          is_active: boolean
+          last_sent_at: string | null
+          recipients: string[]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          form_id: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_sent_at?: string | null
+          recipients?: string[]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          form_id?: string
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          last_sent_at?: string | null
+          recipients?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "form_digest_config_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: true
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       form_fields: {
         Row: {
           created_at: string
