@@ -66,6 +66,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const roleMap: Record<string, UserRole> = {
         'usuario': 'USUARIO',
         'oficineiro': 'OFICINEIRO',
+        'voluntario': 'VOLUNTARIO',
         'coordenador': 'COORDENADOR',
         'analista': 'ANALISTA',
         'admin': 'ADMIN',

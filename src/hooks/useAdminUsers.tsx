@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-export type AdminRole = 'usuario' | 'oficineiro' | 'coordenador' | 'analista' | 'admin' | 'super_admin';
+export type AdminRole = 'usuario' | 'oficineiro' | 'voluntario' | 'coordenador' | 'analista' | 'admin' | 'super_admin';
 
 export interface AdminUser {
   id: string;
@@ -44,8 +44,15 @@ export const useAdminUsers = () => {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: (_, vars) => {
-      toast({ title: 'Sucesso', description: vars.sendInvite ? 'Convite enviado com sucesso!' : 'Usuário criado com sucesso!' });
+    onSuccess: (result, vars) => {
+      const isAutoProvisioned = result?.autoProvisioned;
+      const desc = vars.sendInvite
+        ? 'Convite enviado com sucesso!'
+        : isAutoProvisioned
+          ? `Acesso criado! Login: ${vars.email} — Senha temporária gerada e enviada por e-mail.`
+          : `Acesso criado! Login: ${vars.email} — Senha temporária definida.`;
+      toast({ title: 'Sucesso', description: desc });
+      invalidate();
       invalidate();
     },
     onError: (error: Error) => {

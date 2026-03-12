@@ -22,6 +22,7 @@ import { Navigate } from 'react-router-dom';
 const roleLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   usuario: { label: 'Usuário', icon: <Users className="w-3 h-3" />, color: 'bg-secondary text-secondary-foreground' },
   oficineiro: { label: 'Oficineiro(a)', icon: <Users className="w-3 h-3" />, color: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' },
+  voluntario: { label: 'Voluntário(a)', icon: <Users className="w-3 h-3" />, color: 'bg-lime-500/20 text-lime-700 dark:text-lime-300' },
   coordenador: { label: 'Coordenador(a)', icon: <Users className="w-3 h-3" />, color: 'bg-teal-500/20 text-teal-700 dark:text-teal-300' },
   analista: { label: 'Analista', icon: <BarChart3 className="w-3 h-3" />, color: 'bg-purple-500/20 text-purple-700 dark:text-purple-300' },
   admin: { label: 'Admin', icon: <Shield className="w-3 h-3" />, color: 'bg-blue-500/20 text-blue-700 dark:text-blue-300' },
@@ -81,11 +82,12 @@ export const UserManagement: React.FC = () => {
   };
 
   const handleCreate = async () => {
+    const isAutoProvision = selectedRole === 'oficineiro' || selectedRole === 'voluntario';
     const result = await createUser({
       email,
       name,
       role: selectedRole,
-      password: createMethod === 'direct' ? password : undefined,
+      password: createMethod === 'direct' && !isAutoProvision ? password : undefined,
       sendInvite: createMethod === 'invite'
     });
     
@@ -203,14 +205,22 @@ export const UserManagement: React.FC = () => {
                 </TabsContent>
                 
                 <TabsContent value="direct" className="mt-0 space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                  {(selectedRole === 'oficineiro' || selectedRole === 'voluntario') ? (
+                    <p className="text-sm text-muted-foreground border rounded-md p-3 bg-muted/50">
+                      🔑 Uma senha temporária segura será <strong>gerada automaticamente</strong> e enviada por e-mail ao usuário.
+                    </p>
+                  ) : (
+                    <>
+                      <Label htmlFor="password">Senha</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Mínimo 6 caracteres"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </>
+                  )}
                 </TabsContent>
                 
                 <div className="space-y-2">
@@ -222,6 +232,7 @@ export const UserManagement: React.FC = () => {
                     <SelectContent>
                       <SelectItem value="usuario">Usuário</SelectItem>
                       <SelectItem value="oficineiro">Oficineiro(a)</SelectItem>
+                      <SelectItem value="voluntario">Voluntário(a)</SelectItem>
                       <SelectItem value="coordenador">Coordenador(a)</SelectItem>
                       <SelectItem value="analista">Analista</SelectItem>
                       {role === 'SUPER_ADMIN' && <SelectItem value="admin">Admin</SelectItem>}
@@ -430,6 +441,7 @@ export const UserManagement: React.FC = () => {
                 <SelectContent>
                   <SelectItem value="usuario">Usuário</SelectItem>
                   <SelectItem value="oficineiro">Oficineiro(a)</SelectItem>
+                  <SelectItem value="voluntario">Voluntário(a)</SelectItem>
                   <SelectItem value="coordenador">Coordenador(a)</SelectItem>
                   <SelectItem value="analista">Analista</SelectItem>
                   {role === 'SUPER_ADMIN' && <SelectItem value="admin">Admin</SelectItem>}

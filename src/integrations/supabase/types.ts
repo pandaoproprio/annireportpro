@@ -2488,6 +2488,7 @@ export type Database = {
         | "analista"
         | "usuario"
         | "coordenador"
+        | "voluntario"
       budget_category:
         | "pessoal"
         | "material"
@@ -2716,6 +2717,7 @@ export const Constants = {
         "analista",
         "usuario",
         "coordenador",
+        "voluntario",
       ],
       budget_category: [
         "pessoal",
