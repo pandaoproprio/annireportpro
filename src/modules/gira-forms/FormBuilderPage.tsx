@@ -226,6 +226,8 @@ export default function FormBuilderPage() {
                   </Button>
                 ))}
               </div>
+
+              <FormDigestConfig formId={id!} />
             </div>
           </div>
         </TabsContent>
