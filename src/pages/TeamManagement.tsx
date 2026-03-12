@@ -518,7 +518,15 @@ export const TeamManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Criar Acesso ao Diário de Bordo</DialogTitle>
             <DialogDescription>
-              Defina uma senha para <strong>{accessMember?.name}</strong> acessar o Diário de Bordo com o e-mail <strong>{accessMember?.email}</strong>
+              {accessIsAutoProvision ? (
+                <>
+                  O acesso de <strong>{accessMember?.name}</strong> será provisionado automaticamente com senha temporária segura, enviada para <strong>{accessMember?.email}</strong>.
+                </>
+              ) : (
+                <>
+                  Defina uma senha para <strong>{accessMember?.name}</strong> acessar o Diário de Bordo com o e-mail <strong>{accessMember?.email}</strong>
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -526,15 +534,22 @@ export const TeamManagement: React.FC = () => {
               <Label>E-mail (login)</Label>
               <Input value={accessMember?.email || ''} disabled className="bg-muted" />
             </div>
-            <div className="space-y-2">
-              <Label>Senha temporária *</Label>
-              <Input
-                type="password"
-                value={accessPassword}
-                onChange={e => setAccessPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-              />
-            </div>
+            {!accessIsAutoProvision && (
+              <div className="space-y-2">
+                <Label>Senha temporária *</Label>
+                <Input
+                  type="password"
+                  value={accessPassword}
+                  onChange={e => setAccessPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+            )}
+            {accessIsAutoProvision && (
+              <p className="text-sm text-muted-foreground border rounded-md p-3 bg-muted/50">
+                🔑 Para este perfil, a senha temporária é gerada automaticamente e enviada por e-mail.
+              </p>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAccessOpen(false)}>Cancelar</Button>
               <Button
