@@ -112,6 +112,9 @@ export const TeamManagement: React.FC = () => {
   };
 
   const handleCreate = async () => {
+    const normalizedRole = normalizeRoleValue(functionRole);
+    const shouldAutoProvision = normalizedRole.includes('oficineiro') || normalizedRole.includes('voluntar');
+
     const result = await createMember({
       name,
       document: document || undefined,
@@ -119,9 +122,23 @@ export const TeamManagement: React.FC = () => {
       email: email || undefined,
       phone: phone || undefined
     });
+
     if (result.success && result.data && createProjectId) {
       await assignToProject(result.data.id, createProjectId);
     }
+
+    if (result.success && result.data && shouldAutoProvision) {
+      if (result.data.email) {
+        await createAccessForMember(result.data);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'E-mail obrigatório para provisionar acesso',
+          description: 'Cadastre um e-mail no membro para gerar senha temporária e enviar credenciais automaticamente.',
+        });
+      }
+    }
+
     if (result.success) { setIsCreateOpen(false); resetForm(); }
   };
 
