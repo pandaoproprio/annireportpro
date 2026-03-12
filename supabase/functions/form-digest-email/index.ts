@@ -176,12 +176,18 @@ Deno.serve(async (req: Request) => {
         .order('submitted_at', { ascending: true });
 
       const now = new Date();
-      const sinceDate = new Date(since);
-      const periodLabel = `${sinceDate.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} — ${now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`;
+      const responseList = (responses || []) as FormResponse[];
+      // Use first response date as period start (not last_sent_at which may be artificially old)
+      const periodStart = responseList.length > 0
+        ? new Date(responseList[0].submitted_at)
+        : now;
+      const periodLabel = responseList.length > 0
+        ? `${periodStart.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })} — ${now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`
+        : now.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 
       const html = buildDigestHtml(
         form.title,
-        (responses || []) as FormResponse[],
+        responseList,
         (fields || []) as FormField[],
         periodLabel
       );
