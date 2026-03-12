@@ -59,6 +59,13 @@ import { UserPermissionsDialog } from '@/components/UserPermissionsDialog';
 import { useAdminUsers, AdminUser } from '@/hooks/useAdminUsers';
 import { useAuth } from '@/hooks/useAuth';
 
+const normalizeRoleValue = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
 export const TeamManagement: React.FC = () => {
   const { toast } = useToast();
   const { role } = useAuth();
