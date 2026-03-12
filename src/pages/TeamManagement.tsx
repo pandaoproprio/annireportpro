@@ -553,10 +553,10 @@ export const TeamManagement: React.FC = () => {
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAccessOpen(false)}>Cancelar</Button>
               <Button
-                disabled={isLoading || accessPassword.length < 6}
+                disabled={isLoading || (!accessIsAutoProvision && accessPassword.length < 6)}
                 onClick={async () => {
                   if (!accessMember) return;
-                  const result = await createAccessForMember(accessMember, accessPassword);
+                  const result = await createAccessForMember(accessMember, accessIsAutoProvision ? undefined : accessPassword);
                   if (result.success) { setIsAccessOpen(false); setAccessMember(null); setAccessPassword(''); }
                 }}
               >
