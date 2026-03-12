@@ -32,6 +32,13 @@ const MEMBERS_KEY = ['team-members'];
 const ASSIGNMENTS_KEY = ['team-member-assignments'];
 const projectMembersKey = (projectId: string) => ['project-team-members', projectId];
 
+const normalizeRoleValue = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
 export const useTeamMembers = (projectId?: string | null) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
