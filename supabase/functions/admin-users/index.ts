@@ -395,6 +395,31 @@ Deno.serve(async (req) => {
           ip_address: req.headers.get('x-forwarded-for') || null,
           user_agent: req.headers.get('user-agent') || null,
         }]);
+
+        // Auto-send welcome email with credentials for new users
+        if (password && !sendInvite) {
+          try {
+            const loginUrl = 'https://annireportpro.lovable.app/login';
+            const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+            await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseAnonKey}`,
+              },
+              body: JSON.stringify({
+                to: email,
+                name: name,
+                password,
+                loginUrl,
+              }),
+            });
+            console.log(`Welcome email sent to ${email} after user creation`);
+          } catch (emailErr) {
+            console.error('Failed to send welcome email after user creation:', emailErr);
+          }
+        }
       }
 
       return new Response(JSON.stringify({ success: true, user: userData }), {
