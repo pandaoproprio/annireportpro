@@ -465,7 +465,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(JSON.stringify({ success: true, user: userData }), {
+      return new Response(JSON.stringify({ success: true, user: userData, autoProvisioned: isAutoProvision }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
