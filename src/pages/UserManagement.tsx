@@ -223,6 +223,7 @@ export const UserManagement: React.FC = () => {
                     <SelectContent>
                       <SelectItem value="usuario">Usuário</SelectItem>
                       <SelectItem value="oficineiro">Oficineiro(a)</SelectItem>
+                      <SelectItem value="voluntario">Voluntário(a)</SelectItem>
                       <SelectItem value="coordenador">Coordenador(a)</SelectItem>
                       <SelectItem value="analista">Analista</SelectItem>
                       {role === 'SUPER_ADMIN' && <SelectItem value="admin">Admin</SelectItem>}
