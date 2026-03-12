@@ -18,10 +18,6 @@ const DiaryLayout = lazy(() => import('@/pages/DiaryLayout').then(m => ({ defaul
 const Onboarding = lazy(() => import('@/pages/Onboarding').then(m => ({ default: m.Onboarding })));
 const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'));
 const PublicEventPage = lazy(() => import('@/modules/gira-eventos/PublicEventPage'));
-const DiaryLayout = lazy(() => import('@/pages/DiaryLayout').then(m => ({ default: m.DiaryLayout })));
-const Onboarding = lazy(() => import('@/pages/Onboarding').then(m => ({ default: m.Onboarding })));
-const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'));
-const PublicEventPage = lazy(() => import('@/modules/gira-eventos/PublicEventPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
