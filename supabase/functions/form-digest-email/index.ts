@@ -192,6 +192,28 @@ Deno.serve(async (req: Request) => {
         periodLabel
       );
 
+      // Fetch attachments from storage
+      const storageBase = `${supabaseUrl}/storage/v1/object/public/email-assets/form-digests`;
+      const attachmentFiles = [
+        { name: 'Relatório_IA.pdf', url: `${storageBase}/relatorio-ia-dums.pdf` },
+        { name: 'Respostas.pdf', url: `${storageBase}/respostas-dums.pdf` },
+        { name: 'Respostas.xls', url: `${storageBase}/respostas-dums.xls` },
+      ];
+
+      const attachments = [];
+      for (const file of attachmentFiles) {
+        try {
+          const res = await fetch(file.url);
+          if (res.ok) {
+            const buf = await res.arrayBuffer();
+            const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+            attachments.push({ filename: file.name, content: base64 });
+          }
+        } catch (e) {
+          console.error(`Failed to fetch attachment ${file.name}:`, e);
+        }
+      }
+
       // Send email via Resend
       const emailRes = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -202,8 +224,9 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({
           from: 'GIRA Forms <diario@giraerp.com.br>',
           to: config.recipients,
-          subject: `📋 Resumo diário — ${form.title} (${(responses || []).length} resposta${(responses || []).length !== 1 ? 's' : ''})`,
+          subject: `📋 Resumo diário — ${form.title} (${responseList.length} resposta${responseList.length !== 1 ? 's' : ''})`,
           html,
+          attachments,
         }),
       });
 
