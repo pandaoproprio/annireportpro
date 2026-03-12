@@ -140,7 +140,7 @@ export function FormDigestConfig({ formId }: Props) {
         </div>
 
         <p className="text-xs text-muted-foreground">
-          O resumo é enviado diariamente às 8h (BRT) com todas as respostas recebidas nas últimas 24h.
+          O resumo é enviado diariamente às 8h, 14h e 18h (BRT) com as respostas recebidas desde o último envio.
         </p>
 
         {lastSent && (
