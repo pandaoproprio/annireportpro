@@ -187,7 +187,7 @@ Deno.serve(async (req: Request) => {
 
       const html = buildDigestHtml(
         form.title,
-        (responses || []) as FormResponse[],
+        responseList,
         (fields || []) as FormField[],
         periodLabel
       );
