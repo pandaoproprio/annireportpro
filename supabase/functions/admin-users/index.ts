@@ -504,6 +504,35 @@ Deno.serve(async (req) => {
           login_attempts_without_change: 0,
           first_login_at: null,
         }).eq('user_id', userId);
+
+        // Auto-send welcome email with new credentials
+        try {
+          const { data: profileData } = await supabaseAdmin.from('profiles').select('name, email').eq('user_id', userId).single();
+          const userEmail = profileData?.email || '';
+          const userName = profileData?.name || userEmail.split('@')[0];
+          const loginUrl = 'https://annireportpro.lovable.app/login';
+
+          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+          await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${supabaseAnonKey}`,
+            },
+            body: JSON.stringify({
+              to: userEmail,
+              name: userName,
+              password,
+              loginUrl,
+            }),
+          });
+          console.log(`Welcome email sent to ${userEmail} after password reset`);
+        } catch (emailErr) {
+          console.error('Failed to send welcome email after password reset:', emailErr);
+          // Don't fail the password reset if email fails
+        }
       }
 
       return new Response(JSON.stringify({ success: true }), {
