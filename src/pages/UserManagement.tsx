@@ -22,6 +22,7 @@ import { Navigate } from 'react-router-dom';
 const roleLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   usuario: { label: 'Usuário', icon: <Users className="w-3 h-3" />, color: 'bg-secondary text-secondary-foreground' },
   oficineiro: { label: 'Oficineiro(a)', icon: <Users className="w-3 h-3" />, color: 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' },
+  voluntario: { label: 'Voluntário(a)', icon: <Users className="w-3 h-3" />, color: 'bg-lime-500/20 text-lime-700 dark:text-lime-300' },
   coordenador: { label: 'Coordenador(a)', icon: <Users className="w-3 h-3" />, color: 'bg-teal-500/20 text-teal-700 dark:text-teal-300' },
   analista: { label: 'Analista', icon: <BarChart3 className="w-3 h-3" />, color: 'bg-purple-500/20 text-purple-700 dark:text-purple-300' },
   admin: { label: 'Admin', icon: <Shield className="w-3 h-3" />, color: 'bg-blue-500/20 text-blue-700 dark:text-blue-300' },
