@@ -402,7 +402,7 @@ Deno.serve(async (req) => {
             const loginUrl = 'https://annireportpro.lovable.app/login';
             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-            await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+            const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -410,12 +410,18 @@ Deno.serve(async (req) => {
               },
               body: JSON.stringify({
                 to: email,
-                name: name,
+                name,
                 password,
                 loginUrl,
               }),
             });
-            console.log(`Welcome email sent to ${email} after user creation`);
+
+            const emailResponseText = await emailResponse.text();
+            if (!emailResponse.ok) {
+              throw new Error(`send-welcome-email failed (${emailResponse.status}): ${emailResponseText}`);
+            }
+
+            console.log(`Welcome email request accepted for ${email} after user creation`);
           } catch (emailErr) {
             console.error('Failed to send welcome email after user creation:', emailErr);
           }
@@ -532,15 +538,42 @@ Deno.serve(async (req) => {
 
         // Auto-send welcome email with new credentials
         try {
-          const { data: profileData } = await supabaseAdmin.from('profiles').select('name, email').eq('user_id', userId).single();
-          const userEmail = profileData?.email || '';
-          const userName = profileData?.name || userEmail.split('@')[0];
-          const loginUrl = 'https://annireportpro.lovable.app/login';
+          const { data: profileData } = await supabaseAdmin
+            .from('profiles')
+            .select('name, email')
+            .eq('user_id', userId)
+            .maybeSingle();
 
-          const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+          let userEmail = profileData?.email?.trim() || '';
+          let userName = profileData?.name?.trim() || '';
+
+          if (!userEmail) {
+            const { data: authUserData, error: authUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+            if (authUserError) {
+              throw new Error(`Unable to resolve user email: ${authUserError.message}`);
+            }
+
+            userEmail = authUserData.user?.email?.trim() || '';
+            if (!userName) {
+              const metaName = authUserData.user?.user_metadata?.name;
+              userName = typeof metaName === 'string' && metaName.trim()
+                ? metaName.trim()
+                : userEmail.split('@')[0];
+            }
+          }
+
+          if (!userEmail) {
+            throw new Error('Target user does not have a valid email address');
+          }
+
+          if (!userName) {
+            userName = userEmail.split('@')[0];
+          }
+
+          const loginUrl = 'https://annireportpro.lovable.app/login';
           const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
 
-          await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
+          const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-welcome-email`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -553,7 +586,13 @@ Deno.serve(async (req) => {
               loginUrl,
             }),
           });
-          console.log(`Welcome email sent to ${userEmail} after password reset`);
+
+          const emailResponseText = await emailResponse.text();
+          if (!emailResponse.ok) {
+            throw new Error(`send-welcome-email failed (${emailResponse.status}): ${emailResponseText}`);
+          }
+
+          console.log(`Welcome email request accepted for ${userEmail} after password reset`);
         } catch (emailErr) {
           console.error('Failed to send welcome email after password reset:', emailErr);
           // Don't fail the password reset if email fails
