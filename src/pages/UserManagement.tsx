@@ -204,14 +204,22 @@ export const UserManagement: React.FC = () => {
                 </TabsContent>
                 
                 <TabsContent value="direct" className="mt-0 space-y-2">
-                  <Label htmlFor="password">Senha</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Mínimo 6 caracteres"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                  {(selectedRole === 'oficineiro' || selectedRole === 'voluntario') ? (
+                    <p className="text-sm text-muted-foreground border rounded-md p-3 bg-muted/50">
+                      🔑 Uma senha temporária segura será <strong>gerada automaticamente</strong> e enviada por e-mail ao usuário.
+                    </p>
+                  ) : (
+                    <>
+                      <Label htmlFor="password">Senha</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Mínimo 6 caracteres"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                      />
+                    </>
+                  )}
                 </TabsContent>
                 
                 <div className="space-y-2">
