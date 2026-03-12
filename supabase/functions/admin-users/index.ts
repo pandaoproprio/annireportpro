@@ -356,7 +356,13 @@ Deno.serve(async (req) => {
     // POST: Create user
     if (req.method === 'POST') {
       const body: CreateUserRequest = await req.json();
-      const { email, password, name, role, sendInvite } = body;
+      const { email, name, role, sendInvite } = body;
+      // Auto-generate password for oficineiro/voluntario if not provided
+      let password = body.password;
+      const isAutoProvision = AUTO_PROVISION_ROLES.includes(role);
+      if (isAutoProvision && !password) {
+        password = generateSecurePassword();
+      }
 
       if (!email || !name || !role) {
         return new Response(JSON.stringify({ error: 'Email, name and role are required' }), {
@@ -422,7 +428,7 @@ Deno.serve(async (req) => {
           action: 'user_created',
           entity_type: 'user',
           entity_id: userData.id,
-          new_data: { email, name, role },
+          new_data: { email, name, role, auto_provisioned: isAutoProvision },
           ip_address: req.headers.get('x-forwarded-for') || null,
           user_agent: req.headers.get('user-agent') || null,
         }]);
