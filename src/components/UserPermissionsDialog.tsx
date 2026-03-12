@@ -84,6 +84,25 @@ const MODULES: ModuleConfig[] = [
     label: 'Excluir Projetos',
     actions: [],
   },
+  {
+    key: 'forms_view',
+    label: 'GIRA Forms',
+    actions: [
+      { key: 'forms_create', label: 'Criar' },
+      { key: 'forms_edit', label: 'Editar' },
+      { key: 'forms_delete', label: 'Excluir' },
+      { key: 'forms_export', label: 'Exportar' },
+    ],
+  },
+  {
+    key: 'events_view',
+    label: 'GIRA Eventos',
+    actions: [
+      { key: 'events_create', label: 'Criar' },
+      { key: 'events_edit', label: 'Editar' },
+      { key: 'events_delete', label: 'Excluir' },
+    ],
+  },
 ];
 
 interface UserPermissionsDialogProps {
