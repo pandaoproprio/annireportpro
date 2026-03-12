@@ -198,26 +198,37 @@ export const useTeamMembers = (projectId?: string | null) => {
   });
 
   const createAccessForMemberMutation = useMutation({
-    mutationFn: async ({ member, password }: { member: TeamMember; password: string }) => {
+    mutationFn: async ({ member, password }: { member: TeamMember; password?: string }) => {
       if (!member.email) throw new Error('Membro precisa ter um e-mail cadastrado');
-      if (password.length < 6) throw new Error('Senha deve ter pelo menos 6 caracteres');
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Não autenticado');
+      if (password && password.length < 6) throw new Error('Senha deve ter pelo menos 6 caracteres');
 
       // Determine role based on function_role
-      const functionLower = member.function_role.toLowerCase();
-      let memberRole = 'usuario';
+      const functionLower = normalizeRoleValue(member.function_role);
+      let memberRole: 'usuario' | 'coordenador' | 'oficineiro' | 'voluntario' = 'usuario';
+
       if (functionLower.includes('coordenador')) {
         memberRole = 'coordenador';
       } else if (functionLower.includes('oficineiro')) {
         memberRole = 'oficineiro';
+      } else if (functionLower.includes('voluntar')) {
+        memberRole = 'voluntario';
+      }
+
+      const payload: { email: string; name: string; role: string; password?: string } = {
+        email: member.email,
+        name: member.name,
+        role: memberRole,
+      };
+
+      if (password) {
+        payload.password = password;
       }
 
       const { data, error } = await supabase.functions.invoke('admin-users', {
         method: 'POST',
-        body: { email: member.email, password, name: member.name, role: memberRole },
+        body: payload,
       });
+
       if (error) {
         // Parse edge function error for better messaging
         const errBody = typeof error === 'object' && 'context' in (error as any)
@@ -228,6 +239,7 @@ export const useTeamMembers = (projectId?: string | null) => {
         }
         throw error;
       }
+
       if (data?.error) {
         if (data.error.includes('já está cadastrado')) {
           throw new Error('Este e-mail já está cadastrado no sistema. Use a opção de vincular conta existente.');
@@ -254,10 +266,15 @@ export const useTeamMembers = (projectId?: string | null) => {
         }
       }
 
-      return member;
+      return { member, autoProvisioned: Boolean(data?.autoProvisioned) };
     },
-    onSuccess: (member) => {
-      toast({ title: 'Acesso criado!', description: `Login: ${member.email} — Senha temporária definida.` });
+    onSuccess: ({ member, autoProvisioned }) => {
+      toast({
+        title: 'Acesso criado!',
+        description: autoProvisioned
+          ? `Credenciais enviadas para ${member.email}. A senha temporária foi gerada automaticamente.`
+          : `Login: ${member.email} — Senha temporária definida e enviada por e-mail.`,
+      });
       invalidateAll();
     },
     onError: (error: Error) => {
