@@ -360,6 +360,8 @@ Deno.serve(async (req) => {
       // Auto-generate password for oficineiro/voluntario if not provided
       let password = body.password;
       const isAutoProvision = AUTO_PROVISION_ROLES.includes(role);
+      const effectiveSendInvite = !isAutoProvision && sendInvite === true;
+
       if (isAutoProvision && !password) {
         password = generateSecurePassword();
       }
@@ -379,7 +381,7 @@ Deno.serve(async (req) => {
 
       let userData;
 
-      if (sendInvite) {
+      if (effectiveSendInvite) {
         const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
           data: { name },
           redirectTo: `${url.origin.replace('functions/v1', '')}`
