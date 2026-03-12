@@ -25,6 +25,9 @@ const RiskManagement = lazy(() => import('@/pages/RiskManagement'));
 const BudgetDashboard = lazy(() => import('@/pages/BudgetDashboard'));
 const SprintDashboard = lazy(() => import('@/pages/SprintDashboard'));
 const RetrospectivesPage = lazy(() => import('@/pages/RetrospectivesPage'));
+const MaturityAuditReport = lazy(() => import('@/pages/MaturityAuditReport'));
+const AiAuditReport = lazy(() => import('@/pages/AiAuditReport'));
+const ValuationReport = lazy(() => import('@/pages/ValuationReport'));
 const InvoicesPage = lazy(() => import('@/pages/InvoicesPage'));
 const MessagingPage = lazy(() => import('@/pages/MessagingPage'));
 
@@ -64,6 +67,9 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/budget', element: BudgetDashboard },
   { path: '/sprints', element: SprintDashboard },
   { path: '/retrospectives', element: RetrospectivesPage },
+  { path: '/maturity-audit', element: MaturityAuditReport },
+  { path: '/ai-audit', element: AiAuditReport },
+  { path: '/valuation', element: ValuationReport },
   { path: '/invoices', element: InvoicesPage },
   { path: '/messaging', element: MessagingPage },
 ];

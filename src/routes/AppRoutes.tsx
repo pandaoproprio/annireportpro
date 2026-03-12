@@ -11,9 +11,6 @@ import { MainLayout } from '@/components/layout/MainLayout';
 
 const GuiaAulaPage = lazy(() => import('@/pages/GuiaAulaPage'));
 const InstallGuide = lazy(() => import('@/pages/InstallGuide').then(m => ({ default: m.InstallGuide })));
-const ValuationReport = lazy(() => import('@/pages/ValuationReport'));
-const AiAuditReport = lazy(() => import('@/pages/AiAuditReport'));
-const MaturityAuditReport = lazy(() => import('@/pages/MaturityAuditReport'));
 const MfaVerify = lazy(() => import('@/pages/MfaVerify').then(m => ({ default: m.MfaVerify })));
 const LgpdConsent = lazy(() => import('@/pages/LgpdConsent').then(m => ({ default: m.LgpdConsent })));
 const ForcePasswordChange = lazy(() => import('@/pages/ForcePasswordChange').then(m => ({ default: m.ForcePasswordChange })));
@@ -38,9 +35,6 @@ export const AppRoutes: React.FC = () => {
         <Route path="/login" element={<Login />} />
         <Route path="/guia-aula" element={<Suspense fallback={<PageFallback />}><GuiaAulaPage /></Suspense>} />
         <Route path="/instalar" element={<InstallGuide />} />
-        <Route path="/valuation" element={<Suspense fallback={<PageFallback />}><ValuationReport /></Suspense>} />
-        <Route path="/ai-audit" element={<Suspense fallback={<PageFallback />}><AiAuditReport /></Suspense>} />
-        <Route path="/maturity-audit" element={<Suspense fallback={<PageFallback />}><MaturityAuditReport /></Suspense>} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/lgpd" element={<PrivacyPolicy />} />
         <Route path="/licenca" element={<TermsOfUse />} />
