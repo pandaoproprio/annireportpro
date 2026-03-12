@@ -82,11 +82,12 @@ export const UserManagement: React.FC = () => {
   };
 
   const handleCreate = async () => {
+    const isAutoProvision = selectedRole === 'oficineiro' || selectedRole === 'voluntario';
     const result = await createUser({
       email,
       name,
       role: selectedRole,
-      password: createMethod === 'direct' ? password : undefined,
+      password: createMethod === 'direct' && !isAutoProvision ? password : undefined,
       sendInvite: createMethod === 'invite'
     });
     
