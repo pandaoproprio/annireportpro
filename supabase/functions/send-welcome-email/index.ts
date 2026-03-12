@@ -99,7 +99,7 @@ Deno.serve(async (req: Request) => {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        from: 'GIRA <noreply@relatorios.giraerp.com.br>',
+        from: 'GIRA Diário de Bordo <diario@giraerp.com.br>',
         to: [to],
         subject: 'GIRA – Suas credenciais de acesso ao Diário de Bordo',
         html: htmlContent,
