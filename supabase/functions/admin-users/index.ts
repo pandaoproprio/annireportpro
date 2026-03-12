@@ -6,7 +6,38 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
 };
 
-type AppRole = 'usuario' | 'oficineiro' | 'coordenador' | 'analista' | 'admin' | 'super_admin';
+type AppRole = 'usuario' | 'oficineiro' | 'voluntario' | 'coordenador' | 'analista' | 'admin' | 'super_admin';
+
+const AUTO_PROVISION_ROLES: AppRole[] = ['oficineiro', 'voluntario'];
+
+/** Generate a cryptographically-secure random password (12+ chars, upper, lower, digit, special). */
+function generateSecurePassword(length = 14): string {
+  const upper = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  const lower = 'abcdefghijklmnopqrstuvwxyz';
+  const digits = '0123456789';
+  const special = '!@#$%&*?';
+  const all = upper + lower + digits + special;
+
+  // Guarantee at least one of each category
+  const mandatory = [
+    upper[Math.floor(Math.random() * upper.length)],
+    lower[Math.floor(Math.random() * lower.length)],
+    digits[Math.floor(Math.random() * digits.length)],
+    special[Math.floor(Math.random() * special.length)],
+  ];
+
+  const remaining = Array.from({ length: length - mandatory.length }, () =>
+    all[Math.floor(Math.random() * all.length)]
+  );
+
+  // Shuffle
+  const chars = [...mandatory, ...remaining];
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+  return chars.join('');
+}
 
 interface CreateUserRequest {
   email: string;
