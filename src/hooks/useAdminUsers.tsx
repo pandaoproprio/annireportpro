@@ -41,6 +41,7 @@ export const useAdminUsers = () => {
     mutationFn: async (userData: { email: string; password?: string; name: string; role: AdminRole; sendInvite?: boolean }) => {
       const { data, error } = await supabase.functions.invoke('admin-users', { method: 'POST', body: userData });
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       return data;
     },
     onSuccess: (_, vars) => {
