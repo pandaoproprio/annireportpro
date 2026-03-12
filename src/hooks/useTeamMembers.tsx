@@ -350,7 +350,7 @@ export const useTeamMembers = (projectId?: string | null) => {
         return { success: false };
       }
     },
-    createAccessForMember: async (member: TeamMember, password: string) => {
+    createAccessForMember: async (member: TeamMember, password?: string) => {
       try {
         await createAccessForMemberMutation.mutateAsync({ member, password });
         return { success: true };
