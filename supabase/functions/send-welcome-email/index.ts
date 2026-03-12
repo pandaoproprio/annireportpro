@@ -3,6 +3,178 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+function buildHtml(name: string, email: string, password: string, loginUrl: string): string {
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html dir="ltr" lang="en">
+  <head>
+    <meta content="width=device-width" name="viewport" />
+    <meta content="text/html; charset=UTF-8" http-equiv="Content-Type" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta content="IE=edge" http-equiv="X-UA-Compatible" />
+    <meta content="telephone=no,address=no,email=no,date=no,url=no" name="format-detection" />
+  </head>
+  <body>
+    <div style="display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0" data-skip-in-text="true">
+      Seu acesso ao sistema está pronto. Confira as credenciais.
+    </div>
+    <table border="0" width="100%" cellpadding="0" cellspacing="0" role="presentation" align="center">
+      <tbody><tr><td>
+        <table align="center" width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto','Oxygen','Ubuntu','Cantarell','Fira Sans','Droid Sans','Helvetica Neue',sans-serif;font-size:16px;min-height:100%;line-height:155%">
+          <tbody><tr><td>
+            <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="width:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto','Oxygen','Ubuntu','Cantarell','Fira Sans','Droid Sans','Helvetica Neue',sans-serif">
+              <tbody><tr><td>
+                <div style="margin:0;padding:0;display:none;overflow:hidden;line-height:1px;opacity:0;max-height:0;max-width:0">
+                  <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em">
+                    <span>Seu acesso ao sistema está pronto. Confira as credenciais.</span>
+                  </p>
+                </div>
+                <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0;padding:40px 16px;background-color:#eef1f6">
+                  <tbody><tr><td>
+                    <tr style="margin:0;padding:0">
+                      <td align="center" data-id="__react-email-column" style="margin:0;padding:0">
+                        <table width="600" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0;padding:0;max-width:600px;width:100%;background-color:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 4px 24px rgba(30,58,110,0.10)">
+                          <tbody><tr><td>
+                            <!-- HEADER GRADIENT -->
+                            <tr style="margin:0;padding:0">
+                              <td data-id="__react-email-column" style="margin:0;padding:32px 40px 28px 40px;background:linear-gradient(135deg,#1e3a6e 0%,#2a7ab5 60%,#2d7a4f 100%)">
+                                <p style="margin:0 0 14px 0;padding:0;font-size:10px;padding-top:0.5em;padding-bottom:0.5em;font-weight:600;letter-spacing:0.22em;text-transform:uppercase;color:rgba(255,255,255,0.65);font-family:'Courier New',Courier,monospace">
+                                  <span>ATIS - Área de Tecnologia e Inovação Social | CEAP</span>
+                                </p>
+                                <h1 style="margin:0;padding:0;font-size:26px;line-height:1.3;padding-top:0.389em;font-weight:800;color:#ffffff;letter-spacing:-0.01em">
+                                  <span>Acesso criado.</span><br /><span>Bem-vindo ao </span><span style="color:#7ed957">Diário de Bordo.</span>
+                                </h1>
+                              </td>
+                            </tr>
+                            <!-- BRAND BAR -->
+                            <tr style="margin:0;padding:0">
+                              <td data-id="__react-email-column" style="margin:0;padding:16px 40px;background-color:#ffffff;border-bottom:3px solid #4a9e3f">
+                                <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0;padding:0">
+                                  <tbody><tr><td>
+                                    <tr style="margin:0;padding:0">
+                                      <td data-id="__react-email-column" style="margin:0;padding:0;font-size:22px;font-weight:800;color:#1e3a6e;letter-spacing:-0.02em;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
+                                        <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em"><span>GIRA</span></p>
+                                      </td>
+                                      <td data-id="__react-email-column" style="margin:0;padding:0 10px;font-size:20px;color:#cccccc;font-weight:300">
+                                        <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em"><span>|</span></p>
+                                      </td>
+                                      <td data-id="__react-email-column" style="margin:0;padding:0;font-size:14px;font-weight:700;color:#4a9e3f;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
+                                        <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em"><span>Diário de Bordo</span></p>
+                                      </td>
+                                    </tr>
+                                  </td></tr></tbody>
+                                </table>
+                              </td>
+                            </tr>
+                            <!-- BODY CONTENT -->
+                            <tr style="margin:0;padding:0">
+                              <td data-id="__react-email-column" style="margin:0;padding:32px 40px;background-color:#ffffff">
+                                <p style="margin:0 0 28px 0;padding:0;font-size:15px;padding-top:0.5em;padding-bottom:0.5em;color:#555555;line-height:1.7">
+                                  <span>Olá, </span><span><strong>${name}</strong></span><span>.</span><br /><br />
+                                  <span>Seu acesso à plataforma foi configurado. Utilize as credenciais abaixo para realizar seu primeiro login.</span>
+                                </p>
+                                <p style="margin:0 0 10px 0;padding:0;font-size:10px;padding-top:0.5em;padding-bottom:0.5em;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#999999;font-family:'Courier New',Courier,monospace">
+                                  <span>Suas credenciais de acesso</span>
+                                </p>
+                                <!-- CREDENTIALS BOX -->
+                                <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 24px 0;padding:0;background-color:#f4f7fb;border:1px solid #dde4f0;border-left:4px solid #1e3a6e;border-radius:6px">
+                                  <tbody><tr><td>
+                                    <tr style="margin:0;padding:0">
+                                      <td data-id="__react-email-column" style="margin:0;padding:20px 24px">
+                                        <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 12px 0;padding:0">
+                                          <tbody><tr><td>
+                                            <tr style="margin:0;padding:0">
+                                              <td data-id="__react-email-column" style="margin:0;padding:0;font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:0.12em;font-family:'Courier New',Courier,monospace;width:72px;vertical-align:baseline;padding-right:14px">
+                                                <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em"><span>Login</span></p>
+                                              </td>
+                                              <td data-id="__react-email-column" style="margin:0;padding:0;font-size:14px;color:#1e3a6e;font-weight:600;font-family:'Courier New',Courier,monospace;vertical-align:baseline">
+                                                <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em"><span>${email}</span></p>
+                                              </td>
+                                            </tr>
+                                          </td></tr></tbody>
+                                        </table>
+                                        <table border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0;padding:0">
+                                          <tbody><tr><td>
+                                            <tr style="margin:0;padding:0">
+                                              <td data-id="__react-email-column" style="margin:0;padding:0;font-size:10px;color:#888888;text-transform:uppercase;letter-spacing:0.12em;font-family:'Courier New',Courier,monospace;width:72px;vertical-align:baseline;padding-right:14px">
+                                                <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em"><span>Senha</span></p>
+                                              </td>
+                                              <td data-id="__react-email-column" style="margin:0;padding:0;font-size:17px;color:#4a9e3f;font-weight:700;letter-spacing:0.06em;font-family:'Courier New',Courier,monospace;vertical-align:baseline">
+                                                <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em"><span>${password}</span></p>
+                                              </td>
+                                            </tr>
+                                          </td></tr></tbody>
+                                        </table>
+                                      </td>
+                                    </tr>
+                                  </td></tr></tbody>
+                                </table>
+                                <!-- WARNING BOX -->
+                                <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 28px 0;padding:0;background-color:#fffbf0;border:1px solid #ffe3a0;border-left:4px solid #f0a500;border-radius:6px">
+                                  <tbody><tr><td>
+                                    <tr style="margin:0;padding:0">
+                                      <td data-id="__react-email-column" style="margin:0;padding:13px 18px;font-size:13px;color:#7a5a10;line-height:1.6">
+                                        <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em">
+                                          <span><strong>Atenção:</strong></span><span> Esta é uma senha temporária. Por segurança, você será solicitado a criar uma nova senha no primeiro acesso.</span>
+                                        </p>
+                                      </td>
+                                    </tr>
+                                  </td></tr></tbody>
+                                </table>
+                                <!-- CTA BUTTON -->
+                                <table width="100%" border="0" cellpadding="0" cellspacing="0" role="presentation" style="margin:0 0 32px 0;padding:0">
+                                  <tbody><tr><td>
+                                    <tr style="margin:0;padding:0">
+                                      <td align="center" data-id="__react-email-column" style="margin:0;padding:0">
+                                        <p style="margin:0 0 14px 0;padding:0;font-size:10px;padding-top:0.5em;padding-bottom:0.5em;letter-spacing:0.18em;text-transform:uppercase;color:#aaaaaa;font-family:'Courier New',Courier,monospace">
+                                          <span>Acesse agora</span>
+                                        </p>
+                                        <p style="margin:0;padding:0;font-size:1em;padding-top:0.5em;padding-bottom:0.5em">
+                                          <span><a href="${loginUrl}" rel="noopener noreferrer nofollow" style="color:#ffffff;text-decoration:none;display:inline-block;background-color:#1e3a6e;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-weight:800;font-size:15px;letter-spacing:0.02em;padding:14px 40px;border-radius:6px" target="_blank">Acessar o Diário de Bordo →</a></span>
+                                        </p>
+                                        <p style="margin:14px 0 0 0;padding:0;font-size:11px;padding-top:0.5em;padding-bottom:0.5em;color:#aaaaaa;font-family:'Courier New',Courier,monospace;word-break:break-all">
+                                          <span>Ou copie o link: </span><span><a href="${loginUrl}" rel="noopener noreferrer nofollow" style="color:#2a7ab5;text-decoration:underline" target="_blank"><u>${loginUrl}</u></a></span>
+                                        </p>
+                                      </td>
+                                    </tr>
+                                  </td></tr></tbody>
+                                </table>
+                                <hr style="width:100%;border:none;border-top:1px solid #eeeeee;padding-bottom:1em;border-width:2px;margin:0 0 28px 0" />
+                                <p style="margin:0;padding:0;font-size:13px;padding-top:0.5em;padding-bottom:0.5em;color:#888888;line-height:1.7">
+                                  <span>Problemas para acessar? Entre em contato com o suporte em </span>
+                                  <span><a href="mailto:diario@giraerp.com.br" rel="noopener noreferrer nofollow" style="color:#4a9e3f;text-decoration:none;font-weight:700" target="_blank">diario@giraerp.com.br</a></span>
+                                  <span> ou fale com a equipe ATIS.</span>
+                                </p>
+                              </td>
+                            </tr>
+                            <!-- FOOTER -->
+                            <tr style="margin:0;padding:0">
+                              <td align="center" data-id="__react-email-column" style="margin:0;padding:22px 40px;background-color:#1e3a6e;text-align:center">
+                                <p style="margin:0 0 6px 0;padding:0;font-size:11px;padding-top:0.5em;padding-bottom:0.5em;font-weight:600;color:rgba(255,255,255,0.5);letter-spacing:0.15em;text-transform:uppercase;font-family:'Courier New',Courier,monospace">
+                                  <span>GIRA | Diário de Bordo · CEAP</span>
+                                </p>
+                                <p style="margin:0;padding:0;font-size:11px;padding-top:0.5em;padding-bottom:0.5em;color:rgba(255,255,255,0.35);line-height:1.6">
+                                  <span>ATIS — Área de Tecnologia e Inovação Social</span><br />
+                                  <span>Este e-mail foi enviado automaticamente. Por favor, não responda.</span><br />
+                                  <span>© 2026 AnnITech - IT Solutions — Todos os direitos reservados.</span>
+                                </p>
+                              </td>
+                            </tr>
+                          </td></tr></tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  </td></tr></tbody>
+                </table>
+              </td></tr></tbody>
+            </table>
+          </td></tr></tbody>
+        </table>
+      </td></tr></tbody>
+    </table>
+  </body>
+</html>`;
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -27,61 +199,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const displayName = name || to.split('@')[0];
-    const templateId = Deno.env.get('RESEND_TEMPLATE_ID');
-
-    // Build request payload — prefer Resend template, fallback to inline HTML
-    const emailPayload: Record<string, unknown> = {
-      from: 'GIRA Diário de Bordo <diario@giraerp.com.br>',
-      to: [to],
-      subject: 'GIRA – Suas credenciais de acesso ao Diário de Bordo',
-    };
-
-    if (templateId) {
-      // Use Resend template
-      emailPayload.template_id = templateId;
-      emailPayload.data = {
-        name: displayName,
-        email: to,
-        password: password,
-        loginUrl: loginUrl,
-      };
-    } else {
-      // Fallback inline HTML
-      emailPayload.html = `
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head><meta charset="UTF-8"></head>
-<body style="margin:0;padding:0;background-color:#f4f4f5;font-family:Arial,Helvetica,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f4f4f5;padding:40px 0;">
-    <tr><td align="center">
-      <table width="560" cellpadding="0" cellspacing="0" style="background-color:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.06);">
-        <tr><td style="background-color:#1a1a2e;padding:32px 40px;text-align:center;">
-          <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:1px;">GIRA</h1>
-          <p style="margin:4px 0 0;color:#a0a0b8;font-size:12px;">Diário de Bordo</p>
-        </td></tr>
-        <tr><td style="padding:36px 40px;">
-          <p style="margin:0 0 20px;color:#333;font-size:16px;">Olá <strong>${displayName}</strong>,</p>
-          <p style="margin:0 0 24px;color:#555;font-size:14px;line-height:1.6;">Sua conta no <strong>GIRA – Diário de Bordo</strong> foi criada com sucesso. Use as credenciais abaixo para acessar o sistema:</p>
-          <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8f8fc;border:1px solid #e5e5ee;border-radius:8px;margin-bottom:28px;">
-            <tr><td style="padding:20px 24px;">
-              <p style="margin:0 0 10px;color:#666;font-size:13px;"><strong style="color:#333;">E-mail:</strong> ${to}</p>
-              <p style="margin:0;color:#666;font-size:13px;"><strong style="color:#333;">Senha temporária:</strong> <code style="background:#e8e8f0;padding:2px 8px;border-radius:4px;font-size:14px;color:#1a1a2e;">${password}</code></p>
-            </td></tr>
-          </table>
-          <table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center">
-            <a href="${loginUrl}" style="display:inline-block;background-color:#6366f1;color:#ffffff;text-decoration:none;padding:12px 32px;border-radius:8px;font-size:14px;font-weight:600;">Acessar o Sistema</a>
-          </td></tr></table>
-          <p style="margin:24px 0 0;color:#999;font-size:12px;line-height:1.5;text-align:center;">Você será solicitado a alterar sua senha no primeiro acesso.</p>
-        </td></tr>
-        <tr><td style="background-color:#f8f8fc;padding:20px 40px;text-align:center;border-top:1px solid #eee;">
-          <p style="margin:0;color:#aaa;font-size:11px;">Este e-mail foi enviado automaticamente pelo sistema GIRA. Não responda a esta mensagem.</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body>
-</html>`;
-    }
+    const htmlContent = buildHtml(displayName, to, password, loginUrl);
 
     const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -89,7 +207,12 @@ Deno.serve(async (req: Request) => {
         'Authorization': `Bearer ${resendApiKey}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(emailPayload),
+      body: JSON.stringify({
+        from: 'GIRA Diário de Bordo <diario@giraerp.com.br>',
+        to: [to],
+        subject: 'GIRA – Suas credenciais de acesso ao Diário de Bordo',
+        html: htmlContent,
+      }),
     });
 
     const result = await response.json();
