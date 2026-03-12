@@ -98,6 +98,9 @@ export const TeamManagement: React.FC = () => {
   const [permissionsUser, setPermissionsUser] = useState<AdminUser | null>(null);
   const [filterProjectId, setFilterProjectId] = useState<string>('all');
 
+  const accessRoleNormalized = normalizeRoleValue(accessMember?.function_role || '');
+  const accessIsAutoProvision = accessRoleNormalized.includes('oficineiro') || accessRoleNormalized.includes('voluntar');
+
   // Fetch admin users for RBAC management
   React.useEffect(() => {
     if (isSuperAdmin) {
