@@ -59,6 +59,13 @@ import { UserPermissionsDialog } from '@/components/UserPermissionsDialog';
 import { useAdminUsers, AdminUser } from '@/hooks/useAdminUsers';
 import { useAuth } from '@/hooks/useAuth';
 
+const normalizeRoleValue = (value: string) =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
 export const TeamManagement: React.FC = () => {
   const { toast } = useToast();
   const { role } = useAuth();
@@ -91,6 +98,9 @@ export const TeamManagement: React.FC = () => {
   const [permissionsUser, setPermissionsUser] = useState<AdminUser | null>(null);
   const [filterProjectId, setFilterProjectId] = useState<string>('all');
 
+  const accessRoleNormalized = normalizeRoleValue(accessMember?.function_role || '');
+  const accessIsAutoProvision = accessRoleNormalized.includes('oficineiro') || accessRoleNormalized.includes('voluntar');
+
   // Fetch admin users for RBAC management
   React.useEffect(() => {
     if (isSuperAdmin) {
@@ -105,6 +115,9 @@ export const TeamManagement: React.FC = () => {
   };
 
   const handleCreate = async () => {
+    const normalizedRole = normalizeRoleValue(functionRole);
+    const shouldAutoProvision = normalizedRole.includes('oficineiro') || normalizedRole.includes('voluntar');
+
     const result = await createMember({
       name,
       document: document || undefined,
@@ -112,9 +125,23 @@ export const TeamManagement: React.FC = () => {
       email: email || undefined,
       phone: phone || undefined
     });
+
     if (result.success && result.data && createProjectId) {
       await assignToProject(result.data.id, createProjectId);
     }
+
+    if (result.success && result.data && shouldAutoProvision) {
+      if (result.data.email) {
+        await createAccessForMember(result.data);
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'E-mail obrigatório para provisionar acesso',
+          description: 'Cadastre um e-mail no membro para gerar senha temporária e enviar credenciais automaticamente.',
+        });
+      }
+    }
+
     if (result.success) { setIsCreateOpen(false); resetForm(); }
   };
 
@@ -491,7 +518,15 @@ export const TeamManagement: React.FC = () => {
           <DialogHeader>
             <DialogTitle>Criar Acesso ao Diário de Bordo</DialogTitle>
             <DialogDescription>
-              Defina uma senha para <strong>{accessMember?.name}</strong> acessar o Diário de Bordo com o e-mail <strong>{accessMember?.email}</strong>
+              {accessIsAutoProvision ? (
+                <>
+                  O acesso de <strong>{accessMember?.name}</strong> será provisionado automaticamente com senha temporária segura, enviada para <strong>{accessMember?.email}</strong>.
+                </>
+              ) : (
+                <>
+                  Defina uma senha para <strong>{accessMember?.name}</strong> acessar o Diário de Bordo com o e-mail <strong>{accessMember?.email}</strong>
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -499,22 +534,29 @@ export const TeamManagement: React.FC = () => {
               <Label>E-mail (login)</Label>
               <Input value={accessMember?.email || ''} disabled className="bg-muted" />
             </div>
-            <div className="space-y-2">
-              <Label>Senha temporária *</Label>
-              <Input
-                type="password"
-                value={accessPassword}
-                onChange={e => setAccessPassword(e.target.value)}
-                placeholder="Mínimo 6 caracteres"
-              />
-            </div>
+            {!accessIsAutoProvision && (
+              <div className="space-y-2">
+                <Label>Senha temporária *</Label>
+                <Input
+                  type="password"
+                  value={accessPassword}
+                  onChange={e => setAccessPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+            )}
+            {accessIsAutoProvision && (
+              <p className="text-sm text-muted-foreground border rounded-md p-3 bg-muted/50">
+                🔑 Para este perfil, a senha temporária é gerada automaticamente e enviada por e-mail.
+              </p>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsAccessOpen(false)}>Cancelar</Button>
               <Button
-                disabled={isLoading || accessPassword.length < 6}
+                disabled={isLoading || (!accessIsAutoProvision && accessPassword.length < 6)}
                 onClick={async () => {
                   if (!accessMember) return;
-                  const result = await createAccessForMember(accessMember, accessPassword);
+                  const result = await createAccessForMember(accessMember, accessIsAutoProvision ? undefined : accessPassword);
                   if (result.success) { setIsAccessOpen(false); setAccessMember(null); setAccessPassword(''); }
                 }}
               >

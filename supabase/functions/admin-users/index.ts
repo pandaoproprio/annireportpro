@@ -360,6 +360,8 @@ Deno.serve(async (req) => {
       // Auto-generate password for oficineiro/voluntario if not provided
       let password = body.password;
       const isAutoProvision = AUTO_PROVISION_ROLES.includes(role);
+      const effectiveSendInvite = !isAutoProvision && sendInvite === true;
+
       if (isAutoProvision && !password) {
         password = generateSecurePassword();
       }
@@ -379,7 +381,7 @@ Deno.serve(async (req) => {
 
       let userData;
 
-      if (sendInvite) {
+      if (effectiveSendInvite) {
         const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
           data: { name },
           redirectTo: `${url.origin.replace('functions/v1', '')}`
@@ -434,7 +436,7 @@ Deno.serve(async (req) => {
         }]);
 
         // Auto-send welcome email with credentials for new users
-        if (password && !sendInvite) {
+        if (password && !effectiveSendInvite) {
           try {
             const loginUrl = 'https://annireportpro.lovable.app/login';
             const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -461,6 +463,21 @@ Deno.serve(async (req) => {
             console.log(`Welcome email request accepted for ${email} after user creation`);
           } catch (emailErr) {
             console.error('Failed to send welcome email after user creation:', emailErr);
+
+            if (isAutoProvision && userData?.id) {
+              try {
+                await supabaseAdmin.auth.admin.deleteUser(userData.id);
+              } catch (cleanupErr) {
+                console.error('Failed to rollback user after email failure:', cleanupErr);
+              }
+
+              return new Response(JSON.stringify({
+                error: 'Não foi possível enviar o e-mail com as credenciais. A conta não foi criada. Tente novamente.'
+              }), {
+                status: 502,
+                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
           }
         }
       }

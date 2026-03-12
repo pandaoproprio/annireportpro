@@ -46,10 +46,10 @@ export const useAdminUsers = () => {
     },
     onSuccess: (result, vars) => {
       const isAutoProvisioned = result?.autoProvisioned;
-      const desc = vars.sendInvite
-        ? 'Convite enviado com sucesso!'
-        : isAutoProvisioned
-          ? `Acesso criado! Login: ${vars.email} — Senha temporária gerada e enviada por e-mail.`
+      const desc = isAutoProvisioned
+        ? `Acesso criado! Login: ${vars.email} — Senha temporária gerada e enviada por e-mail.`
+        : vars.sendInvite
+          ? 'Convite enviado com sucesso!'
           : `Acesso criado! Login: ${vars.email} — Senha temporária definida.`;
       toast({ title: 'Sucesso', description: desc });
       invalidate();
