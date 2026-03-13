@@ -4,6 +4,26 @@ import type { PdfContext } from './pageLayout';
 import type { PageLayout } from '@/types/imageLayout';
 
 // ── Image loader ──
+const imageToJpegDataUrl = (img: HTMLImageElement): string | null => {
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx2d = canvas.getContext('2d');
+    if (!ctx2d) return null;
+
+    // Evita fundo preto em imagens com transparência
+    ctx2d.fillStyle = '#ffffff';
+    ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+    ctx2d.drawImage(img, 0, 0);
+
+    return canvas.toDataURL('image/jpeg', 0.92);
+  } catch (e) {
+    console.warn('[loadImage] jpeg conversion error', e);
+    return null;
+  }
+};
+
 const loadImageViaFetch = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
   try {
     const response = await fetch(url, { mode: 'cors' });
@@ -15,11 +35,19 @@ const loadImageViaFetch = async (url: string): Promise<{ data: string; width: nu
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onload = () => {
-        const dataUrl = reader.result as string;
+        const sourceDataUrl = reader.result as string;
         const img = new Image();
-        img.onload = () => resolve({ data: dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+        img.onload = () => {
+          const jpegDataUrl = imageToJpegDataUrl(img);
+          if (!jpegDataUrl) {
+            console.warn('[loadImage] jpeg conversion failed after fetch', url);
+            resolve(null);
+            return;
+          }
+          resolve({ data: jpegDataUrl, width: img.naturalWidth, height: img.naturalHeight });
+        };
         img.onerror = () => { console.warn('[loadImage] img decode error', url); resolve(null); };
-        img.src = dataUrl;
+        img.src = sourceDataUrl;
       };
       reader.onerror = () => { console.warn('[loadImage] reader error', url); resolve(null); };
       reader.readAsDataURL(blob);
@@ -35,19 +63,9 @@ const loadImageViaElement = (url: string): Promise<{ data: string; width: number
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx2d = canvas.getContext('2d');
-        if (!ctx2d) { resolve(null); return; }
-        ctx2d.drawImage(img, 0, 0);
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        resolve({ data: dataUrl, width: img.naturalWidth, height: img.naturalHeight });
-      } catch (e) {
-        console.warn('[loadImage] canvas tainted', url, e);
-        resolve(null);
-      }
+      const jpegDataUrl = imageToJpegDataUrl(img);
+      if (!jpegDataUrl) { resolve(null); return; }
+      resolve({ data: jpegDataUrl, width: img.naturalWidth, height: img.naturalHeight });
     };
     img.onerror = () => { console.warn('[loadImage] element error', url); resolve(null); };
     img.src = url;
