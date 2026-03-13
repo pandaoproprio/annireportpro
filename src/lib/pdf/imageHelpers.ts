@@ -2,6 +2,7 @@ import { CW, ML, FONT_BODY, FONT_CAPTION, LINE_H, MAX_Y } from './constants';
 import { ensureSpace, addPage } from './pageLayout';
 import type { PdfContext } from './pageLayout';
 import type { PageLayout } from '@/types/imageLayout';
+import { supabase } from '@/integrations/supabase/client';
 
 // ── Image loader ──
 const imageToJpegDataUrl = (img: HTMLImageElement): string | null => {
