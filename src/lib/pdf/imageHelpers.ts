@@ -4,10 +4,13 @@ import type { PdfContext } from './pageLayout';
 import type { PageLayout } from '@/types/imageLayout';
 
 // ── Image loader ──
-export const loadImage = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
+const loadImageViaFetch = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
   try {
-    const response = await fetch(url);
-    if (!response.ok) return null;
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) {
+      console.warn('[loadImage] fetch failed with status', response.status, url);
+      return null;
+    }
     const blob = await response.blob();
     return new Promise((resolve) => {
       const reader = new FileReader();
@@ -15,13 +18,49 @@ export const loadImage = async (url: string): Promise<{ data: string; width: num
         const dataUrl = reader.result as string;
         const img = new Image();
         img.onload = () => resolve({ data: dataUrl, width: img.naturalWidth, height: img.naturalHeight });
-        img.onerror = () => resolve(null);
+        img.onerror = () => { console.warn('[loadImage] img decode error', url); resolve(null); };
         img.src = dataUrl;
       };
-      reader.onerror = () => resolve(null);
+      reader.onerror = () => { console.warn('[loadImage] reader error', url); resolve(null); };
       reader.readAsDataURL(blob);
     });
-  } catch { return null; }
+  } catch (e) {
+    console.warn('[loadImage] fetch exception', url, e);
+    return null;
+  }
+};
+
+const loadImageViaElement = (url: string): Promise<{ data: string; width: number; height: number } | null> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx2d = canvas.getContext('2d');
+        if (!ctx2d) { resolve(null); return; }
+        ctx2d.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        resolve({ data: dataUrl, width: img.naturalWidth, height: img.naturalHeight });
+      } catch (e) {
+        console.warn('[loadImage] canvas tainted', url, e);
+        resolve(null);
+      }
+    };
+    img.onerror = () => { console.warn('[loadImage] element error', url); resolve(null); };
+    img.src = url;
+  });
+};
+
+export const loadImage = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
+  if (!url) return null;
+  // Try fetch first, fallback to Image element (handles different CORS scenarios)
+  const result = await loadImageViaFetch(url);
+  if (result) return result;
+  console.warn('[loadImage] fetch failed, trying Image element fallback for:', url);
+  return loadImageViaElement(url);
 };
 
 // ── Inline image ──
