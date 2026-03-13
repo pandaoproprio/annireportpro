@@ -2,6 +2,7 @@ import { CW, ML, FONT_BODY, FONT_CAPTION, LINE_H, MAX_Y } from './constants';
 import { ensureSpace, addPage } from './pageLayout';
 import type { PdfContext } from './pageLayout';
 import type { PageLayout } from '@/types/imageLayout';
+import { supabase } from '@/integrations/supabase/client';
 
 // ── Image loader ──
 const imageToJpegDataUrl = (img: HTMLImageElement): string | null => {
@@ -24,6 +25,73 @@ const imageToJpegDataUrl = (img: HTMLImageElement): string | null => {
   }
 };
 
+const blobToImageData = async (blob: Blob, sourceLabel: string): Promise<{ data: string; width: number; height: number } | null> => {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const sourceDataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const jpegDataUrl = imageToJpegDataUrl(img);
+        if (!jpegDataUrl) {
+          console.warn('[loadImage] jpeg conversion failed', sourceLabel);
+          resolve(null);
+          return;
+        }
+        resolve({ data: jpegDataUrl, width: img.naturalWidth, height: img.naturalHeight });
+      };
+      img.onerror = () => {
+        console.warn('[loadImage] img decode error', sourceLabel);
+        resolve(null);
+      };
+      img.src = sourceDataUrl;
+    };
+    reader.onerror = () => {
+      console.warn('[loadImage] reader error', sourceLabel);
+      resolve(null);
+    };
+    reader.readAsDataURL(blob);
+  });
+};
+
+const parseStorageObjectUrl = (rawUrl: string): { bucket: string; path: string } | null => {
+  try {
+    const u = new URL(rawUrl);
+    const parts = u.pathname.split('/').filter(Boolean);
+    const objectIdx = parts.indexOf('object');
+    if (objectIdx === -1) return null;
+
+    // /storage/v1/object/{public|authenticated|sign}/{bucket}/{path...}
+    const visibility = parts[objectIdx + 1];
+    if (!['public', 'authenticated', 'sign'].includes(visibility)) return null;
+
+    const bucket = parts[objectIdx + 2];
+    const path = parts.slice(objectIdx + 3).join('/');
+    if (!bucket || !path) return null;
+
+    return { bucket, path: decodeURIComponent(path) };
+  } catch {
+    return null;
+  }
+};
+
+const loadImageViaStorageDownload = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
+  const parsed = parseStorageObjectUrl(url);
+  if (!parsed) return null;
+
+  try {
+    const { data, error } = await supabase.storage.from(parsed.bucket).download(parsed.path);
+    if (error || !data) {
+      console.warn('[loadImage] storage download failed', parsed.bucket, parsed.path, error?.message);
+      return null;
+    }
+    return await blobToImageData(data, `${parsed.bucket}/${parsed.path}`);
+  } catch (e) {
+    console.warn('[loadImage] storage download exception', url, e);
+    return null;
+  }
+};
+
 const loadImageViaFetch = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
   try {
     const response = await fetch(url, { mode: 'cors' });
@@ -32,36 +100,17 @@ const loadImageViaFetch = async (url: string): Promise<{ data: string; width: nu
       return null;
     }
     const blob = await response.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const sourceDataUrl = reader.result as string;
-        const img = new Image();
-        img.onload = () => {
-          const jpegDataUrl = imageToJpegDataUrl(img);
-          if (!jpegDataUrl) {
-            console.warn('[loadImage] jpeg conversion failed after fetch', url);
-            resolve(null);
-            return;
-          }
-          resolve({ data: jpegDataUrl, width: img.naturalWidth, height: img.naturalHeight });
-        };
-        img.onerror = () => { console.warn('[loadImage] img decode error', url); resolve(null); };
-        img.src = sourceDataUrl;
-      };
-      reader.onerror = () => { console.warn('[loadImage] reader error', url); resolve(null); };
-      reader.readAsDataURL(blob);
-    });
+    return await blobToImageData(blob, url);
   } catch (e) {
     console.warn('[loadImage] fetch exception', url, e);
     return null;
   }
 };
 
-const loadImageViaElement = (url: string): Promise<{ data: string; width: number; height: number } | null> => {
+const loadImageViaElement = (url: string, useAnonymousCrossOrigin: boolean = true): Promise<{ data: string; width: number; height: number } | null> => {
   return new Promise((resolve) => {
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    if (useAnonymousCrossOrigin) img.crossOrigin = 'anonymous';
     img.onload = () => {
       const jpegDataUrl = imageToJpegDataUrl(img);
       if (!jpegDataUrl) { resolve(null); return; }
@@ -74,11 +123,28 @@ const loadImageViaElement = (url: string): Promise<{ data: string; width: number
 
 export const loadImage = async (url: string): Promise<{ data: string; width: number; height: number } | null> => {
   if (!url) return null;
-  // Try fetch first, fallback to Image element (handles different CORS scenarios)
-  const result = await loadImageViaFetch(url);
-  if (result) return result;
-  console.warn('[loadImage] fetch failed, trying Image element fallback for:', url);
-  return loadImageViaElement(url);
+  const normalizedUrl = url.trim();
+
+  // Data URL (base64) é melhor decodificada direto em elemento
+  if (normalizedUrl.startsWith('data:image/')) {
+    const fromDataUrl = await loadImageViaElement(normalizedUrl, false);
+    if (fromDataUrl) return fromDataUrl;
+  }
+
+  // 1) Fetch direto
+  const fetchResult = await loadImageViaFetch(normalizedUrl);
+  if (fetchResult) return fetchResult;
+
+  // 2) Fallback robusto: download via SDK de storage (evita problemas de URL pública/signed)
+  const storageResult = await loadImageViaStorageDownload(normalizedUrl);
+  if (storageResult) return storageResult;
+
+  // 3) Último fallback: elemento HTMLImage
+  const elementResult = await loadImageViaElement(normalizedUrl, true);
+  if (elementResult) return elementResult;
+
+  console.warn('[loadImage] all strategies failed for:', normalizedUrl);
+  return null;
 };
 
 // ── Inline image ──
