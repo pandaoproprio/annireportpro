@@ -137,6 +137,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
 
           {/* Remaining sections driven by config */}
           {sidebarSections.filter(s => s.title !== 'Visão Geral').map(section => {
+            const allItems = section.items;
+            const filteredItems = allItems.filter(shouldShowItem);
+            if (section.title === 'Gestão') {
+              console.log('[Sidebar Debug] Gestão items total:', allItems.length, 'visible:', filteredItems.length);
+              allItems.forEach(item => {
+                const visible = shouldShowItem(item);
+                if (!visible) console.log('[Sidebar Debug] HIDDEN:', item.label, item.to, 'permission:', item.permission, 'adminOnly:', item.adminOnly);
+              });
+              console.log('[Sidebar Debug] role:', role, 'isAdmin:', isAdmin, 'isPrivileged:', isPrivileged);
+            }
             if (section.adminOnly && !isAdmin) return null;
             if (section.permission && !hasPermission(section.permission)) return null;
 
