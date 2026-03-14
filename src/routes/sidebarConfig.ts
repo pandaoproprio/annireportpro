@@ -11,6 +11,7 @@
  * ║    • GIRA Eventos                                                   ║
  * ║                                                                     ║
  * ║  ⚠️  NÃO MODIFIQUE sem autorização explícita do proprietário.      ║
+ * ║  Rebuild: 2026-03-14                                               ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
 
