@@ -873,13 +873,17 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
           </div>
           {enableAudio && (
             <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: isDark ? '#1e293b' : '#f0fdf4', border: '1px solid', borderColor: isDark ? '#334155' : '#bbf7d0' }}>
-              <SpeechToTextButton
+              <AudioRecorderButton
                 onTranscript={(text) => onChange(text)}
+                onAudioUrl={(url) => {
+                  onAudioUrl?.(field.id, url);
+                }}
                 currentText={(value as string) || ''}
                 lang="pt-BR"
+                storagePath={`forms/${formId}/audio`}
               />
               <span className="text-xs" style={{ color: 'var(--form-muted)' }}>
-                🎙️ Clique para responder por áudio (transcrição automática)
+                🎙️ Gravar áudio (transcrição automática + arquivo salvo)
               </span>
             </div>
           )}
