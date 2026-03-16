@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { SpeechToTextButton } from '@/components/SpeechToTextButton';
+import { AudioRecorderButton } from '@/components/AudioRecorderButton';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -650,6 +650,10 @@ export default function PublicFormPage() {
                       onChange={val => updateAnswer(field.id, val)}
                       onCepAutoFill={(data) => handleCepAutoFill(data, field.id)}
                       isDark={isDark}
+                      formId={formId}
+                      onAudioUrl={(fieldId, url) => {
+                        setAnswers(prev => ({ ...prev, [`${fieldId}_audio_url`]: url }));
+                      }}
                     />
                     {validationErrors[field.id] && (
                       <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs" style={{ color: '#ef4444' }}>
@@ -820,12 +824,14 @@ function renderFormattedText(text: string) {
 }
 
 // ─── Smart Field Input ──────────────────────────────────────
-function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
+function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId, onAudioUrl }: {
   field: FormField;
   value: unknown;
   onChange: (v: unknown) => void;
   onCepAutoFill?: (data: CepData) => void;
   isDark?: boolean;
+  formId?: string;
+  onAudioUrl?: (fieldId: string, url: string) => void;
 }) {
   const options = field.options || [];
   const smartType = detectSmartType(field);
@@ -873,13 +879,17 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
           </div>
           {enableAudio && (
             <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: isDark ? '#1e293b' : '#f0fdf4', border: '1px solid', borderColor: isDark ? '#334155' : '#bbf7d0' }}>
-              <SpeechToTextButton
+              <AudioRecorderButton
                 onTranscript={(text) => onChange(text)}
+                onAudioUrl={(url) => {
+                  onAudioUrl?.(field.id, url);
+                }}
                 currentText={(value as string) || ''}
                 lang="pt-BR"
+                storagePath={`forms/${formId}/audio`}
               />
               <span className="text-xs" style={{ color: 'var(--form-muted)' }}>
-                🎙️ Clique para responder por áudio (transcrição automática)
+                🎙️ Gravar áudio (transcrição automática + arquivo salvo)
               </span>
             </div>
           )}
