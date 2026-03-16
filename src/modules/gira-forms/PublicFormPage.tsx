@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
-import { SpeechToTextButton } from '@/components/SpeechToTextButton';
+import { AudioRecorderButton } from '@/components/AudioRecorderButton';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
