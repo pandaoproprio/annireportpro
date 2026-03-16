@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
+import { SpeechToTextButton } from '@/components/SpeechToTextButton';
 import { useParams } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -860,15 +861,31 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
   switch (field.type) {
     case 'short_text':
       return <Input value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="Sua resposta" maxLength={500} />;
-    case 'long_text':
+    case 'long_text': {
+      const enableAudio = !!(field.settings?.enableAudio);
       return (
-        <div className="relative">
-          <Textarea value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="Sua resposta" rows={4} maxLength={5000} />
-          <span className="absolute bottom-2 right-2 text-[10px]" style={{ color: 'var(--form-muted)' }}>
-            {((value as string) || '').length}/5000
-          </span>
+        <div className="space-y-2">
+          <div className="relative">
+            <Textarea value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="Sua resposta (digite ou use o microfone 🎙️)" rows={4} maxLength={5000} />
+            <span className="absolute bottom-2 right-2 text-[10px]" style={{ color: 'var(--form-muted)' }}>
+              {((value as string) || '').length}/5000
+            </span>
+          </div>
+          {enableAudio && (
+            <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: isDark ? '#1e293b' : '#f0fdf4', border: '1px solid', borderColor: isDark ? '#334155' : '#bbf7d0' }}>
+              <SpeechToTextButton
+                onTranscript={(text) => onChange(text)}
+                currentText={(value as string) || ''}
+                lang="pt-BR"
+              />
+              <span className="text-xs" style={{ color: 'var(--form-muted)' }}>
+                🎙️ Clique para responder por áudio (transcrição automática)
+              </span>
+            </div>
+          )}
         </div>
       );
+    }
     case 'number':
       return <Input type="number" value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="0" />;
     case 'date':
