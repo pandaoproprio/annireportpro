@@ -360,7 +360,7 @@ export default function PublicFormPage() {
 
       if (field.required) {
         if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
-          errors[field.id] = 'Campo obrigatório';
+          errors[field.id] = 'Este campo é obrigatório.';
           continue;
         }
       }
