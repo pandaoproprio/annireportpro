@@ -820,12 +820,14 @@ function renderFormattedText(text: string) {
 }
 
 // ─── Smart Field Input ──────────────────────────────────────
-function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
+function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId, onAudioUrl }: {
   field: FormField;
   value: unknown;
   onChange: (v: unknown) => void;
   onCepAutoFill?: (data: CepData) => void;
   isDark?: boolean;
+  formId?: string;
+  onAudioUrl?: (fieldId: string, url: string) => void;
 }) {
   const options = field.options || [];
   const smartType = detectSmartType(field);
