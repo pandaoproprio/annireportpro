@@ -368,7 +368,7 @@ export default function PublicFormPage() {
       if (!val) continue;
 
       if (smart === 'email' || field.type === 'email') {
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val))) errors[field.id] = 'E-mail inválido';
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val))) errors[field.id] = 'Informe um e-mail válido para continuar.';
       }
       if (smart === 'cpf_cnpj' || field.type === 'cpf_cnpj') {
         const digits = String(val).replace(/\D/g, '');
