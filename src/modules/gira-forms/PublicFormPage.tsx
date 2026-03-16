@@ -650,6 +650,10 @@ export default function PublicFormPage() {
                       onChange={val => updateAnswer(field.id, val)}
                       onCepAutoFill={(data) => handleCepAutoFill(data, field.id)}
                       isDark={isDark}
+                      formId={formId}
+                      onAudioUrl={(fieldId, url) => {
+                        setAnswers(prev => ({ ...prev, [`${fieldId}_audio_url`]: url }));
+                      }}
                     />
                     {validationErrors[field.id] && (
                       <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs" style={{ color: '#ef4444' }}>
