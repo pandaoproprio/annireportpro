@@ -866,7 +866,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark }: {
       return (
         <div className="space-y-2">
           <div className="relative">
-            <Textarea value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="Sua resposta (digite ou use o microfone 🎙️)" rows={4} maxLength={5000} />
+            <Textarea value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder={enableAudio ? "Sua resposta (digite ou use o microfone 🎙️)" : "Sua resposta"} rows={4} maxLength={5000} />
             <span className="absolute bottom-2 right-2 text-[10px]" style={{ color: 'var(--form-muted)' }}>
               {((value as string) || '').length}/5000
             </span>
