@@ -288,7 +288,30 @@ export default function FormBuilderPage() {
                 ))}
               </div>
 
+              <div className="border-t pt-3">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-sm h-9 gap-2"
+                  onClick={() => setImportDialogOpen(true)}
+                >
+                  <Download className="w-3.5 h-3.5 text-primary" />
+                  Importar de outro formulário
+                </Button>
+              </div>
+
               <FormDigestConfig formId={id!} />
+
+              <ImportFieldsDialog
+                open={importDialogOpen}
+                onOpenChange={setImportDialogOpen}
+                currentFormId={id!}
+                currentFieldCount={localFields.length}
+                onImport={async (fieldsToImport) => {
+                  for (const f of fieldsToImport) {
+                    await upsertField.mutateAsync(f as any);
+                  }
+                }}
+              />
             </div>
           </div>
         </TabsContent>
