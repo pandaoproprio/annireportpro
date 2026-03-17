@@ -239,7 +239,7 @@ export const addPhotoGrid = async (
   const renderSet = async (indices: number[], sharedCaption?: string) => {
     const useSingle = indices.length === 1;
     const photoW = useSingle ? CW : (CW - COL_GAP) / 2;
-    const photoH = useSingle ? photoW * 0.65 : photoW * 0.85;
+    const photoH = photoW * 0.75; // Consistent 4:3 aspect ratio for all photos
     const CAPTION_H = 6;
     const cols = useSingle ? 1 : 2;
 
