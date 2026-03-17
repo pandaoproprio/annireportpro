@@ -649,6 +649,10 @@ export const TeamReportGenerator: React.FC = () => {
   if (!isPreview) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
+        <CollaborationPresenceBar
+          collaborators={collab.collaborators}
+          remoteUpdateCount={collab.remoteUpdateCount}
+        />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => setShowDraftsList(true)}>
