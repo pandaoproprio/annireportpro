@@ -6,6 +6,34 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const CEAP_INSTITUTIONAL_MEMORY = `## MEMÓRIA NARRATIVA INSTITUCIONAL DO CEAP
+
+O CEAP — Centro de Articulação de Populações Marginalizadas — é uma organização da sociedade civil fundada em 1989 no Rio de Janeiro, com a missão de articular e fortalecer populações historicamente marginalizadas, especialmente comunidades negras, periféricas e de matriz africana.
+
+### IDENTIDADE E MISSÃO
+- O CEAP atua na defesa de direitos humanos, no enfrentamento ao racismo estrutural e na valorização da memória, identidade e tradições de matriz africana.
+- Seus projetos articulam cultura, educação, saúde, segurança alimentar e esporte como ferramentas de transformação social nos territórios periféricos.
+- A organização opera em rede com instituições públicas, universidades, organizações comunitárias e lideranças territoriais.
+
+### TOM DE VOZ CEAP
+- Formal e institucional, mas com profundidade social e política
+- Valoriza o protagonismo comunitário e territorial
+- Contextualiza as ações dentro de um compromisso histórico com populações marginalizadas
+- Reconhece saberes tradicionais e culturais como estratégias legítimas de transformação
+- Nomeia os desafios estruturais (racismo, desigualdade, vulnerabilidade) sem eufemismos, mas com propositura
+- Destaca o impacto coletivo e comunitário das ações, não apenas indicadores numéricos
+- Conecta cada ação ao compromisso institucional maior de articulação e fortalecimento de populações marginalizadas
+
+### LINGUAGEM E ESTILO
+- Usar verbos na terceira pessoa ou voz passiva institucional
+- Situar cada atividade no contexto social e territorial
+- Valorizar a dimensão política e cultural das ações, mesmo as administrativas
+- Descrever metodologias com atenção às relações comunitárias e ao acolhimento
+- Mencionar parcerias e articulações interinstitucionais quando existirem
+- Evitar linguagem genérica, burocrática ou superficial
+- Evitar tom excessivamente técnico ou distanciado da realidade territorial
+- Preferir concisão com densidade narrativa: cada frase deve carregar significado`;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -163,26 +191,40 @@ Não adicione ou remova informações. Apenas corrija erros.
 Retorne o texto corrigido sem explicações adicionais.`;
       userPrompt = `Corrija o seguinte texto:\n\n${text}`;
     } else if (mode === "rewrite") {
-      systemPrompt = `Você é um redator especializado em documentos institucionais e relatórios de prestação de contas no Brasil.
-Reescreva o texto em tom formal, técnico e institucional, adequado para relatórios enviados a órgãos financiadores.
-Mantenha todas as informações e dados originais. Apenas melhore a redação, fluidez e formalidade.
+      systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
+
+${CEAP_INSTITUTIONAL_MEMORY}
+
+Reescreva o texto fornecido aplicando rigorosamente o tom de voz e a linguagem institucional do CEAP.
+Mantenha todas as informações e dados originais. Transforme a redação para refletir a identidade narrativa do CEAP.
 Retorne o texto reescrito sem explicações adicionais.`;
-      userPrompt = `Reescreva o seguinte texto em tom formal e institucional:\n\n${text}`;
+      userPrompt = `Reescreva o seguinte texto no padrão narrativo institucional do CEAP:\n\n${text}`;
     } else if (mode === "expand") {
-      systemPrompt = `Você é um redator especializado em relatórios de prestação de contas de projetos sociais no Brasil.
-Expanda o texto fornecido, adicionando mais detalhes, contexto e profundidade.
-Mantenha o tom formal e institucional. Não invente dados que não estejam implícitos no texto original.
+      systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
+
+${CEAP_INSTITUTIONAL_MEMORY}
+
+Expanda o texto fornecido, adicionando contexto social, territorial e institucional.
+Mantenha o tom de voz do CEAP. Não invente dados que não estejam implícitos no texto original.
+Valorize o impacto social e a conexão com a missão institucional.
 Retorne o texto expandido sem explicações adicionais.`;
-      userPrompt = `Expanda e aprofunde o seguinte texto, mantendo o tom formal:\n\n${text}`;
+      userPrompt = `Expanda e aprofunde o seguinte texto, mantendo o tom institucional do CEAP:\n\n${text}`;
     } else {
-      // mode === "generate" (original behavior)
-      systemPrompt = `Você é um redator especializado em relatórios de prestação de contas de projetos sociais no Brasil. 
-Escreva textos em português brasileiro formal, objetivos e adequados para relatórios institucionais enviados a órgãos financiadores.
-Use linguagem técnica mas acessível. Não invente dados — baseie-se exclusivamente nas informações fornecidas.
-Não use markdown, bullet points ou formatação especial. Escreva em parágrafos corridos.`;
+      // mode === "generate"
+      systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
+
+${CEAP_INSTITUTIONAL_MEMORY}
+
+## REGRAS DE GERAÇÃO
+- Não inventar dados — baseie-se exclusivamente nas informações fornecidas
+- Não usar markdown, bullet points ou formatação especial
+- Escrever em parágrafos corridos com densidade narrativa
+- Cada narrativa deve refletir a identidade institucional do CEAP
+- Preferir concisão com profundidade sobre extensão superficial
+- Retornar APENAS o texto, sem explicações adicionais`;
 
       if (sectionType === "goal") {
-        userPrompt = `Gere um relato narrativo para a seguinte meta de um projeto social:
+        userPrompt = `Gere um relato narrativo institucional no padrão CEAP para a seguinte meta:
 
 Projeto: ${projectName}
 Objeto: ${projectObject}
@@ -192,9 +234,9 @@ Público-alvo: ${goalAudience}
 Atividades realizadas vinculadas a esta meta:
 ${(activities || []).map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}${a.attendeesCount ? ` | ${a.attendeesCount} participantes` : ""}`).join("\n")}
 
-Escreva um relato narrativo de 2-4 parágrafos descrevendo as realizações, metodologia utilizada, resultados alcançados e impacto no público-alvo.`;
+Escreva 2-4 parágrafos descrevendo as realizações, metodologia, resultados alcançados e impacto social no público-alvo. Conecte as ações ao compromisso institucional do CEAP com populações marginalizadas.`;
       } else if (sectionType === "summary") {
-        userPrompt = `Gere um resumo executivo para o seguinte projeto social:
+        userPrompt = `Gere um resumo executivo institucional no padrão CEAP para o seguinte projeto:
 
 Projeto: ${projectName}
 Objeto: ${projectObject}
@@ -205,34 +247,33 @@ Total de participantes: ${(activities || []).reduce((sum: number, a: any) => sum
 Tipos de atividades:
 ${Object.entries((activities || []).reduce((acc: any, a: any) => { acc[a.type] = (acc[a.type] || 0) + 1; return acc; }, {})).map(([type, count]) => `- ${type}: ${count}`).join("\n")}
 
-Escreva um resumo executivo de 2-3 parágrafos com visão geral das atividades realizadas, contexto e principais realizações.`;
+Escreva 2-3 parágrafos com visão geral das atividades, contexto territorial e principais realizações, refletindo o tom institucional do CEAP.`;
       } else if (sectionType === "other") {
-        userPrompt = `Gere um texto narrativo sobre outras ações desenvolvidas no projeto:
+        userPrompt = `Gere um texto narrativo institucional no padrão CEAP sobre outras ações desenvolvidas:
 
 Projeto: ${projectName}
 
 Atividades registradas (ocorrências, administrativo, outras):
 ${(activities || []).map((a: any) => `- ${a.date} (${a.type}): ${a.description}${a.challenges ? ` | Desafios: ${a.challenges}` : ""}`).join("\n")}
 
-Escreva 1-3 parágrafos descrevendo essas ações complementares, imprevistos enfrentados e soluções adotadas.`;
+Escreva 1-3 parágrafos descrevendo essas ações complementares, contextualizando os desafios enfrentados dentro da realidade territorial e institucional.`;
       } else if (sectionType === "communication") {
-        userPrompt = `Gere um texto narrativo sobre as ações de divulgação e comunicação do projeto:
+        userPrompt = `Gere um texto narrativo institucional no padrão CEAP sobre as ações de divulgação e comunicação:
 
 Projeto: ${projectName}
 
 Atividades de divulgação registradas:
 ${(activities || []).map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}`).join("\n")}
 
-Escreva 1-2 parágrafos descrevendo as estratégias de comunicação utilizadas e seus resultados.`;
+Escreva 1-2 parágrafos descrevendo as estratégias de comunicação e seus resultados, valorizando a visibilidade das ações e o fortalecimento da narrativa institucional.`;
       } else if (sectionType === "generic") {
-        // Generic generation from text context
-        userPrompt = `Com base no seguinte contexto, gere um texto formal e institucional adequado para um relatório de prestação de contas:
+        userPrompt = `Com base no seguinte contexto, gere um texto institucional no padrão narrativo do CEAP, adequado para um relatório de prestação de contas:
 
 ${text || "Nenhum contexto fornecido."}
 
-Escreva 2-3 parágrafos em tom formal e institucional.`;
+Escreva 2-3 parágrafos em tom institucional do CEAP, com densidade narrativa e conexão com a missão de articulação de populações marginalizadas.`;
       } else {
-        userPrompt = text || "Gere um texto formal para um relatório de prestação de contas de um projeto social.";
+        userPrompt = text || "Gere um texto institucional no padrão narrativo do CEAP para um relatório de prestação de contas de um projeto social.";
       }
     }
 
