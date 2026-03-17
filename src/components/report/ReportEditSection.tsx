@@ -103,9 +103,11 @@ interface Props {
   handleDocumentUpload: (e: React.ChangeEvent<HTMLInputElement>, linkField: 'attendance' | 'registration' | 'media') => void;
   handleSectionPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => void;
   removeSectionPhoto: (sectionKey: string, index: number) => void;
+  reorderSectionPhotos: (sectionKey: string, oldIndex: number, newIndex: number) => void;
   handleSectionDocUpload: (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => void;
   removeSectionDoc: (sectionKey: string, index: number) => void;
   insertDiaryPhotos: (sectionKey: string, urls: string[], captions: Record<string, string>) => void;
+  reorderGoalPhotos: (goalId: string, oldIndex: number, newIndex: number) => void;
 }
 
 // ── Photo card with caption, width slider, and edit button ──
