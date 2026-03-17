@@ -180,6 +180,44 @@ export default function FormBuilderPage() {
         </CardContent>
       </Card>
 
+      {/* Status & Scheduling Controls */}
+      <Card>
+        <CardContent className="p-3 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Status:</span>
+            <Select value={status} onValueChange={(v) => setStatus(v as FormStatus)}>
+              <SelectTrigger className="w-40 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativo">🟢 Ativo</SelectItem>
+                <SelectItem value="pausado">🟡 Pausado</SelectItem>
+                <SelectItem value="encerrado">🔴 Encerrado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Encerramento automático:</span>
+            <Input
+              type="datetime-local"
+              value={closesAt ? closesAt.slice(0, 16) : ''}
+              onChange={e => setClosesAt(e.target.value ? new Date(e.target.value).toISOString() : '')}
+              className="h-8 text-xs w-52"
+            />
+            {closesAt && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setClosesAt('')}>
+                Limpar
+              </Button>
+            )}
+          </div>
+          {closesAt && (
+            <span className="text-[10px] text-muted-foreground italic">
+              O formulário será encerrado automaticamente em {new Date(closesAt).toLocaleString('pt-BR')}
+            </span>
+          )}
+        </CardContent>
+      </Card>
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="editor">Editor</TabsTrigger>
