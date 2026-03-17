@@ -341,40 +341,46 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
             <Button variant="outline" size="sm" className="mt-1" onClick={() => setShowLayoutEditor(true)}>
               <LayoutGrid className="w-4 h-4 mr-2" /> Editor de Layout
             </Button>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
-              {photos.map((photo, pIdx) => {
-                const inGroup = getPhotoGroupId(pIdx);
-                return (
-                  <div key={pIdx} className="relative">
-                    {!inGroup && photos.length >= 2 && (
-                      <div className="absolute top-2 right-8 z-10">
-                        <Checkbox
-                          checked={selectedIndices.has(pIdx)}
-                          onCheckedChange={() => toggleSelect(pIdx)}
-                          className="bg-background/80 border-2"
-                        />
-                      </div>
-                    )}
-                    {inGroup && (
-                      <div className="absolute inset-0 bg-primary/10 rounded-lg z-10 pointer-events-none flex items-center justify-center">
-                        <span className="text-xs font-medium text-primary bg-background/90 px-2 py-1 rounded">Em grupo</span>
-                      </div>
-                    )}
-                    <PhotoCard
-                      photo={photo}
-                      index={pIdx}
-                      metaKey={sectionKey}
-                      meta={metas[pIdx]}
-                      projectId={projectId}
-                      updatePhotoCaption={updatePhotoCaption}
-                      updatePhotoSize={updatePhotoSize}
-                      onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
-                      onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            <DndContext sensors={sectionSensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
+              <SortableContext items={sectionPhotoIds} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
+                  {photos.map((photo, pIdx) => {
+                    const inGroup = getPhotoGroupId(pIdx);
+                    return (
+                      <SortablePhotoCard key={sectionPhotoIds[pIdx]} id={sectionPhotoIds[pIdx]}>
+                        <div className="relative">
+                          {!inGroup && photos.length >= 2 && (
+                            <div className="absolute top-2 right-8 z-10">
+                              <Checkbox
+                                checked={selectedIndices.has(pIdx)}
+                                onCheckedChange={() => toggleSelect(pIdx)}
+                                className="bg-background/80 border-2"
+                              />
+                            </div>
+                          )}
+                          {inGroup && (
+                            <div className="absolute inset-0 bg-primary/10 rounded-lg z-10 pointer-events-none flex items-center justify-center">
+                              <span className="text-xs font-medium text-primary bg-background/90 px-2 py-1 rounded">Em grupo</span>
+                            </div>
+                          )}
+                          <PhotoCard
+                            photo={photo}
+                            index={pIdx}
+                            metaKey={sectionKey}
+                            meta={metas[pIdx]}
+                            projectId={projectId}
+                            updatePhotoCaption={updatePhotoCaption}
+                            updatePhotoSize={updatePhotoSize}
+                            onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
+                            onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
+                          />
+                        </div>
+                      </SortablePhotoCard>
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
           </>
         )}
         {showLayoutEditor && (
