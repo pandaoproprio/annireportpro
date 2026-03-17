@@ -12,6 +12,8 @@ import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useJustificationReportState } from '@/hooks/useJustificationReportState';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
+import { useRealtimeCollaboration } from '@/hooks/useRealtimeCollaboration';
+import { CollaborationPresenceBar } from '@/components/CollaborationPresenceBar';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportStructureEditor } from '@/components/report/ReportStructureEditor';
 import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
