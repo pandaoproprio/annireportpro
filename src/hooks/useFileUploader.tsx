@@ -118,6 +118,15 @@ export const useFileUploader = ({ projectId, basePath }: UseFileUploaderOptions)
     }));
   };
 
+  const reorderSectionPhotos = (sectionKey: string, oldIndex: number, newIndex: number) => {
+    setSectionPhotos(prev => {
+      const photos = [...(prev[sectionKey] || [])];
+      const [moved] = photos.splice(oldIndex, 1);
+      photos.splice(newIndex, 0, moved);
+      return { ...prev, [sectionKey]: photos };
+    });
+  };
+
   return {
     sectionPhotos,
     setSectionPhotos,
@@ -125,6 +134,7 @@ export const useFileUploader = ({ projectId, basePath }: UseFileUploaderOptions)
     setSectionDocs,
     handleSectionPhotoUpload,
     removeSectionPhoto,
+    reorderSectionPhotos,
     handleSectionDocUpload,
     removeSectionDoc,
   };

@@ -203,6 +203,21 @@ export const useReportState = () => {
     setGoalPhotos(prev => ({ ...prev, [goalId]: (prev[goalId] || []).filter((_, i) => i !== index) }));
   };
 
+  const reorderGoalPhotos = (goalId: string, oldIndex: number, newIndex: number) => {
+    setGoalPhotos(prev => {
+      const photos = [...(prev[goalId] || [])];
+      const [moved] = photos.splice(oldIndex, 1);
+      photos.splice(newIndex, 0, moved);
+      return { ...prev, [goalId]: photos };
+    });
+    setPhotoMetadata(prev => {
+      const metas = [...(prev[goalId] || [])];
+      const [moved] = metas.splice(oldIndex, 1);
+      metas.splice(newIndex, 0, moved);
+      return { ...prev, [goalId]: metas };
+    });
+  };
+
   const handleExpenseImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, expenseId: string) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
