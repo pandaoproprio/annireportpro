@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileEdit, Link2, Sparkles, Loader2, Bot, Cpu, Zap } from 'lucide-react';
@@ -11,6 +11,8 @@ import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { useReportState } from '@/hooks/useReportState';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { useDiaryReportLinks } from '@/hooks/useDiaryReportLinks';
+import { useRealtimeCollaboration } from '@/hooks/useRealtimeCollaboration';
+import { CollaborationPresenceBar } from '@/components/CollaborationPresenceBar';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportStructureEditor } from '@/components/report/ReportStructureEditor';
 import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
