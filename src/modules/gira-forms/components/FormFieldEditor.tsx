@@ -73,6 +73,7 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     setType(field.type as FieldType);
     setOptions(field.options || []);
     setConditionGroup(parseLegacyCondition(field.settings?.condition));
+    setAllowOther(!!(field.settings?.allowOther));
   }, [field]);
 
   const getIcon = () => {
