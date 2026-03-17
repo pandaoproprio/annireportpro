@@ -27,8 +27,9 @@ import { Slider } from '@/components/ui/slider';
 // ── Custom Image NodeView with caption + resize ──
 const InlineImageView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected, deleteNode }) => {
   const [editing, setEditing] = useState(false);
-  const caption = node.attrs['data-caption'] || '';
-  const widthPct = node.attrs['data-width'] || 100;
+  const attrs = node.attrs as Record<string, any>;
+  const caption = attrs['data-caption'] || '';
+  const widthPct = attrs['data-width'] || 100;
 
   return (
     <NodeViewWrapper className="my-3">
@@ -40,8 +41,8 @@ const InlineImageView: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
         onClick={() => setEditing(true)}
       >
         <img
-          src={node.attrs.src}
-          alt={node.attrs.alt || caption || 'Imagem'}
+          src={attrs.src}
+          alt={attrs.alt || caption || 'Imagem'}
           style={{ width: `${widthPct}%`, margin: '0 auto' }}
           className="rounded-md max-w-full block mx-auto"
           draggable={false}
@@ -109,9 +110,10 @@ const InlineImageView: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
 // ── Custom Gallery NodeView ──
 const GalleryView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected, deleteNode }) => {
   const [editing, setEditing] = useState(false);
-  const images: Array<{ src: string; caption: string; widthPct?: number; heightPx?: number }> = node.attrs.images || [];
-  const columns = node.attrs.columns || 2;
-  const groupCaption = node.attrs.groupCaption || '';
+  const gAttrs = node.attrs as Record<string, any>;
+  const images: Array<{ src: string; caption: string; widthPct?: number; heightPx?: number }> = gAttrs.images || [];
+  const columns = gAttrs.columns || 2;
+  const groupCaption = gAttrs.groupCaption || '';
 
   const updateImage = (index: number, updates: Partial<{ caption: string; widthPct: number; heightPx: number }>) => {
     const updated = [...images];

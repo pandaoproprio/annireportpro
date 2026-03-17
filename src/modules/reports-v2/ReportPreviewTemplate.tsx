@@ -60,18 +60,21 @@ export function generateReportHtml(data: ReportV2Data): string {
 <head>
   <meta charset="UTF-8"/>
   <style>
-    @page { size: A4; margin: 20mm; }
+    @page { size: A4; margin: 30mm 20mm 20mm 30mm; }
     * { box-sizing: border-box; }
     body {
       font-family: "Times New Roman", Times, serif;
+      font-size: 12pt;
+      line-height: 1.5;
       color: #000;
       margin: 0;
       padding: 0;
     }
+    p { text-align: justify; text-indent: 1.25cm; }
     .page {
       width: 210mm;
       min-height: 297mm;
-      padding: 20mm;
+      padding: 30mm 20mm 20mm 30mm;
     }
   </style>
 </head>
