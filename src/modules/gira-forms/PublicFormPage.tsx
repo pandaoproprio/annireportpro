@@ -99,14 +99,19 @@ export default function PublicFormPage() {
       let data: any;
       let error: any;
       if (isUuid) {
-        const res = await supabase.from('forms').select('*').eq('status', 'ativo').eq('id', id!).single();
+        const res = await supabase.from('forms').select('*').eq('id', id!).single();
         data = res.data; error = res.error;
       } else {
-        const res = await supabase.from('forms').select('*').eq('status', 'ativo').filter('public_slug', 'eq', id!).single();
+        const res = await supabase.from('forms').select('*').filter('public_slug', 'eq', id!).single();
         data = res.data; error = res.error;
       }
       if (error) throw error;
-      return data as unknown as Form;
+      const form = data as unknown as Form;
+      // Auto-close: if closes_at is in the past and still active, treat as encerrado
+      if (form.closes_at && new Date(form.closes_at) <= new Date() && form.status === 'ativo') {
+        form.status = 'encerrado';
+      }
+      return form;
     },
     enabled: !!id,
   });
