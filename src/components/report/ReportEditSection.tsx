@@ -436,9 +436,19 @@ const SectionContent: React.FC<ExtProps> = (props) => {
   }
 };
 
-const ObjectSection: React.FC<Props> = ({ objectText, setObjectText }) => (
-  <div className="space-y-2">
-    <Label>Texto do Objeto</Label>
+const ObjectSection: React.FC<ExtProps> = ({ objectText, setObjectText, activities, formatActivityDate, activitiesExpanded, projectName, projectObject }) => (
+  <div className="space-y-4">
+    <ActivitiesPanel
+      activities={activities}
+      expanded={activitiesExpanded}
+      formatActivityDate={formatActivityDate}
+      label="atividade(s) registradas no Diário de Bordo"
+      onInsert={(text) => setObjectText(objectText ? objectText + '\n' + text : text)}
+    />
+    <div className="flex items-center justify-between">
+      <Label>Texto do Objeto</Label>
+      <AiTextToolbar text={objectText} onResult={setObjectText} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
+    </div>
     <Textarea rows={4} value={objectText} onChange={e => setObjectText(e.target.value)} placeholder="Descrição do objeto do termo de fomento..." />
   </div>
 );
