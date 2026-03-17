@@ -107,45 +107,80 @@ export const useReportState = () => {
     }
   }, [project]);
 
+  // ── Auto-save debounce ──
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isSaving = useRef(false);
+  const autoSaveGeneration = useRef(0);
+
+  const buildReportPayload = useCallback(() => ({
+    objectOverride: objectText,
+    executiveSummary: summary,
+    goalNarratives,
+    goalPhotos,
+    otherActionsText: otherActionsNarrative,
+    otherActionsPhotos,
+    communicationText: communicationNarrative,
+    communicationPhotos,
+    satisfactionText: satisfaction,
+    futureActionsText: futureActions,
+    expenses,
+    links: {
+      attendanceList: links.attendance,
+      registrationList: links.registration,
+      mediaFolder: links.media,
+      attendanceFileName: linkFileNames.attendance,
+      registrationFileName: linkFileNames.registration,
+      mediaFileName: linkFileNames.media,
+      attendanceDisplayName: linkDisplayNames.attendance,
+      registrationDisplayName: linkDisplayNames.registration,
+      mediaDisplayName: linkDisplayNames.media,
+    },
+    sections: sectionManager.sections,
+    sectionPhotos: fileUploader.sectionPhotos,
+    sectionDocs: fileUploader.sectionDocs,
+    photoMetadata,
+    pageLayouts,
+    sectionPhotoGroups,
+    selectedVideoUrls,
+  }), [objectText, summary, goalNarratives, goalPhotos, otherActionsNarrative, otherActionsPhotos,
+    communicationNarrative, communicationPhotos, satisfaction, futureActions, expenses,
+    links, linkFileNames, linkDisplayNames, sectionManager.sections, fileUploader.sectionPhotos,
+    fileUploader.sectionDocs, photoMetadata, pageLayouts, sectionPhotoGroups, selectedVideoUrls]);
+
   const saveReportData = async (showToast = true) => {
     try {
-      await updateReportData({
-        objectOverride: objectText,
-        executiveSummary: summary,
-        goalNarratives,
-        goalPhotos,
-        otherActionsText: otherActionsNarrative,
-        otherActionsPhotos,
-        communicationText: communicationNarrative,
-        communicationPhotos,
-        satisfactionText: satisfaction,
-        futureActionsText: futureActions,
-        expenses,
-        links: {
-          attendanceList: links.attendance,
-          registrationList: links.registration,
-          mediaFolder: links.media,
-          attendanceFileName: linkFileNames.attendance,
-          registrationFileName: linkFileNames.registration,
-          mediaFileName: linkFileNames.media,
-          attendanceDisplayName: linkDisplayNames.attendance,
-          registrationDisplayName: linkDisplayNames.registration,
-          mediaDisplayName: linkDisplayNames.media,
-        },
-        sections: sectionManager.sections,
-        sectionPhotos: fileUploader.sectionPhotos,
-        sectionDocs: fileUploader.sectionDocs,
-        photoMetadata,
-        pageLayouts,
-        sectionPhotoGroups,
-        selectedVideoUrls,
-      } as any);
+      await updateReportData(buildReportPayload() as any);
       if (showToast) toast.success('Rascunho salvo com sucesso!');
     } catch (error) {
       console.error('Erro ao salvar rascunho do relatório:', error);
       toast.error('Erro ao salvar rascunho. Tente novamente.');
     }
   };
+
+  // Auto-save: debounce 3s after any content change
+  useEffect(() => {
+    if (!initializedProjectId.current || initializedProjectId.current !== project?.id) return;
+    autoSaveGeneration.current += 1;
+    const gen = autoSaveGeneration.current;
+
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      if (gen !== autoSaveGeneration.current) return; // stale
+      if (isSaving.current) return;
+      isSaving.current = true;
+      try {
+        await updateReportData(buildReportPayload() as any);
+      } catch (e) {
+        console.error('Auto-save falhou:', e);
+      } finally {
+        isSaving.current = false;
+      }
+    }, 3000);
+
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [buildReportPayload, project?.id]);
 
   // Expense management
   const addExpense = () => setExpenses([...expenses, { id: Date.now().toString(), itemName: '', description: '', image: '' }]);
