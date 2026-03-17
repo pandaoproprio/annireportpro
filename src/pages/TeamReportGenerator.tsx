@@ -111,6 +111,12 @@ export const TeamReportGenerator: React.FC = () => {
     })
   );
 
+  // Realtime collaboration
+  const collab = useRealtimeCollaboration({
+    channelKey: `report_team:${currentDraftId || project?.id || 'none'}`,
+    enabled: !!project?.id,
+  });
+
   // Reset form
   const resetForm = () => {
     setCurrentDraftId(undefined);
