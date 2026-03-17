@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTeamReports, TeamReportDraft } from '@/hooks/useTeamReports';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
+import { useRealtimeCollaboration } from '@/hooks/useRealtimeCollaboration';
+import { CollaborationPresenceBar } from '@/components/CollaborationPresenceBar';
 import { TeamReport, PhotoWithCaption, PhotoGroup } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
