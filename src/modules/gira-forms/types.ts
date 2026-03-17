@@ -73,6 +73,8 @@ export interface FormDesignSettings {
   successMessage?: string;
 }
 
+export type FormStatus = 'ativo' | 'inativo' | 'pausado' | 'encerrado';
+
 export interface Form {
   id: string;
   project_id: string | null;
@@ -80,8 +82,9 @@ export interface Form {
   title: string;
   description: string;
   category: string;
-  status: 'ativo' | 'inativo';
+  status: FormStatus;
   settings: FormDesignSettings;
+  closes_at: string | null;
   created_at: string;
   updated_at: string;
 }

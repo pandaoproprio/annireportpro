@@ -480,6 +480,48 @@ export default function PublicFormPage() {
     );
   }
 
+  if (form.status === 'pausado') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#f59e0b' }} />
+            <h2 className="text-xl font-semibold">Formulário pausado</h2>
+            <p className="text-sm" style={{ color: '#666' }}>Este formulário está temporariamente indisponível.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (form.status === 'encerrado') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#ef4444' }} />
+            <h2 className="text-xl font-semibold">Inscrições encerradas</h2>
+            <p className="text-sm" style={{ color: '#666' }}>As inscrições para este formulário já foram encerradas.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (form.status !== 'ativo') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#999' }} />
+            <h2 className="text-xl font-semibold">Formulário indisponível</h2>
+            <p className="text-sm" style={{ color: '#666' }}>Este formulário não está mais disponível.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const successMsg = design.successMessage || 'Obrigado por preencher o formulário. Suas informações foram registradas com segurança.';
 
   if (submitted) {
