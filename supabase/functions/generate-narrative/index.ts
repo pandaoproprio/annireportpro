@@ -386,7 +386,7 @@ Escreva 2-3 parágrafos em tom institucional do CEAP, com densidade narrativa, a
           { role: "user", content: userPrompt },
         ],
         temperature: mode === "correct" ? 0.3 : 0.7,
-        max_tokens: mode === "correct" ? 2000 : 1500,
+        max_tokens: mode === "full_report" ? 4000 : (mode === "correct" ? 2000 : 1500),
       }),
     });
 
@@ -410,6 +410,24 @@ Escreva 2-3 parágrafos em tom institucional do CEAP, com densidade narrativa, a
 
     const data = await response.json();
     const resultText = data.choices?.[0]?.message?.content || "";
+
+    if (mode === "full_report") {
+      // Parse JSON response for full report
+      try {
+        // Strip markdown code blocks if present
+        const cleaned = resultText.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+        const parsed = JSON.parse(cleaned);
+        return new Response(JSON.stringify({ sections: parsed }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      } catch (parseErr) {
+        console.error("Failed to parse full_report JSON:", parseErr, "Raw:", resultText);
+        return new Response(JSON.stringify({ error: "Falha ao processar resposta da IA. Tente novamente." }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
 
     return new Response(JSON.stringify({ text: resultText }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
