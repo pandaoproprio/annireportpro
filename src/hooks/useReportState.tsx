@@ -439,6 +439,8 @@ export const useReportState = () => {
     sectionPhotoGroups, setSectionPhotoGroups,
     selectedVideoUrls, setSelectedVideoUrls,
     saveReportData,
+    setBroadcastCallback,
+    applyRemoteData,
     moveSection: sectionManager.moveSection,
     toggleVisibility: sectionManager.toggleVisibility,
     updateSectionTitle: sectionManager.updateSectionTitle,
