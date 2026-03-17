@@ -27,8 +27,9 @@ import { Slider } from '@/components/ui/slider';
 // ── Custom Image NodeView with caption + resize ──
 const InlineImageView: React.FC<NodeViewProps> = ({ node, updateAttributes, selected, deleteNode }) => {
   const [editing, setEditing] = useState(false);
-  const caption = node.attrs['data-caption'] || '';
-  const widthPct = node.attrs['data-width'] || 100;
+  const attrs = node.attrs as Record<string, any>;
+  const caption = attrs['data-caption'] || '';
+  const widthPct = attrs['data-width'] || 100;
 
   return (
     <NodeViewWrapper className="my-3">
