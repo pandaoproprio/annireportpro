@@ -5,6 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTeamReports, TeamReportDraft } from '@/hooks/useTeamReports';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
+import { useRealtimeCollaboration } from '@/hooks/useRealtimeCollaboration';
+import { CollaborationPresenceBar } from '@/components/CollaborationPresenceBar';
 import { TeamReport, PhotoWithCaption, PhotoGroup } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,6 +110,12 @@ export const TeamReportGenerator: React.FC = () => {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
+
+  // Realtime collaboration
+  const collab = useRealtimeCollaboration({
+    channelKey: `report_team:${currentDraftId || project?.id || 'none'}`,
+    enabled: !!project?.id,
+  });
 
   // Reset form
   const resetForm = () => {
@@ -641,6 +649,10 @@ export const TeamReportGenerator: React.FC = () => {
   if (!isPreview) {
     return (
       <div className="max-w-4xl mx-auto space-y-6">
+        <CollaborationPresenceBar
+          collaborators={collab.collaborators}
+          remoteUpdateCount={collab.remoteUpdateCount}
+        />
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" size="sm" onClick={() => setShowDraftsList(true)}>

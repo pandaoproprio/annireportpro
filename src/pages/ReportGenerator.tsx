@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { FileEdit, Link2, Sparkles, Loader2, Bot, Cpu, Zap } from 'lucide-react';
@@ -11,6 +11,8 @@ import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { useReportState } from '@/hooks/useReportState';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import { useDiaryReportLinks } from '@/hooks/useDiaryReportLinks';
+import { useRealtimeCollaboration } from '@/hooks/useRealtimeCollaboration';
+import { CollaborationPresenceBar } from '@/components/CollaborationPresenceBar';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportStructureEditor } from '@/components/report/ReportStructureEditor';
 import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
@@ -39,7 +41,8 @@ export const ReportGenerator: React.FC = () => {
     photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     pageLayouts, setPageLayouts,
     sectionPhotoGroups, setSectionPhotoGroups,
-    saveReportData, moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
+    saveReportData, setBroadcastCallback, applyRemoteData,
+    moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection, pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     addExpense, updateExpense, removeExpense,
     handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, reorderGoalPhotos, handleExpenseImageUpload,
@@ -53,6 +56,23 @@ export const ReportGenerator: React.FC = () => {
   // Visual config scoped to this project + report_object
   const vc = useReportVisualConfig(project?.id, 'report_object');
   const diaryLinks = useDiaryReportLinks(project?.id, 'report_object');
+
+  // Realtime collaboration
+  const collab = useRealtimeCollaboration({
+    channelKey: `report_object:${project?.id || 'none'}`,
+    onRemoteUpdate: (data) => {
+      applyRemoteData(data);
+      toast.info('Relatório atualizado por outro colaborador', { duration: 2000 });
+    },
+    enabled: !!project?.id,
+  });
+
+  // Wire broadcast callback
+  useEffect(() => {
+    setBroadcastCallback(collab.broadcastUpdate);
+    return () => setBroadcastCallback(null);
+  }, [collab.broadcastUpdate, setBroadcastCallback]);
+
   const [showDiaryLinkDialog, setShowDiaryLinkDialog] = useState(false);
   const [isGeneratingFullReport, setIsGeneratingFullReport] = useState(false);
   const [generatingMode, setGeneratingMode] = useState<string | null>(null);
@@ -310,6 +330,11 @@ export const ReportGenerator: React.FC = () => {
 
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
+          {/* Collaboration Presence */}
+          <CollaborationPresenceBar
+            collaborators={collab.collaborators}
+            remoteUpdateCount={collab.remoteUpdateCount}
+          />
           {/* Diary Link Button */}
           <div className="flex justify-end gap-2 flex-wrap">
             <DropdownMenu>

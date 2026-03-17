@@ -157,6 +157,52 @@ export const useReportState = () => {
     }
   };
 
+  // ── Collaboration broadcast callback ──
+  const broadcastRef = useRef<((data: any) => void) | null>(null);
+  const setBroadcastCallback = useCallback((fn: ((data: any) => void) | null) => {
+    broadcastRef.current = fn;
+  }, []);
+
+  /** Apply remote data from another collaborator */
+  const applyRemoteData = useCallback((rd: any) => {
+    if (!rd) return;
+    if (rd.objectOverride !== undefined) setObjectText(rd.objectOverride);
+    if (rd.executiveSummary !== undefined) setSummary(rd.executiveSummary);
+    if (rd.goalNarratives) setGoalNarratives(rd.goalNarratives);
+    if (rd.goalPhotos) setGoalPhotos(rd.goalPhotos);
+    if (rd.otherActionsText !== undefined) setOtherActionsNarrative(rd.otherActionsText);
+    if (rd.otherActionsPhotos) setOtherActionsPhotos(rd.otherActionsPhotos);
+    if (rd.communicationText !== undefined) setCommunicationNarrative(rd.communicationText);
+    if (rd.communicationPhotos) setCommunicationPhotos(rd.communicationPhotos);
+    if (rd.satisfactionText !== undefined) setSatisfaction(rd.satisfactionText);
+    if (rd.futureActionsText !== undefined) setFutureActions(rd.futureActionsText);
+    if (rd.expenses) setExpenses(rd.expenses);
+    if (rd.links) {
+      setLinks({
+        attendance: rd.links.attendanceList || '',
+        registration: rd.links.registrationList || '',
+        media: rd.links.mediaFolder || '',
+      });
+      setLinkFileNames({
+        attendance: rd.links.attendanceFileName || '',
+        registration: rd.links.registrationFileName || '',
+        media: rd.links.mediaFileName || '',
+      });
+      setLinkDisplayNames({
+        attendance: rd.links.attendanceDisplayName || '',
+        registration: rd.links.registrationDisplayName || '',
+        media: rd.links.mediaDisplayName || '',
+      });
+    }
+    if (rd.sections) sectionManager.setSections(rd.sections);
+    if (rd.sectionPhotos) fileUploader.setSectionPhotos(rd.sectionPhotos);
+    if (rd.sectionDocs) fileUploader.setSectionDocs(rd.sectionDocs);
+    if (rd.photoMetadata) setPhotoMetadata(rd.photoMetadata);
+    if (rd.pageLayouts) setPageLayouts(rd.pageLayouts);
+    if (rd.sectionPhotoGroups) setSectionPhotoGroups(rd.sectionPhotoGroups);
+    if (rd.selectedVideoUrls) setSelectedVideoUrls(rd.selectedVideoUrls);
+  }, []);
+
   // Auto-save: debounce 3s after any content change
   useEffect(() => {
     if (!initializedProjectId.current || initializedProjectId.current !== project?.id) return;
@@ -169,7 +215,10 @@ export const useReportState = () => {
       if (isSaving.current) return;
       isSaving.current = true;
       try {
-        await updateReportData(buildReportPayload() as any);
+        const payload = buildReportPayload();
+        await updateReportData(payload as any);
+        // Broadcast to collaborators
+        broadcastRef.current?.(payload);
       } catch (e) {
         console.error('Auto-save falhou:', e);
       } finally {
@@ -390,6 +439,8 @@ export const useReportState = () => {
     sectionPhotoGroups, setSectionPhotoGroups,
     selectedVideoUrls, setSelectedVideoUrls,
     saveReportData,
+    setBroadcastCallback,
+    applyRemoteData,
     moveSection: sectionManager.moveSection,
     toggleVisibility: sectionManager.toggleVisibility,
     updateSectionTitle: sectionManager.updateSectionTitle,

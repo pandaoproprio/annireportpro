@@ -12,6 +12,8 @@ import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useJustificationReportState } from '@/hooks/useJustificationReportState';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
+import { useRealtimeCollaboration } from '@/hooks/useRealtimeCollaboration';
+import { CollaborationPresenceBar } from '@/components/CollaborationPresenceBar';
 import { ReportToolbar } from '@/components/report/ReportToolbar';
 import { ReportStructureEditor } from '@/components/report/ReportStructureEditor';
 import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfigEditor';
@@ -43,6 +45,12 @@ export const JustificationReportGenerator: React.FC = () => {
     handleSectionPhotoUpload, removeSectionPhoto,
     handleSectionDocUpload, removeSectionDoc,
   } = state;
+
+  // Realtime collaboration
+  const collab = useRealtimeCollaboration({
+    channelKey: `justification:${currentDraftId || project?.id || 'none'}`,
+    enabled: !!project?.id,
+  });
 
   // Auto-load draft from URL query param (switch project if needed)
   useEffect(() => {
@@ -177,6 +185,10 @@ export const JustificationReportGenerator: React.FC = () => {
 
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
+          <CollaborationPresenceBar
+            collaborators={collab.collaborators}
+            remoteUpdateCount={collab.remoteUpdateCount}
+          />
           <ReportStructureEditor
             sections={sections}
             moveSection={moveSection}
