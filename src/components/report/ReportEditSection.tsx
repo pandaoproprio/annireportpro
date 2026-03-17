@@ -947,8 +947,15 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
 });
 LinksSection.displayName = 'LinksSection';
 
-const CustomSection: React.FC<Props> = ({ section, index, updateCustomContent, projectName, projectObject }) => (
+const CustomSection: React.FC<ExtProps> = ({ section, index, updateCustomContent, projectName, projectObject, activities, formatActivityDate, activitiesExpanded }) => (
   <div className="space-y-4">
+    <ActivitiesPanel
+      activities={activities}
+      expanded={activitiesExpanded}
+      formatActivityDate={formatActivityDate}
+      label="atividade(s) registradas no Diário de Bordo"
+      onInsert={(text) => updateCustomContent(index, (section.content || '') + '\n' + text)}
+    />
     <div className="flex items-center justify-between">
       <Label>Conteúdo</Label>
       <AiTextToolbar text={section.content || ''} onResult={(text) => updateCustomContent(index, text)} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
