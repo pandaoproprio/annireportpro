@@ -48,6 +48,7 @@ export default function FormBuilderPage() {
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [localFields, setLocalFields] = useState<FormField[]>([]);
   const [activeTab, setActiveTab] = useState('editor');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   React.useEffect(() => {
     if (form) {
