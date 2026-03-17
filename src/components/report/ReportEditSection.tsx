@@ -1,4 +1,18 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  useSortable,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, PhotoSize, PhotoLayout, PhotoGroup } from '@/types';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { PageLayout } from '@/types/imageLayout';
@@ -10,7 +24,7 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus, Check, ClipboardPaste, BookImage, Video, ExternalLink } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus, Check, ClipboardPaste, BookImage, Video, ExternalLink, GripVertical } from 'lucide-react';
 import { ActivityCountBadge } from '@/components/report/ActivityCountBadge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageLayoutEditor } from '@/components/report/ImageLayoutEditor';
@@ -89,9 +103,11 @@ interface Props {
   handleDocumentUpload: (e: React.ChangeEvent<HTMLInputElement>, linkField: 'attendance' | 'registration' | 'media') => void;
   handleSectionPhotoUpload: (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => void;
   removeSectionPhoto: (sectionKey: string, index: number) => void;
+  reorderSectionPhotos: (sectionKey: string, oldIndex: number, newIndex: number) => void;
   handleSectionDocUpload: (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => void;
   removeSectionDoc: (sectionKey: string, index: number) => void;
   insertDiaryPhotos: (sectionKey: string, urls: string[], captions: Record<string, string>) => void;
+  reorderGoalPhotos: (goalId: string, oldIndex: number, newIndex: number) => void;
 }
 
 // ── Photo card with caption, width slider, and edit button ──
@@ -153,6 +169,33 @@ const PhotoCard: React.FC<{
   );
 };
 
+// ── Sortable wrapper for PhotoCard (drag to reorder) ──
+const SortablePhotoCard: React.FC<{
+  id: string;
+  children: React.ReactNode;
+}> = ({ id, children }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className={`relative ${isDragging ? 'ring-2 ring-primary rounded-lg' : ''}`}>
+      <button
+        {...attributes}
+        {...listeners}
+        className="absolute top-1 left-1 z-20 p-1 bg-background/80 rounded cursor-grab active:cursor-grabbing touch-none"
+        title="Arraste para reordenar"
+      >
+        <GripVertical className="w-4 h-4 text-muted-foreground" />
+      </button>
+      {children}
+    </div>
+  );
+};
+
+
 export const ReportEditSection: React.FC<Props> = (props) => {
   const { section, index } = props;
   const [activitiesExpanded, setActivitiesExpanded] = useState(false);
@@ -173,7 +216,7 @@ export const ReportEditSection: React.FC<Props> = (props) => {
   );
 };
 
-const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts, sectionPhotoGroups, setSectionPhotoGroups, activities, insertDiaryPhotos }) => {
+const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, reorderSectionPhotos, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts, sectionPhotoGroups, setSectionPhotoGroups, activities, insertDiaryPhotos }) => {
   const sectionKey = section.type === 'custom' ? section.id : section.key;
   const photos = sectionPhotos[sectionKey] || [];
   const docs = sectionDocs[sectionKey] || [];
@@ -182,6 +225,16 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
   const [showLayoutEditor, setShowLayoutEditor] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [diaryPickerOpen, setDiaryPickerOpen] = useState(false);
+  const sectionSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sectionPhotoIds = useMemo(() => photos.map((_, i) => `section-${sectionKey}-photo-${i}`), [photos.length, sectionKey]);
+
+  const handleSectionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sectionPhotoIds.indexOf(active.id as string);
+    const newIndex = sectionPhotoIds.indexOf(over.id as string);
+    if (oldIndex !== -1 && newIndex !== -1) reorderSectionPhotos(sectionKey, oldIndex, newIndex);
+  };
 
   const handleDiaryInsert = (diaryPhotos: { url: string; caption: string; activityDate: string }[]) => {
     const newUrls = diaryPhotos.map(p => p.url).filter(url => !photos.includes(url));
@@ -288,40 +341,46 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
             <Button variant="outline" size="sm" className="mt-1" onClick={() => setShowLayoutEditor(true)}>
               <LayoutGrid className="w-4 h-4 mr-2" /> Editor de Layout
             </Button>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
-              {photos.map((photo, pIdx) => {
-                const inGroup = getPhotoGroupId(pIdx);
-                return (
-                  <div key={pIdx} className="relative">
-                    {!inGroup && photos.length >= 2 && (
-                      <div className="absolute top-2 right-8 z-10">
-                        <Checkbox
-                          checked={selectedIndices.has(pIdx)}
-                          onCheckedChange={() => toggleSelect(pIdx)}
-                          className="bg-background/80 border-2"
-                        />
-                      </div>
-                    )}
-                    {inGroup && (
-                      <div className="absolute inset-0 bg-primary/10 rounded-lg z-10 pointer-events-none flex items-center justify-center">
-                        <span className="text-xs font-medium text-primary bg-background/90 px-2 py-1 rounded">Em grupo</span>
-                      </div>
-                    )}
-                    <PhotoCard
-                      photo={photo}
-                      index={pIdx}
-                      metaKey={sectionKey}
-                      meta={metas[pIdx]}
-                      projectId={projectId}
-                      updatePhotoCaption={updatePhotoCaption}
-                      updatePhotoSize={updatePhotoSize}
-                      onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
-                      onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
-                    />
-                  </div>
-                );
-              })}
-            </div>
+            <DndContext sensors={sectionSensors} collisionDetection={closestCenter} onDragEnd={handleSectionDragEnd}>
+              <SortableContext items={sectionPhotoIds} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mt-2">
+                  {photos.map((photo, pIdx) => {
+                    const inGroup = getPhotoGroupId(pIdx);
+                    return (
+                      <SortablePhotoCard key={sectionPhotoIds[pIdx]} id={sectionPhotoIds[pIdx]}>
+                        <div className="relative">
+                          {!inGroup && photos.length >= 2 && (
+                            <div className="absolute top-2 right-8 z-10">
+                              <Checkbox
+                                checked={selectedIndices.has(pIdx)}
+                                onCheckedChange={() => toggleSelect(pIdx)}
+                                className="bg-background/80 border-2"
+                              />
+                            </div>
+                          )}
+                          {inGroup && (
+                            <div className="absolute inset-0 bg-primary/10 rounded-lg z-10 pointer-events-none flex items-center justify-center">
+                              <span className="text-xs font-medium text-primary bg-background/90 px-2 py-1 rounded">Em grupo</span>
+                            </div>
+                          )}
+                          <PhotoCard
+                            photo={photo}
+                            index={pIdx}
+                            metaKey={sectionKey}
+                            meta={metas[pIdx]}
+                            projectId={projectId}
+                            updatePhotoCaption={updatePhotoCaption}
+                            updatePhotoSize={updatePhotoSize}
+                            onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
+                            onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
+                          />
+                        </div>
+                      </SortablePhotoCard>
+                    );
+                  })}
+                </div>
+              </SortableContext>
+            </DndContext>
           </>
         )}
         {showLayoutEditor && (
@@ -570,10 +629,13 @@ const SummarySection: React.FC<ExtProps> = ({ summary, setSummary, activities, p
 
 const GoalsSection: React.FC<ExtProps> = ({
   goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject, projectId,
-  handleGoalPhotoUpload, removeGoalPhoto, getActivitiesByGoal, formatActivityDate,
+  handleGoalPhotoUpload, removeGoalPhoto, reorderGoalPhotos, getActivitiesByGoal, formatActivityDate,
   photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
   activitiesExpanded, activities,
-}) => (
+}) => {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  return (
   <div className="space-y-6">
     <div className="flex flex-wrap gap-2">
       <AttendeesByGoalInline activities={activities} goals={goals} getActivitiesByGoal={getActivitiesByGoal} />
@@ -583,6 +645,16 @@ const GoalsSection: React.FC<ExtProps> = ({
       const goalActs = getActivitiesByGoal(goal.id);
       const photos = goalPhotos[goal.id] || [];
       const metas = photoMetadata[goal.id] || [];
+      const photoIds = photos.map((_, i) => `goal-${goal.id}-photo-${i}`);
+
+      const handleGoalDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        const oldIndex = photoIds.indexOf(active.id as string);
+        const newIndex = photoIds.indexOf(over.id as string);
+        if (oldIndex !== -1 && newIndex !== -1) reorderGoalPhotos(goal.id, oldIndex, newIndex);
+      };
+
       return (
         <div key={goal.id} className="p-4 border rounded-lg bg-muted/50">
           <div className="flex items-center gap-2 mb-2">
@@ -611,28 +683,34 @@ const GoalsSection: React.FC<ExtProps> = ({
           <Label className="flex items-center gap-2 mt-4"><ImageIcon className="w-4 h-4" /> Fotos da Meta</Label>
           <Input type="file" accept="image/*" multiple onChange={e => handleGoalPhotoUpload(e, goal.id)} className="mb-2" />
           {photos.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {photos.map((photo, pIdx) => (
-                <PhotoCard
-                  key={pIdx}
-                  photo={photo}
-                  index={pIdx}
-                  metaKey={goal.id}
-                  meta={metas[pIdx]}
-                  projectId={projectId}
-                  updatePhotoCaption={updatePhotoCaption}
-                  updatePhotoSize={updatePhotoSize}
-                  onReplace={(newUrl) => replacePhotoUrl(goal.id, pIdx, newUrl, null, goal.id)}
-                  onRemove={() => removeGoalPhoto(goal.id, pIdx)}
-                />
-              ))}
-            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGoalDragEnd}>
+              <SortableContext items={photoIds} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {photos.map((photo, pIdx) => (
+                    <SortablePhotoCard key={photoIds[pIdx]} id={photoIds[pIdx]}>
+                      <PhotoCard
+                        photo={photo}
+                        index={pIdx}
+                        metaKey={goal.id}
+                        meta={metas[pIdx]}
+                        projectId={projectId}
+                        updatePhotoCaption={updatePhotoCaption}
+                        updatePhotoSize={updatePhotoSize}
+                        onReplace={(newUrl) => replacePhotoUrl(goal.id, pIdx, newUrl, null, goal.id)}
+                        onRemove={() => removeGoalPhoto(goal.id, pIdx)}
+                      />
+                    </SortablePhotoCard>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       );
     })}
   </div>
-);
+  );
+};
 
 const OtherSection: React.FC<ExtProps> = ({
   otherActionsNarrative, setOtherActionsNarrative,

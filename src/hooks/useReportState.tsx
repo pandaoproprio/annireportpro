@@ -203,6 +203,21 @@ export const useReportState = () => {
     setGoalPhotos(prev => ({ ...prev, [goalId]: (prev[goalId] || []).filter((_, i) => i !== index) }));
   };
 
+  const reorderGoalPhotos = (goalId: string, oldIndex: number, newIndex: number) => {
+    setGoalPhotos(prev => {
+      const photos = [...(prev[goalId] || [])];
+      const [moved] = photos.splice(oldIndex, 1);
+      photos.splice(newIndex, 0, moved);
+      return { ...prev, [goalId]: photos };
+    });
+    setPhotoMetadata(prev => {
+      const metas = [...(prev[goalId] || [])];
+      const [moved] = metas.splice(oldIndex, 1);
+      metas.splice(newIndex, 0, moved);
+      return { ...prev, [goalId]: metas };
+    });
+  };
+
   const handleExpenseImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, expenseId: string) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -350,10 +365,21 @@ export const useReportState = () => {
     confirmRemoveSection: sectionManager.confirmRemoveSection,
     cancelRemoveSection: sectionManager.cancelRemoveSection,
     addExpense, updateExpense, removeExpense,
-    handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, handleExpenseImageUpload,
+    handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, reorderGoalPhotos, handleExpenseImageUpload,
     handleDocumentUpload,
     handleSectionPhotoUpload: fileUploader.handleSectionPhotoUpload,
     removeSectionPhoto: fileUploader.removeSectionPhoto,
+    reorderSectionPhotos: (sectionKey: string, oldIndex: number, newIndex: number) => {
+      fileUploader.reorderSectionPhotos(sectionKey, oldIndex, newIndex);
+      setPhotoMetadata(prev => {
+        const metas = [...(prev[sectionKey] || [])];
+        if (metas.length > 0) {
+          const [moved] = metas.splice(oldIndex, 1);
+          metas.splice(newIndex, 0, moved);
+        }
+        return { ...prev, [sectionKey]: metas };
+      });
+    },
     handleSectionDocUpload: fileUploader.handleSectionDocUpload,
     removeSectionDoc: fileUploader.removeSectionDoc,
     insertDiaryPhotos,
