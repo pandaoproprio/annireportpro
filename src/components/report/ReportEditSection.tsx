@@ -373,11 +373,15 @@ const getActivityCountForSection = (
   getOtherActivities: () => Activity[],
 ): number | undefined => {
   switch (sectionKey) {
+    case 'object': return activities.length;
     case 'summary': return activities.length;
     case 'goals': return goals.reduce((sum, g) => sum + getActivitiesByGoal(g.id).length, 0);
     case 'other': return getOtherActivities().length;
     case 'communication': return getCommunicationActivities().length;
-    default: return undefined; // object, satisfaction, future, expenses, links, custom
+    case 'satisfaction': return activities.length;
+    case 'future': return activities.length;
+    case 'custom': return activities.length;
+    default: return undefined; // expenses, links
   }
 };
 
