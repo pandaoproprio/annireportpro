@@ -330,6 +330,11 @@ export const ReportGenerator: React.FC = () => {
 
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
+          {/* Collaboration Presence */}
+          <CollaborationPresenceBar
+            collaborators={collab.collaborators}
+            remoteUpdateCount={collab.remoteUpdateCount}
+          />
           {/* Diary Link Button */}
           <div className="flex justify-end gap-2 flex-wrap">
             <DropdownMenu>
