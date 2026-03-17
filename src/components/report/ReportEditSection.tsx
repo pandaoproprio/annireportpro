@@ -699,8 +699,15 @@ const SatisfactionSection: React.FC<ExtProps> = ({ satisfaction, setSatisfaction
   </div>
 );
 
-const FutureSection: React.FC<Props> = ({ futureActions, setFutureActions, projectName, projectObject }) => (
+const FutureSection: React.FC<ExtProps> = ({ futureActions, setFutureActions, projectName, projectObject, activities, formatActivityDate, activitiesExpanded }) => (
   <div className="space-y-4">
+    <ActivitiesPanel
+      activities={activities}
+      expanded={activitiesExpanded}
+      formatActivityDate={formatActivityDate}
+      label="atividade(s) registradas no Diário de Bordo"
+      onInsert={(text) => setFutureActions(futureActions ? futureActions + '\n' + text : text)}
+    />
     <div className="flex items-center justify-between">
       <Label>Ações Futuras</Label>
       <AiTextToolbar text={futureActions} onResult={setFutureActions} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
