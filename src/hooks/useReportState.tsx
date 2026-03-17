@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta, PhotoGroup } from '@/types';
 import { PageLayout } from '@/types/imageLayout';
