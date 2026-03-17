@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,9 +25,9 @@ serve(async (req) => {
     const attachments = await Promise.all(
       fileUrls.map(async (f: { url: string; filename: string }) => {
         const res = await fetch(f.url);
-        const buf = await res.arrayBuffer();
-        const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-        return { filename: f.filename, content: base64 };
+        const buf = new Uint8Array(await res.arrayBuffer());
+        const content = base64Encode(buf);
+        return { filename: f.filename, content };
       })
     );
 
