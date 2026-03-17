@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useForms, useFormFields } from './hooks/useForms';
 import { FormFieldEditor } from './components/FormFieldEditor';
+import { ImportFieldsDialog } from './components/ImportFieldsDialog';
 import { FormResponsesTab } from './components/FormResponsesTab';
 import { FormDashboardTab } from './components/FormDashboardTab';
 import { FormDesignEditor } from './components/FormDesignEditor';
@@ -16,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink, Download } from 'lucide-react';
 import { FIELD_TYPE_LABELS, CATEGORIES, type Form, type FormField, type FieldType, type FormDesignSettings, type FormStatus } from './types';
 import { motion, Reorder } from 'framer-motion';
 import { toast } from 'sonner';
@@ -47,6 +48,7 @@ export default function FormBuilderPage() {
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [localFields, setLocalFields] = useState<FormField[]>([]);
   const [activeTab, setActiveTab] = useState('editor');
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
 
   React.useEffect(() => {
     if (form) {
@@ -286,7 +288,30 @@ export default function FormBuilderPage() {
                 ))}
               </div>
 
+              <div className="border-t pt-3">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start text-sm h-9 gap-2"
+                  onClick={() => setImportDialogOpen(true)}
+                >
+                  <Download className="w-3.5 h-3.5 text-primary" />
+                  Importar de outro formulário
+                </Button>
+              </div>
+
               <FormDigestConfig formId={id!} />
+
+              <ImportFieldsDialog
+                open={importDialogOpen}
+                onOpenChange={setImportDialogOpen}
+                currentFormId={id!}
+                currentFieldCount={localFields.length}
+                onImport={async (fieldsToImport) => {
+                  for (const f of fieldsToImport) {
+                    await upsertField.mutateAsync(f as any);
+                  }
+                }}
+              />
             </div>
           </div>
         </TabsContent>
