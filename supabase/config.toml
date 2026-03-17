@@ -23,3 +23,5 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.daily-proactive-summary]
     verify_jwt = false
+  [functions.analyze-risks]
+    verify_jwt = false
