@@ -209,6 +209,79 @@ Mantenha o tom de voz do CEAP. Não invente dados que não estejam implícitos n
 Valorize o impacto social e a conexão com a missão institucional.
 Retorne o texto expandido sem explicações adicionais.`;
       userPrompt = `Expanda e aprofunde o seguinte texto, mantendo o tom institucional do CEAP:\n\n${text}`;
+    } else if (mode === "full_report") {
+      // ── FULL REPORT MODE: generate all sections in one call ──
+      systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
+
+${CEAP_INSTITUTIONAL_MEMORY}
+
+## REGRAS DE GERAÇÃO — RELATÓRIO COMPLETO
+- Gere narrativas para TODAS as seções do relatório em uma única resposta
+- Cada seção deve ser coerente com seu contexto específico
+- NÃO repetir conteúdo entre seções
+- Manter continuidade lógica e narrativa entre as partes
+- Incluir análise interpretativa (leitura crítica, contextualização social/territorial)
+- Incluir análise preditiva quando aplicável (riscos futuros, necessidades de adaptação, oportunidades)
+- Não inventar dados — baseie-se exclusivamente nas informações fornecidas
+- Não usar markdown, bullet points ou formatação especial
+- Escrever em parágrafos corridos com densidade narrativa
+- Preferir concisão com profundidade sobre extensão superficial
+
+## FORMATO DE RESPOSTA OBRIGATÓRIO
+Retorne um JSON válido com a seguinte estrutura (sem markdown code blocks):
+{
+  "object": "texto da seção OBJETO",
+  "summary": "texto do RESUMO EXECUTIVO",
+  "goalNarratives": { "goalId1": "narrativa da meta 1", "goalId2": "narrativa da meta 2" },
+  "other": "texto de OUTRAS AÇÕES",
+  "communication": "texto de PUBLICAÇÕES E DIVULGAÇÃO",
+  "satisfaction": "texto de GRAU DE SATISFAÇÃO",
+  "future": "texto de AÇÕES FUTURAS"
+}`;
+
+      const goalsData = (goals || []).map((g: any) => {
+        const goalActivities = (activities || []).filter((a: any) => a.goalId === g.id);
+        return {
+          id: g.id,
+          title: g.title,
+          audience: g.audience,
+          activitiesCount: goalActivities.length,
+          totalAttendees: goalActivities.reduce((s: number, a: any) => s + (a.attendeesCount || 0), 0),
+          activitiesSummary: goalActivities.map((a: any) => `${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}${a.attendeesCount ? ` | ${a.attendeesCount} participantes` : ""}`).join("\n"),
+        };
+      });
+
+      const otherActivities = (activities || []).filter((a: any) => ["Ocorrência/Imprevisto", "Administrativo/Financeiro", "Outras Ações", "Reunião de Equipe"].includes(a.type));
+      const commActivities = (activities || []).filter((a: any) => a.type === "Divulgação/Mídia");
+
+      userPrompt = `Gere o relatório completo de prestação de contas no padrão institucional do CEAP.
+
+DADOS DO PROJETO:
+Projeto: ${projectName}
+Objeto: ${projectObject}
+Total de atividades: ${(activities || []).length}
+Total de participantes: ${(activities || []).reduce((s: number, a: any) => s + (a.attendeesCount || 0), 0)}
+
+METAS DO PROJETO:
+${goalsData.map((g: any) => `- Meta "${g.title}" (Público: ${g.audience || "não definido"}) — ${g.activitiesCount} atividades, ${g.totalAttendees} participantes\n  Atividades:\n  ${g.activitiesSummary || "Nenhuma atividade vinculada"}`).join("\n\n")}
+
+OUTRAS AÇÕES (não vinculadas a metas):
+${otherActivities.map((a: any) => `- ${a.date} (${a.type}): ${a.description}${a.challenges ? ` | Desafios: ${a.challenges}` : ""}`).join("\n") || "Nenhuma"}
+
+AÇÕES DE COMUNICAÇÃO:
+${commActivities.map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}`).join("\n") || "Nenhuma"}
+
+INSTRUÇÕES POR SEÇÃO:
+1. OBJETO: Descreva o objeto do projeto e seu contexto social/territorial. 2-3 parágrafos.
+2. RESUMO: Visão geral executiva das atividades, conquistas e impacto. 2-3 parágrafos.
+3. METAS (goalNarratives): Para CADA meta, gere 2-4 parágrafos com realizações, metodologia, resultados e impacto. Use os IDs exatos: ${goalsData.map((g: any) => g.id).join(", ")}
+4. OUTRAS AÇÕES: Descreva ações complementares e desafios enfrentados. 1-3 parágrafos.
+5. COMUNICAÇÃO: Estratégias de comunicação e visibilidade. 1-2 parágrafos.
+6. SATISFAÇÃO: Avaliação do grau de satisfação do público-alvo baseado nos dados. 1-2 parágrafos. Inclua análise preditiva.
+7. AÇÕES FUTURAS: Projeções, riscos, necessidades de adaptação e oportunidades. 2-3 parágrafos. FOCO em análise preditiva.
+
+Retorne APENAS o JSON, sem explicações.`;
+
     } else {
       // mode === "generate"
       systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
@@ -221,6 +294,7 @@ ${CEAP_INSTITUTIONAL_MEMORY}
 - Escrever em parágrafos corridos com densidade narrativa
 - Cada narrativa deve refletir a identidade institucional do CEAP
 - Preferir concisão com profundidade sobre extensão superficial
+- Incluir análise interpretativa e, quando aplicável, análise preditiva
 - Retornar APENAS o texto, sem explicações adicionais`;
 
       if (sectionType === "goal") {
@@ -234,7 +308,7 @@ Público-alvo: ${goalAudience}
 Atividades realizadas vinculadas a esta meta:
 ${(activities || []).map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}${a.attendeesCount ? ` | ${a.attendeesCount} participantes` : ""}`).join("\n")}
 
-Escreva 2-4 parágrafos descrevendo as realizações, metodologia, resultados alcançados e impacto social no público-alvo. Conecte as ações ao compromisso institucional do CEAP com populações marginalizadas.`;
+Escreva 2-4 parágrafos descrevendo as realizações, metodologia, resultados alcançados e impacto social no público-alvo. Inclua análise interpretativa e preditiva. Conecte as ações ao compromisso institucional do CEAP com populações marginalizadas.`;
       } else if (sectionType === "summary") {
         userPrompt = `Gere um resumo executivo institucional no padrão CEAP para o seguinte projeto:
 
@@ -247,7 +321,7 @@ Total de participantes: ${(activities || []).reduce((sum: number, a: any) => sum
 Tipos de atividades:
 ${Object.entries((activities || []).reduce((acc: any, a: any) => { acc[a.type] = (acc[a.type] || 0) + 1; return acc; }, {})).map(([type, count]) => `- ${type}: ${count}`).join("\n")}
 
-Escreva 2-3 parágrafos com visão geral das atividades, contexto territorial e principais realizações, refletindo o tom institucional do CEAP.`;
+Escreva 2-3 parágrafos com visão geral das atividades, contexto territorial e principais realizações. Inclua análise interpretativa e preditiva. Reflita o tom institucional do CEAP.`;
       } else if (sectionType === "other") {
         userPrompt = `Gere um texto narrativo institucional no padrão CEAP sobre outras ações desenvolvidas:
 
@@ -256,7 +330,7 @@ Projeto: ${projectName}
 Atividades registradas (ocorrências, administrativo, outras):
 ${(activities || []).map((a: any) => `- ${a.date} (${a.type}): ${a.description}${a.challenges ? ` | Desafios: ${a.challenges}` : ""}`).join("\n")}
 
-Escreva 1-3 parágrafos descrevendo essas ações complementares, contextualizando os desafios enfrentados dentro da realidade territorial e institucional.`;
+Escreva 1-3 parágrafos descrevendo essas ações complementares, contextualizando os desafios enfrentados dentro da realidade territorial e institucional. Inclua análise preditiva quando pertinente.`;
       } else if (sectionType === "communication") {
         userPrompt = `Gere um texto narrativo institucional no padrão CEAP sobre as ações de divulgação e comunicação:
 
@@ -266,12 +340,34 @@ Atividades de divulgação registradas:
 ${(activities || []).map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}`).join("\n")}
 
 Escreva 1-2 parágrafos descrevendo as estratégias de comunicação e seus resultados, valorizando a visibilidade das ações e o fortalecimento da narrativa institucional.`;
+      } else if (sectionType === "satisfaction") {
+        userPrompt = `Gere um texto narrativo institucional no padrão CEAP sobre o grau de satisfação do público-alvo:
+
+Projeto: ${projectName}
+Objeto: ${projectObject}
+
+Total de participantes atendidos: ${(activities || []).reduce((sum: number, a: any) => sum + (a.attendeesCount || 0), 0)}
+
+Atividades realizadas:
+${(activities || []).map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}`).join("\n")}
+
+Escreva 1-2 parágrafos avaliando o grau de satisfação do público-alvo com base nos dados disponíveis. Inclua análise preditiva sobre tendências e necessidades futuras.`;
+      } else if (sectionType === "future") {
+        userPrompt = `Gere um texto narrativo institucional no padrão CEAP sobre as ações futuras do projeto:
+
+Projeto: ${projectName}
+Objeto: ${projectObject}
+
+Contexto das atividades realizadas:
+${(activities || []).map((a: any) => `- ${a.date} (${a.type}): ${a.description}${a.challenges ? ` | Desafios: ${a.challenges}` : ""}`).join("\n")}
+
+Escreva 2-3 parágrafos com FOCO em análise preditiva: projeções de continuidade, riscos futuros, necessidades de adaptação, oportunidades de fortalecimento e tendências do território ou da política pública. Conecte ao compromisso institucional do CEAP.`;
       } else if (sectionType === "generic") {
         userPrompt = `Com base no seguinte contexto, gere um texto institucional no padrão narrativo do CEAP, adequado para um relatório de prestação de contas:
 
 ${text || "Nenhum contexto fornecido."}
 
-Escreva 2-3 parágrafos em tom institucional do CEAP, com densidade narrativa e conexão com a missão de articulação de populações marginalizadas.`;
+Escreva 2-3 parágrafos em tom institucional do CEAP, com densidade narrativa, análise interpretativa e conexão com a missão de articulação de populações marginalizadas.`;
       } else {
         userPrompt = text || "Gere um texto institucional no padrão narrativo do CEAP para um relatório de prestação de contas de um projeto social.";
       }
