@@ -297,7 +297,24 @@ export const ReportGenerator: React.FC = () => {
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
           {/* Diary Link Button */}
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 flex-wrap">
+            <Button
+              onClick={handleGenerateFullReport}
+              disabled={isGeneratingFullReport || activities.length === 0}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+            >
+              {isGeneratingFullReport ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Gerando relatório...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Gerar Relatório Completo
+                </>
+              )}
+            </Button>
             <NarrativeInsertDialog
               projectId={project.id}
               reportType="report_object"
