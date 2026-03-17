@@ -962,21 +962,51 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       return <CpfCnpjField value={(value as string) || ''} onChange={onChange} />;
     case 'cep':
       return <CepField value={(value as string) || ''} onChange={onChange} onAutoFill={onCepAutoFill} isDark={isDark} />;
-    case 'single_select':
+    case 'single_select': {
+      const allowOther = !!(field.settings?.allowOther);
+      const isOtherSelected = typeof value === 'string' && value.startsWith('__other__:');
+      const otherText = isOtherSelected ? (value as string).replace('__other__:', '') : '';
       return (
-        <RadioGroup value={(value as string) || ''} onValueChange={onChange}>
-          {options.map((opt, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <RadioGroupItem value={opt} id={`${field.id}-${i}`} />
-              <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{opt}</Label>
-            </div>
-          ))}
-        </RadioGroup>
+        <div className="space-y-2">
+          <RadioGroup value={isOtherSelected ? '__other__' : (value as string) || ''} onValueChange={(v) => {
+            if (v === '__other__') {
+              onChange('__other__:');
+            } else {
+              onChange(v);
+            }
+          }}>
+            {options.map((opt, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <RadioGroupItem value={opt} id={`${field.id}-${i}`} />
+                <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{opt}</Label>
+              </div>
+            ))}
+            {allowOther && (
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="__other__" id={`${field.id}-other`} />
+                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+              </div>
+            )}
+          </RadioGroup>
+          {allowOther && isOtherSelected && (
+            <Input
+              value={otherText}
+              onChange={e => onChange(`__other__:${e.target.value}`)}
+              placeholder="Especifique aqui..."
+              className="mt-1"
+            />
+          )}
+        </div>
       );
+    }
     case 'multi_select':
     case 'checkbox': {
       const selected = (value as string[]) || [];
-      if (options.length === 0) {
+      const allowOtherMulti = !!(field.settings?.allowOther);
+      const otherEntry = selected.find(s => s.startsWith('__other__:'));
+      const isOtherChecked = !!otherEntry;
+      const otherTextMulti = otherEntry ? otherEntry.replace('__other__:', '') : '';
+      if (options.length === 0 && !allowOtherMulti) {
         return (
           <div className="flex items-center gap-2">
             <Checkbox id={field.id} checked={!!value} onCheckedChange={(checked) => onChange(!!checked)} />
@@ -992,12 +1022,39 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
                 id={`${field.id}-${i}`}
                 checked={selected.includes(opt)}
                 onCheckedChange={(checked) => {
-                  onChange(checked ? [...selected, opt] : selected.filter(s => s !== opt));
+                  const filtered = selected.filter(s => s !== opt);
+                  onChange(checked ? [...filtered, opt] : filtered);
                 }}
               />
               <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{opt}</Label>
             </div>
           ))}
+          {allowOtherMulti && (
+            <>
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id={`${field.id}-other`}
+                  checked={isOtherChecked}
+                  onCheckedChange={(checked) => {
+                    const filtered = selected.filter(s => !s.startsWith('__other__:'));
+                    onChange(checked ? [...filtered, '__other__:'] : filtered);
+                  }}
+                />
+                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+              </div>
+              {isOtherChecked && (
+                <Input
+                  value={otherTextMulti}
+                  onChange={e => {
+                    const filtered = selected.filter(s => !s.startsWith('__other__:'));
+                    onChange([...filtered, `__other__:${e.target.value}`]);
+                  }}
+                  placeholder="Especifique aqui..."
+                  className="ml-6"
+                />
+              )}
+            </>
+          )}
         </div>
       );
     }

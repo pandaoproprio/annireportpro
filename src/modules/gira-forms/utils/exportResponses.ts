@@ -20,7 +20,8 @@ function getRows(responses: FormResponse[], fields: FormField[]) {
     r.respondent_email || '',
     ...dataFields.map(f => {
       const val = r.answers?.[f.id];
-      return Array.isArray(val) ? val.join(', ') : String(val ?? '');
+      const fmt = (v: unknown): string => typeof v === 'string' && v.startsWith('__other__:') ? `Outros: ${v.replace('__other__:', '')}` : String(v ?? '');
+      return Array.isArray(val) ? val.map(fmt).join(', ') : fmt(val);
     }),
   ]);
 }

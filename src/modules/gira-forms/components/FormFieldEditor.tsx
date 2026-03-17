@@ -43,6 +43,7 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
   const [conditionGroup, setConditionGroup] = useState<FieldConditionGroup | null>(
     () => parseLegacyCondition(field.settings?.condition)
   );
+  const [allowOther, setAllowOther] = useState<boolean>(!!(field.settings?.allowOther));
 
   const hasOptions = ['single_select', 'multi_select', 'checkbox'].includes(type);
   const isNonInput = NON_INPUT_TYPES.includes(type);
@@ -58,6 +59,9 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     } else {
       delete newSettings.condition;
     }
+    if (hasOptions) {
+      newSettings.allowOther = allowOther;
+    }
     await onUpdate({ label, description, required: isNonInput ? false : required, type, options, settings: newSettings });
     onToggleEdit();
   };
@@ -69,6 +73,7 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     setType(field.type as FieldType);
     setOptions(field.options || []);
     setConditionGroup(parseLegacyCondition(field.settings?.condition));
+    setAllowOther(!!(field.settings?.allowOther));
   }, [field]);
 
   const getIcon = () => {
@@ -174,6 +179,13 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
                       <Button variant="ghost" size="sm" className="text-xs gap-1" onClick={() => setOptions([...options, ''])}>
                         <PlusCircle className="w-3 h-3" /> Adicionar opção
                       </Button>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Switch
+                        checked={allowOther}
+                        onCheckedChange={setAllowOther}
+                      />
+                      <Label className="text-xs">Incluir opção "Outros (especifique)"</Label>
                     </div>
                   </div>
                 )}
