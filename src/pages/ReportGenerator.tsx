@@ -41,7 +41,8 @@ export const ReportGenerator: React.FC = () => {
     photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     pageLayouts, setPageLayouts,
     sectionPhotoGroups, setSectionPhotoGroups,
-    saveReportData, moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
+    saveReportData, setBroadcastCallback, applyRemoteData,
+    moveSection, toggleVisibility, updateSectionTitle, updateCustomContent,
     addCustomSection, removeSection, pendingRemoveIndex, confirmRemoveSection, cancelRemoveSection,
     addExpense, updateExpense, removeExpense,
     handlePhotoUpload, handleGoalPhotoUpload, removeGoalPhoto, reorderGoalPhotos, handleExpenseImageUpload,
@@ -55,6 +56,23 @@ export const ReportGenerator: React.FC = () => {
   // Visual config scoped to this project + report_object
   const vc = useReportVisualConfig(project?.id, 'report_object');
   const diaryLinks = useDiaryReportLinks(project?.id, 'report_object');
+
+  // Realtime collaboration
+  const collab = useRealtimeCollaboration({
+    channelKey: `report_object:${project?.id || 'none'}`,
+    onRemoteUpdate: (data) => {
+      applyRemoteData(data);
+      toast.info('Relatório atualizado por outro colaborador', { duration: 2000 });
+    },
+    enabled: !!project?.id,
+  });
+
+  // Wire broadcast callback
+  useEffect(() => {
+    setBroadcastCallback(collab.broadcastUpdate);
+    return () => setBroadcastCallback(null);
+  }, [collab.broadcastUpdate, setBroadcastCallback]);
+
   const [showDiaryLinkDialog, setShowDiaryLinkDialog] = useState(false);
   const [isGeneratingFullReport, setIsGeneratingFullReport] = useState(false);
   const [generatingMode, setGeneratingMode] = useState<string | null>(null);
