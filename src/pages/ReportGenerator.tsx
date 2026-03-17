@@ -55,26 +55,37 @@ export const ReportGenerator: React.FC = () => {
   const diaryLinks = useDiaryReportLinks(project?.id, 'report_object');
   const [showDiaryLinkDialog, setShowDiaryLinkDialog] = useState(false);
   const [isGeneratingFullReport, setIsGeneratingFullReport] = useState(false);
+  const [generatingMode, setGeneratingMode] = useState<string | null>(null);
 
-  const handleGenerateFullReport = async () => {
+  const handleGenerateFullReport = async (generationMode: 'assisted' | 'hybrid' | 'automatic') => {
     if (!project) return;
     setIsGeneratingFullReport(true);
+    setGeneratingMode(generationMode);
     try {
-      const mappedActivities = activities.map(a => ({
-        date: new Date(a.date).toLocaleDateString('pt-BR'),
-        type: a.type,
-        description: a.description,
-        results: a.results,
-        challenges: a.challenges,
-        attendeesCount: a.attendeesCount,
-        goalId: a.goalId,
-      }));
+      const mappedActivities = generationMode !== 'automatic'
+        ? activities.map(a => ({
+            date: new Date(a.date).toLocaleDateString('pt-BR'),
+            type: a.type,
+            description: a.description,
+            results: a.results,
+            challenges: a.challenges,
+            attendeesCount: a.attendeesCount,
+            goalId: a.goalId,
+          }))
+        : [];
 
       const { data, error } = await supabase.functions.invoke('generate-narrative', {
         body: {
           mode: 'full_report',
+          generationMode,
           projectName: project.name,
           projectObject: project.object,
+          projectSummary: project.summary,
+          projectFunder: project.funder,
+          projectStartDate: project.startDate,
+          projectEndDate: project.endDate,
+          projectLocations: project.locations?.join(', '),
+          organizationName: project.organizationName,
           activities: mappedActivities,
           goals: project.goals.map((g: any) => ({ id: g.id, title: g.title, audience: g.audience })),
         },
@@ -91,7 +102,8 @@ export const ReportGenerator: React.FC = () => {
         if (s.communication) setCommunicationNarrative(s.communication);
         if (s.satisfaction) setSatisfaction(s.satisfaction);
         if (s.future) setFutureActions(s.future);
-        toast.success('Relatório completo gerado com sucesso! Revise as seções.');
+        const modeLabels = { assisted: 'Assistido', hybrid: 'Híbrido', automatic: 'Autônomo' };
+        toast.success(`Relatório gerado no modo ${modeLabels[generationMode]}! Revise as seções.`);
       } else {
         toast.error('Nenhum conteúdo gerado.');
       }
@@ -100,6 +112,7 @@ export const ReportGenerator: React.FC = () => {
       toast.error('Erro ao gerar relatório completo. Tente novamente.');
     } finally {
       setIsGeneratingFullReport(false);
+      setGeneratingMode(null);
     }
   };
 
