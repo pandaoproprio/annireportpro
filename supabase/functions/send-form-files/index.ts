@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { encode as base64Encode } from "https://deno.land/std@0.168.0/encoding/base64.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -19,19 +18,8 @@ serve(async (req) => {
   }
 
   try {
-    const { recipients, subject, html, fileUrls } = await req.json();
+    const { recipients, subject, html } = await req.json();
 
-    // Download all files and convert to base64
-    const attachments = await Promise.all(
-      fileUrls.map(async (f: { url: string; filename: string }) => {
-        const res = await fetch(f.url);
-        const buf = new Uint8Array(await res.arrayBuffer());
-        const content = base64Encode(buf);
-        return { filename: f.filename, content };
-      })
-    );
-
-    // Send email via Resend
     const resendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -43,7 +31,6 @@ serve(async (req) => {
         to: recipients,
         subject,
         html,
-        attachments,
       }),
     });
 
