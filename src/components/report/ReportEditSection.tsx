@@ -169,7 +169,33 @@ const PhotoCard: React.FC<{
   );
 };
 
-export const ReportEditSection: React.FC<Props> = (props) => {
+// ── Sortable wrapper for PhotoCard (drag to reorder) ──
+const SortablePhotoCard: React.FC<{
+  id: string;
+  children: React.ReactNode;
+}> = ({ id, children }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style} className={`relative ${isDragging ? 'ring-2 ring-primary rounded-lg' : ''}`}>
+      <button
+        {...attributes}
+        {...listeners}
+        className="absolute top-1 left-1 z-20 p-1 bg-background/80 rounded cursor-grab active:cursor-grabbing touch-none"
+        title="Arraste para reordenar"
+      >
+        <GripVertical className="w-4 h-4 text-muted-foreground" />
+      </button>
+      {children}
+    </div>
+  );
+};
+
+
   const { section, index } = props;
   const [activitiesExpanded, setActivitiesExpanded] = useState(false);
   if (!section.isVisible) return null;
