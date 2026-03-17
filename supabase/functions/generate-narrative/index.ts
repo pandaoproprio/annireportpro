@@ -56,7 +56,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { mode = "generate", activities, goalTitle, goalAudience, sectionType, projectName, projectObject, text, chatHistory, userName } = body;
+    const { mode = "generate", activities, goalTitle, goalAudience, sectionType, projectName, projectObject, text, chatHistory, userName, goals } = body;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
