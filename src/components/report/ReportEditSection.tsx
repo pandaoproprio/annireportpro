@@ -373,11 +373,15 @@ const getActivityCountForSection = (
   getOtherActivities: () => Activity[],
 ): number | undefined => {
   switch (sectionKey) {
+    case 'object': return activities.length;
     case 'summary': return activities.length;
     case 'goals': return goals.reduce((sum, g) => sum + getActivitiesByGoal(g.id).length, 0);
     case 'other': return getOtherActivities().length;
     case 'communication': return getCommunicationActivities().length;
-    default: return undefined; // object, satisfaction, future, expenses, links, custom
+    case 'satisfaction': return activities.length;
+    case 'future': return activities.length;
+    case 'custom': return activities.length;
+    default: return undefined; // expenses, links
   }
 };
 
@@ -432,9 +436,19 @@ const SectionContent: React.FC<ExtProps> = (props) => {
   }
 };
 
-const ObjectSection: React.FC<Props> = ({ objectText, setObjectText }) => (
-  <div className="space-y-2">
-    <Label>Texto do Objeto</Label>
+const ObjectSection: React.FC<ExtProps> = ({ objectText, setObjectText, activities, formatActivityDate, activitiesExpanded, projectName, projectObject }) => (
+  <div className="space-y-4">
+    <ActivitiesPanel
+      activities={activities}
+      expanded={activitiesExpanded}
+      formatActivityDate={formatActivityDate}
+      label="atividade(s) registradas no Diário de Bordo"
+      onInsert={(text) => setObjectText(objectText ? objectText + '\n' + text : text)}
+    />
+    <div className="flex items-center justify-between">
+      <Label>Texto do Objeto</Label>
+      <AiTextToolbar text={objectText} onResult={setObjectText} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
+    </div>
     <Textarea rows={4} value={objectText} onChange={e => setObjectText(e.target.value)} placeholder="Descrição do objeto do termo de fomento..." />
   </div>
 );
@@ -668,8 +682,15 @@ const CommunicationSection: React.FC<ExtProps> = ({
   );
 };
 
-const SatisfactionSection: React.FC<Props> = ({ satisfaction, setSatisfaction, projectName, projectObject }) => (
+const SatisfactionSection: React.FC<ExtProps> = ({ satisfaction, setSatisfaction, projectName, projectObject, activities, formatActivityDate, activitiesExpanded }) => (
   <div className="space-y-4">
+    <ActivitiesPanel
+      activities={activities}
+      expanded={activitiesExpanded}
+      formatActivityDate={formatActivityDate}
+      label="atividade(s) registradas no Diário de Bordo"
+      onInsert={(text) => setSatisfaction(satisfaction ? satisfaction + '\n' + text : text)}
+    />
     <div className="flex items-center justify-between">
       <Label>Grau de Satisfação</Label>
       <AiTextToolbar text={satisfaction} onResult={setSatisfaction} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
@@ -678,8 +699,15 @@ const SatisfactionSection: React.FC<Props> = ({ satisfaction, setSatisfaction, p
   </div>
 );
 
-const FutureSection: React.FC<Props> = ({ futureActions, setFutureActions, projectName, projectObject }) => (
+const FutureSection: React.FC<ExtProps> = ({ futureActions, setFutureActions, projectName, projectObject, activities, formatActivityDate, activitiesExpanded }) => (
   <div className="space-y-4">
+    <ActivitiesPanel
+      activities={activities}
+      expanded={activitiesExpanded}
+      formatActivityDate={formatActivityDate}
+      label="atividade(s) registradas no Diário de Bordo"
+      onInsert={(text) => setFutureActions(futureActions ? futureActions + '\n' + text : text)}
+    />
     <div className="flex items-center justify-between">
       <Label>Ações Futuras</Label>
       <AiTextToolbar text={futureActions} onResult={setFutureActions} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
@@ -919,8 +947,15 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
 });
 LinksSection.displayName = 'LinksSection';
 
-const CustomSection: React.FC<Props> = ({ section, index, updateCustomContent, projectName, projectObject }) => (
+const CustomSection: React.FC<ExtProps> = ({ section, index, updateCustomContent, projectName, projectObject, activities, formatActivityDate, activitiesExpanded }) => (
   <div className="space-y-4">
+    <ActivitiesPanel
+      activities={activities}
+      expanded={activitiesExpanded}
+      formatActivityDate={formatActivityDate}
+      label="atividade(s) registradas no Diário de Bordo"
+      onInsert={(text) => updateCustomContent(index, (section.content || '') + '\n' + text)}
+    />
     <div className="flex items-center justify-between">
       <Label>Conteúdo</Label>
       <AiTextToolbar text={section.content || ''} onResult={(text) => updateCustomContent(index, text)} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
