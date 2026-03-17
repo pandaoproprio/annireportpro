@@ -5,7 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 interface Props {
-  sectionType: 'goal' | 'summary' | 'other' | 'communication';
+  sectionType: 'goal' | 'summary' | 'other' | 'communication' | 'satisfaction' | 'future';
   activities: any[];
   projectName: string;
   projectObject: string;

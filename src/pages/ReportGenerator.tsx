@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileEdit, Link2, Sparkles } from 'lucide-react';
+import { FileEdit, Link2, Sparkles, Loader2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 import { NarrativeInsertDialog } from '@/components/report/NarrativeInsertDialog';
 import { exportReportToPdf } from '@/lib/reportPdfExport';
 import { exportToDocx } from '@/lib/docxExport';
@@ -52,6 +53,54 @@ export const ReportGenerator: React.FC = () => {
   const vc = useReportVisualConfig(project?.id, 'report_object');
   const diaryLinks = useDiaryReportLinks(project?.id, 'report_object');
   const [showDiaryLinkDialog, setShowDiaryLinkDialog] = useState(false);
+  const [isGeneratingFullReport, setIsGeneratingFullReport] = useState(false);
+
+  const handleGenerateFullReport = async () => {
+    if (!project) return;
+    setIsGeneratingFullReport(true);
+    try {
+      const mappedActivities = activities.map(a => ({
+        date: new Date(a.date).toLocaleDateString('pt-BR'),
+        type: a.type,
+        description: a.description,
+        results: a.results,
+        challenges: a.challenges,
+        attendeesCount: a.attendeesCount,
+        goalId: a.goalId,
+      }));
+
+      const { data, error } = await supabase.functions.invoke('generate-narrative', {
+        body: {
+          mode: 'full_report',
+          projectName: project.name,
+          projectObject: project.object,
+          activities: mappedActivities,
+          goals: project.goals.map((g: any) => ({ id: g.id, title: g.title, audience: g.audience })),
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.sections) {
+        const s = data.sections;
+        if (s.object) setObjectText(s.object);
+        if (s.summary) setSummary(s.summary);
+        if (s.goalNarratives) setGoalNarratives(s.goalNarratives);
+        if (s.other) setOtherActionsNarrative(s.other);
+        if (s.communication) setCommunicationNarrative(s.communication);
+        if (s.satisfaction) setSatisfaction(s.satisfaction);
+        if (s.future) setFutureActions(s.future);
+        toast.success('Relatório completo gerado com sucesso! Revise as seções.');
+      } else {
+        toast.error('Nenhum conteúdo gerado.');
+      }
+    } catch (err: any) {
+      console.error('Full report generation error:', err);
+      toast.error('Erro ao gerar relatório completo. Tente novamente.');
+    } finally {
+      setIsGeneratingFullReport(false);
+    }
+  };
 
   if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
 
@@ -248,7 +297,24 @@ export const ReportGenerator: React.FC = () => {
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
           {/* Diary Link Button */}
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end gap-2 flex-wrap">
+            <Button
+              onClick={handleGenerateFullReport}
+              disabled={isGeneratingFullReport || activities.length === 0}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+            >
+              {isGeneratingFullReport ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Gerando relatório...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  Gerar Relatório Completo
+                </>
+              )}
+            </Button>
             <NarrativeInsertDialog
               projectId={project.id}
               reportType="report_object"
