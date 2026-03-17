@@ -217,12 +217,20 @@ export const useReportVisualConfig = (projectId: string | undefined, reportType:
   ) => {
     if (!e.target.files?.[0] || !projectId) return;
     const file = e.target.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Imagem muito grande (máx. 5MB)');
+      return;
+    }
     try {
       const photoId = crypto.randomUUID();
       const fileExt = file.name.split('.').pop() || 'png';
       const filePath = `reports/${projectId}/logos/${reportType}_${position}_${photoId}.${fileExt}`;
-      const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
-      if (error) { toast.error('Erro ao enviar logo'); return; }
+      const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { contentType: file.type, cacheControl: '3600', upsert: false });
+      if (error) {
+        console.error('Storage upload error (logo):', error);
+        toast.error(`Erro ao enviar logo: ${error.message}`);
+        return;
+      }
       const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
       const key = position === 'cover' ? 'coverLogo' : position === 'secondary' ? 'logoSecondary' : position === 'center' ? 'logoCenter' : 'logo';
       const patch = { [key]: urlData.publicUrl };
@@ -230,7 +238,10 @@ export const useReportVisualConfig = (projectId: string | undefined, reportType:
       // Auto-save with the new value to ensure persistence
       await saveConfig(false, patch);
       toast.success('Logo enviado com sucesso');
-    } catch { toast.error('Erro ao processar logo'); }
+    } catch (err) {
+      console.error('Logo upload exception:', err);
+      toast.error('Erro ao processar logo');
+    }
   }, [projectId, reportType, updateConfig, saveConfig]);
 
   const handleBannerUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
