@@ -205,7 +205,11 @@ export const FormResponsesTab: React.FC<Props> = ({ formId, form, fields }) => {
                       </TableCell>
                       {dataFields.map(f => {
                         const val = r.answers?.[f.id];
-                        const display = Array.isArray(val) ? val.join(', ') : String(val ?? '—');
+                        const formatOther = (v: unknown): string => {
+                          if (typeof v === 'string' && v.startsWith('__other__:')) return `Outros: ${v.replace('__other__:', '')}`;
+                          return String(v ?? '—');
+                        };
+                        const display = Array.isArray(val) ? val.map(formatOther).join(', ') : formatOther(val);
                         return <TableCell key={f.id} className="text-sm max-w-[200px] truncate">{display}</TableCell>;
                       })}
                     </TableRow>
