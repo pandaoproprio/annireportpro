@@ -613,10 +613,13 @@ const SummarySection: React.FC<ExtProps> = ({ summary, setSummary, activities, p
 
 const GoalsSection: React.FC<ExtProps> = ({
   goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject, projectId,
-  handleGoalPhotoUpload, removeGoalPhoto, getActivitiesByGoal, formatActivityDate,
+  handleGoalPhotoUpload, removeGoalPhoto, reorderGoalPhotos, getActivitiesByGoal, formatActivityDate,
   photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
   activitiesExpanded, activities,
-}) => (
+}) => {
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  return (
   <div className="space-y-6">
     <div className="flex flex-wrap gap-2">
       <AttendeesByGoalInline activities={activities} goals={goals} getActivitiesByGoal={getActivitiesByGoal} />
@@ -626,6 +629,16 @@ const GoalsSection: React.FC<ExtProps> = ({
       const goalActs = getActivitiesByGoal(goal.id);
       const photos = goalPhotos[goal.id] || [];
       const metas = photoMetadata[goal.id] || [];
+      const photoIds = photos.map((_, i) => `goal-${goal.id}-photo-${i}`);
+
+      const handleGoalDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        const oldIndex = photoIds.indexOf(active.id as string);
+        const newIndex = photoIds.indexOf(over.id as string);
+        if (oldIndex !== -1 && newIndex !== -1) reorderGoalPhotos(goal.id, oldIndex, newIndex);
+      };
+
       return (
         <div key={goal.id} className="p-4 border rounded-lg bg-muted/50">
           <div className="flex items-center gap-2 mb-2">
@@ -654,28 +667,34 @@ const GoalsSection: React.FC<ExtProps> = ({
           <Label className="flex items-center gap-2 mt-4"><ImageIcon className="w-4 h-4" /> Fotos da Meta</Label>
           <Input type="file" accept="image/*" multiple onChange={e => handleGoalPhotoUpload(e, goal.id)} className="mb-2" />
           {photos.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-              {photos.map((photo, pIdx) => (
-                <PhotoCard
-                  key={pIdx}
-                  photo={photo}
-                  index={pIdx}
-                  metaKey={goal.id}
-                  meta={metas[pIdx]}
-                  projectId={projectId}
-                  updatePhotoCaption={updatePhotoCaption}
-                  updatePhotoSize={updatePhotoSize}
-                  onReplace={(newUrl) => replacePhotoUrl(goal.id, pIdx, newUrl, null, goal.id)}
-                  onRemove={() => removeGoalPhoto(goal.id, pIdx)}
-                />
-              ))}
-            </div>
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGoalDragEnd}>
+              <SortableContext items={photoIds} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {photos.map((photo, pIdx) => (
+                    <SortablePhotoCard key={photoIds[pIdx]} id={photoIds[pIdx]}>
+                      <PhotoCard
+                        photo={photo}
+                        index={pIdx}
+                        metaKey={goal.id}
+                        meta={metas[pIdx]}
+                        projectId={projectId}
+                        updatePhotoCaption={updatePhotoCaption}
+                        updatePhotoSize={updatePhotoSize}
+                        onReplace={(newUrl) => replacePhotoUrl(goal.id, pIdx, newUrl, null, goal.id)}
+                        onRemove={() => removeGoalPhoto(goal.id, pIdx)}
+                      />
+                    </SortablePhotoCard>
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       );
     })}
   </div>
-);
+  );
+};
 
 const OtherSection: React.FC<ExtProps> = ({
   otherActionsNarrative, setOtherActionsNarrative,
