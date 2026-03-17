@@ -216,7 +216,7 @@ export const ReportEditSection: React.FC<Props> = (props) => {
   );
 };
 
-const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts, sectionPhotoGroups, setSectionPhotoGroups, activities, insertDiaryPhotos }) => {
+const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, reorderSectionPhotos, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts, sectionPhotoGroups, setSectionPhotoGroups, activities, insertDiaryPhotos }) => {
   const sectionKey = section.type === 'custom' ? section.id : section.key;
   const photos = sectionPhotos[sectionKey] || [];
   const docs = sectionDocs[sectionKey] || [];
@@ -225,6 +225,16 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
   const [showLayoutEditor, setShowLayoutEditor] = useState(false);
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
   const [diaryPickerOpen, setDiaryPickerOpen] = useState(false);
+  const sectionSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  const sectionPhotoIds = useMemo(() => photos.map((_, i) => `section-${sectionKey}-photo-${i}`), [photos.length, sectionKey]);
+
+  const handleSectionDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = sectionPhotoIds.indexOf(active.id as string);
+    const newIndex = sectionPhotoIds.indexOf(over.id as string);
+    if (oldIndex !== -1 && newIndex !== -1) reorderSectionPhotos(sectionKey, oldIndex, newIndex);
+  };
 
   const handleDiaryInsert = (diaryPhotos: { url: string; caption: string; activityDate: string }[]) => {
     const newUrls = diaryPhotos.map(p => p.url).filter(url => !photos.includes(url));
