@@ -1,8 +1,9 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { FileEdit, Link2, Sparkles, Loader2 } from 'lucide-react';
+import { FileEdit, Link2, Sparkles, Loader2, Bot, Cpu, Zap } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NarrativeInsertDialog } from '@/components/report/NarrativeInsertDialog';
 import { exportReportToPdf } from '@/lib/reportPdfExport';
 import { exportToDocx } from '@/lib/docxExport';
@@ -54,26 +55,37 @@ export const ReportGenerator: React.FC = () => {
   const diaryLinks = useDiaryReportLinks(project?.id, 'report_object');
   const [showDiaryLinkDialog, setShowDiaryLinkDialog] = useState(false);
   const [isGeneratingFullReport, setIsGeneratingFullReport] = useState(false);
+  const [generatingMode, setGeneratingMode] = useState<string | null>(null);
 
-  const handleGenerateFullReport = async () => {
+  const handleGenerateFullReport = async (generationMode: 'assisted' | 'hybrid' | 'automatic') => {
     if (!project) return;
     setIsGeneratingFullReport(true);
+    setGeneratingMode(generationMode);
     try {
-      const mappedActivities = activities.map(a => ({
-        date: new Date(a.date).toLocaleDateString('pt-BR'),
-        type: a.type,
-        description: a.description,
-        results: a.results,
-        challenges: a.challenges,
-        attendeesCount: a.attendeesCount,
-        goalId: a.goalId,
-      }));
+      const mappedActivities = generationMode !== 'automatic'
+        ? activities.map(a => ({
+            date: new Date(a.date).toLocaleDateString('pt-BR'),
+            type: a.type,
+            description: a.description,
+            results: a.results,
+            challenges: a.challenges,
+            attendeesCount: a.attendeesCount,
+            goalId: a.goalId,
+          }))
+        : [];
 
       const { data, error } = await supabase.functions.invoke('generate-narrative', {
         body: {
           mode: 'full_report',
+          generationMode,
           projectName: project.name,
           projectObject: project.object,
+          projectSummary: project.summary,
+          projectFunder: project.funder,
+          projectStartDate: project.startDate,
+          projectEndDate: project.endDate,
+          projectLocations: project.locations?.join(', '),
+          organizationName: project.organizationName,
           activities: mappedActivities,
           goals: project.goals.map((g: any) => ({ id: g.id, title: g.title, audience: g.audience })),
         },
@@ -90,7 +102,8 @@ export const ReportGenerator: React.FC = () => {
         if (s.communication) setCommunicationNarrative(s.communication);
         if (s.satisfaction) setSatisfaction(s.satisfaction);
         if (s.future) setFutureActions(s.future);
-        toast.success('Relatório completo gerado com sucesso! Revise as seções.');
+        const modeLabels = { assisted: 'Assistido', hybrid: 'Híbrido', automatic: 'Autônomo' };
+        toast.success(`Relatório gerado no modo ${modeLabels[generationMode]}! Revise as seções.`);
       } else {
         toast.error('Nenhum conteúdo gerado.');
       }
@@ -99,6 +112,7 @@ export const ReportGenerator: React.FC = () => {
       toast.error('Erro ao gerar relatório completo. Tente novamente.');
     } finally {
       setIsGeneratingFullReport(false);
+      setGeneratingMode(null);
     }
   };
 
@@ -298,23 +312,49 @@ export const ReportGenerator: React.FC = () => {
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
           {/* Diary Link Button */}
           <div className="flex justify-end gap-2 flex-wrap">
-            <Button
-              onClick={handleGenerateFullReport}
-              disabled={isGeneratingFullReport || activities.length === 0}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-            >
-              {isGeneratingFullReport ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Gerando relatório...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Gerar Relatório Completo
-                </>
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  disabled={isGeneratingFullReport}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+                >
+                  {isGeneratingFullReport ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Gerando ({generatingMode === 'automatic' ? 'Autônomo' : generatingMode === 'hybrid' ? 'Híbrido' : 'Assistido'})...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Gerar Relatório Completo
+                    </>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuItem onClick={() => handleGenerateFullReport('assisted')} disabled={activities.length === 0}>
+                  <Zap className="w-4 h-4 mr-2 text-amber-500" />
+                  <div>
+                    <p className="font-medium">Modo Assistido</p>
+                    <p className="text-xs text-muted-foreground">Usa dados + Diário de Bordo</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleGenerateFullReport('hybrid')}>
+                  <Cpu className="w-4 h-4 mr-2 text-blue-500" />
+                  <div>
+                    <p className="font-medium">Modo Híbrido</p>
+                    <p className="text-xs text-muted-foreground">Dados + descrição, Diário opcional</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleGenerateFullReport('automatic')}>
+                  <Bot className="w-4 h-4 mr-2 text-emerald-500" />
+                  <div>
+                    <p className="font-medium">Modo Autônomo</p>
+                    <p className="text-xs text-muted-foreground">Gera sem Diário de Bordo</p>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <NarrativeInsertDialog
               projectId={project.id}
               reportType="report_object"

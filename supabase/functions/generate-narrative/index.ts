@@ -211,6 +211,12 @@ Retorne o texto expandido sem explicações adicionais.`;
       userPrompt = `Expanda e aprofunde o seguinte texto, mantendo o tom institucional do CEAP:\n\n${text}`;
     } else if (mode === "full_report") {
       // ── FULL REPORT MODE: generate all sections in one call ──
+      // Supports 3 generation modes via body.generationMode:
+      //   "assisted"  — uses activities from Diary + project data (default, legacy)
+      //   "hybrid"    — uses project data + description, diary optional
+      //   "automatic" — fully autonomous, no diary required
+      const generationMode = body.generationMode || "assisted";
+
       systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
 
 ${CEAP_INSTITUTIONAL_MEMORY}
@@ -222,10 +228,23 @@ ${CEAP_INSTITUTIONAL_MEMORY}
 - Manter continuidade lógica e narrativa entre as partes
 - Incluir análise interpretativa (leitura crítica, contextualização social/territorial)
 - Incluir análise preditiva quando aplicável (riscos futuros, necessidades de adaptação, oportunidades)
-- Não inventar dados — baseie-se exclusivamente nas informações fornecidas
+- Não inventar dados — baseie-se nas informações fornecidas e infira contexto quando necessário
 - Não usar markdown, bullet points ou formatação especial
 - Escrever em parágrafos corridos com densidade narrativa
 - Preferir concisão com profundidade sobre extensão superficial
+${generationMode === "automatic" ? `
+## MODO AUTÔNOMO
+- Você NÃO receberá atividades do Diário de Bordo. Isso é NORMAL.
+- Gere narrativas completas baseando-se exclusivamente nos dados do projeto, objeto, metas e metadados disponíveis.
+- Infira o contexto social, territorial e político a partir do nome do projeto, objeto e público-alvo.
+- A ausência de atividades NÃO deve impedir a geração de narrativas de alta qualidade.
+- Construa a narrativa a partir da missão institucional do CEAP e do contexto implícito do projeto.` : ""}
+${generationMode === "hybrid" ? `
+## MODO HÍBRIDO
+- Atividades do Diário de Bordo podem ou não estar presentes.
+- Use os dados do projeto e descrição como fonte primária.
+- Complemente com atividades do Diário quando disponíveis.
+- Quando não houver atividades, infira o contexto a partir dos metadados do projeto.` : ""}
 
 ## FORMATO DE RESPOSTA OBRIGATÓRIO
 Retorne um JSON válido com a seguinte estrutura (sem markdown code blocks):
@@ -247,29 +266,54 @@ Retorne um JSON válido com a seguinte estrutura (sem markdown code blocks):
           audience: g.audience,
           activitiesCount: goalActivities.length,
           totalAttendees: goalActivities.reduce((s: number, a: any) => s + (a.attendeesCount || 0), 0),
-          activitiesSummary: goalActivities.map((a: any) => `${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}${a.attendeesCount ? ` | ${a.attendeesCount} participantes` : ""}`).join("\n"),
+          activitiesSummary: goalActivities.length > 0
+            ? goalActivities.map((a: any) => `${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}${a.attendeesCount ? ` | ${a.attendeesCount} participantes` : ""}`).join("\n")
+            : "",
         };
       });
 
-      const otherActivities = (activities || []).filter((a: any) => ["Ocorrência/Imprevisto", "Administrativo/Financeiro", "Outras Ações", "Reunião de Equipe"].includes(a.type));
-      const commActivities = (activities || []).filter((a: any) => a.type === "Divulgação/Mídia");
+      const hasActivities = (activities || []).length > 0;
+      const otherActivities = hasActivities
+        ? (activities || []).filter((a: any) => ["Ocorrência/Imprevisto", "Administrativo/Financeiro", "Outras Ações", "Reunião de Equipe"].includes(a.type))
+        : [];
+      const commActivities = hasActivities
+        ? (activities || []).filter((a: any) => a.type === "Divulgação/Mídia")
+        : [];
 
-      userPrompt = `Gere o relatório completo de prestação de contas no padrão institucional do CEAP.
-
-DADOS DO PROJETO:
+      // Build context-aware prompt based on generationMode
+      const projectContext = `DADOS DO PROJETO:
 Projeto: ${projectName}
 Objeto: ${projectObject}
+${body.projectSummary ? `Descrição/Resumo: ${body.projectSummary}` : ""}
+${body.projectFunder ? `Financiador: ${body.projectFunder}` : ""}
+${body.projectStartDate ? `Período: ${body.projectStartDate} a ${body.projectEndDate || "em andamento"}` : ""}
+${body.projectLocations ? `Territórios: ${body.projectLocations}` : ""}
+${body.organizationName ? `Organização: ${body.organizationName}` : ""}`;
+
+      const activitiesContext = hasActivities ? `
+ATIVIDADES REGISTRADAS (Diário de Bordo):
 Total de atividades: ${(activities || []).length}
 Total de participantes: ${(activities || []).reduce((s: number, a: any) => s + (a.attendeesCount || 0), 0)}
 
 METAS DO PROJETO:
-${goalsData.map((g: any) => `- Meta "${g.title}" (Público: ${g.audience || "não definido"}) — ${g.activitiesCount} atividades, ${g.totalAttendees} participantes\n  Atividades:\n  ${g.activitiesSummary || "Nenhuma atividade vinculada"}`).join("\n\n")}
+${goalsData.map((g: any) => `- Meta "${g.title}" (Público: ${g.audience || "não definido"}) — ${g.activitiesCount} atividades, ${g.totalAttendees} participantes${g.activitiesSummary ? `\n  Atividades:\n  ${g.activitiesSummary}` : ""}`).join("\n\n")}
 
-OUTRAS AÇÕES (não vinculadas a metas):
+OUTRAS AÇÕES:
 ${otherActivities.map((a: any) => `- ${a.date} (${a.type}): ${a.description}${a.challenges ? ` | Desafios: ${a.challenges}` : ""}`).join("\n") || "Nenhuma"}
 
 AÇÕES DE COMUNICAÇÃO:
-${commActivities.map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}`).join("\n") || "Nenhuma"}
+${commActivities.map((a: any) => `- ${a.date}: ${a.description}${a.results ? ` | Resultados: ${a.results}` : ""}`).join("\n") || "Nenhuma"}` : `
+NOTA: Nenhuma atividade do Diário de Bordo foi fornecida. Gere narrativas baseando-se exclusivamente nos dados do projeto e metadados das metas.
+
+METAS DO PROJETO:
+${goalsData.map((g: any) => `- Meta "${g.title}" (Público: ${g.audience || "não definido"})`).join("\n")}`;
+
+      userPrompt = `Gere o relatório completo de prestação de contas no padrão institucional do CEAP.
+${generationMode === "automatic" ? "\nMODO: AUTÔNOMO — gere narrativas completas sem depender do Diário de Bordo." : ""}
+${generationMode === "hybrid" ? "\nMODO: HÍBRIDO — use os dados disponíveis, complementando com inferência contextual quando necessário." : ""}
+
+${projectContext}
+${activitiesContext}
 
 INSTRUÇÕES POR SEÇÃO:
 1. OBJETO: Descreva o objeto do projeto e seu contexto social/territorial. 2-3 parágrafos.
