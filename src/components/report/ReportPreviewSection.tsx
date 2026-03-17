@@ -106,14 +106,14 @@ interface Props {
   formatActivityDate: (date: string, endDate?: string) => string;
 }
 
-// Renders a single photo with caption and width
+// Renders a single photo with caption and width — uses consistent aspect ratio
 const PreviewPhoto: React.FC<{ photo: string; meta?: ReportPhotoMeta; index: number }> = ({ photo, meta, index }) => {
   const widthPercent = meta?.widthPercent || 100;
   const caption = meta?.caption || '';
   return (
-    <div className="break-inside-avoid mb-4" style={{ width: `${widthPercent}%` }}>
-      <div className="overflow-hidden rounded-lg border shadow-sm">
-        <img src={photo} alt={caption || `Registro ${index + 1}`} className="w-full object-contain bg-muted" />
+    <div className="break-inside-avoid mb-4" style={{ width: `${widthPercent}%`, maxWidth: '100%' }}>
+      <div className="overflow-hidden rounded-lg border shadow-sm aspect-[4/3] bg-muted">
+        <img src={photo} alt={caption || `Registro ${index + 1}`} className="w-full h-full object-cover" />
       </div>
       {caption && (
         <p className="text-xs text-muted-foreground text-center mt-1 italic">{caption}</p>
@@ -134,7 +134,7 @@ const PreviewPhotoGrid: React.FC<{ photos: string[]; metas?: ReportPhotoMeta[]; 
         if (indices.length === 0) return null;
         return (
           <div key={group.id} className="mb-4">
-            <div className="flex flex-wrap gap-4 justify-center">
+            <div className="grid grid-cols-2 gap-4">
               {indices.map(i => <PreviewPhoto key={i} photo={photos[i]} meta={metas?.[i]} index={i} />)}
             </div>
             <p className="text-xs text-muted-foreground text-center mt-1 italic">{group.caption}</p>
@@ -142,7 +142,7 @@ const PreviewPhotoGrid: React.FC<{ photos: string[]; metas?: ReportPhotoMeta[]; 
         );
       })}
       {ungrouped.length > 0 && (
-        <div className="flex flex-wrap gap-4 justify-center">
+        <div className="grid grid-cols-2 gap-4">
           {ungrouped.map(i => <PreviewPhoto key={i} photo={photos[i]} meta={metas?.[i]} index={i} />)}
         </div>
       )}
