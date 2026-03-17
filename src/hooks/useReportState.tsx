@@ -369,7 +369,17 @@ export const useReportState = () => {
     handleDocumentUpload,
     handleSectionPhotoUpload: fileUploader.handleSectionPhotoUpload,
     removeSectionPhoto: fileUploader.removeSectionPhoto,
-    reorderSectionPhotos: fileUploader.reorderSectionPhotos,
+    reorderSectionPhotos: (sectionKey: string, oldIndex: number, newIndex: number) => {
+      fileUploader.reorderSectionPhotos(sectionKey, oldIndex, newIndex);
+      setPhotoMetadata(prev => {
+        const metas = [...(prev[sectionKey] || [])];
+        if (metas.length > 0) {
+          const [moved] = metas.splice(oldIndex, 1);
+          metas.splice(newIndex, 0, moved);
+        }
+        return { ...prev, [sectionKey]: metas };
+      });
+    },
     handleSectionDocUpload: fileUploader.handleSectionDocUpload,
     removeSectionDoc: fileUploader.removeSectionDoc,
     insertDiaryPhotos,
