@@ -682,8 +682,15 @@ const CommunicationSection: React.FC<ExtProps> = ({
   );
 };
 
-const SatisfactionSection: React.FC<Props> = ({ satisfaction, setSatisfaction, projectName, projectObject }) => (
+const SatisfactionSection: React.FC<ExtProps> = ({ satisfaction, setSatisfaction, projectName, projectObject, activities, formatActivityDate, activitiesExpanded }) => (
   <div className="space-y-4">
+    <ActivitiesPanel
+      activities={activities}
+      expanded={activitiesExpanded}
+      formatActivityDate={formatActivityDate}
+      label="atividade(s) registradas no Diário de Bordo"
+      onInsert={(text) => setSatisfaction(satisfaction ? satisfaction + '\n' + text : text)}
+    />
     <div className="flex items-center justify-between">
       <Label>Grau de Satisfação</Label>
       <AiTextToolbar text={satisfaction} onResult={setSatisfaction} sectionType="generic" projectName={projectName} projectObject={projectObject} hideGenerate />
