@@ -127,8 +127,19 @@ export default function FormBuilderPage() {
             placeholder="Título do formulário"
           />
         </div>
-        <Badge variant={status === 'ativo' ? 'default' : 'secondary'} className="cursor-pointer" onClick={() => setStatus(s => s === 'ativo' ? 'inativo' : 'ativo')}>
-          {status === 'ativo' ? <><Eye className="w-3 h-3 mr-1" /> Ativo</> : <><EyeOff className="w-3 h-3 mr-1" /> Inativo</>}
+        <Badge
+          variant={status === 'ativo' ? 'default' : status === 'pausado' ? 'secondary' : 'destructive'}
+          className="cursor-pointer"
+          onClick={() => setStatus(s => {
+            if (s === 'ativo') return 'pausado';
+            if (s === 'pausado') return 'encerrado';
+            return 'ativo';
+          })}
+        >
+          {status === 'ativo' ? <><Eye className="w-3 h-3 mr-1" /> Ativo</> :
+           status === 'pausado' ? <><EyeOff className="w-3 h-3 mr-1" /> Pausado</> :
+           status === 'encerrado' ? <><EyeOff className="w-3 h-3 mr-1" /> Encerrado</> :
+           <><EyeOff className="w-3 h-3 mr-1" /> Inativo</>}
         </Badge>
         <Button variant="outline" size="sm" className="gap-2" onClick={copyLink}>
           <Share2 className="w-3.5 h-3.5" /> Compartilhar
