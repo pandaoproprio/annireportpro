@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useForms, useFormFields } from './hooks/useForms';
 import { FormFieldEditor } from './components/FormFieldEditor';
+import { ImportFieldsDialog } from './components/ImportFieldsDialog';
 import { FormResponsesTab } from './components/FormResponsesTab';
 import { FormDashboardTab } from './components/FormDashboardTab';
 import { FormDesignEditor } from './components/FormDesignEditor';
