@@ -46,6 +46,12 @@ export const JustificationReportGenerator: React.FC = () => {
     handleSectionDocUpload, removeSectionDoc,
   } = state;
 
+  // Realtime collaboration
+  const collab = useRealtimeCollaboration({
+    channelKey: `justification:${currentDraftId || project?.id || 'none'}`,
+    enabled: !!project?.id,
+  });
+
   // Auto-load draft from URL query param (switch project if needed)
   useEffect(() => {
     const draftId = searchParams.get('draftId');
