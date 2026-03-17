@@ -147,8 +147,8 @@ export default function FormsListPage() {
                 <CardContent className="p-5 space-y-3">
                   <div className="flex items-start justify-between">
                     <h3 className="font-semibold text-foreground line-clamp-1">{form.title}</h3>
-                    <Badge variant={form.status === 'ativo' ? 'default' : 'secondary'} className="text-xs shrink-0">
-                      {form.status === 'ativo' ? 'Ativo' : 'Inativo'}
+                    <Badge variant={form.status === 'ativo' ? 'default' : form.status === 'pausado' ? 'secondary' : form.status === 'encerrado' ? 'destructive' : 'secondary'} className="text-xs shrink-0">
+                      {form.status === 'ativo' ? 'Ativo' : form.status === 'pausado' ? 'Pausado' : form.status === 'encerrado' ? 'Encerrado' : 'Inativo'}
                     </Badge>
                   </div>
                   {form.description && (
