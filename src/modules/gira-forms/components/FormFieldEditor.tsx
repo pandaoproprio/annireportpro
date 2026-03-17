@@ -175,6 +175,13 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
                         <PlusCircle className="w-3 h-3" /> Adicionar opção
                       </Button>
                     </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <Switch
+                        checked={!!(field.settings?.allowOther ?? (conditionGroup as any)?.allowOther ?? allowOther)}
+                        onCheckedChange={setAllowOther}
+                      />
+                      <Label className="text-xs">Incluir opção "Outros (especifique)"</Label>
+                    </div>
                   </div>
                 )}
 
