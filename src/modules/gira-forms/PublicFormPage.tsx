@@ -99,14 +99,19 @@ export default function PublicFormPage() {
       let data: any;
       let error: any;
       if (isUuid) {
-        const res = await supabase.from('forms').select('*').eq('status', 'ativo').eq('id', id!).single();
+        const res = await supabase.from('forms').select('*').eq('id', id!).single();
         data = res.data; error = res.error;
       } else {
-        const res = await supabase.from('forms').select('*').eq('status', 'ativo').filter('public_slug', 'eq', id!).single();
+        const res = await supabase.from('forms').select('*').filter('public_slug', 'eq', id!).single();
         data = res.data; error = res.error;
       }
       if (error) throw error;
-      return data as unknown as Form;
+      const form = data as unknown as Form;
+      // Auto-close: if closes_at is in the past and still active, treat as encerrado
+      if (form.closes_at && new Date(form.closes_at) <= new Date() && form.status === 'ativo') {
+        form.status = 'encerrado';
+      }
+      return form;
     },
     enabled: !!id,
   });
@@ -469,6 +474,48 @@ export default function PublicFormPage() {
             <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#999' }} />
             <h2 className="text-xl font-semibold">Formulário indisponível</h2>
             <p className="text-sm" style={{ color: '#666' }}>Este formulário não existe ou não está mais ativo.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (form.status === 'pausado') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#f59e0b' }} />
+            <h2 className="text-xl font-semibold">Formulário pausado</h2>
+            <p className="text-sm" style={{ color: '#666' }}>Este formulário está temporariamente indisponível.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (form.status === 'encerrado') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#ef4444' }} />
+            <h2 className="text-xl font-semibold">Inscrições encerradas</h2>
+            <p className="text-sm" style={{ color: '#666' }}>As inscrições para este formulário já foram encerradas.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (form.status !== 'ativo') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#999' }} />
+            <h2 className="text-xl font-semibold">Formulário indisponível</h2>
+            <p className="text-sm" style={{ color: '#666' }}>Este formulário não está mais disponível.</p>
           </CardContent>
         </Card>
       </div>

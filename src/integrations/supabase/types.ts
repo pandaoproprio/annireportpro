@@ -904,6 +904,7 @@ export type Database = {
       forms: {
         Row: {
           category: string
+          closes_at: string | null
           created_at: string
           description: string
           id: string
@@ -917,6 +918,7 @@ export type Database = {
         }
         Insert: {
           category?: string
+          closes_at?: string | null
           created_at?: string
           description?: string
           id?: string
@@ -930,6 +932,7 @@ export type Database = {
         }
         Update: {
           category?: string
+          closes_at?: string | null
           created_at?: string
           description?: string
           id?: string

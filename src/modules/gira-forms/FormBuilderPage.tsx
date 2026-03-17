@@ -17,7 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink } from 'lucide-react';
-import { FIELD_TYPE_LABELS, CATEGORIES, type Form, type FormField, type FieldType, type FormDesignSettings } from './types';
+import { FIELD_TYPE_LABELS, CATEGORIES, type Form, type FormField, type FieldType, type FormDesignSettings, type FormStatus } from './types';
 import { motion, Reorder } from 'framer-motion';
 import { toast } from 'sonner';
 
@@ -41,7 +41,8 @@ export default function FormBuilderPage() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('geral');
-  const [status, setStatus] = useState<'ativo' | 'inativo'>('ativo');
+  const [status, setStatus] = useState<FormStatus>('ativo');
+  const [closesAt, setClosesAt] = useState<string>('');
   const [publicSlug, setPublicSlug] = useState('');
   const [editingFieldId, setEditingFieldId] = useState<string | null>(null);
   const [localFields, setLocalFields] = useState<FormField[]>([]);
@@ -53,6 +54,7 @@ export default function FormBuilderPage() {
       setDescription(form.description);
       setCategory(form.category);
       setStatus(form.status);
+      setClosesAt((form as any).closes_at || '');
       setPublicSlug((form as any).public_slug || '');
     }
   }, [form]);
@@ -64,7 +66,15 @@ export default function FormBuilderPage() {
   const handleSaveForm = async () => {
     if (!id) return;
     const slugToSave = publicSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '') || undefined;
-    await updateForm.mutateAsync({ id, title, description, category, status, public_slug: slugToSave });
+    await updateForm.mutateAsync({
+      id,
+      title,
+      description,
+      category,
+      status,
+      public_slug: slugToSave,
+      closes_at: closesAt || null,
+    });
     if (slugToSave) setPublicSlug(slugToSave);
   };
 
@@ -117,8 +127,19 @@ export default function FormBuilderPage() {
             placeholder="Título do formulário"
           />
         </div>
-        <Badge variant={status === 'ativo' ? 'default' : 'secondary'} className="cursor-pointer" onClick={() => setStatus(s => s === 'ativo' ? 'inativo' : 'ativo')}>
-          {status === 'ativo' ? <><Eye className="w-3 h-3 mr-1" /> Ativo</> : <><EyeOff className="w-3 h-3 mr-1" /> Inativo</>}
+        <Badge
+          variant={status === 'ativo' ? 'default' : status === 'pausado' ? 'secondary' : 'destructive'}
+          className="cursor-pointer"
+          onClick={() => setStatus(s => {
+            if (s === 'ativo') return 'pausado';
+            if (s === 'pausado') return 'encerrado';
+            return 'ativo';
+          })}
+        >
+          {status === 'ativo' ? <><Eye className="w-3 h-3 mr-1" /> Ativo</> :
+           status === 'pausado' ? <><EyeOff className="w-3 h-3 mr-1" /> Pausado</> :
+           status === 'encerrado' ? <><EyeOff className="w-3 h-3 mr-1" /> Encerrado</> :
+           <><EyeOff className="w-3 h-3 mr-1" /> Inativo</>}
         </Badge>
         <Button variant="outline" size="sm" className="gap-2" onClick={copyLink}>
           <Share2 className="w-3.5 h-3.5" /> Compartilhar
@@ -156,6 +177,44 @@ export default function FormBuilderPage() {
             </div>
             <span className="text-[10px] text-muted-foreground italic">Salve para aplicar</span>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Status & Scheduling Controls */}
+      <Card>
+        <CardContent className="p-3 flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Status:</span>
+            <Select value={status} onValueChange={(v) => setStatus(v as FormStatus)}>
+              <SelectTrigger className="w-40 h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ativo">🟢 Ativo</SelectItem>
+                <SelectItem value="pausado">🟡 Pausado</SelectItem>
+                <SelectItem value="encerrado">🔴 Encerrado</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Encerramento automático:</span>
+            <Input
+              type="datetime-local"
+              value={closesAt ? closesAt.slice(0, 16) : ''}
+              onChange={e => setClosesAt(e.target.value ? new Date(e.target.value).toISOString() : '')}
+              className="h-8 text-xs w-52"
+            />
+            {closesAt && (
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setClosesAt('')}>
+                Limpar
+              </Button>
+            )}
+          </div>
+          {closesAt && (
+            <span className="text-[10px] text-muted-foreground italic">
+              O formulário será encerrado automaticamente em {new Date(closesAt).toLocaleString('pt-BR')}
+            </span>
+          )}
         </CardContent>
       </Card>
 
