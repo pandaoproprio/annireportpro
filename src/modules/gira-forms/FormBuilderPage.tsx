@@ -17,7 +17,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink, Download } from 'lucide-react';
 import { FIELD_TYPE_LABELS, CATEGORIES, type Form, type FormField, type FieldType, type FormDesignSettings, type FormStatus } from './types';
 import { motion, Reorder } from 'framer-motion';
 import { toast } from 'sonner';
