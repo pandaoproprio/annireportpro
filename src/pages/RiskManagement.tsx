@@ -6,16 +6,18 @@ import { useProjectRisks, getRiskLevel, ProjectRisk, RiskFormData, PROBABILITY_L
 import { RiskFormDialog } from '@/components/risks/RiskFormDialog';
 import { RiskSummaryCards } from '@/components/risks/RiskSummaryCards';
 import { RiskMatrix } from '@/components/risks/RiskMatrix';
+import { RiskAiPanel } from '@/components/risks/RiskAiPanel';
+import { RiskCalendar } from '@/components/risks/RiskCalendar';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Edit, Trash2, ShieldAlert, Calendar, User, Filter } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ShieldAlert, Calendar, User, Filter, Brain, CalendarDays } from 'lucide-react';
 import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
 
 const RiskManagement: React.FC = () => {
   const { user } = useAuth();
@@ -27,6 +29,7 @@ const RiskManagement: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState('risks');
 
   if (!user) return <Navigate to="/login" replace />;
   if (!project) return (
@@ -69,6 +72,9 @@ const RiskManagement: React.FC = () => {
     return 'secondary' as const;
   };
 
+  // Count overdue risks for badge
+  const overdueCount = risks.filter(r => r.due_date && r.status !== 'resolvido' && new Date(r.due_date) < new Date()).length;
+
   return (
     <PageTransition>
       <div className="space-y-6 p-4 md:p-6">
@@ -87,102 +93,142 @@ const RiskManagement: React.FC = () => {
 
         <RiskSummaryCards summary={summary} />
 
-        {/* Matrix */}
-        {risks.length > 0 && (
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Matriz de Riscos</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <RiskMatrix risks={risks} />
-            </CardContent>
-          </Card>
-        )}
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="risks" className="gap-2">
+              <ShieldAlert className="w-4 h-4" /> Riscos
+            </TabsTrigger>
+            <TabsTrigger value="ai" className="gap-2">
+              <Brain className="w-4 h-4" /> Análise IA
+            </TabsTrigger>
+            <TabsTrigger value="calendar" className="gap-2 relative">
+              <CalendarDays className="w-4 h-4" /> Calendário
+              {overdueCount > 0 && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {overdueCount}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-        {/* Filters */}
-        <div className="flex flex-wrap gap-3 items-center">
-          <Filter className="w-4 h-4 text-muted-foreground" />
-          <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os Status</SelectItem>
-              {Object.entries(STATUS_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={filterCategory} onValueChange={setFilterCategory}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas Categorias</SelectItem>
-              {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <span className="text-sm text-muted-foreground ml-auto">{filtered.length} risco(s)</span>
-        </div>
+          {/* ── TAB: Riscos ── */}
+          <TabsContent value="risks" className="space-y-4 mt-4">
+            {/* Matrix */}
+            {risks.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Matriz de Riscos</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RiskMatrix risks={risks} />
+                </CardContent>
+              </Card>
+            )}
 
-        {/* List */}
-        {isLoading ? (
-          <div className="space-y-3">
-            {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
-          </div>
-        ) : filtered.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <ShieldAlert className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p>{risks.length === 0 ? 'Nenhum risco registrado ainda.' : 'Nenhum risco encontrado com os filtros atuais.'}</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {filtered.map(risk => {
-              const rl = getRiskLevel(risk.probability, risk.impact);
-              return (
-                <Card key={risk.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row justify-between gap-3">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          <h3 className="font-semibold text-base truncate">{risk.title}</h3>
-                          <Badge variant={getBadgeVariant(rl.level)}>{rl.level} ({rl.score})</Badge>
-                          <Badge variant="outline">{STATUS_LABELS[risk.status] || risk.status}</Badge>
-                          <Badge variant="secondary">{CATEGORY_LABELS[risk.category] || risk.category}</Badge>
+            {/* Filters */}
+            <div className="flex flex-wrap gap-3 items-center">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Status" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Status</SelectItem>
+                  {Object.entries(STATUS_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterCategory} onValueChange={setFilterCategory}>
+                <SelectTrigger className="w-[160px]"><SelectValue placeholder="Categoria" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas Categorias</SelectItem>
+                  {Object.entries(CATEGORY_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground ml-auto">{filtered.length} risco(s)</span>
+            </div>
+
+            {/* List */}
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
+              </div>
+            ) : filtered.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center text-muted-foreground">
+                  <ShieldAlert className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                  <p>{risks.length === 0 ? 'Nenhum risco registrado ainda.' : 'Nenhum risco encontrado com os filtros atuais.'}</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map(risk => {
+                  const rl = getRiskLevel(risk.probability, risk.impact);
+                  const isOverdue = risk.due_date && new Date(risk.due_date) < new Date() && risk.status !== 'resolvido';
+                  return (
+                    <Card key={risk.id} className={`hover:shadow-md transition-shadow ${isOverdue ? 'border-destructive/40' : ''}`}>
+                      <CardContent className="p-4">
+                        <div className="flex flex-col sm:flex-row justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              <h3 className="font-semibold text-base truncate">{risk.title}</h3>
+                              <Badge variant={getBadgeVariant(rl.level)}>{rl.level} ({rl.score})</Badge>
+                              <Badge variant="outline">{STATUS_LABELS[risk.status] || risk.status}</Badge>
+                              <Badge variant="secondary">{CATEGORY_LABELS[risk.category] || risk.category}</Badge>
+                              {isOverdue && <Badge variant="destructive">Atrasado</Badge>}
+                            </div>
+                            {risk.description && (
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{risk.description}</p>
+                            )}
+                            <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
+                              <span>Prob: {PROBABILITY_LABELS[risk.probability]}</span>
+                              <span>Impacto: {IMPACT_LABELS[risk.impact]}</span>
+                              {risk.responsible && (
+                                <span className="flex items-center gap-1">
+                                  <User className="w-3 h-3" /> {risk.responsible}
+                                </span>
+                              )}
+                              {risk.due_date && (
+                                <span className={`flex items-center gap-1 ${isOverdue ? 'text-destructive font-medium' : ''}`}>
+                                  <Calendar className="w-3 h-3" /> {format(new Date(risk.due_date), 'dd/MM/yyyy')}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-1 shrink-0">
+                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(risk)}>
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(risk.id)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
                         </div>
-                        {risk.description && (
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{risk.description}</p>
-                        )}
-                        <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-                          <span>Prob: {PROBABILITY_LABELS[risk.probability]}</span>
-                          <span>Impacto: {IMPACT_LABELS[risk.impact]}</span>
-                          {risk.responsible && (
-                            <span className="flex items-center gap-1">
-                              <User className="w-3 h-3" /> {risk.responsible}
-                            </span>
-                          )}
-                          {risk.due_date && (
-                            <span className="flex items-center gap-1">
-                              <Calendar className="w-3 h-3" /> {format(new Date(risk.due_date), 'dd/MM/yyyy')}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-1 shrink-0">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(risk)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(risk.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* ── TAB: Análise IA ── */}
+          <TabsContent value="ai" className="mt-4">
+            <RiskAiPanel
+              risks={risks}
+              projectName={project.name}
+              projectObject={project.object}
+              projectSummary={project.summary}
+              onCreateRisk={createRisk}
+            />
+          </TabsContent>
+
+          {/* ── TAB: Calendário ── */}
+          <TabsContent value="calendar" className="mt-4">
+            <RiskCalendar risks={risks} />
+          </TabsContent>
+        </Tabs>
 
         <RiskFormDialog
           open={formOpen}
