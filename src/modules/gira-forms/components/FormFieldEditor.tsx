@@ -59,6 +59,9 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     } else {
       delete newSettings.condition;
     }
+    if (hasOptions) {
+      newSettings.allowOther = allowOther;
+    }
     await onUpdate({ label, description, required: isNonInput ? false : required, type, options, settings: newSettings });
     onToggleEdit();
   };
