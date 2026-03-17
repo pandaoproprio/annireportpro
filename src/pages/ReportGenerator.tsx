@@ -312,23 +312,49 @@ export const ReportGenerator: React.FC = () => {
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
           {/* Diary Link Button */}
           <div className="flex justify-end gap-2 flex-wrap">
-            <Button
-              onClick={handleGenerateFullReport}
-              disabled={isGeneratingFullReport || activities.length === 0}
-              className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
-            >
-              {isGeneratingFullReport ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Gerando relatório...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="w-4 h-4" />
-                  Gerar Relatório Completo
-                </>
-              )}
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  disabled={isGeneratingFullReport}
+                  className="bg-primary hover:bg-primary/90 text-primary-foreground gap-2"
+                >
+                  {isGeneratingFullReport ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Gerando ({generatingMode === 'automatic' ? 'Autônomo' : generatingMode === 'hybrid' ? 'Híbrido' : 'Assistido'})...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      Gerar Relatório Completo
+                    </>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72">
+                <DropdownMenuItem onClick={() => handleGenerateFullReport('assisted')} disabled={activities.length === 0}>
+                  <Zap className="w-4 h-4 mr-2 text-amber-500" />
+                  <div>
+                    <p className="font-medium">Modo Assistido</p>
+                    <p className="text-xs text-muted-foreground">Usa dados + Diário de Bordo</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleGenerateFullReport('hybrid')}>
+                  <Cpu className="w-4 h-4 mr-2 text-blue-500" />
+                  <div>
+                    <p className="font-medium">Modo Híbrido</p>
+                    <p className="text-xs text-muted-foreground">Dados + descrição, Diário opcional</p>
+                  </div>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleGenerateFullReport('automatic')}>
+                  <Bot className="w-4 h-4 mr-2 text-emerald-500" />
+                  <div>
+                    <p className="font-medium">Modo Autônomo</p>
+                    <p className="text-xs text-muted-foreground">Gera sem Diário de Bordo</p>
+                  </div>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <NarrativeInsertDialog
               projectId={project.id}
               reportType="report_object"
