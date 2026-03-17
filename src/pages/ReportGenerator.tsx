@@ -53,6 +53,54 @@ export const ReportGenerator: React.FC = () => {
   const vc = useReportVisualConfig(project?.id, 'report_object');
   const diaryLinks = useDiaryReportLinks(project?.id, 'report_object');
   const [showDiaryLinkDialog, setShowDiaryLinkDialog] = useState(false);
+  const [isGeneratingFullReport, setIsGeneratingFullReport] = useState(false);
+
+  const handleGenerateFullReport = async () => {
+    if (!project) return;
+    setIsGeneratingFullReport(true);
+    try {
+      const mappedActivities = activities.map(a => ({
+        date: new Date(a.date).toLocaleDateString('pt-BR'),
+        type: a.type,
+        description: a.description,
+        results: a.results,
+        challenges: a.challenges,
+        attendeesCount: a.attendeesCount,
+        goalId: a.goalId,
+      }));
+
+      const { data, error } = await supabase.functions.invoke('generate-narrative', {
+        body: {
+          mode: 'full_report',
+          projectName: project.name,
+          projectObject: project.object,
+          activities: mappedActivities,
+          goals: project.goals.map((g: any) => ({ id: g.id, title: g.title, audience: g.audience })),
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.sections) {
+        const s = data.sections;
+        if (s.object) setObjectText(s.object);
+        if (s.summary) setSummary(s.summary);
+        if (s.goalNarratives) setGoalNarratives(s.goalNarratives);
+        if (s.other) setOtherActionsNarrative(s.other);
+        if (s.communication) setCommunicationNarrative(s.communication);
+        if (s.satisfaction) setSatisfaction(s.satisfaction);
+        if (s.future) setFutureActions(s.future);
+        toast.success('Relatório completo gerado com sucesso! Revise as seções.');
+      } else {
+        toast.error('Nenhum conteúdo gerado.');
+      }
+    } catch (err: any) {
+      console.error('Full report generation error:', err);
+      toast.error('Erro ao gerar relatório completo. Tente novamente.');
+    } finally {
+      setIsGeneratingFullReport(false);
+    }
+  };
 
   if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
 
