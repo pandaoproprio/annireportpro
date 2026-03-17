@@ -185,6 +185,10 @@ export const JustificationReportGenerator: React.FC = () => {
 
       {mode === 'edit' && (
         <div className="space-y-8 max-w-4xl mx-auto animate-slideUp pb-12">
+          <CollaborationPresenceBar
+            collaborators={collab.collaborators}
+            remoteUpdateCount={collab.remoteUpdateCount}
+          />
           <ReportStructureEditor
             sections={sections}
             moveSection={moveSection}
