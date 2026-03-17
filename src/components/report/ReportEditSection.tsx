@@ -196,6 +196,7 @@ const SortablePhotoCard: React.FC<{
 };
 
 
+export const ReportEditSection: React.FC<Props> = (props) => {
   const { section, index } = props;
   const [activitiesExpanded, setActivitiesExpanded] = useState(false);
   if (!section.isVisible) return null;
