@@ -43,6 +43,7 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
   const [conditionGroup, setConditionGroup] = useState<FieldConditionGroup | null>(
     () => parseLegacyCondition(field.settings?.condition)
   );
+  const [allowOther, setAllowOther] = useState<boolean>(!!(field.settings?.allowOther));
 
   const hasOptions = ['single_select', 'multi_select', 'checkbox'].includes(type);
   const isNonInput = NON_INPUT_TYPES.includes(type);
