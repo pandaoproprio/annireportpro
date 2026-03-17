@@ -54,6 +54,7 @@ export default function FormBuilderPage() {
       setDescription(form.description);
       setCategory(form.category);
       setStatus(form.status);
+      setClosesAt((form as any).closes_at || '');
       setPublicSlug((form as any).public_slug || '');
     }
   }, [form]);
