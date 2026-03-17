@@ -41,8 +41,8 @@ const InlineImageView: React.FC<NodeViewProps> = ({ node, updateAttributes, sele
         onClick={() => setEditing(true)}
       >
         <img
-          src={node.attrs.src}
-          alt={node.attrs.alt || caption || 'Imagem'}
+          src={attrs.src}
+          alt={attrs.alt || caption || 'Imagem'}
           style={{ width: `${widthPct}%`, margin: '0 auto' }}
           className="rounded-md max-w-full block mx-auto"
           draggable={false}
