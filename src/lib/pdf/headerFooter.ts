@@ -160,8 +160,15 @@ export const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
 
     let cx = startX;
     for (const logo of logos) {
-      const h = logo.computedW / (logo.img.width / logo.img.height);
-      try { pdf.addImage(logo.img.data, 'JPEG', cx, headerY, logo.computedW, Math.min(h, logoH)); } catch { /* skip */ }
+      const aspect = logo.img.width / logo.img.height;
+      let drawW = logo.computedW;
+      let drawH = drawW / aspect;
+      // If height exceeds max, clamp and recalculate width to preserve aspect ratio
+      if (drawH > logoH) {
+        drawH = logoH;
+        drawW = drawH * aspect;
+      }
+      try { pdf.addImage(logo.img.data, 'JPEG', cx, headerY, drawW, drawH); } catch { /* skip */ }
       cx += logo.computedW + effectiveGap;
     }
   }
