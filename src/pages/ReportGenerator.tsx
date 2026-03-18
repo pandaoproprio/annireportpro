@@ -22,7 +22,7 @@ import { DiaryReportLinkDialog } from '@/components/report/DiaryReportLinkDialog
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { WorkflowPanel } from '@/components/workflow/WorkflowPanel';
 import { toast } from 'sonner';
-import { mmToPx, a4PageStyle, MR, ML, MB } from '@/lib/previewConstants';
+import { mmToPx, a4PageStyle, MR, ML, MB, MT } from '@/lib/previewConstants';
 
 export const ReportGenerator: React.FC = () => {
   const state = useReportState();
