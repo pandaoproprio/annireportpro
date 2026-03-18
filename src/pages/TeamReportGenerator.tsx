@@ -1137,8 +1137,11 @@ export const TeamReportGenerator: React.FC = () => {
 
   const headerContentGapPx = (config.headerContentSpacing ?? 8) * 3;
 
+  // Pull header up into the top margin area (30mm ABNT margin)
+  const headerNegMargin = 30 * 3 - (config.headerTopPadding || 3) * 3; // approximate px
+
   const PreviewHeader = () => (
-    <div className="pb-4 border-b print:border-b-0" style={{ paddingTop: `${config.headerTopPadding}px`, minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px` }}>
+    <div className="pb-4 border-b print:border-b-0" style={{ marginTop: `-${headerNegMargin}px`, paddingTop: `${(config.headerTopPadding || 3) * 3}px`, minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px` }}>
       {config.headerBannerUrl && config.headerBannerVisible ? (
         <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ height: `${config.headerBannerHeightMm * 3}px`, objectFit: config.headerBannerFit }} />
       ) : (
