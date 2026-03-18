@@ -493,6 +493,10 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   addSignatureBlock(ctx, project.organizationName, dateText, 'Assinatura do Responsável');
 
   // ── Footer + page numbers ──
+  const CEAP_FOOTER_L1 = 'Centro de Articulação de Populações Marginalizadas - CEAP';
+  const CEAP_FOOTER_L2 = 'R. Sr. dos Passos, 174 - Sl 701 - Centro, Rio de Janeiro - RJ, 20061-011';
+  const CEAP_FOOTER_L3 = 'ceapoficial.org.br | falecom@ceapoficial.org.br | (21) 9 7286-4717';
+
   const footerInfo: FooterInfo = {
     orgName: project.organizationName,
     address: footerShowAddress ? project.organizationAddress : undefined,
@@ -501,12 +505,12 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     phone: footerShowContact ? project.organizationPhone : undefined,
     customText: footerText,
     alignment: footerAlignment,
-    institutionalEnabled: vc?.footerInstitutionalEnabled,
-    line1Text: vc?.footerLine1Text,
+    institutionalEnabled: vc?.footerInstitutionalEnabled !== false,
+    line1Text: vc?.footerLine1Text || CEAP_FOOTER_L1,
     line1FontSize: vc?.footerLine1FontSize,
-    line2Text: vc?.footerLine2Text,
+    line2Text: vc?.footerLine2Text || CEAP_FOOTER_L2,
     line2FontSize: vc?.footerLine2FontSize,
-    line3Text: vc?.footerLine3Text,
+    line3Text: vc?.footerLine3Text || CEAP_FOOTER_L3,
     line3FontSize: vc?.footerLine3FontSize,
     lineSpacing: vc?.footerLineSpacing,
     topSpacing: vc?.footerTopSpacing,

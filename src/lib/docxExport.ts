@@ -450,8 +450,12 @@ export const exportToDocx = async (data: ExportData) => {
               const instEnabled = vc ? vc.footerInstitutionalEnabled !== false : true;
 
               if (instEnabled) {
+                const CEAP_L1 = 'Centro de Articulação de Populações Marginalizadas - CEAP';
+                const CEAP_L2 = 'R. Sr. dos Passos, 174 - Sl 701 - Centro, Rio de Janeiro - RJ, 20061-011';
+                const CEAP_L3 = 'ceapoficial.org.br | falecom@ceapoficial.org.br | (21) 9 7286-4717';
+
                 // Line 1 (bold)
-                const l1Text = vc?.footerLine1Text || project.organizationName;
+                const l1Text = vc?.footerLine1Text || CEAP_L1;
                 const l1Size = Math.round((vc?.footerLine1FontSize ?? 9) * 2);
                 children.push(new Paragraph({
                   alignment: AlignmentType.CENTER,
@@ -460,24 +464,22 @@ export const exportToDocx = async (data: ExportData) => {
                 }));
 
                 // Line 2 (normal)
-                if (vc?.footerLine2Text) {
-                  const l2Size = Math.round((vc.footerLine2FontSize ?? 7) * 2);
-                  children.push(new Paragraph({
-                    alignment: AlignmentType.CENTER,
-                    spacing: { after: 20 },
-                    children: [new TextRun({ text: vc.footerLine2Text, size: l2Size, font: 'Times New Roman' })],
-                  }));
-                }
+                const l2Text = vc?.footerLine2Text || CEAP_L2;
+                const l2Size = Math.round((vc?.footerLine2FontSize ?? 7) * 2);
+                children.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: l2Text, size: l2Size, font: 'Times New Roman' })],
+                }));
 
                 // Line 3 (normal)
-                if (vc?.footerLine3Text) {
-                  const l3Size = Math.round((vc.footerLine3FontSize ?? 7) * 2);
-                  children.push(new Paragraph({
-                    alignment: AlignmentType.CENTER,
-                    spacing: { after: 20 },
-                    children: [new TextRun({ text: vc.footerLine3Text, size: l3Size, font: 'Times New Roman' })],
-                  }));
-                }
+                const l3Text = vc?.footerLine3Text || CEAP_L3;
+                const l3Size = Math.round((vc?.footerLine3FontSize ?? 7) * 2);
+                children.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: l3Text, size: l3Size, font: 'Times New Roman' })],
+                }));
               }
 
               // Custom text (italic)
