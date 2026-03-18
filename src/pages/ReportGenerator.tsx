@@ -216,8 +216,11 @@ export const ReportGenerator: React.FC = () => {
 
   const headerContentGapPx = mmToPx(config.headerContentSpacing ?? 8);
 
+  // Pull the header up into the top margin area so it starts at headerTopPadding from page top
+  const headerNegativeMarginPx = mmToPx(MT - (config.headerTopPadding || 3));
+
   const ReportHeader = () => (
-    <div className="pb-4 border-b print:border-b-0" style={{ paddingTop: `${config.headerTopPadding}px`, minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px` }}>
+    <div className="pb-4 border-b print:border-b-0" style={{ marginTop: `-${headerNegativeMarginPx}px`, paddingTop: `${mmToPx(config.headerTopPadding || 3)}px`, minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px` }}>
       {config.headerBannerUrl && config.headerBannerVisible ? (
         <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ height: `${mmToPx(config.headerBannerHeightMm)}px`, objectFit: config.headerBannerFit }} />
       ) : (
