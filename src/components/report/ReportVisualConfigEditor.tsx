@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { BookOpen, FileText, PanelBottom, X, Save, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportVisualConfig, LogoConfig } from '@/hooks/useReportVisualConfig';
+import { mmToPx } from '@/lib/previewConstants';
 
 interface Props {
   config: ReportVisualConfig;
