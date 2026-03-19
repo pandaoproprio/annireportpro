@@ -216,8 +216,10 @@ export const ReportGenerator: React.FC = () => {
 
   const headerContentGapPx = mmToPx(config.headerContentSpacing ?? 8);
 
+  const headerTopPadPx = mmToPx(config.headerTopPadding ?? 3);
+
   const ReportHeader = () => (
-    <div className="pb-4 border-b print:border-b-0" style={{ minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px` }}>
+    <div className="pb-4 border-b print:border-b-0" style={{ minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px`, paddingTop: `${headerTopPadPx}px` }}>
       {config.headerBannerUrl && config.headerBannerVisible ? (
         <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ height: `${mmToPx(config.headerBannerHeightMm)}px`, objectFit: config.headerBannerFit }} />
       ) : (
