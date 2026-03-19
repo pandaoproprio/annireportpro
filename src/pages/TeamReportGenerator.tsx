@@ -38,6 +38,7 @@ import { maskCpfCnpj } from '@/lib/masks';
 import { fetchCnpjData } from '@/lib/cnpjLookup';
 import { WorkflowPanel } from '@/components/workflow/WorkflowPanel';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { mmToPx } from '@/lib/previewConstants';
 import {
   DndContext,
   closestCenter,
@@ -1132,32 +1133,33 @@ export const TeamReportGenerator: React.FC = () => {
     : config.headerLogoAlignment;
 
   const effectiveHeaderHeightPx = config.headerBannerUrl && config.headerBannerVisible
-    ? config.headerBannerHeightMm * 3
-    : config.headerHeight * 2;
+    ? mmToPx(config.headerBannerHeightMm)
+    : mmToPx(config.headerHeight);
 
-  const headerContentGapPx = (config.headerContentSpacing ?? 8) * 3;
+  const headerContentGapPx = mmToPx(config.headerContentSpacing ?? 8);
+  const headerTopPadPx = mmToPx(config.headerTopPadding ?? 3);
 
   const PreviewHeader = () => (
-    <div className="pb-4 border-b print:border-b-0" style={{ minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px` }}>
+    <div className="pb-4 border-b print:border-b-0" style={{ minHeight: `${effectiveHeaderHeightPx}px`, marginBottom: `${headerContentGapPx}px`, paddingTop: `${headerTopPadPx}px` }}>
       {config.headerBannerUrl && config.headerBannerVisible ? (
-        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ height: `${config.headerBannerHeightMm * 3}px`, objectFit: config.headerBannerFit }} />
+        <img src={config.headerBannerUrl} alt="Cabeçalho" className="w-full" style={{ height: `${mmToPx(config.headerBannerHeightMm)}px`, objectFit: config.headerBannerFit }} />
       ) : (
-        <div className="flex items-center" style={{ justifyContent: logoJustify, gap: `${config.headerLogoGap * 2}px` }}>
+        <div className="flex items-center" style={{ justifyContent: logoJustify, gap: `${mmToPx(config.headerLogoGap)}px` }}>
           <div className="flex items-center gap-3">
             {config.logo && config.logoConfig.visible && (
-              <img src={config.logo} alt="Logo" className="object-contain" style={{ width: `${config.logoConfig.widthMm * 2.5}px` }} />
+              <img src={config.logo} alt="Logo" className="object-contain" style={{ width: `${mmToPx(config.logoConfig.widthMm)}px` }} />
             )}
             {config.headerLeftText && <span className="text-xs text-muted-foreground">{config.headerLeftText}</span>}
           </div>
           <div className="flex items-center justify-center">
             {config.logoCenter && config.logoCenterConfig.visible && (
-              <img src={config.logoCenter} alt="Logo Centro" className="object-contain" style={{ width: `${config.logoCenterConfig.widthMm * 2.5}px` }} />
+              <img src={config.logoCenter} alt="Logo Centro" className="object-contain" style={{ width: `${mmToPx(config.logoCenterConfig.widthMm)}px` }} />
             )}
           </div>
           <div className="flex items-center gap-3">
             {config.headerRightText && <span className="text-xs text-muted-foreground">{config.headerRightText}</span>}
             {config.logoSecondary && config.logoSecondaryConfig.visible && (
-              <img src={config.logoSecondary} alt="Logo Secundário" className="object-contain" style={{ width: `${config.logoSecondaryConfig.widthMm * 2.5}px` }} />
+              <img src={config.logoSecondary} alt="Logo Secundário" className="object-contain" style={{ width: `${mmToPx(config.logoSecondaryConfig.widthMm)}px` }} />
             )}
           </div>
         </div>

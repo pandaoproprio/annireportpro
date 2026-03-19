@@ -9,6 +9,7 @@ import { Slider } from '@/components/ui/slider';
 import { BookOpen, FileText, PanelBottom, X, Save, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ReportVisualConfig, LogoConfig } from '@/hooks/useReportVisualConfig';
+import { mmToPx } from '@/lib/previewConstants';
 
 interface Props {
   config: ReportVisualConfig;
@@ -343,6 +344,43 @@ export const ReportVisualConfigEditor = React.forwardRef<HTMLDivElement, Props>(
                   <Slider value={[config.headerContentSpacing]} min={0} max={30} step={1} onValueChange={([v]) => updateConfig({ headerContentSpacing: v })} />
                 </div>
               </div>
+
+              {/* Header preview at actual sizes */}
+              {(config.logo || config.logoCenter || config.logoSecondary) && (
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground uppercase">Pré-visualização do cabeçalho (tamanho real)</Label>
+                  <div
+                    className="bg-background border rounded-lg overflow-hidden"
+                    style={{
+                      minHeight: `${mmToPx(config.headerHeight)}px`,
+                      paddingTop: `${mmToPx(config.headerTopPadding)}px`,
+                      paddingBottom: '8px',
+                    }}
+                  >
+                    <div
+                      className="flex items-center px-3"
+                      style={{
+                        justifyContent:
+                          config.headerLogoAlignment === 'left' ? 'flex-start'
+                          : config.headerLogoAlignment === 'right' ? 'flex-end'
+                          : config.headerLogoAlignment === 'center' ? 'center'
+                          : config.headerLogoAlignment,
+                        gap: `${mmToPx(config.headerLogoGap)}px`,
+                      }}
+                    >
+                      {config.logo && config.logoConfig.visible && (
+                        <img src={config.logo} alt="Logo" className="object-contain" style={{ width: `${mmToPx(config.logoConfig.widthMm)}px` }} />
+                      )}
+                      {config.logoCenter && config.logoCenterConfig.visible && (
+                        <img src={config.logoCenter} alt="Logo Centro" className="object-contain" style={{ width: `${mmToPx(config.logoCenterConfig.widthMm)}px` }} />
+                      )}
+                      {config.logoSecondary && config.logoSecondaryConfig.visible && (
+                        <img src={config.logoSecondary} alt="Logo Direita" className="object-contain" style={{ width: `${mmToPx(config.logoSecondaryConfig.widthMm)}px` }} />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
