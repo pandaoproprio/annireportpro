@@ -141,7 +141,9 @@ const normalizeLegacyLogoConfig = (
     visible: logoConfig?.visible ?? fallback.visible,
     widthMm:
       typeof savedWidth === 'number'
-        ? (savedWidth <= LEGACY_LOGO_WIDTH_MM ? fallback.widthMm : savedWidth)
+        ? savedWidth <= LEGACY_LOGO_WIDTH_MM
+          ? fallback.widthMm
+          : savedWidth
         : fallback.widthMm,
   };
 };
@@ -151,7 +153,9 @@ const normalizeLoadedConfig = (reportData: Record<string, any>): ReportVisualCon
   ...reportData,
   headerHeight:
     typeof reportData.headerHeight === 'number'
-      ? (reportData.headerHeight <= LEGACY_HEADER_HEIGHT_MM ? DEFAULT_CONFIG.headerHeight : reportData.headerHeight)
+      ? reportData.headerHeight <= LEGACY_HEADER_HEIGHT_MM
+        ? DEFAULT_CONFIG.headerHeight
+        : reportData.headerHeight
       : DEFAULT_CONFIG.headerHeight,
   logoConfig: normalizeLegacyLogoConfig(reportData.logoConfig, DEFAULT_CONFIG.logoConfig),
   logoCenterConfig: normalizeLegacyLogoConfig(reportData.logoCenterConfig, DEFAULT_CONFIG.logoCenterConfig),
@@ -159,7 +163,27 @@ const normalizeLoadedConfig = (reportData: Record<string, any>): ReportVisualCon
   footerShowAddress: reportData.footerShowAddress !== false,
   footerShowContact: reportData.footerShowContact !== false,
 });
-...
+
+export const useReportVisualConfig = (projectId: string | undefined, reportType: ReportType) => {
+  const { user } = useAuth();
+  const [config, setConfig] = useState<ReportVisualConfig>(DEFAULT_CONFIG);
+  const [isLoading, setIsLoading] = useState(true);
+  const [rowId, setRowId] = useState<string | null>(null);
+
+  // Load config from project_report_templates
+  useEffect(() => {
+    if (!projectId) return;
+
+    const load = async () => {
+      setIsLoading(true);
+      try {
+        const { data, error } = await (supabase
+          .from('project_report_templates')
+          .select('id, report_data') as any)
+          .eq('project_id', projectId)
+          .eq('report_type', reportType)
+          .maybeSingle();
+
         if (error) {
           console.error('Error loading visual config:', error);
         } else if (data) {
