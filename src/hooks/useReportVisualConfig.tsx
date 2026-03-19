@@ -128,6 +128,42 @@ const DEFAULT_CONFIG: ReportVisualConfig = {
   footerTopSpacing: 4,
 };
 
+const LEGACY_LOGO_WIDTH_MM = 12;
+const LEGACY_HEADER_HEIGHT_MM = 14;
+
+const normalizeLegacyLogoConfig = (
+  logoConfig: Partial<LogoConfig> | undefined,
+  fallback: LogoConfig,
+): LogoConfig => {
+  const savedWidth = logoConfig?.widthMm;
+
+  return {
+    visible: logoConfig?.visible ?? fallback.visible,
+    widthMm:
+      typeof savedWidth === 'number'
+        ? savedWidth <= LEGACY_LOGO_WIDTH_MM
+          ? fallback.widthMm
+          : savedWidth
+        : fallback.widthMm,
+  };
+};
+
+const normalizeLoadedConfig = (reportData: Record<string, any>): ReportVisualConfig => ({
+  ...DEFAULT_CONFIG,
+  ...reportData,
+  headerHeight:
+    typeof reportData.headerHeight === 'number'
+      ? reportData.headerHeight <= LEGACY_HEADER_HEIGHT_MM
+        ? DEFAULT_CONFIG.headerHeight
+        : reportData.headerHeight
+      : DEFAULT_CONFIG.headerHeight,
+  logoConfig: normalizeLegacyLogoConfig(reportData.logoConfig, DEFAULT_CONFIG.logoConfig),
+  logoCenterConfig: normalizeLegacyLogoConfig(reportData.logoCenterConfig, DEFAULT_CONFIG.logoCenterConfig),
+  logoSecondaryConfig: normalizeLegacyLogoConfig(reportData.logoSecondaryConfig, DEFAULT_CONFIG.logoSecondaryConfig),
+  footerShowAddress: reportData.footerShowAddress !== false,
+  footerShowContact: reportData.footerShowContact !== false,
+});
+
 export const useReportVisualConfig = (projectId: string | undefined, reportType: ReportType) => {
   const { user } = useAuth();
   const [config, setConfig] = useState<ReportVisualConfig>(DEFAULT_CONFIG);
@@ -153,15 +189,7 @@ export const useReportVisualConfig = (projectId: string | undefined, reportType:
         } else if (data) {
           setRowId(data.id);
           const rd = (data.report_data || {}) as Record<string, any>;
-          setConfig({
-            ...DEFAULT_CONFIG,
-            ...rd,
-            logoConfig: { ...DEFAULT_CONFIG.logoConfig, ...(rd.logoConfig || {}) },
-            logoCenterConfig: { ...DEFAULT_CONFIG.logoCenterConfig, ...(rd.logoCenterConfig || {}) },
-            logoSecondaryConfig: { ...DEFAULT_CONFIG.logoSecondaryConfig, ...(rd.logoSecondaryConfig || {}) },
-            footerShowAddress: rd.footerShowAddress !== false,
-            footerShowContact: rd.footerShowContact !== false,
-          });
+          setConfig(normalizeLoadedConfig(rd));
         }
       } catch (e) {
         console.error('Error loading visual config:', e);
