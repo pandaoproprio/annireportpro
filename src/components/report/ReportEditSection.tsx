@@ -973,6 +973,19 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
               ))}
             </div>
           )}
+          {/* Manual URL input */}
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Cole um link aqui (https://...)"
+              value={manualUrl}
+              onChange={e => setManualUrl(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addManualUrl(); } }}
+              className="text-sm flex-1"
+            />
+            <Button variant="outline" size="sm" onClick={addManualUrl} disabled={!manualUrl.trim()}>
+              <PlusCircle className="w-4 h-4 mr-1" /> Adicionar
+            </Button>
+          </div>
           {/* Always show upload button for media */}
           <div className="flex items-center gap-2 flex-wrap">
             <Label htmlFor={`upload-${field}`} className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors">
