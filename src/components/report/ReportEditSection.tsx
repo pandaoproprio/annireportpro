@@ -839,6 +839,8 @@ const extractFileName = (url: string) => {
 
 const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, linkDisplayNames, setLinkDisplayNames, handleDocumentUpload, activities, selectedVideoUrls, setSelectedVideoUrls }, ref) => {
   const [showVideoPicker, setShowVideoPicker] = React.useState(false);
+  const [manualUrl, setManualUrl] = React.useState('');
+  const { shortenUrl, shortening } = useShortLinks();
 
   // Auto-derive video entries from diary activities
   const diaryVideos = React.useMemo(() => {
