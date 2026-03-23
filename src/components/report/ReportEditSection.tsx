@@ -880,10 +880,10 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
     const names = (linkFileNames.media || '').split('\n').filter(l => l.trim());
     urls.splice(index, 1);
     names.splice(index, 1);
-    setLinks(prev => ({ ...prev, media: urls.join('\n') }));
-    setLinkFileNames(prev => ({ ...prev, media: names.join('\n') }));
+    setLinks({ ...links, media: urls.join('\n') });
+    setLinkFileNames({ ...linkFileNames, media: names.join('\n') });
     if (urls.length === 0) {
-      setLinkDisplayNames(prev => ({ ...prev, media: '' }));
+      setLinkDisplayNames({ ...linkDisplayNames, media: '' });
     }
   };
 
