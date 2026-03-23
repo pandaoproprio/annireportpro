@@ -352,7 +352,21 @@ const LinksPreview = React.forwardRef<HTMLElement, Props>(({ section, links, lin
       <ul className="space-y-3 text-sm">
         <li><strong>Listas de Presença:</strong>{' '}{links.attendance ? <a href={links.attendance} className="text-primary underline break-all">{dn.attendance || links.attendance}</a> : '[Insira o link]'}</li>
         <li><strong>Listas de Inscrição:</strong>{' '}{links.registration ? <a href={links.registration} className="text-primary underline break-all">{dn.registration || links.registration}</a> : '[Insira o link]'}</li>
-        <li><strong>Mídias (Fotos, Vídeos):</strong>{' '}{links.media ? <a href={links.media} className="text-primary underline break-all">{dn.media || links.media}</a> : '[Insira o link]'}</li>
+        <li>
+          <strong>Mídias (Fotos, Vídeos):</strong>{' '}
+          {links.media ? (() => {
+            const mediaUrls = links.media.split('\n').filter((l: string) => l.trim());
+            if (dn.media) return <a href={mediaUrls[0] || '#'} className="text-primary underline break-all">{dn.media}</a>;
+            if (mediaUrls.length === 1) return <a href={mediaUrls[0]} className="text-primary underline break-all">{mediaUrls[0]}</a>;
+            return (
+              <ul className="list-disc list-inside mt-1 space-y-1">
+                {mediaUrls.map((u: string, i: number) => (
+                  <li key={i}><a href={u} className="text-primary underline break-all text-xs">{u}</a></li>
+                ))}
+              </ul>
+            );
+          })() : '[Insira o link]'}
+        </li>
       </ul>
     </section>
   );
