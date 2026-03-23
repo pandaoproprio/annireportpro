@@ -890,6 +890,31 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
     }
   };
 
+  const addManualUrl = () => {
+    const trimmed = manualUrl.trim();
+    if (!trimmed) return;
+    try { new URL(trimmed); } catch { toast.error('URL inválida. Insira um link válido.'); return; }
+    const existing = (links.media || '').split('\n').filter(l => l.trim());
+    existing.push(trimmed);
+    setLinks({ ...links, media: existing.join('\n') });
+    const names = (linkFileNames.media || '').split('\n').filter(l => l.trim());
+    names.push(trimmed);
+    setLinkFileNames({ ...linkFileNames, media: names.join('\n') });
+    setManualUrl('');
+    toast.success('Link adicionado!');
+  };
+
+  const handleShortenMediaItem = async (index: number) => {
+    const urls = (links.media || '').split('\n').filter(l => l.trim());
+    const originalUrl = urls[index];
+    if (!originalUrl) return;
+    const shortened = await shortenUrl(originalUrl);
+    if (shortened) {
+      urls[index] = shortened;
+      setLinks({ ...links, media: urls.join('\n') });
+    }
+  };
+
   const renderLinkField = (label: string, field: 'attendance' | 'registration' | 'media', accept: string) => {
     const url = links[field];
     const fileName = linkFileNames[field];
