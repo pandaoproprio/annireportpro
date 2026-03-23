@@ -1955,6 +1955,33 @@ export type Database = {
           },
         ]
       }
+      short_links: {
+        Row: {
+          click_count: number | null
+          created_at: string | null
+          created_by: string
+          id: string
+          original_url: string
+          slug: string
+        }
+        Insert: {
+          click_count?: number | null
+          created_at?: string | null
+          created_by: string
+          id?: string
+          original_url: string
+          slug: string
+        }
+        Update: {
+          click_count?: number | null
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          original_url?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       sprint_items: {
         Row: {
           activity_id: string | null

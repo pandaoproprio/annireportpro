@@ -24,8 +24,9 @@ import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
-import { Trash2, Plus, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus, Check, ClipboardPaste, BookImage, Video, ExternalLink, GripVertical } from 'lucide-react';
+import { Trash2, Plus, PlusCircle, Image as ImageIcon, Upload, FileText, Pencil, Grid2x2, Grid3x3, LayoutList, GalleryHorizontal, LayoutGrid, FolderPlus, FolderMinus, Check, ClipboardPaste, BookImage, Video, ExternalLink, GripVertical } from 'lucide-react';
 import { ActivityCountBadge } from '@/components/report/ActivityCountBadge';
+import { useShortLinks } from '@/hooks/useShortLinks';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ImageLayoutEditor } from '@/components/report/ImageLayoutEditor';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
@@ -839,6 +840,8 @@ const extractFileName = (url: string) => {
 
 const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks, linkFileNames, setLinkFileNames, linkDisplayNames, setLinkDisplayNames, handleDocumentUpload, activities, selectedVideoUrls, setSelectedVideoUrls }, ref) => {
   const [showVideoPicker, setShowVideoPicker] = React.useState(false);
+  const [manualUrl, setManualUrl] = React.useState('');
+  const { shortenUrl, shortening } = useShortLinks();
 
   // Auto-derive video entries from diary activities
   const diaryVideos = React.useMemo(() => {
@@ -887,6 +890,31 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
     }
   };
 
+  const addManualUrl = () => {
+    const trimmed = manualUrl.trim();
+    if (!trimmed) return;
+    try { new URL(trimmed); } catch { toast.error('URL inválida. Insira um link válido.'); return; }
+    const existing = (links.media || '').split('\n').filter(l => l.trim());
+    existing.push(trimmed);
+    setLinks({ ...links, media: existing.join('\n') });
+    const names = (linkFileNames.media || '').split('\n').filter(l => l.trim());
+    names.push(trimmed);
+    setLinkFileNames({ ...linkFileNames, media: names.join('\n') });
+    setManualUrl('');
+    toast.success('Link adicionado!');
+  };
+
+  const handleShortenMediaItem = async (index: number) => {
+    const urls = (links.media || '').split('\n').filter(l => l.trim());
+    const originalUrl = urls[index];
+    if (!originalUrl) return;
+    const shortened = await shortenUrl(originalUrl);
+    if (shortened) {
+      urls[index] = shortened;
+      setLinks({ ...links, media: urls.join('\n') });
+    }
+  };
+
   const renderLinkField = (label: string, field: 'attendance' | 'registration' | 'media', accept: string) => {
     const url = links[field];
     const fileName = linkFileNames[field];
@@ -919,10 +947,15 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
                 const mName = mediaNames[i] || (isVideo ? extractFileName(mUrl) : 'Documento enviado');
                 return (
                   <div key={i} className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                    {isVideo ? <Video className="w-4 h-4 text-primary shrink-0" /> : <FileText className="w-4 h-4 text-primary shrink-0" />}
+                    {isVideo ? <Video className="w-4 h-4 text-primary shrink-0" /> : mUrl.includes('short-link-redirect') ? <ExternalLink className="w-4 h-4 text-accent-foreground shrink-0" /> : <FileText className="w-4 h-4 text-primary shrink-0" />}
                     <a href={mUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={mUrl}>
                       {mName}
                     </a>
+                    {!mUrl.includes('short-link-redirect') && (
+                      <button onClick={() => handleShortenMediaItem(i)} disabled={shortening} className="text-muted-foreground hover:text-primary p-1" title="Encurtar link">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button onClick={() => removeMediaItem(i)} className="text-destructive/60 hover:text-destructive p-1" title="Remover">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -940,6 +973,19 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
               ))}
             </div>
           )}
+          {/* Manual URL input */}
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Cole um link aqui (https://...)"
+              value={manualUrl}
+              onChange={e => setManualUrl(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addManualUrl(); } }}
+              className="text-sm flex-1"
+            />
+            <Button variant="outline" size="sm" onClick={addManualUrl} disabled={!manualUrl.trim()}>
+              <PlusCircle className="w-4 h-4 mr-1" /> Adicionar
+            </Button>
+          </div>
           {/* Always show upload button for media */}
           <div className="flex items-center gap-2 flex-wrap">
             <Label htmlFor={`upload-${field}`} className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors">
