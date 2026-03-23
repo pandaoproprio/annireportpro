@@ -947,10 +947,15 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
                 const mName = mediaNames[i] || (isVideo ? extractFileName(mUrl) : 'Documento enviado');
                 return (
                   <div key={i} className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                    {isVideo ? <Video className="w-4 h-4 text-primary shrink-0" /> : <FileText className="w-4 h-4 text-primary shrink-0" />}
+                    {isVideo ? <Video className="w-4 h-4 text-primary shrink-0" /> : mUrl.includes('supabase.co/functions/v1/short-link') ? <ExternalLink className="w-4 h-4 text-green-600 shrink-0" /> : <FileText className="w-4 h-4 text-primary shrink-0" />}
                     <a href={mUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={mUrl}>
                       {mName}
                     </a>
+                    {!mUrl.includes('short-link-redirect') && (
+                      <button onClick={() => handleShortenMediaItem(i)} disabled={shortening} className="text-muted-foreground hover:text-primary p-1" title="Encurtar link">
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button onClick={() => removeMediaItem(i)} className="text-destructive/60 hover:text-destructive p-1" title="Remover">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
