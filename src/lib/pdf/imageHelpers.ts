@@ -313,8 +313,12 @@ export const addPhotoLayout = async (ctx: PdfContext, layout: PageLayout, sectio
   pdf.setFontSize(FONT_BODY);
   pdf.setFont('times', 'bold');
   const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
-  pdf.text(titleText, ML, ctx.currentY);
-  ctx.currentY += LINE_H + 4;
+  const titleLines: string[] = pdf.splitTextToSize(titleText, CW);
+  for (const tLine of titleLines) {
+    pdf.text(tLine, ML, ctx.currentY);
+    ctx.currentY += LINE_H;
+  }
+  ctx.currentY += 4;
 
   const sorted = [...layout.images].sort((a, b) => a.zIndex - b.zIndex);
   for (const item of sorted) {
