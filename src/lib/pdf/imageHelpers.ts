@@ -231,8 +231,12 @@ export const addPhotoGrid = async (
   pdf.setFontSize(FONT_BODY);
   pdf.setFont('times', 'bold');
   const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
-  pdf.text(titleText, ML, ctx.currentY);
-  ctx.currentY += LINE_H + 4;
+  const titleLines: string[] = pdf.splitTextToSize(titleText, CW);
+  for (const tLine of titleLines) {
+    pdf.text(tLine, ML, ctx.currentY);
+    ctx.currentY += LINE_H;
+  }
+  ctx.currentY += 4;
 
   const COL_GAP = 8;
 
@@ -242,37 +246,49 @@ export const addPhotoGrid = async (
     const photoH = photoW * 0.75; // Consistent 4:3 aspect ratio for all photos
     const CAPTION_H = 6;
     const cols = useSingle ? 1 : 2;
+    const maxPhotoH = photoW * 0.75; // Max height based on 4:3, but don't force crop
 
     let i = 0;
     while (i < indices.length) {
-      const rowNeeded = photoH + CAPTION_H + 6;
+      // Pre-calculate row height based on actual image aspect ratios
+      let rowPhotoH = maxPhotoH;
+      const rowIndices: number[] = [];
+      for (let col = 0; col < cols && (i + col) < indices.length; col++) {
+        rowIndices.push(indices[i + col]);
+      }
+
+      const rowNeeded = rowPhotoH + CAPTION_H + 6;
       if (ctx.currentY + rowNeeded > MAX_Y) addPage(ctx);
       const rowY = ctx.currentY;
+      let maxDrawBottom = rowY;
       for (let col = 0; col < cols && i < indices.length; col++) {
         const idx = indices[i];
         const x = useSingle ? ML : (col === 0 ? ML : ML + photoW + COL_GAP);
         const imgData = await loadImage(photoUrls[idx]);
         if (imgData) {
           const imgAspect = imgData.width / imgData.height;
-          const cellAspect = photoW / photoH;
-          let drawW: number, drawH: number, drawX: number, drawY: number;
-          if (imgAspect > cellAspect) { drawW = photoW; drawH = photoW / imgAspect; drawX = x; drawY = rowY + (photoH - drawH) / 2; }
-          else { drawH = photoH; drawW = photoH * imgAspect; drawX = x + (photoW - drawW) / 2; drawY = rowY; }
+          // Fit image within photoW width, cap height at maxPhotoH
+          let drawW = photoW;
+          let drawH = drawW / imgAspect;
+          if (drawH > maxPhotoH) { drawH = maxPhotoH; drawW = drawH * imgAspect; }
+          const drawX = x + (photoW - drawW) / 2;
+          const drawY = rowY;
           try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Image error:', e); }
+          if (drawY + drawH > maxDrawBottom) maxDrawBottom = drawY + drawH;
         }
         if (!sharedCaption) {
           const caption = captions?.[idx] || `Foto ${idx + 1}`;
           pdf.setFontSize(FONT_CAPTION);
           pdf.setFont('times', 'italic');
           const capLines: string[] = pdf.splitTextToSize(caption, photoW);
-          const capY = rowY + photoH + 3;
+          const capY = maxDrawBottom + 3;
           for (let cl = 0; cl < Math.min(capLines.length, 2); cl++) {
             pdf.text(capLines[cl], x + photoW / 2, capY + cl * 4, { align: 'center' });
           }
         }
         i++;
       }
-      ctx.currentY = rowY + photoH + CAPTION_H + 4;
+      ctx.currentY = maxDrawBottom + CAPTION_H + 4;
     }
 
     if (sharedCaption) {
@@ -309,8 +325,12 @@ export const addPhotoLayout = async (ctx: PdfContext, layout: PageLayout, sectio
   pdf.setFontSize(FONT_BODY);
   pdf.setFont('times', 'bold');
   const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
-  pdf.text(titleText, ML, ctx.currentY);
-  ctx.currentY += LINE_H + 4;
+  const titleLines: string[] = pdf.splitTextToSize(titleText, CW);
+  for (const tLine of titleLines) {
+    pdf.text(tLine, ML, ctx.currentY);
+    ctx.currentY += LINE_H;
+  }
+  ctx.currentY += 4;
 
   const sorted = [...layout.images].sort((a, b) => a.zIndex - b.zIndex);
   for (const item of sorted) {
