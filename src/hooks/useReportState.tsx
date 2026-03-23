@@ -382,8 +382,9 @@ export const useReportState = () => {
 
   // Document upload for links section
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>, linkField: 'attendance' | 'registration' | 'media') => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+    if (!e.target.files || !e.target.files.length) return;
+    const files = linkField === 'media' ? Array.from(e.target.files) : [e.target.files[0]];
+    for (const file of files) {
       try {
         const fileId = crypto.randomUUID();
         const fileExt = file.name.split('.').pop() || 'pdf';
@@ -392,12 +393,26 @@ export const useReportState = () => {
         const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
         if (error) { toast.error(`Erro ao enviar documento: ${file.name}`); return; }
         const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
-        setLinks(prev => ({ ...prev, [linkField]: urlData.publicUrl }));
-        setLinkFileNames(prev => ({ ...prev, [linkField]: file.name }));
+        if (linkField === 'media') {
+          // Append to existing media URLs (newline-separated)
+          setLinks(prev => {
+            const existing = prev.media ? prev.media.split('\n').filter(l => l.trim()) : [];
+            existing.push(urlData.publicUrl);
+            return { ...prev, media: existing.join('\n') };
+          });
+          setLinkFileNames(prev => {
+            const existing = prev.media ? prev.media.split('\n').filter(l => l.trim()) : [];
+            existing.push(file.name);
+            return { ...prev, media: existing.join('\n') };
+          });
+        } else {
+          setLinks(prev => ({ ...prev, [linkField]: urlData.publicUrl }));
+          setLinkFileNames(prev => ({ ...prev, [linkField]: file.name }));
+        }
         toast.success(`Documento "${file.name}" enviado com sucesso`);
       } catch { toast.error(`Erro ao processar documento: ${file.name}`); }
-      e.target.value = '';
     }
+    e.target.value = '';
   };
 
   // Insert diary photos by reference (no duplication)
