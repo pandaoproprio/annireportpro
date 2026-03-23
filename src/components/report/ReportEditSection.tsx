@@ -875,18 +875,105 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
     if (field === 'media') setSelectedVideoUrls([]);
   };
 
+  const removeMediaItem = (index: number) => {
+    const urls = (links.media || '').split('\n').filter(l => l.trim());
+    const names = (linkFileNames.media || '').split('\n').filter(l => l.trim());
+    urls.splice(index, 1);
+    names.splice(index, 1);
+    setLinks(prev => ({ ...prev, media: urls.join('\n') }));
+    setLinkFileNames(prev => ({ ...prev, media: names.join('\n') }));
+    if (urls.length === 0) {
+      setLinkDisplayNames(prev => ({ ...prev, media: '' }));
+    }
+  };
+
   const renderLinkField = (label: string, field: 'attendance' | 'registration' | 'media', accept: string) => {
     const url = links[field];
     const fileName = linkFileNames[field];
     const displayName = linkDisplayNames[field];
     const hasFile = !!url;
 
+    // For media field, support multiple files
+    if (field === 'media') {
+      const mediaUrls = url ? url.split('\n').filter(l => l.trim()) : [];
+      const mediaNames = fileName ? fileName.split('\n').filter(l => l.trim()) : [];
+      const hasMedia = mediaUrls.length > 0 || selectedVideoUrls.length > 0;
+
+      return (
+        <div className="space-y-2">
+          <Label>{label}</Label>
+          {hasMedia && (
+            <div className="space-y-2">
+              <div className="space-y-1">
+                <Label className="text-xs text-muted-foreground">Nome de exibição (aparece no relatório)</Label>
+                <Input
+                  placeholder={`Ex: ${label}`}
+                  value={displayName}
+                  onChange={e => setLinkDisplayNames(prev => ({ ...prev, [field]: e.target.value }))}
+                  className="text-sm"
+                />
+              </div>
+              {/* Uploaded files */}
+              {mediaUrls.map((mUrl, i) => {
+                const isVideo = isVideoUrl(mUrl);
+                const mName = mediaNames[i] || (isVideo ? extractFileName(mUrl) : 'Documento enviado');
+                return (
+                  <div key={i} className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                    {isVideo ? <Video className="w-4 h-4 text-primary shrink-0" /> : <FileText className="w-4 h-4 text-primary shrink-0" />}
+                    <a href={mUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={mUrl}>
+                      {mName}
+                    </a>
+                    <button onClick={() => removeMediaItem(i)} className="text-destructive/60 hover:text-destructive p-1" title="Remover">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                );
+              })}
+              {/* Selected diary videos not yet in mediaUrls */}
+              {selectedVideoUrls.filter(v => !mediaUrls.includes(v)).map((vUrl, vi) => (
+                <div key={`vid-${vi}`} className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
+                  <Video className="w-4 h-4 text-primary shrink-0" />
+                  <a href={vUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={vUrl}>
+                    {extractFileName(vUrl)}
+                  </a>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Always show upload button for media */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <Label htmlFor={`upload-${field}`} className="cursor-pointer inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors">
+              <Upload className="w-3.5 h-3.5" />
+              {hasMedia ? 'Adicionar mais' : 'Enviar documento'}
+            </Label>
+            <input id={`upload-${field}`} type="file" accept={accept} multiple className="hidden" onChange={e => handleDocumentUpload(e, field)} />
+            {diaryVideos.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowVideoPicker(!showVideoPicker)}
+                className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors"
+              >
+                <Video className="w-3.5 h-3.5" />
+                Inserir vídeo do Diário ({diaryVideos.length})
+              </button>
+            )}
+            {!hasMedia && <span className="text-xs text-muted-foreground">PDF, DOC, XLS, imagens, vídeos...</span>}
+          </div>
+          {hasMedia && (
+            <button onClick={() => clearLink(field)} className="text-xs text-destructive/60 hover:text-destructive flex items-center gap-1">
+              <Trash2 className="w-3 h-3" /> Limpar tudo
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    // Non-media fields (attendance, registration) — single file behavior
     return (
       <div className="space-y-2">
         <Label>{label}</Label>
         {hasFile ? (
           <div className="space-y-2">
-            {/* Display name (custom label) */}
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Nome de exibição (aparece no relatório)</Label>
               <Input
@@ -896,24 +983,12 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
                 className="text-sm"
               />
             </div>
-            {/* If multiple URLs (videos), show each */}
-            {field === 'media' && selectedVideoUrls.length > 0 ? (
-              selectedVideoUrls.map((vUrl, vi) => (
-                <div key={vi} className="flex items-center gap-2 p-2 border rounded-md bg-muted/50">
-                  <Video className="w-4 h-4 text-primary shrink-0" />
-                  <a href={vUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={vUrl}>
-                    {extractFileName(vUrl)}
-                  </a>
-                </div>
-              ))
-            ) : (
-              <div className="flex items-center gap-2 p-2.5 border rounded-md bg-muted/50">
-                <FileText className="w-4 h-4 text-primary shrink-0" />
-                <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={url}>
-                  {fileName || 'Documento enviado'}
-                </a>
-              </div>
-            )}
+            <div className="flex items-center gap-2 p-2.5 border rounded-md bg-muted/50">
+              <FileText className="w-4 h-4 text-primary shrink-0" />
+              <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate flex-1" title={url}>
+                {fileName || 'Documento enviado'}
+              </a>
+            </div>
             <button onClick={() => clearLink(field)} className="text-xs text-destructive/60 hover:text-destructive flex items-center gap-1 mt-1">
               <Trash2 className="w-3 h-3" /> Limpar
             </button>
@@ -928,16 +1003,6 @@ const LinksSection = React.forwardRef<HTMLDivElement, Props>(({ links, setLinks,
               Enviar documento
             </Label>
             <input id={`upload-${field}`} type="file" accept={accept} className="hidden" onChange={e => handleDocumentUpload(e, field)} />
-            {field === 'media' && diaryVideos.length > 0 && (
-              <button
-                type="button"
-                onClick={() => setShowVideoPicker(!showVideoPicker)}
-                className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 border border-dashed border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition-colors"
-              >
-                <Video className="w-3.5 h-3.5" />
-                Inserir vídeo do Diário ({diaryVideos.length})
-              </button>
-            )}
             <span className="text-xs text-muted-foreground">PDF, DOC, XLS, imagens...</span>
           </div>
         )}
