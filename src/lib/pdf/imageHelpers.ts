@@ -231,8 +231,12 @@ export const addPhotoGrid = async (
   pdf.setFontSize(FONT_BODY);
   pdf.setFont('times', 'bold');
   const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
-  pdf.text(titleText, ML, ctx.currentY);
-  ctx.currentY += LINE_H + 4;
+  const titleLines: string[] = pdf.splitTextToSize(titleText, CW);
+  for (const tLine of titleLines) {
+    pdf.text(tLine, ML, ctx.currentY);
+    ctx.currentY += LINE_H;
+  }
+  ctx.currentY += 4;
 
   const COL_GAP = 8;
 
