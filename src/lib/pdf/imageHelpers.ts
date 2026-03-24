@@ -242,64 +242,73 @@ export const addPhotoGrid = async (
 
   const renderSet = async (indices: number[], sharedCaption?: string) => {
     const useSingle = indices.length === 1;
-    const photoW = useSingle ? CW : (CW - COL_GAP) / 2;
-    const photoH = photoW * 0.75; // Consistent 4:3 aspect ratio for all photos
-    const CAPTION_H = 6;
+    const photoW = useSingle ? CW * 0.7 : (CW - COL_GAP) / 2;
+    const CELL_H = photoW * 0.75; // Fixed cell height for uniform grid
+    const CAPTION_LINE_H = 4;
+    const CAPTION_MAX_LINES = 3;
+    const CAPTION_BLOCK_H = CAPTION_LINE_H * CAPTION_MAX_LINES + 2;
     const cols = useSingle ? 1 : 2;
-    const maxPhotoH = photoW * 0.75; // Max height based on 4:3, but don't force crop
 
     let i = 0;
     while (i < indices.length) {
-      // Pre-calculate row height based on actual image aspect ratios
-      let rowPhotoH = maxPhotoH;
-      const rowIndices: number[] = [];
-      for (let col = 0; col < cols && (i + col) < indices.length; col++) {
-        rowIndices.push(indices[i + col]);
-      }
-
-      const rowNeeded = rowPhotoH + CAPTION_H + 6;
+      const rowNeeded = CELL_H + CAPTION_BLOCK_H + 6;
       if (ctx.currentY + rowNeeded > MAX_Y) addPage(ctx);
       const rowY = ctx.currentY;
-      let maxDrawBottom = rowY;
+
       for (let col = 0; col < cols && i < indices.length; col++) {
         const idx = indices[i];
-        const x = useSingle ? ML : (col === 0 ? ML : ML + photoW + COL_GAP);
+        const x = useSingle ? ML + (CW - photoW) / 2 : (col === 0 ? ML : ML + photoW + COL_GAP);
         const imgData = await loadImage(photoUrls[idx]);
+
+        // Draw light border for the cell
+        pdf.setDrawColor(220, 220, 220);
+        pdf.setLineWidth(0.3);
+        pdf.rect(x, rowY, photoW, CELL_H, 'S');
+
         if (imgData) {
           const imgAspect = imgData.width / imgData.height;
-          // Fit image within photoW width, cap height at maxPhotoH
-          let drawW = photoW;
-          let drawH = drawW / imgAspect;
-          if (drawH > maxPhotoH) { drawH = maxPhotoH; drawW = drawH * imgAspect; }
+          let drawW: number, drawH: number;
+          // Fit image inside cell preserving aspect ratio
+          if (imgAspect > photoW / CELL_H) {
+            drawW = photoW;
+            drawH = photoW / imgAspect;
+          } else {
+            drawH = CELL_H;
+            drawW = CELL_H * imgAspect;
+          }
           const drawX = x + (photoW - drawW) / 2;
-          const drawY = rowY;
+          const drawY = rowY + (CELL_H - drawH) / 2;
           try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Image error:', e); }
-          if (drawY + drawH > maxDrawBottom) maxDrawBottom = drawY + drawH;
         }
+
         if (!sharedCaption) {
           const caption = captions?.[idx] || `Foto ${idx + 1}`;
           pdf.setFontSize(FONT_CAPTION);
           pdf.setFont('times', 'italic');
-          const capLines: string[] = pdf.splitTextToSize(caption, photoW);
-          const capY = maxDrawBottom + 3;
-          for (let cl = 0; cl < Math.min(capLines.length, 2); cl++) {
-            pdf.text(capLines[cl], x + photoW / 2, capY + cl * 4, { align: 'center' });
+          pdf.setTextColor(80, 80, 80);
+          const capLines: string[] = pdf.splitTextToSize(caption, photoW - 4);
+          const capY = rowY + CELL_H + CAPTION_LINE_H;
+          for (let cl = 0; cl < Math.min(capLines.length, CAPTION_MAX_LINES); cl++) {
+            pdf.text(capLines[cl], x + photoW / 2, capY + cl * CAPTION_LINE_H, { align: 'center' });
           }
+          pdf.setTextColor(0, 0, 0);
         }
         i++;
       }
-      ctx.currentY = maxDrawBottom + CAPTION_H + 4;
+      ctx.currentY = rowY + CELL_H + CAPTION_BLOCK_H + 4;
     }
 
     if (sharedCaption) {
       pdf.setFontSize(FONT_CAPTION);
       pdf.setFont('times', 'italic');
+      pdf.setTextColor(80, 80, 80);
       const capLines: string[] = pdf.splitTextToSize(sharedCaption, CW);
       for (let j = 0; j < capLines.length; j++) {
         const lineW = pdf.getTextWidth(capLines[j]);
         pdf.text(capLines[j], ML + (CW - lineW) / 2, ctx.currentY + j * 4.5);
       }
       ctx.currentY += capLines.length * 4.5 + 6;
+      pdf.setTextColor(0, 0, 0);
     }
   };
 
