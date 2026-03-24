@@ -448,25 +448,39 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
           const mediaText = links.media || '[não informado]';
           const mediaLines = mediaText.split('\n').filter(l => l.trim());
           if (mediaDisplayName) {
-            // Show custom display name as single entry
-            pdf.text(mediaDisplayName, ML + mw, ctx.currentY);
+            const mdnLines: string[] = pdf.splitTextToSize(mediaDisplayName, CW - mw);
+            pdf.text(mdnLines[0], ML + mw, ctx.currentY);
             if (mediaLines.length === 1) {
-              pdf.link(ML + mw, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(mediaDisplayName), LINE_H, { url: mediaLines[0] });
+              pdf.link(ML + mw, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(mdnLines[0]), LINE_H, { url: mediaLines[0] });
             }
             ctx.currentY += LINE_H;
+            for (let mi = 1; mi < mdnLines.length; mi++) {
+              ensureSpace(ctx, LINE_H);
+              pdf.text(mdnLines[mi], ML + 8, ctx.currentY);
+              ctx.currentY += LINE_H;
+            }
           } else if (mediaLines.length <= 1) {
-            pdf.text(mediaLines[0] || '[não informado]', ML + mw, ctx.currentY);
+            const singleUrl = mediaLines[0] || '[não informado]';
+            const singleLines: string[] = pdf.splitTextToSize(singleUrl, CW - mw);
+            pdf.text(singleLines[0], ML + mw, ctx.currentY);
             ctx.currentY += LINE_H;
+            for (let mi = 1; mi < singleLines.length; mi++) {
+              ensureSpace(ctx, LINE_H);
+              pdf.text(singleLines[mi], ML + 8, ctx.currentY);
+              ctx.currentY += LINE_H;
+            }
           } else {
             ctx.currentY += LINE_H;
             for (const mLine of mediaLines) {
               ensureSpace(ctx, LINE_H);
-              const urlDisplay: string[] = pdf.splitTextToSize(mLine, CW - 8);
-              for (const uLine of urlDisplay) {
-                pdf.text(uLine, ML + 8, ctx.currentY);
-                ctx.currentY += LINE_H * 0.9;
+              pdf.text('• ', ML + 4, ctx.currentY);
+              const bulletW = pdf.getTextWidth('• ');
+              const urlDisplay: string[] = pdf.splitTextToSize(mLine, CW - 4 - bulletW);
+              for (let ui = 0; ui < urlDisplay.length; ui++) {
+                if (ui > 0) ensureSpace(ctx, LINE_H);
+                pdf.text(urlDisplay[ui], ML + 4 + bulletW, ctx.currentY);
+                ctx.currentY += LINE_H;
               }
-              ctx.currentY += 1;
             }
           }
         }
