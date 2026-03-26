@@ -23,6 +23,7 @@ const EventDetailPage = lazy(() => import('@/modules/gira-eventos/EventDetailPag
 const AutomatoDashboard = lazy(() => import('@/pages/AutomatoDashboard'));
 const RiskManagement = lazy(() => import('@/pages/RiskManagement'));
 const BudgetDashboard = lazy(() => import('@/pages/BudgetDashboard'));
+const BudgetAdjustmentPage = lazy(() => import('@/pages/BudgetAdjustmentPage'));
 const SprintDashboard = lazy(() => import('@/pages/SprintDashboard'));
 const RetrospectivesPage = lazy(() => import('@/pages/RetrospectivesPage'));
 const MaturityAuditReport = lazy(() => import('@/pages/MaturityAuditReport'));
@@ -65,6 +66,7 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/automato', element: AutomatoDashboard, permission: 'system_logs' },
   { path: '/risks', element: RiskManagement },
   { path: '/budget', element: BudgetDashboard },
+  { path: '/budget-adjustment', element: BudgetAdjustmentPage },
   { path: '/sprints', element: SprintDashboard },
   { path: '/retrospectives', element: RetrospectivesPage },
   { path: '/maturity-audit', element: MaturityAuditReport },
