@@ -413,6 +413,160 @@ export type Database = {
         }
         Relationships: []
       }
+      budget_adjustment_items: {
+        Row: {
+          adjustment_id: string
+          created_at: string
+          description: string
+          executed_amount: number
+          id: string
+          is_new_item: boolean
+          item_number: string
+          justification: string
+          meta_group: string
+          new_quantity: number
+          new_specification: string
+          new_total: number
+          new_unit_measure: string
+          new_unit_value: number
+          original_quantity: number
+          original_total: number
+          original_unit_measure: string
+          original_unit_value: number
+          price_average: number
+          price_ref_1: string
+          price_ref_1_value: number
+          price_ref_2: string
+          price_ref_2_value: number
+          price_ref_3: string
+          price_ref_3_value: number
+          proposal: string
+          sort_order: number
+          specification: string
+          updated_at: string
+        }
+        Insert: {
+          adjustment_id: string
+          created_at?: string
+          description?: string
+          executed_amount?: number
+          id?: string
+          is_new_item?: boolean
+          item_number?: string
+          justification?: string
+          meta_group?: string
+          new_quantity?: number
+          new_specification?: string
+          new_total?: number
+          new_unit_measure?: string
+          new_unit_value?: number
+          original_quantity?: number
+          original_total?: number
+          original_unit_measure?: string
+          original_unit_value?: number
+          price_average?: number
+          price_ref_1?: string
+          price_ref_1_value?: number
+          price_ref_2?: string
+          price_ref_2_value?: number
+          price_ref_3?: string
+          price_ref_3_value?: number
+          proposal?: string
+          sort_order?: number
+          specification?: string
+          updated_at?: string
+        }
+        Update: {
+          adjustment_id?: string
+          created_at?: string
+          description?: string
+          executed_amount?: number
+          id?: string
+          is_new_item?: boolean
+          item_number?: string
+          justification?: string
+          meta_group?: string
+          new_quantity?: number
+          new_specification?: string
+          new_total?: number
+          new_unit_measure?: string
+          new_unit_value?: number
+          original_quantity?: number
+          original_total?: number
+          original_unit_measure?: string
+          original_unit_value?: number
+          price_average?: number
+          price_ref_1?: string
+          price_ref_1_value?: number
+          price_ref_2?: string
+          price_ref_2_value?: number
+          price_ref_3?: string
+          price_ref_3_value?: number
+          proposal?: string
+          sort_order?: number
+          specification?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_adjustment_items_adjustment_id_fkey"
+            columns: ["adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "budget_adjustments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budget_adjustments: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string
+          project_id: string
+          ra_balance: number
+          ra_justification: string
+          ra_schedule: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string
+          project_id: string
+          ra_balance?: number
+          ra_justification?: string
+          ra_schedule?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string
+          project_id?: string
+          ra_balance?: number
+          ra_justification?: string
+          ra_schedule?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budget_adjustments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_channel_members: {
         Row: {
           channel_id: string
