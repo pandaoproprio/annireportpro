@@ -87,6 +87,7 @@ export const sidebarSections: SidebarSection[] = [
     items: [
       { to: '/risks', label: 'Gestão de Riscos', iconName: 'ShieldAlert' },
       { to: '/budget', label: 'Custos Consolidados', iconName: 'DollarSign' },
+      { to: '/budget-adjustment', label: 'Ajuste de PT/RA', iconName: 'FileSpreadsheet' },
       { to: '/sprints', label: 'Sprints & Velocity', iconName: 'Zap' },
       { to: '/retrospectives', label: 'Retrospectivas', iconName: 'ListChecks' },
       { to: '/maturity-audit', label: 'Auditoria de Maturidade', iconName: 'ShieldCheck' },

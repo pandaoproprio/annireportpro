@@ -66,6 +66,7 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/automato', element: AutomatoDashboard, permission: 'system_logs' },
   { path: '/risks', element: RiskManagement },
   { path: '/budget', element: BudgetDashboard },
+  { path: '/budget-adjustment', element: BudgetAdjustmentPage },
   { path: '/sprints', element: SprintDashboard },
   { path: '/retrospectives', element: RetrospectivesPage },
   { path: '/maturity-audit', element: MaturityAuditReport },
