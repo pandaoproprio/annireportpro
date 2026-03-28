@@ -1169,6 +1169,16 @@ function buildHtml(payload: ReportPayload): string {
         ${signatureHtml}
         ${buildFooterHtml(payload.visualConfig)}
       </div>
+      <script>
+        // Force all images to eager load before print
+        (function() {
+          var imgs = document.querySelectorAll('img');
+          imgs.forEach(function(img) {
+            img.loading = 'eager';
+            img.decoding = 'sync';
+          });
+        })();
+      </script>
     </body>
   </html>`;
 }
