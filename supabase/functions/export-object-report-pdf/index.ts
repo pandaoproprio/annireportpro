@@ -1144,6 +1144,7 @@ Deno.serve(async (req) => {
           format: "A4",
           printBackground: true,
           preferCSSPageSize: true,
+          timeout: 60000,
           margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
         },
       }),
