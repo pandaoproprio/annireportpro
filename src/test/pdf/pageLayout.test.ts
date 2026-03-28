@@ -42,6 +42,13 @@ describe('pdf/pageLayout', () => {
       const y = getContentStartY(ctx);
       expect(y).toBe(MT);
     });
+
+    it('returns MT on later pages when header is only for the first content page', () => {
+      const ctx = createPdfContext();
+      ctx.headerConfig = { logoImg: mockImage, logoVisible: true, renderMode: 'first-page' };
+      const y = getContentStartY(ctx, 3);
+      expect(y).toBe(MT);
+    });
   });
 
   describe('ensureSpace', () => {
