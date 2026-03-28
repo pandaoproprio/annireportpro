@@ -1140,7 +1140,6 @@ Deno.serve(async (req) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         html,
-        waitUntil: "load",
         options: {
           format: "A4",
           printBackground: true,
