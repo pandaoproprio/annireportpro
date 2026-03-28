@@ -25,3 +25,5 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.analyze-risks]
     verify_jwt = false
+  [functions.export-object-report-pdf]
+    verify_jwt = false
