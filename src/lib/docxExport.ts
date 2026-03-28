@@ -300,19 +300,20 @@ export const exportToDocx = async (data: ExportData) => {
             text: `Lista de Inscrição: ${dn.registration || links.registration || '[não informado]'}`,
             spacing: { after: 100 },
           }),
-          new Paragraph({
-            text: `Mídias (Fotos/Vídeos): ${dn.media || links.media || '[não informado]'}`,
-            spacing: { after: 200 },
-          })
-          );
+           );
 
-          // Render media links — may contain multiple URLs (one per line)
-          if (!dn.media) {
-            const mediaText = links.media || '[não informado]';
+          // Only render media section if there's actual content
+          const mediaText = dn.media || links.media || '';
+          if (mediaText.trim()) {
             const mediaUrls = mediaText.split('\n').filter(l => l.trim());
-            if (mediaUrls.length > 1) {
-              // Remove the single-line version already pushed above, re-add with multiple lines
-              docSections.pop(); // remove the single Mídias paragraph
+            if (dn.media || mediaUrls.length <= 1) {
+              docSections.push(
+                new Paragraph({
+                  text: `Mídias (Fotos/Vídeos): ${dn.media || mediaUrls[0] || ''}`,
+                  spacing: { after: 200 },
+                })
+              );
+            } else {
               docSections.push(
                 new Paragraph({
                   spacing: { after: 100 },

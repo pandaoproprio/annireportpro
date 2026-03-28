@@ -607,6 +607,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
             }
           }
         }
+        } // end if (hasMedia)
         break;
 
       default:
