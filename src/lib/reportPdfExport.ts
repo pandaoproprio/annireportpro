@@ -10,6 +10,12 @@ import {
   preloadHeaderImages, buildHeaderConfig,
   PAGE_W, PAGE_H, ML, MR, CW, MAX_Y, LINE_H, FONT_BODY, FONT_CAPTION, MT,
 } from '@/lib/pdfHelpers';
+import {
+  getActiveActivities,
+  hasAttachmentLinks,
+  normalizeLinkTargets,
+  resolveLinkDisplayName,
+} from './reportPdfExportUtils';
 
 export interface ReportPdfExportData {
   project: Project;
@@ -122,6 +128,13 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     selectedVideoUrls = [],
   } = data;
 
+  const activeActivities = getActiveActivities(activities);
+  const attachmentTargets = {
+    attendance: normalizeLinkTargets(links.attendance),
+    registration: normalizeLinkTargets(links.registration),
+    media: normalizeLinkTargets(links.media, selectedVideoUrls),
+  };
+
   // Extract visual config values with defaults
   const customCoverTitle = vc?.coverTitle;
   const coverSubtitle = vc?.coverHideSubtitle ? undefined : vc?.coverSubtitle;
@@ -205,13 +218,13 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
 
   // ── Activity filter helpers ──
   const getActivitiesByGoal = (goalId: string) =>
-    activities.filter(a => a.goalId === goalId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    activeActivities.filter(a => a.goalId === goalId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const getCommunicationActivities = () =>
-    activities.filter(a => a.type === ActivityType.COMUNICACAO).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    activeActivities.filter(a => a.type === ActivityType.COMUNICACAO).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const getOtherActivities = () =>
-    activities.filter(a => a.type === ActivityType.OUTROS || a.type === ActivityType.ADMINISTRATIVO || a.type === ActivityType.OCORRENCIA)
+    activeActivities.filter(a => a.type === ActivityType.OUTROS || a.type === ActivityType.ADMINISTRATIVO || a.type === ActivityType.OCORRENCIA)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // ══════════════════════════════════════════════════════════════
@@ -313,12 +326,56 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // ══════════════════════════════════════════════════════════════
   // CONTENT PAGES — now set headerConfig so addPage() adjusts Y
   // ══════════════════════════════════════════════════════════════
-  const headerCfg = buildHeaderConfig({ ...vc, headerRenderMode: 'first-page' }, { bannerImg, logoImg, logoSecondaryImg, logoCenterImg });
+  const headerCfg = buildHeaderConfig({ ...vc, headerRenderMode: 'all-pages' }, { bannerImg, logoImg, logoSecondaryImg, logoCenterImg });
   if (headerCfg) ctx.headerConfig = headerCfg;
   addPage(ctx);
 
+  const renderLinkedRow = (label: string, displayText: string, url: string) => {
+    const labelText = `${label}: `;
+    ensureSpace(ctx, LINE_H * 2);
+    pdf.setFontSize(FONT_BODY);
+    pdf.setFont('times', 'bold');
+    pdf.text(labelText, ML, ctx.currentY);
+
+    const labelWidth = pdf.getTextWidth(labelText);
+    pdf.setFont('times', 'normal');
+    const lines: string[] = pdf.splitTextToSize(displayText, CW - labelWidth);
+
+    for (const line of lines) {
+      ensureSpace(ctx, LINE_H);
+      const x = ML + labelWidth;
+      pdf.text(line, x, ctx.currentY);
+      pdf.link(x, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(line), LINE_H, { url });
+      ctx.currentY += LINE_H;
+    }
+  };
+
+  const renderLinkBulletList = (label: string, urls: string[], customDisplayName?: string) => {
+    ensureSpace(ctx, LINE_H * 2);
+    pdf.setFontSize(FONT_BODY);
+    pdf.setFont('times', 'bold');
+    pdf.text(`${label}:`, ML, ctx.currentY);
+    ctx.currentY += LINE_H;
+
+    pdf.setFont('times', 'normal');
+    urls.forEach((url, index) => {
+      const displayText = resolveLinkDisplayName('media', urls.length === 1 ? customDisplayName : undefined, index);
+      const lines: string[] = pdf.splitTextToSize(displayText, CW - 10);
+
+      lines.forEach((line, lineIndex) => {
+        ensureSpace(ctx, LINE_H);
+        if (lineIndex === 0) pdf.text('•', ML + 4, ctx.currentY);
+        const x = ML + 8;
+        pdf.text(line, x, ctx.currentY);
+        pdf.link(x, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(line), LINE_H, { url });
+        ctx.currentY += LINE_H;
+      });
+    });
+  };
+
   for (const section of sections) {
     if (!section.isVisible) continue;
+    if (section.key === 'links' && !hasAttachmentLinks(attachmentTargets)) continue;
 
     addSectionTitle(ctx, section.title);
 
@@ -533,81 +590,31 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         break;
 
       case 'links':
-        pdf.setFontSize(FONT_BODY);
-        pdf.setFont('times', 'normal');
-
-        ensureSpace(ctx, LINE_H * 3);
-
-        pdf.setFont('times', 'bold');
-        pdf.text('Lista de Presença: ', ML, ctx.currentY);
-        const lpw = pdf.getTextWidth('Lista de Presença: ');
-        pdf.setFont('times', 'normal');
-        const attDisplay = data.linkDisplayNames?.attendance || links.attendance || '[não informado]';
-        pdf.text(attDisplay, ML + lpw, ctx.currentY);
-        if (links.attendance && data.linkDisplayNames?.attendance) {
-          pdf.link(ML + lpw, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(attDisplay), LINE_H, { url: links.attendance });
+        if (attachmentTargets.attendance.length > 0) {
+          renderLinkedRow(
+            'Lista de Presença',
+            resolveLinkDisplayName('attendance', data.linkDisplayNames?.attendance),
+            attachmentTargets.attendance[0],
+          );
         }
-        ctx.currentY += LINE_H;
 
-        pdf.setFont('times', 'bold');
-        pdf.text('Lista de Inscrição: ', ML, ctx.currentY);
-        const liw = pdf.getTextWidth('Lista de Inscrição: ');
-        pdf.setFont('times', 'normal');
-        const regDisplay = data.linkDisplayNames?.registration || links.registration || '[não informado]';
-        pdf.text(regDisplay, ML + liw, ctx.currentY);
-        if (links.registration && data.linkDisplayNames?.registration) {
-          pdf.link(ML + liw, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(regDisplay), LINE_H, { url: links.registration });
+        if (attachmentTargets.registration.length > 0) {
+          renderLinkedRow(
+            'Lista de Inscrição',
+            resolveLinkDisplayName('registration', data.linkDisplayNames?.registration),
+            attachmentTargets.registration[0],
+          );
         }
-        ctx.currentY += LINE_H;
 
-        const hasMedia = !!(links.media && links.media.trim());
-        if (hasMedia) {
-        pdf.setFont('times', 'bold');
-        pdf.text('Mídias (Fotos/Vídeos): ', ML, ctx.currentY);
-        const mw = pdf.getTextWidth('Mídias (Fotos/Vídeos): ');
-        pdf.setFont('times', 'normal');
-        {
-          const mediaDisplayName = data.linkDisplayNames?.media;
-          const mediaText = links.media || '[não informado]';
-          const mediaLines = mediaText.split('\n').filter(l => l.trim());
-          if (mediaDisplayName) {
-            const mdnLines: string[] = pdf.splitTextToSize(mediaDisplayName, CW - mw);
-            pdf.text(mdnLines[0], ML + mw, ctx.currentY);
-            if (mediaLines.length === 1) {
-              pdf.link(ML + mw, ctx.currentY - LINE_H * 0.7, pdf.getTextWidth(mdnLines[0]), LINE_H, { url: mediaLines[0] });
-            }
-            ctx.currentY += LINE_H;
-            for (let mi = 1; mi < mdnLines.length; mi++) {
-              ensureSpace(ctx, LINE_H);
-              pdf.text(mdnLines[mi], ML + 8, ctx.currentY);
-              ctx.currentY += LINE_H;
-            }
-          } else if (mediaLines.length <= 1) {
-            const singleUrl = mediaLines[0] || '[não informado]';
-            const singleLines: string[] = pdf.splitTextToSize(singleUrl, CW - mw);
-            pdf.text(singleLines[0], ML + mw, ctx.currentY);
-            ctx.currentY += LINE_H;
-            for (let mi = 1; mi < singleLines.length; mi++) {
-              ensureSpace(ctx, LINE_H);
-              pdf.text(singleLines[mi], ML + 8, ctx.currentY);
-              ctx.currentY += LINE_H;
-            }
-          } else {
-            ctx.currentY += LINE_H;
-            for (const mLine of mediaLines) {
-              ensureSpace(ctx, LINE_H);
-              pdf.text('• ', ML + 4, ctx.currentY);
-              const bulletW = pdf.getTextWidth('• ');
-              const urlDisplay: string[] = pdf.splitTextToSize(mLine, CW - 4 - bulletW);
-              for (let ui = 0; ui < urlDisplay.length; ui++) {
-                if (ui > 0) ensureSpace(ctx, LINE_H);
-                pdf.text(urlDisplay[ui], ML + 4 + bulletW, ctx.currentY);
-                ctx.currentY += LINE_H;
-              }
-            }
-          }
+        if (attachmentTargets.media.length === 1) {
+          renderLinkedRow(
+            'Mídias (Fotos/Vídeos)',
+            resolveLinkDisplayName('media', data.linkDisplayNames?.media, 0),
+            attachmentTargets.media[0],
+          );
+        } else if (attachmentTargets.media.length > 1) {
+          renderLinkBulletList('Mídias (Fotos/Vídeos)', attachmentTargets.media, data.linkDisplayNames?.media);
         }
-        } // end if (hasMedia)
         break;
 
       default:

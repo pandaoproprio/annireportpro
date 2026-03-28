@@ -24,18 +24,18 @@ const createMockPdf = () => {
 };
 
 describe('pdf/imageHelpers addPhotoGrid', () => {
-  it('organiza fotos em grade 2x2 e centraliza a última foto ímpar na página seguinte', async () => {
+  it('organiza fotos em grade 3x2 e centraliza a última foto ímpar na página seguinte', async () => {
     const pdf = createMockPdf();
     const ctx: PdfContext = { pdf: pdf as never, currentY: MT, pageCount: 1 };
     const imageLoader = vi.fn().mockResolvedValue({ data: 'data:image/jpeg;base64,abc', width: 800, height: 600 });
-    const photos = ['1', '2', '3', '4', '5'];
+    const photos = ['1', '2', '3', '4', '5', '6', '7'];
 
     await addPhotoGrid(ctx, photos, 'Teste', photos.map((p) => `Foto ${p}`), undefined, imageLoader);
 
     expect(ctx.pageCount).toBe(2);
-    expect(pdf.addImage).toHaveBeenCalledTimes(5);
+    expect(pdf.addImage).toHaveBeenCalledTimes(7);
 
-    const photoW = (CW - 8) / 2;
+    const photoW = (CW - 12) / 3;
     const centeredX = ML + (CW - photoW) / 2;
     const secondPageCenteredRect = pdf.rect.mock.calls.find(
       ([x, , width]) => Math.abs(Number(x) - centeredX) < 0.01 && Math.abs(Number(width) - photoW) < 0.01,

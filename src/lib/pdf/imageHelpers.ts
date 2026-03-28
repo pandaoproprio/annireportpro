@@ -7,12 +7,12 @@ import { supabase } from '@/integrations/supabase/client';
 const PHOTO_SECTION_TITLE_GAP_TOP = 2;
 const PHOTO_SECTION_TITLE_GAP_BOTTOM = 3;
 const PHOTO_ROW_GAP = 4;
-const PHOTO_GRID_COLUMNS = 2;
+const PHOTO_GRID_COLUMNS = 3;
 const PHOTO_GRID_ROWS_PER_PAGE = 2;
 const PHOTO_MAX_HEIGHT = 200 * 0.264583;
 
 const getRowsForPage = (availableHeight: number, rowsRemaining: number, minRowBlockHeight: number) => {
-  const maxCandidate = Math.min(3, rowsRemaining);
+  const maxCandidate = Math.min(PHOTO_GRID_ROWS_PER_PAGE, rowsRemaining);
 
   for (let candidate = maxCandidate; candidate >= 1; candidate--) {
     const requiredHeight = candidate * minRowBlockHeight + (candidate - 1) * PHOTO_ROW_GAP;
@@ -293,107 +293,127 @@ export const addPhotoGrid = async (
 
   const COL_GAP = 8;
   const CAPTION_LINE_H = 3.3;
-  const CAPTION_MAX_LINES = 2;
+  const CAPTION_MAX_LINES = 3;
   const CAPTION_BLOCK_H = CAPTION_LINE_H * CAPTION_MAX_LINES + 1.5;
   const IMG_PADDING = 2;
-  const photoW = (CW - COL_GAP) / PHOTO_GRID_COLUMNS;
+  const photoW = (CW - COL_GAP * (PHOTO_GRID_COLUMNS - 1)) / PHOTO_GRID_COLUMNS;
+  const preferredCellH = Math.min(PHOTO_MAX_HEIGHT, photoW * 0.78);
+  const minCellH = Math.min(preferredCellH, 34);
+  const minRowBlockHeight = minCellH + CAPTION_BLOCK_H;
 
-  const renderChunk = async (indices: number[], groupTitle?: string) => {
-    const rowsOnThisPage = Math.min(PHOTO_GRID_ROWS_PER_PAGE, Math.max(1, Math.ceil(indices.length / PHOTO_GRID_COLUMNS)));
-    const availableHeight = MAX_Y - ctx.currentY;
-    const totalCaptionHeight = rowsOnThisPage * CAPTION_BLOCK_H;
-    const totalGapHeight = (rowsOnThisPage - 1) * PHOTO_ROW_GAP;
-    const rawCellH = (availableHeight - totalCaptionHeight - totalGapHeight) / rowsOnThisPage;
-    const cellH = Math.max(44, Math.min(Math.min(rawCellH, photoW * 0.9), PHOTO_MAX_HEIGHT));
+  const ensureSectionStart = (titleLinesCount: number) => {
+    const requiredHeight = titleLinesCount * LINE_H + PHOTO_SECTION_TITLE_GAP_TOP + PHOTO_SECTION_TITLE_GAP_BOTTOM + minRowBlockHeight;
+    if (ctx.currentY + requiredHeight > MAX_Y) addPage(ctx);
+  };
 
-    for (let row = 0; row < rowsOnThisPage; row++) {
-      const rowIndices = indices.slice(row * PHOTO_GRID_COLUMNS, row * PHOTO_GRID_COLUMNS + PHOTO_GRID_COLUMNS);
-      const rowNeeded = cellH + CAPTION_BLOCK_H;
-      ensureSpace(ctx, rowNeeded + (row < rowsOnThisPage - 1 ? PHOTO_ROW_GAP : 0));
-      const rowY = ctx.currentY;
-      const isSingleCentered = rowIndices.length === 1;
-      const rowStartX = isSingleCentered ? ML + (CW - photoW) / 2 : ML;
+  const drawPhotoTitle = (title: string) => {
+    const titleLines: string[] = pdf.splitTextToSize(title, CW);
+    ensureSectionStart(titleLines.length);
+    ctx.currentY += PHOTO_SECTION_TITLE_GAP_TOP;
+    pdf.setFontSize(FONT_BODY);
+    pdf.setFont('times', 'bold');
+    for (const tLine of titleLines) {
+      pdf.text(tLine, ML, ctx.currentY);
+      ctx.currentY += LINE_H;
+    }
+    ctx.currentY += PHOTO_SECTION_TITLE_GAP_BOTTOM;
+  };
 
-      for (let col = 0; col < rowIndices.length; col++) {
-        const idx = rowIndices[col];
-        const x = rowStartX + col * (photoW + COL_GAP);
-        const imgData = await imageLoader(photoUrls[idx]);
+  const drawGroupTitle = (title: string) => {
+    const titleLines: string[] = pdf.splitTextToSize(title, CW);
+    const requiredHeight = titleLines.length * LINE_H + 1.5 + minRowBlockHeight;
+    if (ctx.currentY + requiredHeight > MAX_Y) addPage(ctx);
+    pdf.setFontSize(FONT_BODY);
+    pdf.setFont('times', 'bold');
+    for (const line of titleLines) {
+      pdf.text(line, ML, ctx.currentY);
+      ctx.currentY += LINE_H;
+    }
+    ctx.currentY += 1.5;
+  };
 
-        pdf.setFillColor(248, 248, 248);
-        pdf.rect(x, rowY, photoW, cellH, 'F');
-        pdf.setDrawColor(200, 200, 200);
-        pdf.setLineWidth(0.4);
-        pdf.rect(x, rowY, photoW, cellH, 'S');
+  const renderRows = async (indices: number[]) => {
+    let offset = 0;
 
-        if (imgData) {
-          const innerW = photoW - IMG_PADDING * 2;
-          const innerH = cellH - IMG_PADDING * 2;
-          const imgAspect = imgData.width / imgData.height;
-          let drawW = innerW;
-          let drawH = drawW / imgAspect;
+    while (offset < indices.length) {
+      const rowsRemaining = Math.ceil((indices.length - offset) / PHOTO_GRID_COLUMNS);
+      const availableHeight = MAX_Y - ctx.currentY;
+      const rowsOnPage = getRowsForPage(availableHeight, rowsRemaining, minRowBlockHeight);
+      const cellH = getAdaptiveCellHeight(availableHeight, rowsOnPage, CAPTION_BLOCK_H, preferredCellH, minCellH, PHOTO_MAX_HEIGHT);
 
-          if (drawH > innerH) {
-            drawH = innerH;
-            drawW = drawH * imgAspect;
+      for (let row = 0; row < rowsOnPage && offset < indices.length; row++) {
+        const rowIndices = indices.slice(offset, offset + PHOTO_GRID_COLUMNS);
+        const rowNeeded = cellH + CAPTION_BLOCK_H;
+        ensureSpace(ctx, rowNeeded + (row < rowsOnPage - 1 ? PHOTO_ROW_GAP : 0));
+        const rowY = ctx.currentY;
+        const rowWidth = rowIndices.length * photoW + Math.max(0, rowIndices.length - 1) * COL_GAP;
+        const rowStartX = ML + (CW - rowWidth) / 2;
+
+        for (let col = 0; col < rowIndices.length; col++) {
+          const idx = rowIndices[col];
+          const x = rowStartX + col * (photoW + COL_GAP);
+          const imgData = await imageLoader(photoUrls[idx]);
+
+          pdf.setFillColor(248, 248, 248);
+          pdf.rect(x, rowY, photoW, cellH, 'F');
+          pdf.setDrawColor(200, 200, 200);
+          pdf.setLineWidth(0.4);
+          pdf.rect(x, rowY, photoW, cellH, 'S');
+
+          if (imgData) {
+            const innerW = photoW - IMG_PADDING * 2;
+            const innerH = cellH - IMG_PADDING * 2;
+            const imgAspect = imgData.width / imgData.height;
+            let drawW = innerW;
+            let drawH = drawW / imgAspect;
+
+            if (drawH > innerH) {
+              drawH = innerH;
+              drawW = drawH * imgAspect;
+            }
+
+            const drawX = x + (photoW - drawW) / 2;
+            const drawY = rowY + (cellH - drawH) / 2;
+            try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Image error:', e); }
           }
 
-          const drawX = x + (photoW - drawW) / 2;
-          const drawY = rowY + (cellH - drawH) / 2;
-          try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Image error:', e); }
+          const caption = captions?.[idx] || `Foto ${idx + 1}`;
+          pdf.setFontSize(FONT_CAPTION);
+          pdf.setFont('times', 'italic');
+          pdf.setTextColor(80, 80, 80);
+          const capLines: string[] = pdf.splitTextToSize(caption, photoW - 6);
+          const capY = rowY + cellH + CAPTION_LINE_H;
+          for (let cl = 0; cl < Math.min(capLines.length, CAPTION_MAX_LINES); cl++) {
+            pdf.text(capLines[cl], x + photoW / 2, capY + cl * CAPTION_LINE_H, { align: 'center' });
+          }
+          pdf.setTextColor(0, 0, 0);
         }
 
-        const caption = captions?.[idx] || `Foto ${idx + 1}`;
-        pdf.setFontSize(FONT_CAPTION);
-        pdf.setFont('times', 'italic');
-        pdf.setTextColor(80, 80, 80);
-        const capLines: string[] = pdf.splitTextToSize(caption, photoW - 6);
-        const capY = rowY + cellH + CAPTION_LINE_H;
-        for (let cl = 0; cl < Math.min(capLines.length, CAPTION_MAX_LINES); cl++) {
-          pdf.text(capLines[cl], x + photoW / 2, capY + cl * CAPTION_LINE_H, { align: 'center' });
-        }
-        pdf.setTextColor(0, 0, 0);
+        offset += rowIndices.length;
+        ctx.currentY = rowY + cellH + CAPTION_BLOCK_H + PHOTO_ROW_GAP;
       }
 
-      ctx.currentY = rowY + cellH + CAPTION_BLOCK_H + PHOTO_ROW_GAP;
-    }
-
-    if (groupTitle) {
-      ctx.currentY -= PHOTO_ROW_GAP;
+      if (offset < indices.length) addPage(ctx);
     }
   };
+
+  drawPhotoTitle(`REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`);
 
   if (groups && groups.length > 0) {
     const groupedIndices = new Set(groups.flatMap(g => g.photoIds.map(Number)));
     for (const group of groups) {
       const indices = group.photoIds.map(Number).filter(i => i < photoUrls.length);
       if (indices.length === 0) continue;
-      ensureSpace(ctx, LINE_H * 2);
-      pdf.setFontSize(FONT_BODY);
-      pdf.setFont('times', 'bold');
-      pdf.text(group.caption, ML, ctx.currentY);
-      ctx.currentY += LINE_H;
-      for (let start = 0; start < indices.length; start += PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE) {
-        const chunk = indices.slice(start, start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE);
-        await renderChunk(chunk, group.caption);
-        if (start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE < indices.length) addPage(ctx);
-      }
+      drawGroupTitle(group.caption);
+      await renderRows(indices);
       ctx.currentY += 2;
     }
     const ungrouped = photoUrls.map((_, i) => i).filter(i => !groupedIndices.has(i));
     if (ungrouped.length > 0) {
-      for (let start = 0; start < ungrouped.length; start += PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE) {
-        const chunk = ungrouped.slice(start, start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE);
-        await renderChunk(chunk);
-        if (start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE < ungrouped.length) addPage(ctx);
-      }
+      await renderRows(ungrouped);
     }
   } else {
-    const allIndices = photoUrls.map((_, i) => i);
-    for (let start = 0; start < allIndices.length; start += PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE) {
-      const chunk = allIndices.slice(start, start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE);
-      await renderChunk(chunk);
-      if (start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE < allIndices.length) addPage(ctx);
-    }
+    await renderRows(photoUrls.map((_, i) => i));
   }
 };
 
