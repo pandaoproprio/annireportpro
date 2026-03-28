@@ -58,4 +58,16 @@ describe('pdf/imageHelpers addPhotoGrid', () => {
     expect(pdf.addPage).toHaveBeenCalledTimes(1);
     expect(ctx.pageCount).toBe(2);
   });
+
+  it('não força nova página quando o título é controlado pelo chamador', async () => {
+    const pdf = createMockPdf();
+    const ctx: PdfContext = { pdf: pdf as never, currentY: MT + 40, pageCount: 1 };
+    const imageLoader = vi.fn().mockResolvedValue({ data: 'data:image/jpeg;base64,abc', width: 800, height: 600 });
+    const photos = ['1', '2'];
+
+    await addPhotoGrid(ctx, photos, '', photos.map((p) => `Foto ${p}`), undefined, imageLoader);
+
+    expect(pdf.addPage).not.toHaveBeenCalled();
+    expect(ctx.pageCount).toBe(1);
+  });
 });

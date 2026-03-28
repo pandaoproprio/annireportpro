@@ -149,18 +149,6 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   const footerShowContact = vc?.footerShowContact ?? true;
   const footerAlignment = vc?.footerAlignment;
 
-  // Helper: render photos using layout if available, otherwise fallback to grid
-  const renderPhotos = async (photos: string[], sectionKey: string, label: string, captions?: string[], groups?: PhotoGroup[]) => {
-    if (photos.length === 0) return;
-    addSectionTitle(ctx, `REGISTROS FOTOGRÁFICOS – ${label.toUpperCase()}`);
-    const layout = pageLayouts[sectionKey];
-    if (layout && layout.images && layout.images.length > 0) {
-      await addPhotoLayout(ctx, layout, '');
-    } else {
-      await addPhotoGrid(ctx, photos, '', captions, groups);
-    }
-  };
-
   // ── Preload header images once for reuse on ALL pages ──
   const { bannerImg, logoImg, logoSecondaryImg, logoCenterImg } = await preloadHeaderImages(
     headerBannerUrl, logo, logoSecondary, logoCenter,
@@ -195,6 +183,78 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     pdf.setFont('times', 'bold');
     pdf.text(title, ML, ctx.currentY);
     ctx.currentY += LINE_H + 2;
+  };
+
+  // Helper: render photos using layout if available, otherwise fallback to grid
+  const renderPhotos = async (photos: string[], sectionKey: string, label: string, captions?: string[], groups?: PhotoGroup[]) => {
+    if (photos.length === 0) return;
+    const layout = pageLayouts[sectionKey];
+    if (layout && layout.images && layout.images.length > 0) {
+      await addPhotoLayout(ctx, layout, label);
+      return;
+    }
+
+    addSectionTitle(ctx, `REGISTROS FOTOGRÁFICOS – ${label.toUpperCase()}`);
+    await addPhotoGrid(ctx, photos, '', captions, groups);
+  };
+
+  const renderExpensePhotoDocumentation = async (
+    groupedPhotoUrls: string[],
+    groupedCaptions: string[],
+    groups: PhotoGroup[],
+    extraSectionPhotoUrls: string[],
+    extraSectionCaptions: string[],
+  ) => {
+    if (groupedPhotoUrls.length === 0 && extraSectionPhotoUrls.length === 0) return;
+
+    addSectionTitle(ctx, 'REGISTROS FOTOGRÁFICOS – COMPROVAÇÃO DA EXECUÇÃO DOS ITENS DE DESPESA');
+
+    const renderGalleryItems = async (items: { src: string; caption: string }[]) => {
+      if (items.length === 0) return;
+      await addGalleryGrid(ctx, items, 2);
+    };
+
+    if (groups.length > 0) {
+      const groupedIndices = new Set(groups.flatMap((group) => group.photoIds.map(Number)));
+
+      for (const group of groups) {
+        const items = group.photoIds
+          .map(Number)
+          .filter((index) => index >= 0 && index < groupedPhotoUrls.length)
+          .map((index) => ({
+            src: groupedPhotoUrls[index],
+            caption: groupedCaptions[index] || `Foto ${index + 1}`,
+          }));
+
+        if (items.length === 0) continue;
+        addSubSectionTitle(group.caption);
+        await renderGalleryItems(items);
+      }
+
+      const ungroupedItems = groupedPhotoUrls
+        .map((src, index) => ({ src, caption: groupedCaptions[index] || `Foto ${index + 1}`, index }))
+        .filter((item) => !groupedIndices.has(item.index))
+        .map(({ src, caption }) => ({ src, caption }));
+
+      await renderGalleryItems(ungroupedItems);
+    } else {
+      await renderGalleryItems(
+        groupedPhotoUrls.map((src, index) => ({
+          src,
+          caption: groupedCaptions[index] || `Foto ${index + 1}`,
+        })),
+      );
+    }
+
+    if (extraSectionPhotoUrls.length > 0) {
+      if (groupedPhotoUrls.length > 0) addSubSectionTitle('Registros complementares');
+      await renderGalleryItems(
+        extraSectionPhotoUrls.map((src, index) => ({
+          src,
+          caption: extraSectionCaptions[index] || `Foto complementar ${index + 1}`,
+        })),
+      );
+    }
   };
 
   // Activity entry
@@ -482,6 +542,9 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
           const expensePhotoUrls: string[] = [];
           const expensePhotoCaptions: string[] = [];
           const expensePhotoGroups: PhotoGroup[] = [];
+          const expenseSectionKey = sectionPhotos[section.key] ? section.key : section.id;
+          const extraExpensePhotos = sectionPhotos[section.key] || sectionPhotos[section.id] || [];
+          const extraExpenseMetas = photoMetadata[expenseSectionKey] || [];
 
           ensureSpace(ctx, headerRowH * 2);
 
@@ -567,20 +630,18 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
             ctx.currentY += cellH;
           }
 
-          if (expensePhotoUrls.length > 0) {
-            addSectionTitle(ctx, 'REGISTROS FOTOGRÁFICOS – COMPROVAÇÃO DA EXECUÇÃO DOS ITENS DE DESPESA');
-            await addPhotoGrid(
-              ctx,
-              expensePhotoUrls,
-              '',
-              expensePhotoCaptions,
-              expensePhotoGroups,
-            );
-            renderedPhotoKeys.add('expenses');
-          }
+          await renderExpensePhotoDocumentation(
+            expensePhotoUrls,
+            expensePhotoCaptions,
+            expensePhotoGroups,
+            extraExpensePhotos,
+            extraExpensePhotos.map((_, index) => extraExpenseMetas[index]?.caption || `Foto complementar ${index + 1}`),
+          );
         } else {
           addParagraph(ctx, '[Nenhum item de despesa cadastrado]');
         }
+        renderedPhotoKeys.add(section.key);
+        renderedPhotoKeys.add(section.id);
         break;
 
       case 'links':
