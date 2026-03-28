@@ -274,6 +274,7 @@ export const addGalleryGrid = async (ctx: PdfContext, images: { src: string; cap
 export const addPhotoGrid = async (
   ctx: PdfContext, photoUrls: string[], sectionLabel: string,
   captions?: string[], groups?: { id: string; caption: string; photoIds: string[] }[],
+  imageLoader: typeof loadImage = loadImage,
 ): Promise<void> => {
   if (photoUrls.length === 0) return;
   const { pdf } = ctx;
@@ -303,7 +304,7 @@ export const addPhotoGrid = async (
     const totalCaptionHeight = rowsOnThisPage * CAPTION_BLOCK_H;
     const totalGapHeight = (rowsOnThisPage - 1) * PHOTO_ROW_GAP;
     const rawCellH = (availableHeight - totalCaptionHeight - totalGapHeight) / rowsOnThisPage;
-    const cellH = Math.max(44, Math.min(Math.min(rawCellH, photoW * 0.9), PHOTO_MAX_HEIGHT * 0.264583));
+    const cellH = Math.max(44, Math.min(Math.min(rawCellH, photoW * 0.9), PHOTO_MAX_HEIGHT));
 
     for (let row = 0; row < rowsOnThisPage; row++) {
       const rowIndices = indices.slice(row * PHOTO_GRID_COLUMNS, row * PHOTO_GRID_COLUMNS + PHOTO_GRID_COLUMNS);
@@ -316,7 +317,7 @@ export const addPhotoGrid = async (
       for (let col = 0; col < rowIndices.length; col++) {
         const idx = rowIndices[col];
         const x = rowStartX + col * (photoW + COL_GAP);
-        const imgData = await loadImage(photoUrls[idx]);
+        const imgData = await imageLoader(photoUrls[idx]);
 
         pdf.setFillColor(248, 248, 248);
         pdf.rect(x, rowY, photoW, cellH, 'F');
