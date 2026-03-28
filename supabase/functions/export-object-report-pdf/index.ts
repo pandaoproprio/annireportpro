@@ -426,7 +426,8 @@ function collectExpensePhotos(expense: ExpenseItem): string[] {
     ...extractExpensePhotoUrls(expense.midias),
     ...extractExpensePhotoUrls(expense.registroFotografico),
     ...extractExpensePhotoUrls(expense.registro_fotografico),
-  ])));
+  ]));
+}
 }
 
 function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<string>, section: ReportSection): string {
