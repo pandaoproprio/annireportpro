@@ -1135,11 +1135,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    const browserlessResponse = await fetch(`https://chrome.browserless.io/pdf?token=${browserlessApiKey}`, {
+    const browserlessResponse = await fetch(`https://chrome.browserless.io/pdf?token=${browserlessApiKey}&timeout=120000`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         html,
+        waitUntil: "load",
         options: {
           format: "A4",
           printBackground: true,
