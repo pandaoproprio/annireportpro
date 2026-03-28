@@ -4,6 +4,33 @@ import type { PdfContext } from './pageLayout';
 import type { PageLayout } from '@/types/imageLayout';
 import { supabase } from '@/integrations/supabase/client';
 
+const PHOTO_SECTION_TITLE_GAP_TOP = 2;
+const PHOTO_SECTION_TITLE_GAP_BOTTOM = 3;
+const PHOTO_ROW_GAP = 4;
+
+const getRowsForPage = (availableHeight: number, rowsRemaining: number, minRowBlockHeight: number) => {
+  const maxCandidate = Math.min(3, rowsRemaining);
+
+  for (let candidate = maxCandidate; candidate >= 1; candidate--) {
+    const requiredHeight = candidate * minRowBlockHeight + (candidate - 1) * PHOTO_ROW_GAP;
+    if (availableHeight >= requiredHeight) return candidate;
+  }
+
+  return 1;
+};
+
+const getAdaptiveCellHeight = (
+  availableHeight: number,
+  rowsOnPage: number,
+  captionBlockHeight: number,
+  preferredHeight: number,
+  minHeight: number,
+  maxHeight: number,
+) => {
+  const computed = (availableHeight - rowsOnPage * captionBlockHeight - (rowsOnPage - 1) * PHOTO_ROW_GAP) / rowsOnPage;
+  return Math.max(minHeight, Math.min(maxHeight, computed, preferredHeight));
+};
+
 // ── Image loader ──
 const imageToJpegDataUrl = (img: HTMLImageElement): string | null => {
   try {
@@ -183,35 +210,43 @@ export const addGalleryGrid = async (ctx: PdfContext, images: { src: string; cap
   const cols = Math.max(1, Math.min(4, columns));
   const COL_GAP = 6;
   const photoW = (CW - COL_GAP * (cols - 1)) / cols;
-  const CELL_H = photoW * 0.75;
-  const CAPTION_H = 10;
+   const CAPTION_H = 8;
   const IMG_PADDING = 2;
+   const preferredCellH = Math.min(photoW * 0.68, 52);
+   const minCellH = Math.min(photoW * 0.52, 40);
+   const maxCellH = Math.min(photoW * 0.74, 56);
 
   let idx = 0;
   while (idx < images.length) {
-    const rowNeeded = CELL_H + CAPTION_H + 8;
-    ensureSpace(ctx, rowNeeded);
+     const rowsRemaining = Math.ceil((images.length - idx) / cols);
+     const availableHeight = MAX_Y - ctx.currentY;
+     const minRowBlockHeight = minCellH + CAPTION_H;
+     const rowsOnPage = getRowsForPage(availableHeight, rowsRemaining, minRowBlockHeight);
+     const cellH = getAdaptiveCellHeight(availableHeight, rowsOnPage, CAPTION_H, preferredCellH, minCellH, maxCellH);
+     const rowNeeded = cellH + CAPTION_H;
+     ensureSpace(ctx, rowNeeded);
     const rowY = ctx.currentY;
+
     for (let col = 0; col < cols && idx < images.length; col++) {
       const x = ML + col * (photoW + COL_GAP);
 
       // Fill cell background
       pdf.setFillColor(248, 248, 248);
-      pdf.rect(x, rowY, photoW, CELL_H, 'F');
+       pdf.rect(x, rowY, photoW, cellH, 'F');
       pdf.setDrawColor(200, 200, 200);
       pdf.setLineWidth(0.4);
-      pdf.rect(x, rowY, photoW, CELL_H, 'S');
+       pdf.rect(x, rowY, photoW, cellH, 'S');
 
       const imgData = await loadImage(images[idx].src);
       if (imgData) {
         const innerW = photoW - IMG_PADDING * 2;
-        const innerH = CELL_H - IMG_PADDING * 2;
+         const innerH = cellH - IMG_PADDING * 2;
         const imgAspect = imgData.width / imgData.height;
         let drawW: number, drawH: number;
         if (imgAspect > innerW / innerH) { drawW = innerW; drawH = innerW / imgAspect; }
         else { drawH = innerH; drawW = innerH * imgAspect; }
         const drawX = x + (photoW - drawW) / 2;
-        const drawY = rowY + (CELL_H - drawH) / 2;
+         const drawY = rowY + (cellH - drawH) / 2;
         try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Gallery img error:', e); }
       }
       const cap = images[idx].caption;
@@ -221,13 +256,13 @@ export const addGalleryGrid = async (ctx: PdfContext, images: { src: string; cap
         pdf.setTextColor(80, 80, 80);
         const capLines: string[] = pdf.splitTextToSize(cap, photoW - 6);
         for (let j = 0; j < Math.min(capLines.length, 2); j++) {
-          pdf.text(capLines[j], x + photoW / 2, rowY + CELL_H + 3 + j * 3.5, { align: 'center' });
+           pdf.text(capLines[j], x + photoW / 2, rowY + cellH + 3 + j * 3.3, { align: 'center' });
         }
         pdf.setTextColor(0, 0, 0);
       }
       idx++;
     }
-    ctx.currentY = rowY + CELL_H + CAPTION_H + 6;
+     ctx.currentY = rowY + cellH + CAPTION_H + PHOTO_ROW_GAP;
   }
   ctx.currentY += 2;
 };
@@ -240,8 +275,8 @@ export const addPhotoGrid = async (
   if (photoUrls.length === 0) return;
   const { pdf } = ctx;
 
-  ensureSpace(ctx, LINE_H * 3);
-  ctx.currentY += 4;
+  ensureSpace(ctx, LINE_H * 2.5);
+  ctx.currentY += PHOTO_SECTION_TITLE_GAP_TOP;
   pdf.setFontSize(FONT_BODY);
   pdf.setFont('times', 'bold');
   const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
@@ -250,23 +285,36 @@ export const addPhotoGrid = async (
     pdf.text(tLine, ML, ctx.currentY);
     ctx.currentY += LINE_H;
   }
-  ctx.currentY += 4;
+  ctx.currentY += PHOTO_SECTION_TITLE_GAP_BOTTOM;
 
   const COL_GAP = 8;
 
   const renderSet = async (indices: number[], sharedCaption?: string) => {
     const useSingle = indices.length === 1;
     const photoW = useSingle ? CW * 0.7 : (CW - COL_GAP) / 2;
-    const CELL_H = photoW * 0.75; // Fixed cell height for uniform grid
-    const CAPTION_LINE_H = 4;
-    const CAPTION_MAX_LINES = 3;
-    const CAPTION_BLOCK_H = CAPTION_LINE_H * CAPTION_MAX_LINES + 2;
+    const CAPTION_LINE_H = 3.3;
+    const CAPTION_MAX_LINES = 2;
+    const CAPTION_BLOCK_H = CAPTION_LINE_H * CAPTION_MAX_LINES + 1.5;
     const cols = useSingle ? 1 : 2;
-    const IMG_PADDING = 2; // Padding inside the cell around the image
+    const IMG_PADDING = 2;
+    const preferredCellH = useSingle
+      ? Math.min(photoW * 0.72, 82)
+      : Math.min(photoW * 0.68, 52);
+    const minCellH = useSingle
+      ? Math.min(photoW * 0.58, 62)
+      : Math.min(photoW * 0.5, 40);
+    const maxCellH = useSingle
+      ? Math.min(photoW * 0.82, 92)
+      : Math.min(photoW * 0.74, 56);
 
     let i = 0;
     while (i < indices.length) {
-      const rowNeeded = CELL_H + CAPTION_BLOCK_H + 6;
+      const rowsRemaining = Math.ceil((indices.length - i) / cols);
+      const availableHeight = MAX_Y - ctx.currentY;
+      const minRowBlockHeight = minCellH + CAPTION_BLOCK_H;
+      const rowsOnPage = getRowsForPage(availableHeight, rowsRemaining, minRowBlockHeight);
+      const cellH = getAdaptiveCellHeight(availableHeight, rowsOnPage, CAPTION_BLOCK_H, preferredCellH, minCellH, maxCellH);
+      const rowNeeded = cellH + CAPTION_BLOCK_H;
       if (ctx.currentY + rowNeeded > MAX_Y) addPage(ctx);
       const rowY = ctx.currentY;
 
@@ -277,16 +325,16 @@ export const addPhotoGrid = async (
 
         // Fill cell background for uniform appearance
         pdf.setFillColor(248, 248, 248);
-        pdf.rect(x, rowY, photoW, CELL_H, 'F');
+        pdf.rect(x, rowY, photoW, cellH, 'F');
 
         // Draw border for the cell
         pdf.setDrawColor(200, 200, 200);
         pdf.setLineWidth(0.4);
-        pdf.rect(x, rowY, photoW, CELL_H, 'S');
+        pdf.rect(x, rowY, photoW, cellH, 'S');
 
         if (imgData) {
           const innerW = photoW - IMG_PADDING * 2;
-          const innerH = CELL_H - IMG_PADDING * 2;
+          const innerH = cellH - IMG_PADDING * 2;
           const imgAspect = imgData.width / imgData.height;
           let drawW: number, drawH: number;
           // Fit image inside cell preserving aspect ratio (contain mode)
@@ -298,7 +346,7 @@ export const addPhotoGrid = async (
             drawW = innerH * imgAspect;
           }
           const drawX = x + (photoW - drawW) / 2;
-          const drawY = rowY + (CELL_H - drawH) / 2;
+          const drawY = rowY + (cellH - drawH) / 2;
           try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Image error:', e); }
         }
 
@@ -308,7 +356,7 @@ export const addPhotoGrid = async (
           pdf.setFont('times', 'italic');
           pdf.setTextColor(80, 80, 80);
           const capLines: string[] = pdf.splitTextToSize(caption, photoW - 6);
-          const capY = rowY + CELL_H + CAPTION_LINE_H;
+          const capY = rowY + cellH + CAPTION_LINE_H;
           for (let cl = 0; cl < Math.min(capLines.length, CAPTION_MAX_LINES); cl++) {
             pdf.text(capLines[cl], x + photoW / 2, capY + cl * CAPTION_LINE_H, { align: 'center' });
           }
@@ -316,7 +364,7 @@ export const addPhotoGrid = async (
         }
         i++;
       }
-      ctx.currentY = rowY + CELL_H + CAPTION_BLOCK_H + 4;
+      ctx.currentY = rowY + cellH + CAPTION_BLOCK_H + PHOTO_ROW_GAP;
     }
 
     if (sharedCaption) {
