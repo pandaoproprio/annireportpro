@@ -807,46 +807,38 @@ function buildHtml(payload: ReportPayload): string {
     </section>
   `;
 
-  const HEADER_HEIGHT_PX = 86;
-  const PAGE_TOP_MARGIN = `${HEADER_HEIGHT_PX + 32}px`; // 118px — header + gap
-
   return `<!DOCTYPE html>
   <html lang="pt-BR">
     <head>
       <meta charset="UTF-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
       <style>
-        @page {
-          size: A4;
-          margin: ${PAGE_TOP_MARGIN} 12mm 18mm 12mm;
-        }
+        /* ─── Page: Puppeteer margin controls space; NO @page margin ─── */
+        @page { size: A4; margin: 0; }
 
-        * { box-sizing: border-box; }
-        html, body { margin: 0; padding: 0; }
-        body {
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body {
+          margin: 0; padding: 0;
           font-family: "Times New Roman", Times, serif;
-          color: #111827;
           font-size: 12pt;
           line-height: 1.55;
+          color: #111827;
+          background: #fff;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
-          background: #ffffff;
         }
 
-        /* ── Fixed header rendered in the @page top margin area ── */
+        /* ─── HEADER: fixed = repeats every page, lives in Puppeteer top margin ─── */
         .pdf-header {
           position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: ${HEADER_HEIGHT_PX}px;
+          top: 0; left: 0; right: 0;
+          height: 24mm;
+          padding: 3mm 12mm 2mm;
+          background: #fff;
+          border-bottom: 1px solid #d1d5db;
           display: flex;
           align-items: center;
           justify-content: center;
-          background: #ffffff;
-          border-bottom: 1px solid #d1d5db;
-          padding: 8px 12mm 6px;
-          z-index: 1000;
+          z-index: 100;
         }
 
         .header-banner-wrap,
@@ -863,6 +855,7 @@ function buildHtml(payload: ReportPayload): string {
           width: 100%;
           height: 100%;
           display: block;
+          object-fit: contain;
         }
 
         .header-slot {
@@ -872,12 +865,11 @@ function buildHtml(payload: ReportPayload): string {
           gap: 12px;
           min-width: 0;
         }
-
         .header-slot-center { justify-content: center; }
-        .header-slot-right { justify-content: flex-end; }
+        .header-slot-right  { justify-content: flex-end; }
 
         .header-logo {
-          max-height: 50px;
+          max-height: 18mm;
           max-width: 100%;
           object-fit: contain;
           display: block;
@@ -890,12 +882,10 @@ function buildHtml(payload: ReportPayload): string {
           word-break: break-word;
         }
 
-        /* ── Content container (never overlaps header) ── */
-        .pdf-content {
-          padding: 0;
-        }
+        /* ─── CONTENT: flows normally; Puppeteer margin keeps it clear of header ─── */
+        .pdf-content { padding: 0; }
 
-        /* ── Cover page ── */
+        /* ─── COVER ─── */
         .cover {
           min-height: 220mm;
           display: flex;
@@ -905,61 +895,20 @@ function buildHtml(payload: ReportPayload): string {
           break-after: page;
           page-break-after: always;
         }
-
-        .cover-inner {
-          width: 100%;
-          max-width: 150mm;
-          margin: 0 auto;
-        }
-
-        .cover-logo {
-          max-width: 64mm;
-          max-height: 40mm;
-          object-fit: contain;
-          display: block;
-          margin: 0 auto 16mm;
-        }
-
-        .cover-eyebrow {
-          margin: 0 0 8mm;
-          font-size: 12pt;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-          color: #4b5563;
-        }
-
-        .cover-title {
-          margin: 0 0 8mm;
-          font-size: 24pt;
-          line-height: 1.2;
-          text-transform: uppercase;
-          overflow-wrap: anywhere;
-          word-break: break-word;
-        }
-
-        .cover-subtitle,
-        .cover-meta,
-        .cover-project-name {
-          margin: 0 0 6mm;
-          word-break: break-word;
-        }
-
+        .cover-inner { width: 100%; max-width: 150mm; margin: 0 auto; }
+        .cover-logo { max-width: 64mm; max-height: 40mm; object-fit: contain; display: block; margin: 0 auto 16mm; }
+        .cover-eyebrow { margin: 0 0 8mm; font-size: 12pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
+        .cover-title { margin: 0 0 8mm; font-size: 24pt; line-height: 1.2; text-transform: uppercase; overflow-wrap: anywhere; word-break: break-word; }
+        .cover-subtitle, .cover-meta, .cover-project-name { margin: 0 0 6mm; word-break: break-word; }
         .cover-project-name { font-size: 16pt; font-weight: 700; }
         .cover-meta.strong { font-weight: 700; }
 
-        /* ── Section blocks ── */
-        .section {
-          margin: 0 0 10mm;
-          break-inside: avoid;
-          page-break-inside: avoid;
-        }
+        /* ─── SECTIONS: CAN break across pages (critical fix!) ─── */
+        .section { margin: 0 0 10mm; }
 
-        /* Allow large sections to break but keep title with first content */
-        .section-title,
-        .subsection-title,
-        .photo-group-title,
+        /* Titles: never break AFTER (stay with content) and never break INSIDE */
+        .section-title, .subsection-title, .photo-group-title,
         h1, h2, h3 {
-          margin: 0 0 5mm;
           font-weight: 700;
           overflow-wrap: anywhere;
           word-break: break-word;
@@ -967,51 +916,34 @@ function buildHtml(payload: ReportPayload): string {
           page-break-after: avoid;
           break-inside: avoid;
           page-break-inside: avoid;
+          margin: 0 0 5mm;
         }
 
-        .section-title {
-          font-size: 14pt;
-          text-transform: uppercase;
-        }
+        .section-title { font-size: 14pt; text-transform: uppercase; }
+        .subsection-title { font-size: 12.5pt; }
+        .photo-group-title { font-size: 12pt; }
 
-        .subsection-title {
-          font-size: 12.5pt;
-        }
-
-        .photo-group-title {
-          font-size: 12pt;
-        }
-
-        .body-copy,
-        .section p,
-        .section li,
-        .activity-description {
+        .body-copy, .section p, .section li, .activity-description {
           text-align: justify;
           overflow-wrap: anywhere;
           word-break: break-word;
         }
-
-        .body-copy {
-          margin: 0 0 4mm;
-          text-indent: 12.5mm;
-        }
+        .body-copy { margin: 0 0 4mm; text-indent: 12.5mm; }
 
         .activity-list { margin-top: 5mm; }
         .subheading { margin: 0 0 3mm; font-weight: 700; }
-        .activity-bullets { margin: 0; padding-left: 6mm; }
+        .activity-bullets { margin: 0; padding-left: 6mm; list-style: disc; }
         .activity-item { margin: 0 0 4mm; break-inside: avoid; page-break-inside: avoid; }
         .activity-meta { margin-bottom: 2mm; }
         .activity-description { margin: 0; }
-
         .goal-block { margin-bottom: 10mm; }
 
-        /* ── Tables ── */
+        /* ─── TABLES: wrapper CAN break; individual rows avoid break ─── */
         .table-wrap {
           border: 1px solid #d1d5db;
-          border-radius: 10px;
-          overflow: hidden;
-          break-inside: avoid;
-          page-break-inside: avoid;
+          border-radius: 6px;
+          /* NO overflow:hidden — it clips content in print */
+          /* NO break-inside:avoid — table may span pages */
         }
 
         .expense-table {
@@ -1019,33 +951,32 @@ function buildHtml(payload: ReportPayload): string {
           border-collapse: collapse;
           table-layout: fixed;
         }
-
-        .expense-table thead { display: table-header-group; }
-        .expense-table tr { break-inside: avoid; page-break-inside: avoid; }
-        .expense-table th,
-        .expense-table td {
+        .expense-table thead { display: table-header-group; } /* repeat header on each page */
+        .expense-table tr {
+          break-inside: avoid;
+          page-break-inside: avoid;
+        }
+        .expense-table th, .expense-table td {
           border: 1px solid #d1d5db;
-          padding: 10px 12px;
+          padding: 8px 10px;
           vertical-align: top;
           overflow-wrap: anywhere;
           word-break: break-word;
         }
-
         .expense-table th {
           background: #f3f4f6;
           font-size: 11pt;
           text-align: left;
         }
-
         .expense-table td:nth-child(1) { width: 24%; }
         .expense-table td:nth-child(2) { width: 46%; }
         .expense-table td:nth-child(3) { width: 30%; }
 
         .expense-thumb {
           width: 100%;
-          height: 120px;
+          max-height: 100px;
           object-fit: cover;
-          border-radius: 10px;
+          border-radius: 6px;
           display: block;
           background: #f3f4f6;
         }
@@ -1054,57 +985,45 @@ function buildHtml(payload: ReportPayload): string {
           display: inline-block;
           font-style: italic;
           color: #6b7280;
-          padding-top: 20px;
+          padding-top: 10px;
         }
 
-        /* ── Photo grids ── */
-        .photo-section { break-inside: auto; page-break-inside: auto; }
-
-        .photo-block {
-          break-inside: avoid;
-          page-break-inside: avoid;
-          margin-bottom: 8mm;
-        }
-
-        .photo-group {
-          break-inside: avoid;
-          page-break-inside: avoid;
-          margin-bottom: 8mm;
-        }
+        /* ─── PHOTOS: grid CAN break; individual items avoid break ─── */
+        .photo-section { margin-bottom: 10mm; }
+        .photo-block { margin-bottom: 8mm; }
+        .photo-group { margin-bottom: 8mm; }
 
         .photo-grid {
           display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 14px;
-          align-items: start;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
         }
-
         .single-photo-grid {
-          grid-template-columns: minmax(0, 1fr);
+          grid-template-columns: 1fr;
           max-width: 85mm;
         }
 
         .photo-item {
           margin: 0;
           border: 1px solid #d1d5db;
-          border-radius: 12px;
+          border-radius: 8px;
           overflow: hidden;
-          background: #ffffff;
+          background: #fff;
           break-inside: avoid;
           page-break-inside: avoid;
         }
-
         .photo-item img {
           display: block;
           width: 100%;
-          height: 200px;
+          height: 180px;
           object-fit: cover;
           background: #f8f8f8;
         }
+        .rich-photo-item img { height: 180px; }
 
         .caption {
-          padding: 8px 10px;
-          font-size: 10.5pt;
+          padding: 6px 8px;
+          font-size: 10pt;
           line-height: 1.3;
           word-break: break-word;
           color: #374151;
@@ -1112,52 +1031,27 @@ function buildHtml(payload: ReportPayload): string {
           font-style: italic;
         }
 
-        .rich-photo-item img {
-          height: 200px;
-        }
+        /* ─── SIGNATURE ─── */
+        .signature-section { margin-top: 18mm; break-inside: avoid; page-break-inside: avoid; }
+        .signature-date { margin: 0 0 18mm; }
+        .signature-line { width: 78mm; border-top: 1px solid #111827; margin: 0 0 3mm; }
+        .signature-label, .signature-name { margin: 0 0 2mm; }
 
-        /* ── Signature ── */
-        .signature-section {
-          margin-top: 18mm;
-          break-inside: avoid;
-          page-break-inside: avoid;
-        }
-
-        .signature-date {
-          margin: 0 0 18mm;
-        }
-
-        .signature-line {
-          width: 78mm;
-          border-top: 1px solid #111827;
-          margin: 0 0 3mm;
-        }
-
-        .signature-label,
-        .signature-name {
-          margin: 0 0 2mm;
-        }
-
-        /* ── Footer ── */
+        /* ─── FOOTER ─── */
         .institutional-footer {
-          margin-top: 14mm;
-          padding-top: 6mm;
+          margin-top: 14mm; padding-top: 6mm;
           border-top: 1px solid #d1d5db;
-          text-align: center;
-          font-size: 9pt;
-          line-height: 1.3;
-          color: #4b5563;
+          text-align: center; font-size: 9pt; line-height: 1.3; color: #4b5563;
         }
-
         .institutional-footer p { margin: 0 0 2mm; }
 
-        /* ── Links ── */
+        /* ─── LINKS ─── */
         .link-list { margin: 0; padding-left: 6mm; }
         .link-list li { margin: 0 0 3mm; word-break: break-word; }
         .link-label { font-weight: 700; }
         a { color: #111827; text-decoration: underline; }
 
-        /* ── Inline images in rich text ── */
+        /* ─── Inline images in rich text ─── */
         img { max-width: 100%; height: auto; }
       </style>
     </head>
@@ -1170,12 +1064,15 @@ function buildHtml(payload: ReportPayload): string {
         ${buildFooterHtml(payload.visualConfig)}
       </div>
       <script>
-        // Force all images to eager load before print
+        // Deterministic image loading: force ALL images to eager + wait for completion
         (function() {
-          var imgs = document.querySelectorAll('img');
+          var imgs = [].slice.call(document.querySelectorAll('img'));
           imgs.forEach(function(img) {
             img.loading = 'eager';
             img.decoding = 'sync';
+            if (!img.complete) {
+              img.onerror = function() { this.style.background = '#f3f4f6'; };
+            }
           });
         })();
       </script>
@@ -1217,9 +1114,11 @@ Deno.serve(async (req) => {
           options: {
             format: "A4",
             printBackground: true,
-            preferCSSPageSize: true,
             timeout: 55000,
-            margin: { top: "118px", right: "12mm", bottom: "18mm", left: "12mm" },
+            // Puppeteer margin controls the content box.
+            // top: 32mm reserves space for the 24mm fixed header + 8mm gap.
+            // The fixed header renders at top:0 of the PAPER (inside this margin area).
+            margin: { top: "32mm", right: "12mm", bottom: "18mm", left: "12mm" },
           },
         }),
       },
