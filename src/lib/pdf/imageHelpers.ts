@@ -7,6 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 const PHOTO_SECTION_TITLE_GAP_TOP = 2;
 const PHOTO_SECTION_TITLE_GAP_BOTTOM = 3;
 const PHOTO_ROW_GAP = 4;
+const PHOTO_GRID_COLUMNS = 2;
+const PHOTO_GRID_ROWS_PER_PAGE = 2;
+const PHOTO_MAX_HEIGHT = 200 * 0.264583;
 
 const getRowsForPage = (availableHeight: number, rowsRemaining: number, minRowBlockHeight: number) => {
   const maxCandidate = Math.min(3, rowsRemaining);
@@ -288,46 +291,35 @@ export const addPhotoGrid = async (
   ctx.currentY += PHOTO_SECTION_TITLE_GAP_BOTTOM;
 
   const COL_GAP = 8;
+  const CAPTION_LINE_H = 3.3;
+  const CAPTION_MAX_LINES = 2;
+  const CAPTION_BLOCK_H = CAPTION_LINE_H * CAPTION_MAX_LINES + 1.5;
+  const IMG_PADDING = 2;
+  const photoW = (CW - COL_GAP) / PHOTO_GRID_COLUMNS;
 
-  const renderSet = async (indices: number[], sharedCaption?: string) => {
-    const useSingle = indices.length === 1;
-    const photoW = useSingle ? CW * 0.7 : (CW - COL_GAP) / 2;
-    const CAPTION_LINE_H = 3.3;
-    const CAPTION_MAX_LINES = 2;
-    const CAPTION_BLOCK_H = CAPTION_LINE_H * CAPTION_MAX_LINES + 1.5;
-    const cols = useSingle ? 1 : 2;
-    const IMG_PADDING = 2;
-    const preferredCellH = useSingle
-      ? Math.min(photoW * 0.72, 82)
-      : Math.min(photoW * 0.68, 52);
-    const minCellH = useSingle
-      ? Math.min(photoW * 0.58, 62)
-      : Math.min(photoW * 0.5, 40);
-    const maxCellH = useSingle
-      ? Math.min(photoW * 0.82, 92)
-      : Math.min(photoW * 0.74, 56);
+  const renderChunk = async (indices: number[], groupTitle?: string) => {
+    const rowsOnThisPage = Math.min(PHOTO_GRID_ROWS_PER_PAGE, Math.max(1, Math.ceil(indices.length / PHOTO_GRID_COLUMNS)));
+    const availableHeight = MAX_Y - ctx.currentY;
+    const totalCaptionHeight = rowsOnThisPage * CAPTION_BLOCK_H;
+    const totalGapHeight = (rowsOnThisPage - 1) * PHOTO_ROW_GAP;
+    const rawCellH = (availableHeight - totalCaptionHeight - totalGapHeight) / rowsOnThisPage;
+    const cellH = Math.max(44, Math.min(Math.min(rawCellH, photoW * 0.9), PHOTO_MAX_HEIGHT * 0.264583));
 
-    let i = 0;
-    while (i < indices.length) {
-      const rowsRemaining = Math.ceil((indices.length - i) / cols);
-      const availableHeight = MAX_Y - ctx.currentY;
-      const minRowBlockHeight = minCellH + CAPTION_BLOCK_H;
-      const rowsOnPage = getRowsForPage(availableHeight, rowsRemaining, minRowBlockHeight);
-      const cellH = getAdaptiveCellHeight(availableHeight, rowsOnPage, CAPTION_BLOCK_H, preferredCellH, minCellH, maxCellH);
+    for (let row = 0; row < rowsOnThisPage; row++) {
+      const rowIndices = indices.slice(row * PHOTO_GRID_COLUMNS, row * PHOTO_GRID_COLUMNS + PHOTO_GRID_COLUMNS);
       const rowNeeded = cellH + CAPTION_BLOCK_H;
-      if (ctx.currentY + rowNeeded > MAX_Y) addPage(ctx);
+      ensureSpace(ctx, rowNeeded + (row < rowsOnThisPage - 1 ? PHOTO_ROW_GAP : 0));
       const rowY = ctx.currentY;
+      const isSingleCentered = rowIndices.length === 1;
+      const rowStartX = isSingleCentered ? ML + (CW - photoW) / 2 : ML;
 
-      for (let col = 0; col < cols && i < indices.length; col++) {
-        const idx = indices[i];
-        const x = useSingle ? ML + (CW - photoW) / 2 : (col === 0 ? ML : ML + photoW + COL_GAP);
+      for (let col = 0; col < rowIndices.length; col++) {
+        const idx = rowIndices[col];
+        const x = rowStartX + col * (photoW + COL_GAP);
         const imgData = await loadImage(photoUrls[idx]);
 
-        // Fill cell background for uniform appearance
         pdf.setFillColor(248, 248, 248);
         pdf.rect(x, rowY, photoW, cellH, 'F');
-
-        // Draw border for the cell
         pdf.setDrawColor(200, 200, 200);
         pdf.setLineWidth(0.4);
         pdf.rect(x, rowY, photoW, cellH, 'S');
@@ -336,48 +328,36 @@ export const addPhotoGrid = async (
           const innerW = photoW - IMG_PADDING * 2;
           const innerH = cellH - IMG_PADDING * 2;
           const imgAspect = imgData.width / imgData.height;
-          let drawW: number, drawH: number;
-          // Fit image inside cell preserving aspect ratio (contain mode)
-          if (imgAspect > innerW / innerH) {
-            drawW = innerW;
-            drawH = innerW / imgAspect;
-          } else {
+          let drawW = innerW;
+          let drawH = drawW / imgAspect;
+
+          if (drawH > innerH) {
             drawH = innerH;
-            drawW = innerH * imgAspect;
+            drawW = drawH * imgAspect;
           }
+
           const drawX = x + (photoW - drawW) / 2;
           const drawY = rowY + (cellH - drawH) / 2;
           try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Image error:', e); }
         }
 
-        if (!sharedCaption) {
-          const caption = captions?.[idx] || `Foto ${idx + 1}`;
-          pdf.setFontSize(FONT_CAPTION);
-          pdf.setFont('times', 'italic');
-          pdf.setTextColor(80, 80, 80);
-          const capLines: string[] = pdf.splitTextToSize(caption, photoW - 6);
-          const capY = rowY + cellH + CAPTION_LINE_H;
-          for (let cl = 0; cl < Math.min(capLines.length, CAPTION_MAX_LINES); cl++) {
-            pdf.text(capLines[cl], x + photoW / 2, capY + cl * CAPTION_LINE_H, { align: 'center' });
-          }
-          pdf.setTextColor(0, 0, 0);
+        const caption = captions?.[idx] || `Foto ${idx + 1}`;
+        pdf.setFontSize(FONT_CAPTION);
+        pdf.setFont('times', 'italic');
+        pdf.setTextColor(80, 80, 80);
+        const capLines: string[] = pdf.splitTextToSize(caption, photoW - 6);
+        const capY = rowY + cellH + CAPTION_LINE_H;
+        for (let cl = 0; cl < Math.min(capLines.length, CAPTION_MAX_LINES); cl++) {
+          pdf.text(capLines[cl], x + photoW / 2, capY + cl * CAPTION_LINE_H, { align: 'center' });
         }
-        i++;
+        pdf.setTextColor(0, 0, 0);
       }
+
       ctx.currentY = rowY + cellH + CAPTION_BLOCK_H + PHOTO_ROW_GAP;
     }
 
-    if (sharedCaption) {
-      pdf.setFontSize(FONT_CAPTION);
-      pdf.setFont('times', 'italic');
-      pdf.setTextColor(80, 80, 80);
-      const capLines: string[] = pdf.splitTextToSize(sharedCaption, CW);
-      for (let j = 0; j < capLines.length; j++) {
-        const lineW = pdf.getTextWidth(capLines[j]);
-        pdf.text(capLines[j], ML + (CW - lineW) / 2, ctx.currentY + j * 4.5);
-      }
-      ctx.currentY += capLines.length * 4.5 + 6;
-      pdf.setTextColor(0, 0, 0);
+    if (groupTitle) {
+      ctx.currentY -= PHOTO_ROW_GAP;
     }
   };
 
@@ -385,12 +365,34 @@ export const addPhotoGrid = async (
     const groupedIndices = new Set(groups.flatMap(g => g.photoIds.map(Number)));
     for (const group of groups) {
       const indices = group.photoIds.map(Number).filter(i => i < photoUrls.length);
-      if (indices.length > 0) await renderSet(indices, group.caption);
+      if (indices.length === 0) continue;
+      ensureSpace(ctx, LINE_H * 2);
+      pdf.setFontSize(FONT_BODY);
+      pdf.setFont('times', 'bold');
+      pdf.text(group.caption, ML, ctx.currentY);
+      ctx.currentY += LINE_H;
+      for (let start = 0; start < indices.length; start += PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE) {
+        const chunk = indices.slice(start, start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE);
+        await renderChunk(chunk, group.caption);
+        if (start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE < indices.length) addPage(ctx);
+      }
+      ctx.currentY += 2;
     }
     const ungrouped = photoUrls.map((_, i) => i).filter(i => !groupedIndices.has(i));
-    if (ungrouped.length > 0) await renderSet(ungrouped);
+    if (ungrouped.length > 0) {
+      for (let start = 0; start < ungrouped.length; start += PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE) {
+        const chunk = ungrouped.slice(start, start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE);
+        await renderChunk(chunk);
+        if (start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE < ungrouped.length) addPage(ctx);
+      }
+    }
   } else {
-    await renderSet(photoUrls.map((_, i) => i));
+    const allIndices = photoUrls.map((_, i) => i);
+    for (let start = 0; start < allIndices.length; start += PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE) {
+      const chunk = allIndices.slice(start, start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE);
+      await renderChunk(chunk);
+      if (start + PHOTO_GRID_COLUMNS * PHOTO_GRID_ROWS_PER_PAGE < allIndices.length) addPage(ctx);
+    }
   }
 };
 

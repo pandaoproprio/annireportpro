@@ -25,12 +25,13 @@ export const getContentStartY = (ctx: PdfContext): number => {
     const bannerH = ctx.headerConfig.bannerHeightMm ?? ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H;
     return topPad + bannerH + gap;
   }
-  const headerH = Math.min(ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H, HEADER_LOGO_H + 4);
+  const configuredHeaderH = ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H;
+  const headerH = Math.max(Math.min(configuredHeaderH, HEADER_BANNER_H), HEADER_LOGO_H + 2);
   const hasAnyLogo = (ctx.headerConfig.logoImg && ctx.headerConfig.logoVisible !== false)
     || (ctx.headerConfig.logoCenterImg && ctx.headerConfig.logoCenterVisible !== false)
     || (ctx.headerConfig.logoSecondaryImg && ctx.headerConfig.logoSecondaryVisible !== false);
   if (hasAnyLogo) {
-    return topPad + 2 + headerH + gap;
+    return topPad + headerH + gap;
   }
   return MT;
 };
