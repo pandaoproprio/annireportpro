@@ -183,37 +183,51 @@ export const addGalleryGrid = async (ctx: PdfContext, images: { src: string; cap
   const cols = Math.max(1, Math.min(4, columns));
   const COL_GAP = 6;
   const photoW = (CW - COL_GAP * (cols - 1)) / cols;
-  const photoH = photoW * 0.75;
-  const CAPTION_H = 6;
+  const CELL_H = photoW * 0.75;
+  const CAPTION_H = 10;
+  const IMG_PADDING = 2;
 
   let idx = 0;
   while (idx < images.length) {
-    const rowNeeded = photoH + CAPTION_H + 8;
+    const rowNeeded = CELL_H + CAPTION_H + 8;
     ensureSpace(ctx, rowNeeded);
     const rowY = ctx.currentY;
     for (let col = 0; col < cols && idx < images.length; col++) {
       const x = ML + col * (photoW + COL_GAP);
+
+      // Fill cell background
+      pdf.setFillColor(248, 248, 248);
+      pdf.rect(x, rowY, photoW, CELL_H, 'F');
+      pdf.setDrawColor(200, 200, 200);
+      pdf.setLineWidth(0.4);
+      pdf.rect(x, rowY, photoW, CELL_H, 'S');
+
       const imgData = await loadImage(images[idx].src);
       if (imgData) {
+        const innerW = photoW - IMG_PADDING * 2;
+        const innerH = CELL_H - IMG_PADDING * 2;
         const imgAspect = imgData.width / imgData.height;
-        const cellAspect = photoW / photoH;
-        let drawW: number, drawH: number, drawX: number, drawY: number;
-        if (imgAspect > cellAspect) { drawW = photoW; drawH = photoW / imgAspect; drawX = x; drawY = rowY + (photoH - drawH) / 2; }
-        else { drawH = photoH; drawW = photoH * imgAspect; drawX = x + (photoW - drawW) / 2; drawY = rowY; }
+        let drawW: number, drawH: number;
+        if (imgAspect > innerW / innerH) { drawW = innerW; drawH = innerW / imgAspect; }
+        else { drawH = innerH; drawW = innerH * imgAspect; }
+        const drawX = x + (photoW - drawW) / 2;
+        const drawY = rowY + (CELL_H - drawH) / 2;
         try { pdf.addImage(imgData.data, 'JPEG', drawX, drawY, drawW, drawH); } catch (e) { console.warn('Gallery img error:', e); }
       }
       const cap = images[idx].caption;
       if (cap) {
         pdf.setFontSize(8);
         pdf.setFont('times', 'italic');
-        const capLines: string[] = pdf.splitTextToSize(cap, photoW);
+        pdf.setTextColor(80, 80, 80);
+        const capLines: string[] = pdf.splitTextToSize(cap, photoW - 6);
         for (let j = 0; j < Math.min(capLines.length, 2); j++) {
-          pdf.text(capLines[j], x + (photoW - pdf.getTextWidth(capLines[j])) / 2, rowY + photoH + 3 + j * 3.5);
+          pdf.text(capLines[j], x + photoW / 2, rowY + CELL_H + 3 + j * 3.5, { align: 'center' });
         }
+        pdf.setTextColor(0, 0, 0);
       }
       idx++;
     }
-    ctx.currentY = rowY + photoH + CAPTION_H + 6;
+    ctx.currentY = rowY + CELL_H + CAPTION_H + 6;
   }
   ctx.currentY += 2;
 };
