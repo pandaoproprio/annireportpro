@@ -495,7 +495,7 @@ function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<st
         <td>${escapeHtml(itemName)}</td>
         <td>${escapeHtml(description)}</td>
         <td>
-          ${thumb ? `<img class="expense-thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(itemName)}" loading="lazy" decoding="async" />` : `<span class="empty-state">Sem foto</span>`}
+          ${thumb ? `<img class="expense-thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(itemName)}" loading="eager" decoding="sync" />` : `<span class="empty-state">Sem foto</span>`}
         </td>
       </tr>
     `;
