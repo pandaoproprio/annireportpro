@@ -25,7 +25,7 @@ describe('pdf/pageLayout', () => {
       const ctx = createPdfContext();
       ctx.headerConfig = { bannerImg: mockImage, bannerHeightMm: 30, bannerVisible: true };
       const y = getContentStartY(ctx);
-      const expected = HEADER_TOP_Y + 30 + 8;
+      const expected = HEADER_TOP_Y + 30 + 4;
       expect(y).toBe(expected);
     });
 

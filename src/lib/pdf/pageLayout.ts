@@ -31,7 +31,7 @@ export const getContentStartY = (ctx: PdfContext): number => {
     || (ctx.headerConfig.logoCenterImg && ctx.headerConfig.logoCenterVisible !== false)
     || (ctx.headerConfig.logoSecondaryImg && ctx.headerConfig.logoSecondaryVisible !== false);
   if (hasAnyLogo) {
-    return topPad + headerH + gap;
+    return Math.max(MT + 1, topPad + headerH + gap);
   }
   return MT;
 };
