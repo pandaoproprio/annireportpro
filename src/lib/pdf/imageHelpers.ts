@@ -248,6 +248,7 @@ export const addPhotoGrid = async (
     const CAPTION_MAX_LINES = 3;
     const CAPTION_BLOCK_H = CAPTION_LINE_H * CAPTION_MAX_LINES + 2;
     const cols = useSingle ? 1 : 2;
+    const IMG_PADDING = 2; // Padding inside the cell around the image
 
     let i = 0;
     while (i < indices.length) {
@@ -260,21 +261,27 @@ export const addPhotoGrid = async (
         const x = useSingle ? ML + (CW - photoW) / 2 : (col === 0 ? ML : ML + photoW + COL_GAP);
         const imgData = await loadImage(photoUrls[idx]);
 
-        // Draw light border for the cell
-        pdf.setDrawColor(220, 220, 220);
-        pdf.setLineWidth(0.3);
+        // Fill cell background for uniform appearance
+        pdf.setFillColor(248, 248, 248);
+        pdf.rect(x, rowY, photoW, CELL_H, 'F');
+
+        // Draw border for the cell
+        pdf.setDrawColor(200, 200, 200);
+        pdf.setLineWidth(0.4);
         pdf.rect(x, rowY, photoW, CELL_H, 'S');
 
         if (imgData) {
+          const innerW = photoW - IMG_PADDING * 2;
+          const innerH = CELL_H - IMG_PADDING * 2;
           const imgAspect = imgData.width / imgData.height;
           let drawW: number, drawH: number;
-          // Fit image inside cell preserving aspect ratio
-          if (imgAspect > photoW / CELL_H) {
-            drawW = photoW;
-            drawH = photoW / imgAspect;
+          // Fit image inside cell preserving aspect ratio (contain mode)
+          if (imgAspect > innerW / innerH) {
+            drawW = innerW;
+            drawH = innerW / imgAspect;
           } else {
-            drawH = CELL_H;
-            drawW = CELL_H * imgAspect;
+            drawH = innerH;
+            drawW = innerH * imgAspect;
           }
           const drawX = x + (photoW - drawW) / 2;
           const drawY = rowY + (CELL_H - drawH) / 2;
@@ -286,7 +293,7 @@ export const addPhotoGrid = async (
           pdf.setFontSize(FONT_CAPTION);
           pdf.setFont('times', 'italic');
           pdf.setTextColor(80, 80, 80);
-          const capLines: string[] = pdf.splitTextToSize(caption, photoW - 4);
+          const capLines: string[] = pdf.splitTextToSize(caption, photoW - 6);
           const capY = rowY + CELL_H + CAPTION_LINE_H;
           for (let cl = 0; cl < Math.min(capLines.length, CAPTION_MAX_LINES); cl++) {
             pdf.text(capLines[cl], x + photoW / 2, capY + cl * CAPTION_LINE_H, { align: 'center' });
