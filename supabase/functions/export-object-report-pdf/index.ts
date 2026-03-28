@@ -1125,7 +1125,24 @@ Deno.serve(async (req) => {
 
   try {
     const payload = await req.json() as ReportPayload;
-    const html = buildHtml(payload);
+    let html = buildHtml(payload);
+
+    // ── Optimize all image URLs to reduce load time ──
+    html = html.replace(/<img\b([^>]*?)src="([^"]+)"([^>]*?)>/gi, (_full, before: string, src: string, after: string) => {
+      let optimizedSrc = src;
+      try {
+        // For Supabase storage URLs, append render/image transform params
+        if (src.includes("supabase.co/storage/") && !src.includes("/render/image")) {
+          const u = new URL(src);
+          u.searchParams.set("width", "800");
+          u.searchParams.set("quality", "70");
+          optimizedSrc = u.toString();
+        }
+      } catch {
+        // keep original src if URL parsing fails
+      }
+      return `<img${before}src="${optimizedSrc}"${after}>`;
+    });
 
     const browserlessApiKey = Deno.env.get("BROWSERLESS_API_KEY");
     if (!browserlessApiKey) {
@@ -1135,20 +1152,25 @@ Deno.serve(async (req) => {
       });
     }
 
-    const browserlessResponse = await fetch(`https://chrome.browserless.io/pdf?token=${browserlessApiKey}&timeout=60000&bestAttempt=true`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        html,
-        options: {
-          format: "A4",
-          printBackground: true,
-          preferCSSPageSize: true,
-          timeout: 60000,
-          margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
-        },
-      }),
-    });
+    console.log(`HTML size: ${(html.length / 1024).toFixed(1)}KB`);
+
+    const browserlessResponse = await fetch(
+      `https://chrome.browserless.io/pdf?token=${browserlessApiKey}&timeout=55000&bestAttempt=true`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          html,
+          options: {
+            format: "A4",
+            printBackground: true,
+            preferCSSPageSize: true,
+            timeout: 55000,
+            margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+          },
+        }),
+      },
+    );
 
     if (!browserlessResponse.ok) {
       const errorText = await browserlessResponse.text();
