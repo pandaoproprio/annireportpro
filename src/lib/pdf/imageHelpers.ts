@@ -6,10 +6,10 @@ import { supabase } from '@/integrations/supabase/client';
 
 const PHOTO_SECTION_TITLE_GAP_TOP = 2;
 const PHOTO_SECTION_TITLE_GAP_BOTTOM = 3;
-const PHOTO_ROW_GAP = 4;
+const PHOTO_ROW_GAP = 5;
 const PHOTO_GRID_COLUMNS = 3;
 const PHOTO_GRID_ROWS_PER_PAGE = 2;
-const PHOTO_MAX_HEIGHT = 200 * 0.264583;
+const PHOTO_MAX_HEIGHT = 80; // mm — generous max for well-sized photos
 
 const getRowsForPage = (availableHeight: number, rowsRemaining: number, minRowBlockHeight: number) => {
   const maxCandidate = Math.min(PHOTO_GRID_ROWS_PER_PAGE, rowsRemaining);
