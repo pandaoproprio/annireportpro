@@ -196,88 +196,68 @@ function buildParagraphsFromText(text: string): string {
     .join("");
 }
 
-function renderGalleryNode(node: Element, doc: Document) {
-  const imagesAttr = node.getAttribute("data-images") || node.getAttribute("images") || "[]";
-  const groupCaption = node.getAttribute("data-group-caption") || "";
+function renderGalleryHtml(match: string): string {
+  const imagesMatch = match.match(/data-images="([^"]*)"/i) || match.match(/data-images='([^']*)'/i);
+  const groupCaptionMatch = match.match(/data-group-caption="([^"]*)"/i);
+  const imagesAttr = imagesMatch ? imagesMatch[1].replace(/&quot;/g, '"').replace(/&amp;/g, '&') : "[]";
+  const groupCaption = groupCaptionMatch ? groupCaptionMatch[1] : "";
   let images: Array<{ src?: string; caption?: string }> = [];
-
-  try {
-    images = JSON.parse(imagesAttr);
-  } catch {
-    images = [];
-  }
-
+  try { images = JSON.parse(imagesAttr); } catch { images = []; }
   const validImages = images.filter((img) => isNonEmptyString(img?.src));
-  if (validImages.length === 0) {
-    node.remove();
-    return;
-  }
-
-  const wrapper = doc.createElement("div");
-  wrapper.className = validImages.length === 1 ? "photo-grid single-photo-grid" : "photo-grid";
-  wrapper.innerHTML = validImages
+  if (validImages.length === 0) return "";
+  const gridClass = validImages.length === 1 ? "photo-grid single-photo-grid" : "photo-grid";
+  const inner = validImages
     .map((img, index) => `
       <figure class="photo-item rich-photo-item">
         <img src="${escapeHtml(img.src!.trim())}" alt="${escapeHtml((img.caption || `Imagem ${index + 1}`).trim())}" loading="eager" />
         <figcaption class="caption">${escapeHtml((img.caption || `Imagem ${index + 1}`).trim())}</figcaption>
-      </figure>
-    `)
+      </figure>`)
     .join("");
-
+  const wrapper = `<div class="${gridClass}">${inner}</div>`;
   if (groupCaption) {
-    const block = doc.createElement("div");
-    block.className = "photo-group";
-    block.innerHTML = `<h4 class="photo-group-title">${escapeHtml(groupCaption)}</h4>${wrapper.outerHTML}`;
-    node.replaceWith(block);
-    return;
+    return `<div class="photo-group"><h4 class="photo-group-title">${escapeHtml(groupCaption)}</h4>${wrapper}</div>`;
   }
-
-  node.replaceWith(wrapper);
+  return wrapper;
 }
 
 function sanitizeRichHtml(input: string): string {
   if (!input.trim()) return "";
   if (!/[<][a-z!/]/i.test(input)) return buildParagraphsFromText(input);
 
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(`<body>${input}</body>`, "text/html");
-  if (!doc) return buildParagraphsFromText(input);
+  let html = input;
 
-  doc.querySelectorAll("script, style, iframe, object, embed").forEach((node) => node.remove());
+  // Remove dangerous tags
+  html = html.replace(/<(script|style|iframe|object|embed)\b[^>]*>[\s\S]*?<\/\1>/gi, "");
+  html = html.replace(/<(script|style|iframe|object|embed)\b[^>]*\/?>/gi, "");
 
-  doc.querySelectorAll("[data-gallery]").forEach((node) => renderGalleryNode(node, doc));
+  // Process gallery nodes
+  html = html.replace(/<[a-z][a-z0-9]*\b[^>]*data-gallery[^>]*>[\s\S]*?<\/[a-z][a-z0-9]*>/gi, renderGalleryHtml);
+  html = html.replace(/<[a-z][a-z0-9]*\b[^>]*data-gallery[^>]*\/?>/gi, renderGalleryHtml);
 
-  doc.querySelectorAll("*").forEach((element) => {
-    Array.from(element.attributes).forEach((attr) => {
-      const attrName = attr.name.toLowerCase();
-      const attrValue = attr.value.trim();
-      if (attrName.startsWith("on")) {
-        element.removeAttribute(attr.name);
-      }
-      if ((attrName === "href" || attrName === "src") && /^javascript:/i.test(attrValue)) {
-        element.removeAttribute(attr.name);
-      }
-    });
+  // Remove event handlers (on*)
+  html = html.replace(/\s+on\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+
+  // Remove javascript: from href/src
+  html = html.replace(/(href|src)\s*=\s*"javascript:[^"]*"/gi, '$1=""');
+  html = html.replace(/(href|src)\s*=\s*'javascript:[^']*'/gi, "$1=''");
+
+  // Process img tags: enforce sizing and loading
+  html = html.replace(/<img\b([^>]*)>/gi, (_match, attrs: string) => {
+    const widthMatch = attrs.match(/data-width="(\d+)"/i);
+    const widthPct = widthMatch ? Math.min(Math.max(parseInt(widthMatch[1], 10), 35), 100) : 100;
+    const hasAlt = /\balt\s*=/i.test(attrs);
+    let newAttrs = attrs.replace(/\bstyle\s*=\s*"[^"]*"/gi, "");
+    newAttrs = newAttrs.replace(/\bloading\s*=\s*"[^"]*"/gi, "");
+    if (!hasAlt) newAttrs += ` alt="Imagem"`;
+    newAttrs += ` loading="eager"`;
+    newAttrs += ` style="display:block;max-width:${widthPct}%;width:${widthPct}%;height:auto;margin:12px auto;border-radius:10px;"`;
+    return `<img${newAttrs}>`;
   });
 
-  doc.querySelectorAll("img").forEach((img, index) => {
-    const widthPct = Number.parseInt(img.getAttribute("data-width") || "100", 10);
-    const safeWidth = Number.isFinite(widthPct) ? Math.min(Math.max(widthPct, 35), 100) : 100;
-    const currentStyle = img.getAttribute("style") || "";
-    img.setAttribute(
-      "style",
-      `${currentStyle};display:block;max-width:${safeWidth}%;width:${safeWidth}%;height:auto;margin:12px auto;border-radius:10px;`,
-    );
-    if (!img.getAttribute("alt")) img.setAttribute("alt", `Imagem ${index + 1}`);
-    img.setAttribute("loading", "eager");
-  });
+  // Add target to links
+  html = html.replace(/<a\b([^>]*href\s*=)/gi, '<a target="_blank" rel="noreferrer noopener" $1');
 
-  doc.querySelectorAll("a[href]").forEach((anchor) => {
-    anchor.setAttribute("target", "_blank");
-    anchor.setAttribute("rel", "noreferrer noopener");
-  });
-
-  return doc.body.innerHTML;
+  return html;
 }
 
 function renderRichContent(content: string | undefined, fallback: string): string {
