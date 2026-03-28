@@ -388,7 +388,9 @@ export const addPhotoGrid = async (
     }
   };
 
-  drawPhotoTitle(`REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`);
+  if (sectionLabel && sectionLabel.trim().length > 0) {
+    drawPhotoTitle(`REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`);
+  }
 
   if (groups && groups.length > 0) {
     const groupedIndices = new Set(groups.flatMap(g => g.photoIds.map(Number)));
@@ -414,15 +416,17 @@ export const addPhotoLayout = async (ctx: PdfContext, layout: PageLayout, sectio
   const { pdf } = ctx;
   addPage(ctx);
 
-  pdf.setFontSize(FONT_BODY);
-  pdf.setFont('times', 'bold');
-  const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
-  const titleLines: string[] = pdf.splitTextToSize(titleText, CW);
-  for (const tLine of titleLines) {
-    pdf.text(tLine, ML, ctx.currentY);
-    ctx.currentY += LINE_H;
+  if (sectionLabel && sectionLabel.trim().length > 0) {
+    pdf.setFontSize(FONT_BODY);
+    pdf.setFont('times', 'bold');
+    const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
+    const titleLines: string[] = pdf.splitTextToSize(titleText, CW);
+    for (const tLine of titleLines) {
+      pdf.text(tLine, ML, ctx.currentY);
+      ctx.currentY += LINE_H;
+    }
+    ctx.currentY += 4;
   }
-  ctx.currentY += 4;
 
   const sorted = [...layout.images].sort((a, b) => a.zIndex - b.zIndex);
   for (const item of sorted) {
