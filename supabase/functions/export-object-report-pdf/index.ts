@@ -1114,9 +1114,11 @@ Deno.serve(async (req) => {
           options: {
             format: "A4",
             printBackground: true,
-            preferCSSPageSize: true,
             timeout: 55000,
-            margin: { top: "118px", right: "12mm", bottom: "18mm", left: "12mm" },
+            // Puppeteer margin controls the content box.
+            // top: 32mm reserves space for the 24mm fixed header + 8mm gap.
+            // The fixed header renders at top:0 of the PAPER (inside this margin area).
+            margin: { top: "32mm", right: "12mm", bottom: "18mm", left: "12mm" },
           },
         }),
       },
