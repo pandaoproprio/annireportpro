@@ -1135,7 +1135,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const browserlessResponse = await fetch(`https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`, {
+    const browserlessResponse = await fetch(`https://chrome.browserless.io/pdf?token=${browserlessApiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
