@@ -1,5 +1,5 @@
 import { CW, ML, FONT_BODY, FONT_CAPTION, LINE_H, MAX_Y } from './constants';
-import { ensureSpace, addPage } from './pageLayout';
+import { ensureSpace, addPage, getContentStartY } from './pageLayout';
 import type { PdfContext } from './pageLayout';
 import type { PageLayout } from '@/types/imageLayout';
 import { supabase } from '@/integrations/supabase/client';
@@ -279,17 +279,8 @@ export const addPhotoGrid = async (
   if (photoUrls.length === 0) return;
   const { pdf } = ctx;
 
-  ensureSpace(ctx, LINE_H * 2.5);
-  ctx.currentY += PHOTO_SECTION_TITLE_GAP_TOP;
-  pdf.setFontSize(FONT_BODY);
-  pdf.setFont('times', 'bold');
-  const titleText = `REGISTROS FOTOGRÁFICOS – ${sectionLabel.toUpperCase()}`;
-  const titleLines: string[] = pdf.splitTextToSize(titleText, CW);
-  for (const tLine of titleLines) {
-    pdf.text(tLine, ML, ctx.currentY);
-    ctx.currentY += LINE_H;
-  }
-  ctx.currentY += PHOTO_SECTION_TITLE_GAP_BOTTOM;
+  const sectionStartY = getContentStartY(ctx);
+  if (ctx.currentY > sectionStartY + 0.5) addPage(ctx);
 
   const COL_GAP = 8;
   const CAPTION_LINE_H = 3.3;
