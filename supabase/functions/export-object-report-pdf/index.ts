@@ -428,7 +428,7 @@ function collectExpensePhotos(expense: ExpenseItem): string[] {
     ...extractExpensePhotoUrls(expense.registro_fotografico),
   ]));
 }
-}
+
 
 function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<string>, section: ReportSection): string {
   if (payload.expenses.length === 0) {
