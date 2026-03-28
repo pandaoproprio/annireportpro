@@ -476,7 +476,7 @@ function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<st
   const rows = payload.expenses.map((expense) => {
     const itemName = isNonEmptyString(expense.itemName) ? expense.itemName.trim() : "-";
     const description = isNonEmptyString(expense.description) ? expense.description.trim() : "-";
-    const photos = collectExpensePhotos(expense);
+    const photos = collectExpensePhotos(expense).map((photo) => optimizeStorageImageUrl(photo, 520, 60));
     const thumb = photos[0];
 
     if (photos.length > 0) {
@@ -495,7 +495,7 @@ function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<st
         <td>${escapeHtml(itemName)}</td>
         <td>${escapeHtml(description)}</td>
         <td>
-          ${thumb ? `<img class="expense-thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(itemName)}" loading="eager" />` : `<span class="empty-state">Sem foto</span>`}
+          ${thumb ? `<img class="expense-thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(itemName)}" loading="lazy" decoding="async" />` : `<span class="empty-state">Sem foto</span>`}
         </td>
       </tr>
     `;
