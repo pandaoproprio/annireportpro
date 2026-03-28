@@ -35,7 +35,7 @@ describe('pdf/imageHelpers addPhotoGrid', () => {
     expect(ctx.pageCount).toBe(2);
     expect(pdf.addImage).toHaveBeenCalledTimes(7);
 
-    const photoW = (CW - 12) / 3;
+    const photoW = (CW - 16) / 3;
     const centeredX = ML + (CW - photoW) / 2;
     const secondPageCenteredRect = pdf.rect.mock.calls.find(
       ([x, , width]) => Math.abs(Number(x) - centeredX) < 0.01 && Math.abs(Number(width) - photoW) < 0.01,
