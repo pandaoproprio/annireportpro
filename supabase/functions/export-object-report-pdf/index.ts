@@ -1219,7 +1219,7 @@ Deno.serve(async (req) => {
             printBackground: true,
             preferCSSPageSize: true,
             timeout: 55000,
-            margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+            margin: { top: "118px", right: "12mm", bottom: "18mm", left: "12mm" },
           },
         }),
       },
