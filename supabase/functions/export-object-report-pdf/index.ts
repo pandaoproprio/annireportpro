@@ -807,6 +807,10 @@ function buildHtml(payload: ReportPayload): string {
     </section>
   `;
 
+  const HEADER_HEIGHT_MM = 28;
+  const PAGE_TOP_MARGIN_MM = 10;
+  const CONTENT_OFFSET_MM = HEADER_HEIGHT_MM + PAGE_TOP_MARGIN_MM + 4;
+
   return `<!DOCTYPE html>
   <html lang="pt-BR">
     <head>
@@ -815,7 +819,7 @@ function buildHtml(payload: ReportPayload): string {
       <style>
         @page {
           size: A4;
-          margin: 36mm 12mm 18mm;
+          margin: ${CONTENT_OFFSET_MM}mm 12mm 18mm 12mm;
         }
 
         * { box-sizing: border-box; }
@@ -830,18 +834,19 @@ function buildHtml(payload: ReportPayload): string {
           background: #ffffff;
         }
 
-        .header {
+        /* ── Fixed header on every page (inside @page top margin) ── */
+        .pdf-header {
           position: fixed;
-          top: 12mm;
-          left: 12mm;
-          right: 12mm;
-          height: 80px;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: ${HEADER_HEIGHT_MM}mm;
           display: flex;
           align-items: center;
           justify-content: center;
           background: #ffffff;
           border-bottom: 1px solid #d1d5db;
-          padding: 0 4px 10px;
+          padding: ${PAGE_TOP_MARGIN_MM}mm 12mm 2mm;
           z-index: 1000;
         }
 
@@ -873,7 +878,7 @@ function buildHtml(payload: ReportPayload): string {
         .header-slot-right { justify-content: flex-end; }
 
         .header-logo {
-          max-height: 56px;
+          max-height: 50px;
           max-width: 100%;
           object-fit: contain;
           display: block;
@@ -886,6 +891,12 @@ function buildHtml(payload: ReportPayload): string {
           word-break: break-word;
         }
 
+        /* ── Content container (never overlaps header) ── */
+        .pdf-content {
+          padding: 0;
+        }
+
+        /* ── Cover page ── */
         .cover {
           min-height: 220mm;
           display: flex;
@@ -923,6 +934,7 @@ function buildHtml(payload: ReportPayload): string {
           font-size: 24pt;
           line-height: 1.2;
           text-transform: uppercase;
+          overflow-wrap: anywhere;
           word-break: break-word;
         }
 
@@ -936,18 +948,26 @@ function buildHtml(payload: ReportPayload): string {
         .cover-project-name { font-size: 16pt; font-weight: 700; }
         .cover-meta.strong { font-weight: 700; }
 
+        /* ── Section blocks ── */
         .section {
-          margin: 0 0 12mm;
+          margin: 0 0 10mm;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
 
+        /* Allow large sections to break but keep title with first content */
         .section-title,
         .subsection-title,
-        .photo-group-title {
+        .photo-group-title,
+        h1, h2, h3 {
           margin: 0 0 5mm;
           font-weight: 700;
+          overflow-wrap: anywhere;
           word-break: break-word;
-          break-after: avoid-page;
+          break-after: avoid;
           page-break-after: avoid;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
 
         .section-title {
@@ -968,6 +988,8 @@ function buildHtml(payload: ReportPayload): string {
         .section li,
         .activity-description {
           text-align: justify;
+          overflow-wrap: anywhere;
+          word-break: break-word;
         }
 
         .body-copy {
@@ -984,10 +1006,13 @@ function buildHtml(payload: ReportPayload): string {
 
         .goal-block { margin-bottom: 10mm; }
 
+        /* ── Tables ── */
         .table-wrap {
           border: 1px solid #d1d5db;
           border-radius: 10px;
           overflow: hidden;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
 
         .expense-table {
@@ -1003,6 +1028,7 @@ function buildHtml(payload: ReportPayload): string {
           border: 1px solid #d1d5db;
           padding: 10px 12px;
           vertical-align: top;
+          overflow-wrap: anywhere;
           word-break: break-word;
         }
 
@@ -1032,18 +1058,25 @@ function buildHtml(payload: ReportPayload): string {
           padding-top: 20px;
         }
 
-        .photo-section,
-        .photo-group,
-        .photo-block,
-        .photo-item {
+        /* ── Photo grids ── */
+        .photo-section { break-inside: auto; page-break-inside: auto; }
+
+        .photo-block {
           break-inside: avoid;
           page-break-inside: avoid;
+          margin-bottom: 8mm;
+        }
+
+        .photo-group {
+          break-inside: avoid;
+          page-break-inside: avoid;
+          margin-bottom: 8mm;
         }
 
         .photo-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px;
+          gap: 14px;
           align-items: start;
         }
 
@@ -1058,20 +1091,22 @@ function buildHtml(payload: ReportPayload): string {
           border-radius: 12px;
           overflow: hidden;
           background: #ffffff;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
 
         .photo-item img {
           display: block;
           width: 100%;
-          height: 220px;
+          height: 200px;
           object-fit: cover;
-          background: #f3f4f6;
+          background: #f8f8f8;
         }
 
         .caption {
-          padding: 10px 12px;
+          padding: 8px 10px;
           font-size: 10.5pt;
-          line-height: 1.35;
+          line-height: 1.3;
           word-break: break-word;
           color: #374151;
           text-align: center;
@@ -1079,9 +1114,10 @@ function buildHtml(payload: ReportPayload): string {
         }
 
         .rich-photo-item img {
-          height: 210px;
+          height: 200px;
         }
 
+        /* ── Signature ── */
         .signature-section {
           margin-top: 18mm;
           break-inside: avoid;
@@ -1103,6 +1139,7 @@ function buildHtml(payload: ReportPayload): string {
           margin: 0 0 2mm;
         }
 
+        /* ── Footer ── */
         .institutional-footer {
           margin-top: 14mm;
           padding-top: 6mm;
@@ -1115,48 +1152,24 @@ function buildHtml(payload: ReportPayload): string {
 
         .institutional-footer p { margin: 0 0 2mm; }
 
+        /* ── Links ── */
         .link-list { margin: 0; padding-left: 6mm; }
         .link-list li { margin: 0 0 3mm; word-break: break-word; }
         .link-label { font-weight: 700; }
         a { color: #111827; text-decoration: underline; }
 
-        @media print {
-          .header {
-            position: fixed;
-            top: 12mm;
-            height: 80px;
-          }
-
-          .photo-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 16px;
-          }
-
-          .photo-item {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-
-          .photo-item img {
-            width: 100%;
-            height: 220px;
-            object-fit: cover;
-          }
-
-          .section-title {
-            word-break: break-word;
-            page-break-after: avoid;
-          }
-        }
+        /* ── Inline images in rich text ── */
+        img { max-width: 100%; height: auto; }
       </style>
     </head>
     <body>
-      <div class="header">${buildHeaderHtml(payload.visualConfig)}</div>
-      ${buildCoverHtml(payload)}
-      ${sectionsHtml}
-      ${signatureHtml}
-      ${buildFooterHtml(payload.visualConfig)}
+      <div class="pdf-header">${buildHeaderHtml(payload.visualConfig)}</div>
+      <div class="pdf-content">
+        ${buildCoverHtml(payload)}
+        ${sectionsHtml}
+        ${signatureHtml}
+        ${buildFooterHtml(payload.visualConfig)}
+      </div>
     </body>
   </html>`;
 }
