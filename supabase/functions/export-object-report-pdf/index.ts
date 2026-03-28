@@ -1135,7 +1135,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const browserlessResponse = await fetch(`https://chrome.browserless.io/pdf?token=${browserlessApiKey}`, {
+    const browserlessResponse = await fetch(`https://production-sfo.browserless.io/pdf?token=${browserlessApiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1151,8 +1151,8 @@ Deno.serve(async (req) => {
 
     if (!browserlessResponse.ok) {
       const errorText = await browserlessResponse.text();
-      console.error("Browserless error:", errorText);
-      return new Response(JSON.stringify({ error: "Erro ao gerar PDF" }), {
+      console.error("Browserless error:", browserlessResponse.status, errorText);
+      return new Response(JSON.stringify({ error: `Browserless ${browserlessResponse.status}: ${errorText}` }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
