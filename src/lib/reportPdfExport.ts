@@ -423,20 +423,6 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         const otherActs = getOtherActivities();
         await writeHtmlContent(otherActionsNarrative, '[Outras informações sobre as ações desenvolvidas]');
 
-        if (otherActs.length > 0) {
-          ctx.currentY += 2;
-          pdf.setFontSize(FONT_BODY);
-          pdf.setFont('times', 'bold');
-          ensureSpace(ctx, LINE_H);
-          pdf.text('Atividades relacionadas:', ML, ctx.currentY);
-          ctx.currentY += LINE_H;
-          pdf.setFont('times', 'normal');
-
-          for (const act of otherActs) {
-            addBulletItem(ctx, `${formatActivityDate(act.date)}: ${act.description}`);
-          }
-        }
-
         const otherPhotosAll = [...otherActionsPhotos, ...otherActs.flatMap(a => a.photos || [])];
         if (otherPhotosAll.length > 0) {
           const otherMetas = photoMetadata['other'] || [];

@@ -34,6 +34,9 @@ describe('pdf/imageHelpers addPhotoGrid', () => {
 
     expect(ctx.pageCount).toBe(2);
     expect(pdf.addImage).toHaveBeenCalledTimes(7);
+    expect(
+      pdf.text.mock.calls.filter(([value]) => value === 'REGISTROS FOTOGRÁFICOS – TESTE'),
+    ).toHaveLength(1);
 
     const photoW = (CW - 16) / 3;
     const centeredX = ML + (CW - photoW) / 2;
@@ -42,5 +45,17 @@ describe('pdf/imageHelpers addPhotoGrid', () => {
     );
 
     expect(secondPageCenteredRect).toBeTruthy();
+  });
+
+  it('abre uma nova página quando a seção de fotos começa depois do conteúdo textual', async () => {
+    const pdf = createMockPdf();
+    const ctx: PdfContext = { pdf: pdf as never, currentY: MT + 40, pageCount: 1 };
+    const imageLoader = vi.fn().mockResolvedValue({ data: 'data:image/jpeg;base64,abc', width: 800, height: 600 });
+    const photos = ['1', '2', '3', '4', '5', '6'];
+
+    await addPhotoGrid(ctx, photos, 'Teste', photos.map((p) => `Foto ${p}`), undefined, imageLoader);
+
+    expect(pdf.addPage).toHaveBeenCalledTimes(1);
+    expect(ctx.pageCount).toBe(2);
   });
 });
