@@ -289,31 +289,74 @@ function renderPlainActivityList(activities: Activity[]): string {
   `;
 }
 
+function optimizeStorageImageUrl(src: string, width = 800, quality = 70): string {
+  try {
+    const url = new URL(src);
+    const isSupabaseStorage = url.hostname.endsWith("supabase.co") && url.pathname.includes("/storage/v1/");
+    if (!isSupabaseStorage) return src;
+
+    if (url.pathname.includes("/storage/v1/object/public/")) {
+      url.pathname = url.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+    }
+
+    if (!url.pathname.includes("/storage/v1/render/image/public/")) return src;
+
+    url.searchParams.set("width", String(width));
+    url.searchParams.set("quality", String(quality));
+    url.searchParams.set("resize", "contain");
+    return url.toString();
+  } catch {
+    return src;
+  }
+}
+
+function chunkItems<T>(items: T[], size: number): T[][] {
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+}
+
 function normalizePhotoItems(photos: string[], metas: ReportPhotoMeta[] = []): Array<{ src: string; caption: string }> {
-  return photos
-    .filter(isNonEmptyString)
-    .map((src, index) => ({
-      src: src.trim(),
-      caption: metas[index]?.caption?.trim() || `Foto ${index + 1}`,
-    }));
+  const seen = new Set<string>();
+  const items: Array<{ src: string; caption: string }> = [];
+
+  photos.forEach((rawSrc, index) => {
+    if (!isNonEmptyString(rawSrc)) return;
+    const optimizedSrc = optimizeStorageImageUrl(rawSrc.trim(), 800, 70);
+    if (seen.has(optimizedSrc)) return;
+    seen.add(optimizedSrc);
+    items.push({
+      src: optimizedSrc,
+      caption: metas[index]?.caption?.trim() || `Foto ${items.length + 1}`,
+    });
+  });
+
+  return items;
 }
 
 function renderPhotoGrid(items: Array<{ src: string; caption: string }>, title?: string): string {
   if (items.length === 0) return "";
-  const gridClass = items.length === 1 ? "photo-grid single-photo-grid" : "photo-grid";
-  return `
-    <div class="photo-block">
-      ${title ? `<h3 class="section-title photo-section-title">${escapeHtml(title)}</h3>` : ""}
-      <div class="${gridClass}">
-        ${items.map((item, index) => `
-          <figure class="photo-item">
-            <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.caption || `Foto ${index + 1}`)}" loading="eager" />
-            <figcaption class="caption">${escapeHtml(item.caption || `Foto ${index + 1}`)}</figcaption>
-          </figure>
-        `).join("")}
-      </div>
-    </div>
-  `;
+
+  return chunkItems(items, 4)
+    .map((chunk, chunkIndex) => {
+      const gridClass = chunk.length === 1 ? "photo-grid single-photo-grid" : "photo-grid";
+      return `
+        <div class="photo-block">
+          ${title && chunkIndex === 0 ? `<h3 class="section-title photo-section-title">${escapeHtml(title)}</h3>` : ""}
+          <div class="${gridClass}">
+            ${chunk.map((item, index) => `
+              <figure class="photo-item">
+                <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.caption || `Foto ${index + 1}`)}" loading="eager" decoding="async" />
+                <figcaption class="caption">${escapeHtml(item.caption || `Foto ${index + 1}`)}</figcaption>
+              </figure>
+            `).join("")}
+          </div>
+        </div>
+      `;
+    })
+    .join("");
 }
 
 function renderGroupedPhotoBlocks(
