@@ -152,11 +152,12 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // Helper: render photos using layout if available, otherwise fallback to grid
   const renderPhotos = async (photos: string[], sectionKey: string, label: string, captions?: string[], groups?: PhotoGroup[]) => {
     if (photos.length === 0) return;
+    addSectionTitle(ctx, `REGISTROS FOTOGRÁFICOS – ${label.toUpperCase()}`);
     const layout = pageLayouts[sectionKey];
     if (layout && layout.images && layout.images.length > 0) {
-      await addPhotoLayout(ctx, layout, label);
+      await addPhotoLayout(ctx, layout, '');
     } else {
-      await addPhotoGrid(ctx, photos, label, captions, groups);
+      await addPhotoGrid(ctx, photos, '', captions, groups);
     }
   };
 
@@ -373,6 +374,8 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
     });
   };
 
+  const renderedPhotoKeys = new Set<string>();
+
   for (const section of sections) {
     if (!section.isVisible) continue;
     if (section.key === 'links' && !hasAttachmentLinks(attachmentTargets)) continue;
@@ -415,6 +418,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
             const goalMetas = photoMetadata[goal.id] || [];
             const captions = allGoalPhotos.map((_, i) => goalMetas[i]?.caption || `Foto ${i + 1}`);
             await renderPhotos(allGoalPhotos, goal.id, goal.title, captions, sectionPhotoGroups[goal.id]);
+            renderedPhotoKeys.add(goal.id);
           }
         }
         break;
@@ -428,6 +432,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
           const otherMetas = photoMetadata['other'] || [];
           const captions = otherPhotosAll.map((_, i) => otherMetas[i]?.caption || `Foto ${i + 1}`);
           await renderPhotos(otherPhotosAll, 'other', 'OUTRAS AÇÕES', captions, sectionPhotoGroups['other']);
+          renderedPhotoKeys.add('other');
         }
         break;
       }
@@ -455,6 +460,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
           const commMetas = photoMetadata['communication'] || [];
           const captions = commPhotosAll.map((_, i) => commMetas[i]?.caption || `Foto ${i + 1}`);
           await renderPhotos(commPhotosAll, 'communication', 'PUBLICAÇÕES E DIVULGAÇÃO', captions, sectionPhotoGroups['communication']);
+          renderedPhotoKeys.add('communication');
         }
         break;
       }
@@ -562,13 +568,15 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
           }
 
           if (expensePhotoUrls.length > 0) {
+            addSectionTitle(ctx, 'REGISTROS FOTOGRÁFICOS – COMPROVAÇÃO DA EXECUÇÃO DOS ITENS DE DESPESA');
             await addPhotoGrid(
               ctx,
               expensePhotoUrls,
-              'Comprovação da execução dos itens de despesa',
+              '',
               expensePhotoCaptions,
               expensePhotoGroups,
             );
+            renderedPhotoKeys.add('expenses');
           }
         } else {
           addParagraph(ctx, '[Nenhum item de despesa cadastrado]');
@@ -611,11 +619,12 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
 
     // Render per-section photos
     const secPhotos = sectionPhotos[section.key] || sectionPhotos[section.id] || [];
-    if (secPhotos.length > 0) {
-      const secKey = sectionPhotos[section.key] ? section.key : section.id;
+    const secKey = sectionPhotos[section.key] ? section.key : section.id;
+    if (secPhotos.length > 0 && !renderedPhotoKeys.has(secKey)) {
       const secMetas = photoMetadata[secKey] || [];
       const captions = secPhotos.map((_, i) => secMetas[i]?.caption || `Foto ${i + 1}`);
       await renderPhotos(secPhotos, secKey, section.title, captions, sectionPhotoGroups[secKey]);
+      renderedPhotoKeys.add(secKey);
     }
   }
 
