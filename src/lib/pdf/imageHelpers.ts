@@ -288,8 +288,8 @@ export const addPhotoGrid = async (
   const CAPTION_BLOCK_H = CAPTION_LINE_H * CAPTION_MAX_LINES + 1.5;
   const IMG_PADDING = 2;
   const photoW = (CW - COL_GAP * (PHOTO_GRID_COLUMNS - 1)) / PHOTO_GRID_COLUMNS;
-  const preferredCellH = Math.min(PHOTO_MAX_HEIGHT, photoW * 0.78);
-  const minCellH = Math.min(preferredCellH, 34);
+  const preferredCellH = Math.min(PHOTO_MAX_HEIGHT, photoW * 1.3);
+  const minCellH = Math.min(preferredCellH, 45);
   const minRowBlockHeight = minCellH + CAPTION_BLOCK_H;
 
   const ensureSectionStart = (titleLinesCount: number) => {
