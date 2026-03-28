@@ -560,6 +560,8 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
         }
         ctx.currentY += LINE_H;
 
+        const hasMedia = !!(links.media && links.media.trim());
+        if (hasMedia) {
         pdf.setFont('times', 'bold');
         pdf.text('Mídias (Fotos/Vídeos): ', ML, ctx.currentY);
         const mw = pdf.getTextWidth('Mídias (Fotos/Vídeos): ');
@@ -605,6 +607,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
             }
           }
         }
+        } // end if (hasMedia)
         break;
 
       default:
