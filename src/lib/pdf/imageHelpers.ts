@@ -280,7 +280,7 @@ export const addPhotoGrid = async (
   const { pdf } = ctx;
 
   const sectionStartY = getContentStartY(ctx);
-  if (ctx.currentY > sectionStartY + 0.5) addPage(ctx);
+  if (sectionLabel.trim().length > 0 && ctx.currentY > sectionStartY + 0.5) addPage(ctx);
 
   const COL_GAP = 8;
   const CAPTION_LINE_H = 3.3;
