@@ -215,9 +215,9 @@ export const addGalleryGrid = async (ctx: PdfContext, images: { src: string; cap
   const photoW = (CW - COL_GAP * (cols - 1)) / cols;
    const CAPTION_H = 8;
   const IMG_PADDING = 2;
-   const preferredCellH = Math.min(photoW * 0.68, 52);
-   const minCellH = Math.min(photoW * 0.52, 40);
-   const maxCellH = Math.min(photoW * 0.74, 56);
+   const preferredCellH = Math.min(photoW * 0.85, 65);
+   const minCellH = Math.min(photoW * 0.65, 50);
+   const maxCellH = Math.min(photoW * 0.95, 75);
 
   let idx = 0;
   while (idx < images.length) {
