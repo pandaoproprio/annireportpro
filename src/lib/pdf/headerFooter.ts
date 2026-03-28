@@ -114,12 +114,12 @@ export const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
     return;
   }
 
-  const headerY = topY + 3;
+  const headerY = topY + 1.5;
   const logoVisible = config.logoVisible !== false;
   const logoCenterVisible = config.logoCenterVisible !== false;
   const logoSecVisible = config.logoSecondaryVisible !== false;
   const logoH = Math.min(maxH, HEADER_LOGO_H);
-  const gap = config.logoGapMm ?? 0;
+  const gap = config.logoGapMm ?? 4;
   const alignment = config.logoAlignment ?? 'space-between';
 
   const logos: { img: PreloadedImage; computedW: number; position: 'left' | 'center' | 'right' }[] = [];
@@ -169,7 +169,7 @@ export const renderHeaderOnPage = (pdf: jsPDF, config: HeaderConfig): void => {
         drawW = drawH * aspect;
       }
       try { pdf.addImage(logo.img.data, 'JPEG', cx, headerY, drawW, drawH); } catch { /* skip */ }
-      cx += logo.computedW + effectiveGap;
+      cx += drawW + effectiveGap;
     }
   }
 
