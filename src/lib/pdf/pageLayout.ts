@@ -20,17 +20,17 @@ export const createPdfContext = (): PdfContext => {
 export const getContentStartY = (ctx: PdfContext): number => {
   if (!ctx.headerConfig) return MT;
   const topPad = ctx.headerConfig.topPaddingMm ?? HEADER_TOP_Y;
-  const gap = ctx.headerConfig.contentSpacingMm ?? 8;
+  const gap = ctx.headerConfig.contentSpacingMm ?? 4;
   if (ctx.headerConfig.bannerImg && ctx.headerConfig.bannerVisible !== false) {
     const bannerH = ctx.headerConfig.bannerHeightMm ?? ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H;
     return topPad + bannerH + gap;
   }
-  const headerH = ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H;
+  const headerH = Math.min(ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H, HEADER_LOGO_H + 4);
   const hasAnyLogo = (ctx.headerConfig.logoImg && ctx.headerConfig.logoVisible !== false)
     || (ctx.headerConfig.logoCenterImg && ctx.headerConfig.logoCenterVisible !== false)
     || (ctx.headerConfig.logoSecondaryImg && ctx.headerConfig.logoSecondaryVisible !== false);
   if (hasAnyLogo) {
-    return topPad + 3 + (headerH || HEADER_LOGO_H) + gap;
+    return topPad + 2 + headerH + gap;
   }
   return MT;
 };
