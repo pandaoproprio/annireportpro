@@ -818,7 +818,7 @@ function buildHtml(payload: ReportPayload): string {
       <style>
         @page {
           size: A4;
-          margin: ${CONTENT_OFFSET_MM}mm 12mm 18mm 12mm;
+          margin: ${PAGE_TOP_MARGIN} 12mm 18mm 12mm;
         }
 
         * { box-sizing: border-box; }
@@ -833,19 +833,19 @@ function buildHtml(payload: ReportPayload): string {
           background: #ffffff;
         }
 
-        /* ── Fixed header on every page (inside @page top margin) ── */
+        /* ── Fixed header rendered in the @page top margin area ── */
         .pdf-header {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
-          height: ${HEADER_HEIGHT_MM}mm;
+          height: ${HEADER_HEIGHT_PX}px;
           display: flex;
           align-items: center;
           justify-content: center;
           background: #ffffff;
           border-bottom: 1px solid #d1d5db;
-          padding: ${PAGE_TOP_MARGIN_MM}mm 12mm 2mm;
+          padding: 8px 12mm 6px;
           z-index: 1000;
         }
 
