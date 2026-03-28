@@ -495,7 +495,7 @@ function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<st
         <td>${escapeHtml(itemName)}</td>
         <td>${escapeHtml(description)}</td>
         <td>
-          ${thumb ? `<img class="expense-thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(itemName)}" loading="lazy" decoding="async" />` : `<span class="empty-state">Sem foto</span>`}
+          ${thumb ? `<img class="expense-thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(itemName)}" loading="eager" decoding="sync" />` : `<span class="empty-state">Sem foto</span>`}
         </td>
       </tr>
     `;
@@ -807,9 +807,8 @@ function buildHtml(payload: ReportPayload): string {
     </section>
   `;
 
-  const HEADER_HEIGHT_MM = 28;
-  const PAGE_TOP_MARGIN_MM = 10;
-  const CONTENT_OFFSET_MM = HEADER_HEIGHT_MM + PAGE_TOP_MARGIN_MM + 4;
+  const HEADER_HEIGHT_PX = 86;
+  const PAGE_TOP_MARGIN = `${HEADER_HEIGHT_PX + 32}px`; // 118px — header + gap
 
   return `<!DOCTYPE html>
   <html lang="pt-BR">
@@ -819,7 +818,7 @@ function buildHtml(payload: ReportPayload): string {
       <style>
         @page {
           size: A4;
-          margin: ${CONTENT_OFFSET_MM}mm 12mm 18mm 12mm;
+          margin: ${PAGE_TOP_MARGIN} 12mm 18mm 12mm;
         }
 
         * { box-sizing: border-box; }
@@ -834,19 +833,19 @@ function buildHtml(payload: ReportPayload): string {
           background: #ffffff;
         }
 
-        /* ── Fixed header on every page (inside @page top margin) ── */
+        /* ── Fixed header rendered in the @page top margin area ── */
         .pdf-header {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
-          height: ${HEADER_HEIGHT_MM}mm;
+          height: ${HEADER_HEIGHT_PX}px;
           display: flex;
           align-items: center;
           justify-content: center;
           background: #ffffff;
           border-bottom: 1px solid #d1d5db;
-          padding: ${PAGE_TOP_MARGIN_MM}mm 12mm 2mm;
+          padding: 8px 12mm 6px;
           z-index: 1000;
         }
 
@@ -1170,6 +1169,16 @@ function buildHtml(payload: ReportPayload): string {
         ${signatureHtml}
         ${buildFooterHtml(payload.visualConfig)}
       </div>
+      <script>
+        // Force all images to eager load before print
+        (function() {
+          var imgs = document.querySelectorAll('img');
+          imgs.forEach(function(img) {
+            img.loading = 'eager';
+            img.decoding = 'sync';
+          });
+        })();
+      </script>
     </body>
   </html>`;
 }
@@ -1210,7 +1219,7 @@ Deno.serve(async (req) => {
             printBackground: true,
             preferCSSPageSize: true,
             timeout: 55000,
-            margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
+            margin: { top: "118px", right: "12mm", bottom: "18mm", left: "12mm" },
           },
         }),
       },
