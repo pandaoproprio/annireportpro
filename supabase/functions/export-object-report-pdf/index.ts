@@ -807,9 +807,8 @@ function buildHtml(payload: ReportPayload): string {
     </section>
   `;
 
-  const HEADER_HEIGHT_MM = 28;
-  const PAGE_TOP_MARGIN_MM = 10;
-  const CONTENT_OFFSET_MM = HEADER_HEIGHT_MM + PAGE_TOP_MARGIN_MM + 4;
+  const HEADER_HEIGHT_PX = 86;
+  const PAGE_TOP_MARGIN = `${HEADER_HEIGHT_PX + 32}px`; // 118px — header + gap
 
   return `<!DOCTYPE html>
   <html lang="pt-BR">
