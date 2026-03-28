@@ -17,20 +17,22 @@ export const createPdfContext = (): PdfContext => {
 };
 
 // ── Calculate where content should start based on header config ──
-export const getContentStartY = (ctx: PdfContext): number => {
+export const getContentStartY = (ctx: PdfContext, pageNumber: number = ctx.pageCount): number => {
   if (!ctx.headerConfig) return MT;
+  if (ctx.headerConfig.renderMode === 'first-page' && pageNumber > 2) return MT;
   const topPad = ctx.headerConfig.topPaddingMm ?? HEADER_TOP_Y;
   const gap = ctx.headerConfig.contentSpacingMm ?? 4;
   if (ctx.headerConfig.bannerImg && ctx.headerConfig.bannerVisible !== false) {
     const bannerH = ctx.headerConfig.bannerHeightMm ?? ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H;
     return topPad + bannerH + gap;
   }
-  const headerH = Math.min(ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H, HEADER_LOGO_H + 4);
+  const configuredHeaderH = ctx.headerConfig.headerHeightMm ?? HEADER_BANNER_H;
+  const headerH = Math.max(Math.min(configuredHeaderH, HEADER_BANNER_H), HEADER_LOGO_H + 2);
   const hasAnyLogo = (ctx.headerConfig.logoImg && ctx.headerConfig.logoVisible !== false)
     || (ctx.headerConfig.logoCenterImg && ctx.headerConfig.logoCenterVisible !== false)
     || (ctx.headerConfig.logoSecondaryImg && ctx.headerConfig.logoSecondaryVisible !== false);
   if (hasAnyLogo) {
-    return topPad + 2 + headerH + gap;
+    return Math.max(MT + 1, topPad + headerH + gap);
   }
   return MT;
 };
@@ -39,7 +41,7 @@ export const getContentStartY = (ctx: PdfContext): number => {
 export const addPage = (ctx: PdfContext): void => {
   ctx.pdf.addPage();
   ctx.pageCount++;
-  ctx.currentY = getContentStartY(ctx);
+  ctx.currentY = getContentStartY(ctx, ctx.pageCount);
 };
 
 export const ensureSpace = (ctx: PdfContext, h: number): void => {

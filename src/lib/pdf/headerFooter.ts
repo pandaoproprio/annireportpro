@@ -27,6 +27,7 @@ export interface HeaderConfig {
   topPaddingMm?: number;
   headerHeightMm?: number;
   contentSpacingMm?: number;
+  renderMode?: 'first-page' | 'all-pages';
 }
 
 // ── Footer info ──
@@ -59,6 +60,7 @@ export const buildHeaderConfig = (
     logoSecondaryConfig?: { visible?: boolean; widthMm?: number };
     headerLogoAlignment?: 'left' | 'center' | 'right' | 'space-between' | 'space-around';
     headerLogoGap?: number; headerTopPadding?: number; headerHeight?: number; headerContentSpacing?: number;
+    headerRenderMode?: 'first-page' | 'all-pages';
   } | undefined,
   images: { bannerImg?: PreloadedImage | null; logoImg?: PreloadedImage | null; logoSecondaryImg?: PreloadedImage | null; logoCenterImg?: PreloadedImage | null },
 ): HeaderConfig | undefined => {
@@ -80,6 +82,7 @@ export const buildHeaderConfig = (
     topPaddingMm: vc.headerTopPadding,
     headerHeightMm: vc.headerHeight,
     contentSpacingMm: vc.headerContentSpacing,
+    renderMode: vc.headerRenderMode ?? 'first-page',
   };
 };
 
@@ -198,7 +201,7 @@ export const addFooterAndPageNumbers = (ctx: PdfContext, orgName: string, skipPa
     pdf.setPage(p);
     const isCoverPage = skipPage1 && p === 1;
 
-    if (headerConfig && !isCoverPage) {
+    if (headerConfig && !isCoverPage && (headerConfig.renderMode === 'all-pages' || p === 2)) {
       renderHeaderOnPage(pdf, headerConfig);
     }
 

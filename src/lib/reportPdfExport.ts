@@ -313,7 +313,7 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
   // ══════════════════════════════════════════════════════════════
   // CONTENT PAGES — now set headerConfig so addPage() adjusts Y
   // ══════════════════════════════════════════════════════════════
-  const headerCfg = buildHeaderConfig(vc, { bannerImg, logoImg, logoSecondaryImg, logoCenterImg });
+  const headerCfg = buildHeaderConfig({ ...vc, headerRenderMode: 'first-page' }, { bannerImg, logoImg, logoSecondaryImg, logoCenterImg });
   if (headerCfg) ctx.headerConfig = headerCfg;
   addPage(ctx);
 

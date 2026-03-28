@@ -25,7 +25,7 @@ describe('pdf/pageLayout', () => {
       const ctx = createPdfContext();
       ctx.headerConfig = { bannerImg: mockImage, bannerHeightMm: 30, bannerVisible: true };
       const y = getContentStartY(ctx);
-      const expected = HEADER_TOP_Y + 30 + 8;
+      const expected = HEADER_TOP_Y + 30 + 4;
       expect(y).toBe(expected);
     });
 
@@ -40,6 +40,13 @@ describe('pdf/pageLayout', () => {
       const ctx = createPdfContext();
       ctx.headerConfig = { logoImg: mockImage, logoVisible: false };
       const y = getContentStartY(ctx);
+      expect(y).toBe(MT);
+    });
+
+    it('returns MT on later pages when header is only for the first content page', () => {
+      const ctx = createPdfContext();
+      ctx.headerConfig = { logoImg: mockImage, logoVisible: true, renderMode: 'first-page' };
+      const y = getContentStartY(ctx, 3);
       expect(y).toBe(MT);
     });
   });
