@@ -6,10 +6,10 @@ import { supabase } from '@/integrations/supabase/client';
 
 const PHOTO_SECTION_TITLE_GAP_TOP = 2;
 const PHOTO_SECTION_TITLE_GAP_BOTTOM = 3;
-const PHOTO_ROW_GAP = 4;
+const PHOTO_ROW_GAP = 5;
 const PHOTO_GRID_COLUMNS = 3;
 const PHOTO_GRID_ROWS_PER_PAGE = 2;
-const PHOTO_MAX_HEIGHT = 200 * 0.264583;
+const PHOTO_MAX_HEIGHT = 80; // mm — generous max for well-sized photos
 
 const getRowsForPage = (availableHeight: number, rowsRemaining: number, minRowBlockHeight: number) => {
   const maxCandidate = Math.min(PHOTO_GRID_ROWS_PER_PAGE, rowsRemaining);
@@ -213,11 +213,11 @@ export const addGalleryGrid = async (ctx: PdfContext, images: { src: string; cap
   const cols = Math.max(1, Math.min(4, columns));
   const COL_GAP = 6;
   const photoW = (CW - COL_GAP * (cols - 1)) / cols;
-   const CAPTION_H = 8;
-  const IMG_PADDING = 2;
-   const preferredCellH = Math.min(photoW * 0.68, 52);
-   const minCellH = Math.min(photoW * 0.52, 40);
-   const maxCellH = Math.min(photoW * 0.74, 56);
+   const CAPTION_H = 10;
+  const IMG_PADDING = 3;
+   const preferredCellH = Math.min(photoW * 0.85, 65);
+   const minCellH = Math.min(photoW * 0.65, 50);
+   const maxCellH = Math.min(photoW * 0.95, 75);
 
   let idx = 0;
   while (idx < images.length) {
@@ -288,8 +288,8 @@ export const addPhotoGrid = async (
   const CAPTION_BLOCK_H = CAPTION_LINE_H * CAPTION_MAX_LINES + 1.5;
   const IMG_PADDING = 2;
   const photoW = (CW - COL_GAP * (PHOTO_GRID_COLUMNS - 1)) / PHOTO_GRID_COLUMNS;
-  const preferredCellH = Math.min(PHOTO_MAX_HEIGHT, photoW * 0.78);
-  const minCellH = Math.min(preferredCellH, 34);
+  const preferredCellH = Math.min(PHOTO_MAX_HEIGHT, photoW * 1.3);
+  const minCellH = Math.min(preferredCellH, 45);
   const minRowBlockHeight = minCellH + CAPTION_BLOCK_H;
 
   const ensureSectionStart = (titleLinesCount: number) => {
