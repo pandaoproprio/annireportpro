@@ -1,0 +1,1 @@
+DELETE FROM activities WHERE id = 'e8e1bd70-d7c2-4734-aa57-2860dfc1c266';
