@@ -42,6 +42,69 @@ const formatActivityDate = (date: string, endDate?: string) => {
   return start;
 };
 
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === 'string' && value.trim().length > 0;
+
+const normalizeExpensePhotoUrl = (value: unknown): string | null => {
+  if (isNonEmptyString(value)) return value.trim();
+
+  if (!value || typeof value !== 'object') return null;
+
+  const media = value as Record<string, unknown>;
+  const mediaType = typeof media.type === 'string'
+    ? media.type.toLowerCase()
+    : typeof media.mimeType === 'string'
+      ? media.mimeType.toLowerCase()
+      : '';
+
+  const candidate = [media.url, media.src, media.publicUrl, media.fileUrl, media.path].find(isNonEmptyString);
+  if (!candidate) return null;
+
+  if (!mediaType || mediaType === 'image' || mediaType.startsWith('image/')) {
+    return candidate.trim();
+  }
+
+  return null;
+};
+
+const extractExpensePhotoUrls = (value: unknown): string[] => {
+  if (!value) return [];
+
+  if (Array.isArray(value)) {
+    return value.flatMap(extractExpensePhotoUrls);
+  }
+
+  const directUrl = normalizeExpensePhotoUrl(value);
+  if (directUrl) return [directUrl];
+
+  if (typeof value !== 'object') return [];
+
+  const record = value as Record<string, unknown>;
+  return [
+    ...extractExpensePhotoUrls(record.fotos),
+    ...extractExpensePhotoUrls(record.photos),
+    ...extractExpensePhotoUrls(record.images),
+    ...extractExpensePhotoUrls(record.midias),
+    ...extractExpensePhotoUrls(record.registroFotografico),
+    ...extractExpensePhotoUrls(record.registro_fotografico),
+    ...extractExpensePhotoUrls(record.itens),
+    ...extractExpensePhotoUrls(record.items),
+  ];
+};
+
+const collectExpensePhotos = (expense: ExpenseItem): string[] => {
+  const rawExpense = expense as ExpenseItem & Record<string, unknown>;
+  return Array.from(new Set([
+    ...extractExpensePhotoUrls(rawExpense.image),
+    ...extractExpensePhotoUrls(rawExpense.images),
+    ...extractExpensePhotoUrls(rawExpense.fotos),
+    ...extractExpensePhotoUrls(rawExpense.photos),
+    ...extractExpensePhotoUrls(rawExpense.midias),
+    ...extractExpensePhotoUrls(rawExpense.registroFotografico),
+    ...extractExpensePhotoUrls(rawExpense.registro_fotografico),
+  ]));
+};
+
 // addHeader removed — headers are now rendered in the post-pass via addFooterAndPageNumbers
 
 export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void> => {
@@ -363,39 +426,50 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
 
       case 'expenses':
         if (expenses.length > 0) {
-          const colW1 = CW * 0.4;
-          const colW2 = CW * 0.6;
-          const rowH = LINE_H + 2;
+          const colW1 = CW * 0.22;
+          const colW2 = CW * 0.50;
+          const colW3 = CW - colW1 - colW2;
+          const headerRowH = LINE_H + 3;
+          const expensePhotoUrls: string[] = [];
+          const expensePhotoCaptions: string[] = [];
+          const expensePhotoGroups: PhotoGroup[] = [];
 
-          ensureSpace(ctx, rowH * 2);
+          ensureSpace(ctx, headerRowH * 2);
 
           pdf.setFillColor(224, 224, 224);
-          pdf.rect(ML, ctx.currentY - 5, colW1, rowH, 'F');
-          pdf.rect(ML + colW1, ctx.currentY - 5, colW2, rowH, 'F');
+          pdf.rect(ML, ctx.currentY - 5, colW1, headerRowH, 'F');
+          pdf.rect(ML + colW1, ctx.currentY - 5, colW2, headerRowH, 'F');
+          pdf.rect(ML + colW1 + colW2, ctx.currentY - 5, colW3, headerRowH, 'F');
           pdf.setDrawColor(0);
-          pdf.rect(ML, ctx.currentY - 5, colW1, rowH, 'S');
-          pdf.rect(ML + colW1, ctx.currentY - 5, colW2, rowH, 'S');
+          pdf.rect(ML, ctx.currentY - 5, colW1, headerRowH, 'S');
+          pdf.rect(ML + colW1, ctx.currentY - 5, colW2, headerRowH, 'S');
+          pdf.rect(ML + colW1 + colW2, ctx.currentY - 5, colW3, headerRowH, 'S');
 
-          pdf.setFontSize(FONT_BODY);
+          pdf.setFontSize(11);
           pdf.setFont('times', 'bold');
           pdf.text('Item de Despesa', ML + 3, ctx.currentY);
           pdf.text('Descrição de Uso', ML + colW1 + 3, ctx.currentY);
-          ctx.currentY += rowH;
+          pdf.text('Registro Fotográfico', ML + colW1 + colW2 + 3, ctx.currentY);
+          ctx.currentY += headerRowH;
 
           pdf.setFont('times', 'normal');
           for (const exp of expenses) {
             const item = exp.itemName || '-';
             const desc = exp.description || '-';
-
+            const photos = collectExpensePhotos(exp);
             const itemLines: string[] = pdf.splitTextToSize(item, colW1 - 6);
             const descLines: string[] = pdf.splitTextToSize(desc, colW2 - 6);
-            const maxLines = Math.max(itemLines.length, descLines.length);
-            const cellH = maxLines * LINE_H + 4;
+            const textHeight = Math.max(itemLines.length, descLines.length) * LINE_H + 4;
+            const thumbPadding = 2;
+            const thumbMaxW = colW3 - thumbPadding * 2;
+            const thumbMaxH = 24;
+            const cellH = Math.max(textHeight, photos.length > 0 ? thumbMaxH + thumbPadding * 2 : LINE_H + 4);
 
             ensureSpace(ctx, cellH);
 
             pdf.rect(ML, ctx.currentY - 5, colW1, cellH, 'S');
             pdf.rect(ML + colW1, ctx.currentY - 5, colW2, cellH, 'S');
+            pdf.rect(ML + colW1 + colW2, ctx.currentY - 5, colW3, cellH, 'S');
 
             for (let i = 0; i < itemLines.length; i++) {
               pdf.text(itemLines[i], ML + 3, ctx.currentY + i * LINE_H);
@@ -404,7 +478,54 @@ export const exportReportToPdf = async (data: ReportPdfExportData): Promise<void
               pdf.text(descLines[i], ML + colW1 + 3, ctx.currentY + i * LINE_H);
             }
 
+            if (photos.length > 0) {
+              const thumbImage = await loadImage(photos[0]);
+              if (thumbImage) {
+                const aspect = thumbImage.width / thumbImage.height;
+                let drawW = thumbMaxW;
+                let drawH = drawW / aspect;
+
+                if (drawH > thumbMaxH) {
+                  drawH = thumbMaxH;
+                  drawW = drawH * aspect;
+                }
+
+                const thumbX = ML + colW1 + colW2 + (colW3 - drawW) / 2;
+                const thumbY = ctx.currentY - 3 + (cellH - drawH) / 2;
+                try {
+                  pdf.addImage(thumbImage.data, 'JPEG', thumbX, thumbY, drawW, drawH);
+                } catch (error) {
+                  console.warn('Expense photo thumbnail error:', error);
+                }
+              }
+
+              const groupStartIndex = expensePhotoUrls.length;
+              expensePhotoUrls.push(...photos);
+              expensePhotoCaptions.push(...photos.map((_, index) => `${item} — Foto ${index + 1}`));
+              expensePhotoGroups.push({
+                id: exp.id,
+                caption: `Registro fotográfico — ${item}`,
+                photoIds: photos.map((_, index) => String(groupStartIndex + index)),
+              });
+            } else {
+              pdf.setFontSize(FONT_CAPTION);
+              pdf.setFont('times', 'italic');
+              pdf.text('-', ML + colW1 + colW2 + colW3 / 2, ctx.currentY + LINE_H / 2, { align: 'center' });
+              pdf.setFontSize(FONT_BODY);
+              pdf.setFont('times', 'normal');
+            }
+
             ctx.currentY += cellH;
+          }
+
+          if (expensePhotoUrls.length > 0) {
+            await addPhotoGrid(
+              ctx,
+              expensePhotoUrls,
+              'Comprovação da execução dos itens de despesa',
+              expensePhotoCaptions,
+              expensePhotoGroups,
+            );
           }
         } else {
           addParagraph(ctx, '[Nenhum item de despesa cadastrado]');
