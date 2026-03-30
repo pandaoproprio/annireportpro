@@ -13,13 +13,12 @@ import {
   BorderStyle,
   Footer,
   PageNumber,
-  NumberFormat,
-  TabStopType,
-  TabStopPosition,
+  ImageRun,
+  ShadingType,
   TableOfContents,
 } from 'docx';
 import { saveAs } from 'file-saver';
-import { Project, Activity, ActivityType, ExpenseItem, ReportSection, PhotoGroup } from '@/types';
+import { Project, Activity, ActivityType, ExpenseItem, ReportSection, PhotoGroup, ReportPhotoMeta } from '@/types';
 import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
 
 interface ExportData {
@@ -42,9 +41,16 @@ interface ExportData {
   otherActionsPhotos?: string[];
   communicationPhotos?: string[];
   sectionPhotos?: Record<string, string[]>;
-  photoMetadata?: Record<string, any[]>;
+  photoMetadata?: Record<string, ReportPhotoMeta[]>;
   sectionPhotoGroups?: Record<string, PhotoGroup[]>;
 }
+
+// ── Constants ──
+// A4 in DXA: 11906 x 16838
+const PAGE_WIDTH = 11906;
+const MARGIN_LEFT = 1701; // 3cm
+const MARGIN_RIGHT = 1134; // 2cm
+const CONTENT_WIDTH = PAGE_WIDTH - MARGIN_LEFT - MARGIN_RIGHT; // 9071 DXA
 
 const isDeletedActivity = (a: Activity) =>
   Boolean((a as any).deleted_at || (a as any).deletedAt || (a as any).deleted);
@@ -77,30 +83,25 @@ const stripHtml = (html: string): string => {
 const parseHtmlToRuns = (html: string): TextRun[] => {
   if (!html || !html.trim()) return [new TextRun({ text: '', font: 'Times New Roman', size: 24 })];
 
-  // If no HTML tags, return plain text
   if (!/[<][a-z!/]/i.test(html)) {
     return [new TextRun({ text: html.trim(), font: 'Times New Roman', size: 24 })];
   }
 
   const runs: TextRun[] = [];
-  // Simple state-based parser for bold/italic/underline
   let text = html
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
     .replace(/<\/div>\s*<div[^>]*>/gi, '\n');
 
-  // Match segments with inline formatting
   const regex = /<(strong|b|em|i|u)>([\s\S]*?)<\/\1>/gi;
   let lastIndex = 0;
   let match;
 
   while ((match = regex.exec(text)) !== null) {
-    // Add text before this match
     if (match.index > lastIndex) {
       const before = stripHtml(text.substring(lastIndex, match.index));
       if (before) runs.push(new TextRun({ text: before, font: 'Times New Roman', size: 24 }));
     }
-
     const tag = match[1].toLowerCase();
     const content = stripHtml(match[2]);
     if (content) {
@@ -113,11 +114,9 @@ const parseHtmlToRuns = (html: string): TextRun[] => {
         underline: tag === 'u' ? {} : undefined,
       }));
     }
-
     lastIndex = match.index + match[0].length;
   }
 
-  // Remaining text
   if (lastIndex < text.length) {
     const remaining = stripHtml(text.substring(lastIndex));
     if (remaining) runs.push(new TextRun({ text: remaining, font: 'Times New Roman', size: 24 }));
@@ -138,7 +137,6 @@ const richTextToParagraphs = (
 ): Paragraph[] => {
   if (!text || !text.trim()) return [new Paragraph({ text: '', spacing: { after: 200 } })];
 
-  // If it contains HTML, parse it
   if (/[<][a-z!/]/i.test(text)) {
     const plainText = stripHtml(text);
     const lines = plainText.split('\n').filter(line => line.trim() !== '');
@@ -161,7 +159,6 @@ const richTextToParagraphs = (
     );
   }
 
-  // Plain text fallback
   const lines = text.split('\n').filter(line => line.trim() !== '');
   if (lines.length === 0) return [new Paragraph({ text: '', spacing: { after: 200 } })];
   return lines.map(
@@ -182,8 +179,211 @@ const richTextToParagraphs = (
   );
 };
 
-// Legacy alias
 const textToParagraphs = richTextToParagraphs;
+
+// ── Image fetching ──
+async function fetchImageAsBuffer(url: string): Promise<{ buffer: ArrayBuffer; type: 'png' | 'jpg' } | null> {
+  try {
+    const response = await fetch(url, { mode: 'cors' });
+    if (!response.ok) return null;
+    const contentType = response.headers.get('content-type') || '';
+    const buffer = await response.arrayBuffer();
+    const type = contentType.includes('png') ? 'png' : 'jpg';
+    return { buffer, type };
+  } catch (e) {
+    console.warn('Failed to fetch image for DOCX:', url, e);
+    return null;
+  }
+}
+
+// Create an ImageRun paragraph from a fetched image
+function createImageParagraph(
+  imageData: { buffer: ArrayBuffer; type: 'png' | 'jpg' },
+  widthEmu: number,
+  heightEmu: number,
+  altText: string = 'Foto'
+): Paragraph {
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 100 },
+    children: [
+      new ImageRun({
+        data: imageData.buffer,
+        transformation: {
+          width: Math.round(widthEmu / 9525), // EMU to pixels (approx)
+          height: Math.round(heightEmu / 9525),
+        },
+        altText: { title: altText, description: altText, name: altText },
+      }),
+    ],
+  });
+}
+
+// Fetch all images and return paragraphs with photos in a grid-like layout
+async function buildPhotoSection(
+  photos: string[],
+  metadata: ReportPhotoMeta[] | undefined,
+  sectionKey: string,
+  groups?: PhotoGroup[]
+): Promise<(Paragraph | Table)[]> {
+  if (!photos || photos.length === 0) return [];
+
+  const elements: (Paragraph | Table)[] = [];
+
+  // If there are groups, render them first
+  const groupedIndices = new Set<number>();
+  if (groups && groups.length > 0) {
+    for (const group of groups) {
+      const groupPhotos: { url: string; index: number }[] = [];
+      for (const idStr of group.photoIds) {
+        const idx = Number(idStr);
+        if (photos[idx]) {
+          groupPhotos.push({ url: photos[idx], index: idx });
+          groupedIndices.add(idx);
+        }
+      }
+
+      if (groupPhotos.length === 0) continue;
+
+      // Group caption
+      if (group.caption) {
+        elements.push(new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { before: 200, after: 100 },
+          children: [new TextRun({ text: group.caption, font: 'Times New Roman', size: 20, bold: true })],
+        }));
+      }
+
+      // Render group photos in a 2-column table
+      const rows: TableRow[] = [];
+      for (let i = 0; i < groupPhotos.length; i += 2) {
+        const cells: TableCell[] = [];
+        for (let j = 0; j < 2; j++) {
+          const gp = groupPhotos[i + j];
+          if (gp) {
+            const imgData = await fetchImageAsBuffer(gp.url);
+            const cellChildren: Paragraph[] = [];
+            if (imgData) {
+              cellChildren.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                children: [new ImageRun({
+                  data: imgData.buffer,
+                  transformation: { width: 220, height: 165 },
+                  altText: { title: 'Foto', description: 'Foto', name: 'Foto' },
+                })],
+              }));
+            }
+            const meta = metadata?.[gp.index];
+            if (meta?.caption) {
+              cellChildren.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 40 },
+                children: [new TextRun({ text: meta.caption, font: 'Times New Roman', size: 18, italics: true })],
+              }));
+            }
+            if (cellChildren.length === 0) cellChildren.push(new Paragraph(''));
+            cells.push(new TableCell({
+              width: { size: Math.floor(CONTENT_WIDTH / 2), type: WidthType.DXA },
+              borders: noBorders(),
+              margins: { top: 80, bottom: 80, left: 80, right: 80 },
+              children: cellChildren,
+            }));
+          } else {
+            cells.push(new TableCell({
+              width: { size: Math.floor(CONTENT_WIDTH / 2), type: WidthType.DXA },
+              borders: noBorders(),
+              children: [new Paragraph('')],
+            }));
+          }
+        }
+        rows.push(new TableRow({ children: cells }));
+      }
+
+      if (rows.length > 0) {
+        elements.push(new Table({
+          width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+          columnWidths: [Math.floor(CONTENT_WIDTH / 2), Math.floor(CONTENT_WIDTH / 2)],
+          rows,
+        }));
+      }
+    }
+  }
+
+  // Render ungrouped photos in a 3-column table
+  const ungrouped = photos
+    .map((url, idx) => ({ url, idx }))
+    .filter(p => !groupedIndices.has(p.idx));
+
+  if (ungrouped.length > 0) {
+    const colWidth = Math.floor(CONTENT_WIDTH / 3);
+    const rows: TableRow[] = [];
+
+    for (let i = 0; i < ungrouped.length; i += 3) {
+      const cells: TableCell[] = [];
+      for (let j = 0; j < 3; j++) {
+        const item = ungrouped[i + j];
+        if (item) {
+          const imgData = await fetchImageAsBuffer(item.url);
+          const cellChildren: Paragraph[] = [];
+          if (imgData) {
+            cellChildren.push(new Paragraph({
+              alignment: AlignmentType.CENTER,
+              children: [new ImageRun({
+                data: imgData.buffer,
+                transformation: { width: 180, height: 135 },
+                altText: { title: 'Foto', description: 'Foto', name: 'Foto' },
+              })],
+            }));
+          }
+          const meta = metadata?.[item.idx];
+          if (meta?.caption) {
+            cellChildren.push(new Paragraph({
+              alignment: AlignmentType.CENTER,
+              spacing: { before: 40 },
+              children: [new TextRun({ text: meta.caption, font: 'Times New Roman', size: 18, italics: true })],
+            }));
+          }
+          if (cellChildren.length === 0) cellChildren.push(new Paragraph(''));
+          cells.push(new TableCell({
+            width: { size: colWidth, type: WidthType.DXA },
+            borders: noBorders(),
+            margins: { top: 60, bottom: 60, left: 60, right: 60 },
+            children: cellChildren,
+          }));
+        } else {
+          cells.push(new TableCell({
+            width: { size: colWidth, type: WidthType.DXA },
+            borders: noBorders(),
+            children: [new Paragraph('')],
+          }));
+        }
+      }
+      rows.push(new TableRow({ children: cells }));
+    }
+
+    if (rows.length > 0) {
+      elements.push(new Table({
+        width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+        columnWidths: [colWidth, colWidth, colWidth],
+        rows,
+      }));
+    }
+  }
+
+  return elements;
+}
+
+// No-border helper
+function noBorders() {
+  const none = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  return { top: none, bottom: none, left: none, right: none };
+}
+
+// Table cell border helper
+function cellBorders() {
+  const b = { style: BorderStyle.SINGLE, size: 1, color: 'CCCCCC' };
+  return { top: b, bottom: b, left: b, right: b };
+}
 
 export const exportToDocx = async (data: ExportData) => {
   const {
@@ -200,6 +400,12 @@ export const exportToDocx = async (data: ExportData) => {
     expenses,
     links,
     selectedVideoUrls = [],
+    goalPhotos = {},
+    otherActionsPhotos = [],
+    communicationPhotos = [],
+    sectionPhotos = {},
+    photoMetadata = {},
+    sectionPhotoGroups = {},
   } = data;
 
   const getActivitiesByGoal = (goalId: string) =>
@@ -236,7 +442,6 @@ export const exportToDocx = async (data: ExportData) => {
       spacing: { after: 600 },
     }),
     new Paragraph({
-      text: '',
       alignment: AlignmentType.CENTER,
       spacing: { after: 200 },
       children: [new TextRun({ text: project.organizationName, bold: true, size: 28, font: 'Times New Roman' })],
@@ -259,6 +464,8 @@ export const exportToDocx = async (data: ExportData) => {
   // Process each visible section
   for (const section of sections) {
     if (!section.isVisible) continue;
+
+    const sectionKey = section.type === 'custom' ? section.id : section.key;
 
     // Section title
     docSections.push(
@@ -304,22 +511,41 @@ export const exportToDocx = async (data: ExportData) => {
             for (const act of goalActs) {
               docSections.push(
                 new Paragraph({
-                  text: `• ${formatActivityDate(act.date, act.endDate)}${act.location ? ` – ${act.location}` : ''}${act.attendeesCount > 0 ? ` – ${act.attendeesCount} participantes` : ''}`,
                   spacing: { after: 50 },
                   indent: { left: 400 },
+                  children: [new TextRun({
+                    text: `• ${formatActivityDate(act.date, act.endDate)}${act.location ? ` – ${act.location}` : ''}${act.attendeesCount > 0 ? ` – ${act.attendeesCount} participantes` : ''}`,
+                    font: 'Times New Roman', size: 24,
+                  })],
                 }),
                 new Paragraph({
-                  text: act.description,
                   spacing: { after: 100 },
                   indent: { left: 400 },
+                  children: [new TextRun({ text: act.description, font: 'Times New Roman', size: 24 })],
                 })
               );
             }
           }
+
+          // Goal photos
+          const gPhotos = goalPhotos[goal.id];
+          if (gPhotos && gPhotos.length > 0) {
+            const photoElements = await buildPhotoSection(gPhotos, photoMetadata[goal.id], goal.id);
+            docSections.push(...photoElements);
+          }
+        }
+
+        // Section-level photos for goals
+        {
+          const goalSectionPhotos = sectionPhotos['goals'];
+          if (goalSectionPhotos && goalSectionPhotos.length > 0) {
+            const photoElements = await buildPhotoSection(goalSectionPhotos, photoMetadata['goals'], 'goals', sectionPhotoGroups['goals']);
+            docSections.push(...photoElements);
+          }
         }
         break;
 
-      case 'other':
+      case 'other': {
         const otherActs = getOtherActivities();
         docSections.push(...textToParagraphs(otherActionsNarrative || '[Outras informações sobre as ações desenvolvidas]'));
 
@@ -334,16 +560,27 @@ export const exportToDocx = async (data: ExportData) => {
           for (const act of otherActs) {
             docSections.push(
               new Paragraph({
-                text: `• ${formatActivityDate(act.date)}: ${act.description}`,
                 spacing: { after: 50 },
                 indent: { left: 400 },
+                children: [new TextRun({
+                  text: `• ${formatActivityDate(act.date)}: ${act.description}`,
+                  font: 'Times New Roman', size: 24,
+                })],
               })
             );
           }
         }
-        break;
 
-      case 'communication':
+        // Section photos
+        const otherSPhotos = sectionPhotos['other'] || otherActionsPhotos;
+        if (otherSPhotos && otherSPhotos.length > 0) {
+          const photoElements = await buildPhotoSection(otherSPhotos, photoMetadata['other'], 'other', sectionPhotoGroups['other']);
+          docSections.push(...photoElements);
+        }
+        break;
+      }
+
+      case 'communication': {
         const commActs = getCommunicationActivities();
         docSections.push(...textToParagraphs(communicationNarrative || '[Publicações e ações de divulgação]'));
 
@@ -358,71 +595,136 @@ export const exportToDocx = async (data: ExportData) => {
           for (const act of commActs) {
             docSections.push(
               new Paragraph({
-                text: `• ${formatActivityDate(act.date)}: ${act.description}`,
                 spacing: { after: 50 },
                 indent: { left: 400 },
+                children: [new TextRun({
+                  text: `• ${formatActivityDate(act.date)}: ${act.description}`,
+                  font: 'Times New Roman', size: 24,
+                })],
               })
             );
           }
         }
+
+        // Section photos
+        const commSPhotos = sectionPhotos['communication'] || communicationPhotos;
+        if (commSPhotos && commSPhotos.length > 0) {
+          const photoElements = await buildPhotoSection(commSPhotos, photoMetadata['communication'], 'communication', sectionPhotoGroups['communication']);
+          docSections.push(...photoElements);
+        }
         break;
+      }
 
       case 'satisfaction':
         docSections.push(...textToParagraphs(satisfaction || '[Grau de satisfação do público-alvo]'));
+        {
+          const satPhotos = sectionPhotos['satisfaction'];
+          if (satPhotos && satPhotos.length > 0) {
+            const photoElements = await buildPhotoSection(satPhotos, photoMetadata['satisfaction'], 'satisfaction', sectionPhotoGroups['satisfaction']);
+            docSections.push(...photoElements);
+          }
+        }
         break;
 
       case 'future':
         docSections.push(...textToParagraphs(futureActions || '[Sobre as ações futuras]'));
+        {
+          const futPhotos = sectionPhotos['future'];
+          if (futPhotos && futPhotos.length > 0) {
+            const photoElements = await buildPhotoSection(futPhotos, photoMetadata['future'], 'future', sectionPhotoGroups['future']);
+            docSections.push(...photoElements);
+          }
+        }
         break;
 
       case 'expenses':
         if (expenses.length > 0) {
+          // Column widths in DXA — must sum to CONTENT_WIDTH
+          const col1W = Math.floor(CONTENT_WIDTH * 0.24);
+          const col2W = Math.floor(CONTENT_WIDTH * 0.46);
+          const col3W = CONTENT_WIDTH - col1W - col2W;
+
+          const headerBorders = cellBorders();
+          const headerShading = { fill: 'D5E8F0', type: ShadingType.CLEAR, color: 'auto' as const };
+          const cellMargins = { top: 80, bottom: 80, left: 120, right: 120 };
+
+          const dataRows: TableRow[] = [];
+          for (const expense of expenses) {
+            const hasPhotoUrl = expense.image && expense.image.startsWith('http');
+            const cellChildren: Paragraph[] = [];
+
+            if (hasPhotoUrl) {
+              const imgData = await fetchImageAsBuffer(expense.image!);
+              if (imgData) {
+                cellChildren.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  children: [new ImageRun({
+                    data: imgData.buffer,
+                    transformation: { width: 150, height: 112 },
+                    altText: { title: 'Comprovante', description: 'Comprovante de despesa', name: 'Comprovante' },
+                  })],
+                }));
+              } else {
+                cellChildren.push(new Paragraph({ text: '[Imagem indisponível]', alignment: AlignmentType.CENTER }));
+              }
+            } else {
+              cellChildren.push(new Paragraph({ text: 'Sem foto', alignment: AlignmentType.CENTER }));
+            }
+
+            dataRows.push(new TableRow({
+              children: [
+                new TableCell({
+                  children: [new Paragraph({ children: [new TextRun({ text: expense.itemName || '-', font: 'Times New Roman', size: 22 })] })],
+                  width: { size: col1W, type: WidthType.DXA },
+                  borders: cellBorders(),
+                  margins: cellMargins,
+                }),
+                new TableCell({
+                  children: [new Paragraph({ children: [new TextRun({ text: expense.description || '-', font: 'Times New Roman', size: 22 })] })],
+                  width: { size: col2W, type: WidthType.DXA },
+                  borders: cellBorders(),
+                  margins: cellMargins,
+                }),
+                new TableCell({
+                  children: cellChildren.length > 0 ? cellChildren : [new Paragraph('')],
+                  width: { size: col3W, type: WidthType.DXA },
+                  borders: cellBorders(),
+                  margins: cellMargins,
+                }),
+              ],
+            }));
+          }
+
           const expenseTable = new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
+            width: { size: CONTENT_WIDTH, type: WidthType.DXA },
+            columnWidths: [col1W, col2W, col3W],
             rows: [
               new TableRow({
                 children: [
                   new TableCell({
-                    children: [new Paragraph({ text: 'Item de Despesa', alignment: AlignmentType.CENTER })],
-                    shading: { fill: 'E0E0E0' },
-                    width: { size: 24, type: WidthType.PERCENTAGE },
+                    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Item de Despesa', font: 'Times New Roman', size: 22, bold: true })] })],
+                    shading: headerShading,
+                    width: { size: col1W, type: WidthType.DXA },
+                    borders: headerBorders,
+                    margins: cellMargins,
                   }),
                   new TableCell({
-                    children: [new Paragraph({ text: 'Descrição de Uso', alignment: AlignmentType.CENTER })],
-                    shading: { fill: 'E0E0E0' },
-                    width: { size: 46, type: WidthType.PERCENTAGE },
+                    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Descrição de Uso', font: 'Times New Roman', size: 22, bold: true })] })],
+                    shading: headerShading,
+                    width: { size: col2W, type: WidthType.DXA },
+                    borders: headerBorders,
+                    margins: cellMargins,
                   }),
                   new TableCell({
-                    children: [new Paragraph({ text: 'Registro Fotográfico', alignment: AlignmentType.CENTER })],
-                    shading: { fill: 'E0E0E0' },
-                    width: { size: 30, type: WidthType.PERCENTAGE },
+                    children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'Registro Fotográfico', font: 'Times New Roman', size: 22, bold: true })] })],
+                    shading: headerShading,
+                    width: { size: col3W, type: WidthType.DXA },
+                    borders: headerBorders,
+                    margins: cellMargins,
                   }),
                 ],
               }),
-              ...expenses.map(
-                expense => {
-                  const hasPhoto = expense.image || (expense as any).fotos || (expense as any).photos;
-                  return new TableRow({
-                    children: [
-                      new TableCell({
-                        children: [new Paragraph({ text: expense.itemName || '-' })],
-                        width: { size: 24, type: WidthType.PERCENTAGE },
-                      }),
-                      new TableCell({
-                        children: [new Paragraph({ text: expense.description || '-' })],
-                        width: { size: 46, type: WidthType.PERCENTAGE },
-                      }),
-                      new TableCell({
-                        children: [new Paragraph({
-                          text: hasPhoto ? '[Ver registro fotográfico no PDF]' : 'Sem foto',
-                          alignment: AlignmentType.CENTER,
-                        })],
-                        width: { size: 30, type: WidthType.PERCENTAGE },
-                      }),
-                    ],
-                  });
-                }
-              ),
+              ...dataRows,
             ],
           });
           docSections.push(expenseTable);
@@ -436,58 +738,75 @@ export const exportToDocx = async (data: ExportData) => {
         }
         break;
 
-      case 'links':
+      case 'links': {
         const dn = data.linkDisplayNames || { attendance: '', registration: '', media: '' };
         docSections.push(
           new Paragraph({
-            text: `Lista de Presença: ${dn.attendance || links.attendance || '[não informado]'}`,
             spacing: { after: 100 },
+            children: [
+              new TextRun({ text: 'Lista de Presença: ', bold: true, font: 'Times New Roman', size: 24 }),
+              new TextRun({ text: dn.attendance || links.attendance || '[não informado]', font: 'Times New Roman', size: 24 }),
+            ],
           }),
           new Paragraph({
-            text: `Lista de Inscrição: ${dn.registration || links.registration || '[não informado]'}`,
             spacing: { after: 100 },
+            children: [
+              new TextRun({ text: 'Lista de Inscrição: ', bold: true, font: 'Times New Roman', size: 24 }),
+              new TextRun({ text: dn.registration || links.registration || '[não informado]', font: 'Times New Roman', size: 24 }),
+            ],
           }),
-           );
+        );
 
-          // Only render media section if there's actual content
-          const videoUrls = selectedVideoUrls || [];
-          const mediaText = dn.media || links.media || '';
-          const allMediaUrls = [
-            ...mediaText.split('\n').filter(l => l.trim()),
-            ...videoUrls.filter(u => u.trim()),
-          ];
-          const uniqueMediaUrls = Array.from(new Set(allMediaUrls));
-          if (uniqueMediaUrls.length > 0) {
-            if (dn.media || uniqueMediaUrls.length <= 1) {
+        const videoUrls = selectedVideoUrls || [];
+        const mediaText = dn.media || links.media || '';
+        const allMediaUrls = [
+          ...mediaText.split('\n').filter(l => l.trim()),
+          ...videoUrls.filter(u => u.trim()),
+        ];
+        const uniqueMediaUrls = Array.from(new Set(allMediaUrls));
+        if (uniqueMediaUrls.length > 0) {
+          if (dn.media || uniqueMediaUrls.length <= 1) {
+            docSections.push(
+              new Paragraph({
+                spacing: { after: 200 },
+                children: [
+                  new TextRun({ text: 'Mídias (Fotos/Vídeos): ', bold: true, font: 'Times New Roman', size: 24 }),
+                  new TextRun({ text: dn.media || uniqueMediaUrls[0] || '', font: 'Times New Roman', size: 24 }),
+                ],
+              })
+            );
+          } else {
+            docSections.push(
+              new Paragraph({
+                spacing: { after: 100 },
+                children: [new TextRun({ text: 'Mídias (Fotos/Vídeos):', bold: true, font: 'Times New Roman', size: 24 })],
+              })
+            );
+            for (const mUrl of uniqueMediaUrls) {
               docSections.push(
                 new Paragraph({
-                  text: `Mídias (Fotos/Vídeos): ${dn.media || uniqueMediaUrls[0] || ''}`,
-                  spacing: { after: 200 },
+                  spacing: { after: 60 },
+                  indent: { left: 400 },
+                  children: [new TextRun({ text: mUrl, font: 'Times New Roman', size: 22, color: '0563C1' })],
                 })
               );
-            } else {
-              docSections.push(
-                new Paragraph({
-                  spacing: { after: 100 },
-                  children: [new TextRun({ text: 'Mídias (Fotos/Vídeos):', bold: true, font: 'Times New Roman', size: 24 })],
-                })
-              );
-              for (const mUrl of uniqueMediaUrls) {
-                docSections.push(
-                  new Paragraph({
-                    spacing: { after: 60 },
-                    indent: { left: 400 },
-                    children: [new TextRun({ text: mUrl, font: 'Times New Roman', size: 22, color: '0563C1' })],
-                  })
-                );
-              }
             }
           }
+        }
         break;
+      }
 
       default:
         if (section.type === 'custom' && section.content) {
           docSections.push(...richTextToParagraphs(section.content));
+        }
+        // Custom section photos
+        {
+          const customPhotos = sectionPhotos[sectionKey];
+          if (customPhotos && customPhotos.length > 0) {
+            const photoElements = await buildPhotoSection(customPhotos, photoMetadata[sectionKey], sectionKey, sectionPhotoGroups[sectionKey]);
+            docSections.push(...photoElements);
+          }
         }
     }
   }
@@ -512,7 +831,6 @@ export const exportToDocx = async (data: ExportData) => {
       spacing: { after: 100 },
     }),
     new Paragraph({
-      text: '',
       alignment: AlignmentType.CENTER,
       spacing: { after: 50 },
       children: [new TextRun({ text: 'Assinatura do Responsável', bold: true, font: 'Times New Roman', size: 24 })],
@@ -557,6 +875,7 @@ export const exportToDocx = async (data: ExportData) => {
           name: 'Heading 1',
           basedOn: 'Normal',
           next: 'Normal',
+          quickFormat: true,
           run: {
             font: 'Times New Roman',
             size: 28,
@@ -564,6 +883,7 @@ export const exportToDocx = async (data: ExportData) => {
           },
           paragraph: {
             spacing: { before: 240, after: 120 },
+            outlineLevel: 0,
           },
         },
         {
@@ -571,6 +891,7 @@ export const exportToDocx = async (data: ExportData) => {
           name: 'Heading 2',
           basedOn: 'Normal',
           next: 'Normal',
+          quickFormat: true,
           run: {
             font: 'Times New Roman',
             size: 26,
@@ -578,6 +899,7 @@ export const exportToDocx = async (data: ExportData) => {
           },
           paragraph: {
             spacing: { before: 240, after: 120 },
+            outlineLevel: 1,
           },
         },
         {
@@ -585,6 +907,7 @@ export const exportToDocx = async (data: ExportData) => {
           name: 'Heading 3',
           basedOn: 'Normal',
           next: 'Normal',
+          quickFormat: true,
           run: {
             font: 'Times New Roman',
             size: 24,
@@ -592,6 +915,7 @@ export const exportToDocx = async (data: ExportData) => {
           },
           paragraph: {
             spacing: { before: 240, after: 120 },
+            outlineLevel: 2,
           },
         },
       ],
@@ -600,11 +924,15 @@ export const exportToDocx = async (data: ExportData) => {
       {
         properties: {
           page: {
+            size: {
+              width: PAGE_WIDTH,
+              height: 16838,
+            },
             margin: {
               top: 1701,   // 3cm
-              right: 1134, // 2cm
+              right: MARGIN_RIGHT,
               bottom: 1134, // 2cm
-              left: 1701,  // 3cm
+              left: MARGIN_LEFT,
             },
           },
         },
@@ -620,7 +948,6 @@ export const exportToDocx = async (data: ExportData) => {
                 const CEAP_L2 = 'R. Sr. dos Passos, 174 - Sl 701 - Centro, Rio de Janeiro - RJ, 20061-011';
                 const CEAP_L3 = 'ceapoficial.org.br | falecom@ceapoficial.org.br | (21) 9 7286-4717';
 
-                // Line 1 (bold)
                 const l1Text = vc?.footerLine1Text || CEAP_L1;
                 const l1Size = Math.round((vc?.footerLine1FontSize ?? 9) * 2);
                 children.push(new Paragraph({
@@ -629,7 +956,6 @@ export const exportToDocx = async (data: ExportData) => {
                   children: [new TextRun({ text: l1Text, size: l1Size, font: 'Times New Roman', bold: true })],
                 }));
 
-                // Line 2 (normal)
                 const l2Text = vc?.footerLine2Text || CEAP_L2;
                 const l2Size = Math.round((vc?.footerLine2FontSize ?? 7) * 2);
                 children.push(new Paragraph({
@@ -638,7 +964,6 @@ export const exportToDocx = async (data: ExportData) => {
                   children: [new TextRun({ text: l2Text, size: l2Size, font: 'Times New Roman' })],
                 }));
 
-                // Line 3 (normal)
                 const l3Text = vc?.footerLine3Text || CEAP_L3;
                 const l3Size = Math.round((vc?.footerLine3FontSize ?? 7) * 2);
                 children.push(new Paragraph({
@@ -648,7 +973,6 @@ export const exportToDocx = async (data: ExportData) => {
                 }));
               }
 
-              // Custom text (italic)
               const customText = vc?.footerText;
               if (customText) {
                 children.push(new Paragraph({

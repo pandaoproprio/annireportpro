@@ -182,6 +182,12 @@ export const ReportGenerator: React.FC = () => {
         communicationNarrative, satisfaction, futureActions, expenses, links, linkDisplayNames,
         visualConfig: vc.config,
         selectedVideoUrls: state.selectedVideoUrls,
+        goalPhotos,
+        otherActionsPhotos,
+        communicationPhotos,
+        sectionPhotos,
+        photoMetadata,
+        sectionPhotoGroups,
       });
       if (project?.id) {
         createAsanaTaskOnPublish({
