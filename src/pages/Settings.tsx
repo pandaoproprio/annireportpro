@@ -569,6 +569,61 @@ export const Settings: React.FC = () => {
       {/* SLA Configuration (Admin only) */}
       {isAdmin && <SlaConfigPanel />}
 
+      {/* Image Optimization (Admin only) */}
+      {isAdmin && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-4">
+              <div className="bg-primary/10 p-3 rounded-full">
+                <ImageIcon className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-foreground">Otimizar Imagens do Sistema</h3>
+                <p className="text-sm text-muted-foreground mb-4 mt-1">
+                  Comprime e redimensiona todas as fotos armazenadas (atividades, relatórios, metas, despesas) para reduzir o uso de armazenamento. Imagens menores que 150KB são ignoradas.
+                </p>
+                <Button
+                  variant="outline"
+                  disabled={isOptimizingImages}
+                  onClick={async () => {
+                    setIsOptimizingImages(true);
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session) { toast.error('Sessão expirada'); return; }
+                      const resp = await fetch(
+                        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/optimize-stored-images`,
+                        {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            Authorization: `Bearer ${session.access_token}`,
+                          },
+                        }
+                      );
+                      const result = await resp.json();
+                      if (result.error) throw new Error(result.error);
+                      toast.success(
+                        `Otimização concluída: ${result.optimized} imagens comprimidas, ${result.saved_mb}MB economizados.`
+                      );
+                    } catch (err: any) {
+                      toast.error(err.message || 'Erro ao otimizar imagens');
+                    } finally {
+                      setIsOptimizingImages(false);
+                    }
+                  }}
+                >
+                  {isOptimizingImages ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Otimizando...</>
+                  ) : (
+                    <><ImageIcon className="w-4 h-4 mr-2" /> Otimizar Imagens</>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Asana Integration (SuperAdmin only) */}
       {isSuperAdmin && <AsanaConfigPanel />}
 
