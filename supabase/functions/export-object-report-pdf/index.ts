@@ -370,7 +370,7 @@ function renderPhotoGrid(items: Array<{ src: string; caption: string }>, title?:
           <div class="${gridClass}">
             ${chunk.map((item, index) => `
               <figure class="photo-item">
-                <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.caption || `Foto ${index + 1}`)}" loading="eager" decoding="async" />
+                <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.caption || `Foto ${index + 1}`)}" loading="eager" decoding="sync" />
                 <figcaption class="caption">${escapeHtml(item.caption || `Foto ${index + 1}`)}</figcaption>
               </figure>
             `).join("")}
@@ -543,13 +543,28 @@ function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<st
           </tbody>
         </table>
       </div>
+      ${groupedPhotos.length > 0 ? `
+        <div class="expense-photos-section">
+          <h3 class="section-title expense-photos-title">REGISTROS FOTOGRÁFICOS – COMPROVAÇÃO DA EXECUÇÃO DOS ITENS DE DESPESA</h3>
+          ${groups.map((group) => {
+            const groupItems = uniqueStrings(group.photoIds.map((id) => {
+              const index = Number(id);
+              if (Number.isNaN(index) || index < 0 || index >= normalizePhotoItems(groupedPhotos, groupedCaptions).length) return "";
+              return String(index);
+            }))
+              .map((value) => normalizePhotoItems(groupedPhotos, groupedCaptions)[Number(value)])
+              .filter(Boolean);
+            if (groupItems.length === 0) return "";
+            return `
+              <div class="expense-photo-group">
+                <h4 class="photo-group-title">${escapeHtml(group.caption)}</h4>
+                ${renderPhotoGrid(groupItems)}
+              </div>
+            `;
+          }).join("")}
+        </div>
+      ` : ""}
     </section>
-    ${renderGroupedPhotoBlocks(
-      groupedPhotos,
-      groupedCaptions,
-      groups,
-      "REGISTROS FOTOGRÁFICOS – COMPROVAÇÃO DA EXECUÇÃO DOS ITENS DE DESPESA",
-    )}
     ${extraExpensePhotos.length > 0 ? renderGroupedPhotoBlocks(
       extraExpensePhotos,
       extraExpenseMetas,
@@ -1031,13 +1046,16 @@ function buildHtml(payload: ReportPayload): string {
 
         /* ─── TABLES ─── */
         .table-wrap {
-          border: 1px solid #d1d5db;
-          border-radius: 6px;
+          border: 1px solid #374151;
+          border-radius: 4px;
+          overflow: hidden;
+          margin-bottom: 8mm;
         }
 
         .expense-table {
           width: 100%;
           border-collapse: collapse;
+          table-layout: fixed;
         }
         .expense-table thead { display: table-header-group; }
         .expense-table tr {
@@ -1045,27 +1063,35 @@ function buildHtml(payload: ReportPayload): string {
           page-break-inside: avoid;
         }
         .expense-table th, .expense-table td {
-          border: 1px solid #d1d5db;
-          padding: 8px 10px;
+          border: 1px solid #9ca3af;
+          padding: 6px 8px;
           vertical-align: top;
           overflow-wrap: anywhere;
           word-break: break-word;
+          font-size: 11pt;
+          line-height: 1.4;
         }
         .expense-table th {
-          background: #f3f4f6;
+          background: #e5e7eb;
           font-size: 11pt;
-          text-align: left;
+          font-weight: 700;
+          text-align: center;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+          padding: 8px 10px;
+          color: #111827;
         }
-        .expense-table td:nth-child(1) { width: 24%; }
-        .expense-table td:nth-child(2) { width: 46%; }
-        .expense-table td:nth-child(3) { width: 30%; }
+        .expense-table td:nth-child(1) { width: 22%; }
+        .expense-table td:nth-child(2) { width: 48%; }
+        .expense-table td:nth-child(3) { width: 30%; text-align: center; }
 
         .expense-thumb {
           width: 100%;
-          max-height: 120px;
+          max-height: 100px;
           object-fit: cover;
-          border-radius: 6px;
+          border-radius: 4px;
           display: block;
+          margin: 0 auto;
           background: #f3f4f6;
         }
 
@@ -1074,6 +1100,19 @@ function buildHtml(payload: ReportPayload): string {
           font-style: italic;
           color: #6b7280;
           padding-top: 10px;
+        }
+
+        /* ─── EXPENSE PHOTOS SECTION ─── */
+        .expense-photos-section {
+          margin-top: 10mm;
+        }
+        .expense-photos-title {
+          margin-bottom: 6mm;
+        }
+        .expense-photo-group {
+          margin-bottom: 8mm;
+          break-inside: avoid;
+          page-break-inside: avoid;
         }
 
         /* ─── PHOTOS ─── */
