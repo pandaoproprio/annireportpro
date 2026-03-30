@@ -178,7 +178,7 @@ const ReportObjetoIIPage: React.FC = () => {
 
     setIsExporting(true);
     try {
-      const reportState = { sections, titulo: project.name, organizacao: project.organization_name, periodo: '' };
+      const reportState = { sections, titulo: project.name, organizacao: project.organizationName, periodo: '' };
       const data = mapObjetoIIToReportData(reportState, visualConfig?.logo ?? header.logoCenter ?? undefined);
       const blob = await generateReport(data, 'objeto-ii');
       downloadReport(blob, `relatorio-objeto-ii-${Date.now()}`);
