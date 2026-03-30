@@ -132,6 +132,16 @@ const CEAP_FOOTER = {
   line3: "ceapoficial.org.br | falecom@ceapoficial.org.br | (21) 9 7286-4717",
 };
 
+const IMAGE_PRESETS = {
+  inline: { width: 520, quality: 55 },
+  gallery: { width: 420, quality: 52 },
+  grid: { width: 420, quality: 52 },
+  expenseThumb: { width: 180, quality: 45 },
+  banner: { width: 720, quality: 60 },
+  headerLogo: { width: 220, quality: 65 },
+  coverLogo: { width: 320, quality: 65 },
+} as const;
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -211,7 +221,7 @@ function renderGalleryHtml(match: string): string {
   const inner = validImages
     .map((img, index) => `
       <figure class="photo-item rich-photo-item">
-        <img src="${escapeHtml(img.src!.trim())}" alt="${escapeHtml((img.caption || `Imagem ${index + 1}`).trim())}" loading="eager" />
+        <img src="${escapeHtml(optimizeStorageImageUrl(img.src!.trim(), IMAGE_PRESETS.gallery.width, IMAGE_PRESETS.gallery.quality))}" alt="${escapeHtml((img.caption || `Imagem ${index + 1}`).trim())}" loading="eager" decoding="sync" />
         <figcaption class="caption">${escapeHtml((img.caption || `Imagem ${index + 1}`).trim())}</figcaption>
       </figure>`)
     .join("");
@@ -248,10 +258,20 @@ function sanitizeRichHtml(input: string): string {
     const widthMatch = attrs.match(/data-width="(\d+)"/i);
     const widthPct = widthMatch ? Math.min(Math.max(parseInt(widthMatch[1], 10), 35), 100) : 100;
     const hasAlt = /\balt\s*=/i.test(attrs);
+    const srcMatch = attrs.match(/\bsrc\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    const rawSrc = srcMatch?.[2] || srcMatch?.[3] || srcMatch?.[4] || "";
+    const optimizedSrc = rawSrc
+      ? optimizeStorageImageUrl(rawSrc.trim(), IMAGE_PRESETS.inline.width, IMAGE_PRESETS.inline.quality)
+      : "";
     let newAttrs = attrs.replace(/\bstyle\s*=\s*"[^"]*"/gi, "");
     newAttrs = newAttrs.replace(/\bloading\s*=\s*"[^"]*"/gi, "");
+    newAttrs = newAttrs.replace(/\bdecoding\s*=\s*"[^"]*"/gi, "");
+    if (optimizedSrc) {
+      newAttrs = newAttrs.replace(/\bsrc\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/i, `src="${optimizedSrc}"`);
+    }
     if (!hasAlt) newAttrs += ` alt="Imagem"`;
     newAttrs += ` loading="eager"`;
+    newAttrs += ` decoding="sync"`;
     newAttrs += ` style="display:block;max-width:${widthPct}%;width:${widthPct}%;height:auto;margin:12px auto;border-radius:10px;"`;
     return `<img${newAttrs}>`;
   });
@@ -291,7 +311,7 @@ function renderPlainActivityList(activities: Activity[]): string {
   `;
 }
 
-function optimizeStorageImageUrl(src: string, width = 800, quality = 70): string {
+function optimizeStorageImageUrl(src: string, width = IMAGE_PRESETS.grid.width, quality = IMAGE_PRESETS.grid.quality): string {
   try {
     const url = new URL(src);
     const isSupabaseStorage = url.hostname.endsWith("supabase.co") && url.pathname.includes("/storage/v1/");
@@ -303,8 +323,8 @@ function optimizeStorageImageUrl(src: string, width = 800, quality = 70): string
 
     if (!url.pathname.includes("/storage/v1/render/image/public/")) return src;
 
-    url.searchParams.set("width", String(width));
-    url.searchParams.set("quality", String(quality));
+    url.searchParams.set("width", String(Math.max(120, Math.min(width, 1600))));
+    url.searchParams.set("quality", String(Math.max(35, Math.min(quality, 80))));
     url.searchParams.set("resize", "contain");
     return url.toString();
   } catch {
@@ -326,7 +346,7 @@ function normalizePhotoItems(photos: string[], metas: ReportPhotoMeta[] = []): A
 
   photos.forEach((rawSrc, index) => {
     if (!isNonEmptyString(rawSrc)) return;
-    const optimizedSrc = optimizeStorageImageUrl(rawSrc.trim(), 800, 70);
+    const optimizedSrc = optimizeStorageImageUrl(rawSrc.trim(), IMAGE_PRESETS.grid.width, IMAGE_PRESETS.grid.quality);
     if (seen.has(optimizedSrc)) return;
     seen.add(optimizedSrc);
     items.push({
@@ -478,7 +498,7 @@ function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<st
   const rows = payload.expenses.map((expense) => {
     const itemName = isNonEmptyString(expense.itemName) ? expense.itemName.trim() : "-";
     const description = isNonEmptyString(expense.description) ? expense.description.trim() : "-";
-    const photos = collectExpensePhotos(expense).map((photo) => optimizeStorageImageUrl(photo, 520, 60));
+    const photos = collectExpensePhotos(expense).map((photo) => optimizeStorageImageUrl(photo, IMAGE_PRESETS.grid.width, IMAGE_PRESETS.grid.quality));
     const thumb = photos[0];
 
     if (photos.length > 0) {
@@ -497,7 +517,7 @@ function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<st
         <td>${escapeHtml(itemName)}</td>
         <td>${escapeHtml(description)}</td>
         <td>
-          ${thumb ? `<img class="expense-thumb" src="${escapeHtml(thumb)}" alt="${escapeHtml(itemName)}" loading="eager" decoding="sync" />` : `<span class="empty-state">Sem foto</span>`}
+          ${thumb ? `<img class="expense-thumb" src="${escapeHtml(optimizeStorageImageUrl(thumb, IMAGE_PRESETS.expenseThumb.width, IMAGE_PRESETS.expenseThumb.quality))}" alt="${escapeHtml(itemName)}" loading="eager" decoding="sync" />` : `<span class="empty-state">Sem foto</span>`}
         </td>
       </tr>
     `;
@@ -547,7 +567,7 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   const secondaryLogoVisible = isNonEmptyString(config.logoSecondary) && config.logoSecondaryConfig?.visible !== false;
 
   if (showBanner) {
-    const bannerUrl = optimizeStorageImageUrl(config.headerBannerUrl!.trim(), 1200, 75);
+    const bannerUrl = optimizeStorageImageUrl(config.headerBannerUrl!.trim(), IMAGE_PRESETS.banner.width, IMAGE_PRESETS.banner.quality);
     return `
       <div class="header-banner-wrap">
         <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" class="header-banner" style="object-fit:${bannerFit};" />
@@ -555,9 +575,9 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
     `;
   }
 
-  const logoUrl = primaryLogoVisible ? optimizeStorageImageUrl(config.logo!.trim(), 400, 80) : "";
-  const centerUrl = centerLogoVisible ? optimizeStorageImageUrl(config.logoCenter!.trim(), 400, 80) : "";
-  const secUrl = secondaryLogoVisible ? optimizeStorageImageUrl(config.logoSecondary!.trim(), 400, 80) : "";
+  const logoUrl = primaryLogoVisible ? optimizeStorageImageUrl(config.logo!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
+  const centerUrl = centerLogoVisible ? optimizeStorageImageUrl(config.logoCenter!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
+  const secUrl = secondaryLogoVisible ? optimizeStorageImageUrl(config.logoSecondary!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
 
   return `
     <div class="header-logos">
@@ -578,7 +598,7 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
 
 function buildCoverHtml(payload: ReportPayload): string {
   const rawCoverLogo = payload.visualConfig?.coverLogo || payload.visualConfig?.logo || payload.visualConfig?.logoCenter;
-  const coverLogo = isNonEmptyString(rawCoverLogo) ? optimizeStorageImageUrl(rawCoverLogo.trim(), 600, 80) : "";
+  const coverLogo = isNonEmptyString(rawCoverLogo) ? optimizeStorageImageUrl(rawCoverLogo.trim(), IMAGE_PRESETS.coverLogo.width, IMAGE_PRESETS.coverLogo.quality) : "";
   const coverTitle = payload.visualConfig?.coverTitle?.trim() || "RELATÓRIO PARCIAL DE CUMPRIMENTO DO OBJETO";
   const coverSubtitle = payload.visualConfig?.coverHideSubtitle ? "" : (payload.visualConfig?.coverSubtitle?.trim() || "");
 
