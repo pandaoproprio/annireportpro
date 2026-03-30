@@ -877,22 +877,6 @@ function buildHtml(payload: ReportPayload): string {
           print-color-adjust: exact;
         }
 
-        /* ─── HEADER: uses table-header-group trick to repeat on every page ─── */
-        .pdf-header-table {
-          display: table;
-          width: 100%;
-          table-layout: fixed;
-        }
-        .pdf-header-row {
-          display: table-header-group;
-        }
-        .pdf-header-cell {
-          display: table-cell;
-          height: 24mm;
-          padding: 2mm 0 2mm;
-          border-bottom: 1px solid #d1d5db;
-          vertical-align: middle;
-        }
         .pdf-body-row {
           display: table-row-group;
         }
