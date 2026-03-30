@@ -614,12 +614,60 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
 function buildFooterHtml(config: VisualConfig = {}): string {
   if (config.footerInstitutionalEnabled === false) return "";
   return `
-    <div style="width:100%;font-family:'Times New Roman',serif;color:#4b5563;font-size:8.5pt;line-height:1.25;">
-      <div style="width:100%;border-top:1px solid #9ca3af;padding-top:2.5mm;text-align:center;">
-        <div>${escapeHtml(config.footerLine1Text || CEAP_FOOTER.line1)}</div>
-        <div>${escapeHtml(config.footerLine2Text || CEAP_FOOTER.line2)}</div>
-        <div>${escapeHtml(config.footerLine3Text || CEAP_FOOTER.line3)}</div>
+    <div style="font-family:'Times New Roman',serif;color:#4b5563;font-size:8.5pt;line-height:1.25;text-align:center;">
+      <div style="font-weight:bold;">${escapeHtml(config.footerLine1Text || CEAP_FOOTER.line1)}</div>
+      <div>${escapeHtml(config.footerLine2Text || CEAP_FOOTER.line2)}</div>
+      <div>${escapeHtml(config.footerLine3Text || CEAP_FOOTER.line3)}</div>
+    </div>
+  `;
+}
+
+function buildCoverHtml(payload: ReportPayload): string {
+  const vc = payload.visualConfig || {};
+  const coverLogoSrc = vc.coverLogo || vc.logo || "";
+  const coverTitle = vc.coverTitle || "RELATÓRIO DE CUMPRIMENTO DO OBJETO";
+  const coverSubtitle = vc.coverSubtitle || "";
+  const projectName = payload.project.name;
+  const fomentoNumber = payload.project.fomentoNumber || "";
+  const orgName = payload.project.organizationName || "";
+
+  const logoHtml = isNonEmptyString(coverLogoSrc)
+    ? `<img src="${escapeHtml(optimizeStorageImageUrl(coverLogoSrc.trim(), IMAGE_PRESETS.coverLogo.width, IMAGE_PRESETS.coverLogo.quality))}" class="cover-logo" alt="Logo" loading="eager" decoding="sync" />`
+    : "";
+
+  const subtitleHtml = !vc.coverHideSubtitle && isNonEmptyString(coverSubtitle)
+    ? `<p class="cover-subtitle">${escapeHtml(coverSubtitle)}</p>`
+    : "";
+
+  const fomentoHtml = !vc.coverHideFomento && isNonEmptyString(fomentoNumber)
+    ? `<p class="cover-meta">Termo de Fomento nº ${escapeHtml(fomentoNumber)}</p>`
+    : "";
+
+  const orgHtml = !vc.coverHideOrg && isNonEmptyString(orgName)
+    ? `<p class="cover-meta strong">${escapeHtml(orgName)}</p>`
+    : "";
+
+  // Cover page footer (institutional) — rendered in the body, not via Puppeteer template
+  const coverFooterHtml = vc.footerInstitutionalEnabled !== false
+    ? `<div class="institutional-footer">
+        <p><strong>${escapeHtml(vc.footerLine1Text || CEAP_FOOTER.line1)}</strong></p>
+        <p>${escapeHtml(vc.footerLine2Text || CEAP_FOOTER.line2)}</p>
+        <p>${escapeHtml(vc.footerLine3Text || CEAP_FOOTER.line3)}</p>
+      </div>`
+    : "";
+
+  return `
+    <div class="cover">
+      <div class="cover-inner">
+        ${logoHtml}
+        <p class="cover-eyebrow">RELATÓRIO INSTITUCIONAL</p>
+        <h1 class="cover-title">${escapeHtml(coverTitle)}</h1>
+        ${subtitleHtml}
+        <p class="cover-project-name">${escapeHtml(projectName)}</p>
+        ${fomentoHtml}
+        ${orgHtml}
       </div>
+      ${coverFooterHtml}
     </div>
   `;
 }
@@ -933,13 +981,13 @@ function buildHtml(payload: ReportPayload): string {
         .cover {
           min-height: 240mm;
           display: flex;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
+          flex-direction: column;
+          align-items: stretch;
+          justify-content: space-between;
           break-after: page;
           page-break-after: always;
         }
-        .cover-inner { width: 100%; max-width: 150mm; margin: 0 auto; }
+        .cover-inner { width: 100%; max-width: 150mm; margin: auto auto 0; text-align: center; padding-top: 30mm; }
         .cover-logo { max-width: 64mm; max-height: 40mm; object-fit: contain; display: block; margin: 0 auto 16mm; }
         .cover-eyebrow { margin: 0 0 8mm; font-size: 12pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
         .cover-title { margin: 0 0 8mm; font-size: 24pt; line-height: 1.2; text-transform: uppercase; overflow-wrap: anywhere; word-break: break-word; }
@@ -1325,7 +1373,7 @@ Deno.serve(async (req) => {
                 right: "20mm",
               },
               headerTemplate: `<div style="width:100%;padding:0 20mm 0 30mm;font-family:'Times New Roman',serif;"><div style="width:100%;padding:0 0 4mm 0;border-bottom:1px solid #9ca3af;">${buildHeaderHtml(payload.visualConfig)}</div></div>`,
-              footerTemplate: `<div id="pdf-footer" style="width:100%;padding:0 20mm 0 30mm;font-family:'Times New Roman',serif;"><div style="width:100%;padding-top:3mm;border-top:1px solid #9ca3af;text-align:center;font-size:8.5pt;line-height:1.25;color:#4b5563;">${buildFooterHtml(payload.visualConfig)}<div style="text-align:right;font-size:10pt;color:#000;line-height:1;margin-top:1mm;"><span class="pageNumber"></span></div></div></div><script>if(Number(document.querySelector('.pageNumber')?.textContent||'1')===1){document.body.style.visibility='hidden';}</script>`,
+              footerTemplate: `<style>#header,#footer{padding:0 !important;}</style><div style="width:100%;padding:0 20mm 0 30mm;font-family:'Times New Roman',serif;font-size:8.5pt;"><div style="width:100%;padding-top:2mm;border-top:1px solid #9ca3af;">${buildFooterHtml(payload.visualConfig)}<div style="text-align:right;font-size:10pt;color:#000;margin-top:1mm;"><span class="pageNumber"></span></div></div></div>`,
             },
           }),
         },
