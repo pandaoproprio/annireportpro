@@ -370,25 +370,43 @@ export const exportToDocx = async (data: ExportData) => {
                   new TableCell({
                     children: [new Paragraph({ text: 'Item de Despesa', alignment: AlignmentType.CENTER })],
                     shading: { fill: 'E0E0E0' },
+                    width: { size: 24, type: WidthType.PERCENTAGE },
                   }),
                   new TableCell({
                     children: [new Paragraph({ text: 'Descrição de Uso', alignment: AlignmentType.CENTER })],
                     shading: { fill: 'E0E0E0' },
+                    width: { size: 46, type: WidthType.PERCENTAGE },
+                  }),
+                  new TableCell({
+                    children: [new Paragraph({ text: 'Registro Fotográfico', alignment: AlignmentType.CENTER })],
+                    shading: { fill: 'E0E0E0' },
+                    width: { size: 30, type: WidthType.PERCENTAGE },
                   }),
                 ],
               }),
               ...expenses.map(
-                expense =>
-                  new TableRow({
+                expense => {
+                  const hasPhoto = expense.image || (expense as any).fotos || (expense as any).photos;
+                  return new TableRow({
                     children: [
                       new TableCell({
                         children: [new Paragraph({ text: expense.itemName || '-' })],
+                        width: { size: 24, type: WidthType.PERCENTAGE },
                       }),
                       new TableCell({
                         children: [new Paragraph({ text: expense.description || '-' })],
+                        width: { size: 46, type: WidthType.PERCENTAGE },
+                      }),
+                      new TableCell({
+                        children: [new Paragraph({
+                          text: hasPhoto ? '[Ver registro fotográfico no PDF]' : 'Sem foto',
+                          alignment: AlignmentType.CENTER,
+                        })],
+                        width: { size: 30, type: WidthType.PERCENTAGE },
                       }),
                     ],
-                  })
+                  });
+                }
               ),
             ],
           });
