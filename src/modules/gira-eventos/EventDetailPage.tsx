@@ -2,27 +2,38 @@ import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEvents } from './hooks/useEvents';
 import { useEventRegistrations } from './hooks/useEventRegistrations';
+import { useEventCheckins } from './hooks/useEventCheckins';
+import { useEventCertificates } from './hooks/useEventCertificates';
 import { useAppData } from '@/contexts/AppDataContext';
 import { EventForm } from './components/EventForm';
 import { RegistrationsList } from './components/RegistrationsList';
+import { EventDashboard } from './components/EventDashboard';
+import { QrCodeDisplay } from './components/QrCodeDisplay';
+import { exportAttendancePdf } from './components/AttendancePdfExport';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Edit, Trash2, ExternalLink, CalendarDays, MapPin, Copy } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ArrowLeft, Edit, Trash2, ExternalLink, CalendarDays, MapPin, Copy, QrCode, Send } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { EVENT_STATUS_LABELS } from './types';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const EventDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { events, isLoading, updateEvent, deleteEvent } = useEvents();
   const { registrations, isLoading: regsLoading, deleteRegistration } = useEventRegistrations(id);
+  const { checkins } = useEventCheckins(id);
+  const { certificates, generateCertificates } = useEventCertificates(id);
   const { projects } = useAppData();
   const [editing, setEditing] = useState(false);
+  const [qrDialogReg, setQrDialogReg] = useState<{ id: string; name: string; qr_token: string } | null>(null);
+  const [sendingEmails, setSendingEmails] = useState(false);
 
   const event = events.find(e => e.id === id);
 
@@ -66,6 +77,47 @@ const EventDetailPage: React.FC = () => {
     toast.success('Link copiado!');
   };
 
+  const handleSendConfirmationEmails = async () => {
+    const regsWithEmail = registrations.filter(r => r.email);
+    if (regsWithEmail.length === 0) {
+      toast.error('Nenhuma inscrição com e-mail cadastrado.');
+      return;
+    }
+
+    setSendingEmails(true);
+    try {
+      const { error } = await supabase.functions.invoke('send-event-confirmation', {
+        body: {
+          event_id: event.id,
+          event_title: event.title,
+          event_date: event.event_date,
+          event_location: event.location,
+          registrations: regsWithEmail.map(r => ({
+            id: r.id,
+            name: r.name,
+            email: r.email,
+            qr_token: r.qr_token,
+          })),
+        },
+      });
+      if (error) throw error;
+      toast.success(`E-mails de confirmação enviados para ${regsWithEmail.length} inscritos!`);
+    } catch (err) {
+      toast.error('Erro ao enviar e-mails de confirmação.');
+    } finally {
+      setSendingEmails(false);
+    }
+  };
+
+  const handleExportAttendancePdf = () => {
+    exportAttendancePdf(event, registrations, checkins);
+    toast.success('PDF de lista de presença gerado!');
+  };
+
+  const handleGenerateCertificates = () => {
+    generateCertificates.mutate({ event, checkins });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -80,6 +132,7 @@ const EventDetailPage: React.FC = () => {
         <TabsList>
           <TabsTrigger value="details">Detalhes</TabsTrigger>
           <TabsTrigger value="registrations">Inscrições ({registrations.length})</TabsTrigger>
+          <TabsTrigger value="dashboard">Dashboard ({checkins.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="mt-4 space-y-4">
@@ -140,7 +193,7 @@ const EventDetailPage: React.FC = () => {
                 </CardContent>
               </Card>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button variant="outline" onClick={() => setEditing(true)}>
                   <Edit className="w-4 h-4 mr-1" /> Editar
                 </Button>
@@ -152,18 +205,67 @@ const EventDetailPage: React.FC = () => {
           )}
         </TabsContent>
 
-        <TabsContent value="registrations" className="mt-4">
+        <TabsContent value="registrations" className="mt-4 space-y-4">
+          {/* Actions bar */}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSendConfirmationEmails}
+              disabled={sendingEmails || registrations.length === 0}
+            >
+              <Send className="w-4 h-4 mr-1" />
+              {sendingEmails ? 'Enviando...' : 'Enviar QR Codes por E-mail'}
+            </Button>
+          </div>
+
           {regsLoading ? (
             <Skeleton className="h-32 w-full" />
           ) : (
-            <RegistrationsList
-              registrations={registrations}
-              onDelete={id => deleteRegistration.mutate(id)}
-              isLoading={deleteRegistration.isPending}
-            />
+            <>
+              <RegistrationsList
+                registrations={registrations}
+                onDelete={id => deleteRegistration.mutate(id)}
+                isLoading={deleteRegistration.isPending}
+                onShowQr={(reg) => setQrDialogReg(reg as any)}
+                checkins={checkins}
+              />
+            </>
           )}
         </TabsContent>
+
+        <TabsContent value="dashboard" className="mt-4">
+          <EventDashboard
+            event={event}
+            registrations={registrations}
+            checkins={checkins}
+            certificates={certificates}
+            onGenerateCertificates={handleGenerateCertificates}
+            isGenerating={generateCertificates.isPending}
+            onExportAttendancePdf={handleExportAttendancePdf}
+          />
+        </TabsContent>
       </Tabs>
+
+      {/* QR Code Dialog */}
+      <Dialog open={!!qrDialogReg} onOpenChange={() => setQrDialogReg(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">QR Code - {qrDialogReg?.name}</DialogTitle>
+          </DialogHeader>
+          {qrDialogReg?.qr_token && (
+            <div className="flex flex-col items-center gap-3 py-4">
+              <QrCodeDisplay
+                value={`${window.location.origin}/checkin/${event.id}?token=${qrDialogReg.qr_token}`}
+                size={250}
+              />
+              <p className="text-xs text-muted-foreground text-center">
+                Escaneie este QR Code para realizar o check-in no evento.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

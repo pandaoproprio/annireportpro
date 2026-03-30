@@ -18,6 +18,8 @@ const DiaryLayout = lazy(() => import('@/pages/DiaryLayout').then(m => ({ defaul
 const Onboarding = lazy(() => import('@/pages/Onboarding').then(m => ({ default: m.Onboarding })));
 const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'));
 const PublicEventPage = lazy(() => import('@/modules/gira-eventos/PublicEventPage'));
+const CheckinPage = lazy(() => import('@/modules/gira-eventos/components/CheckinPage'));
+const CertificateVerifyPage = lazy(() => import('@/modules/gira-eventos/components/CertificateVerifyPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -41,6 +43,8 @@ export const AppRoutes: React.FC = () => {
         <Route path="/diario/login" element={<DiaryLogin />} />
         <Route path="/f/:id" element={<Suspense fallback={<PageFallback />}><PublicFormPage /></Suspense>} />
         <Route path="/e/:id" element={<Suspense fallback={<PageFallback />}><PublicEventPage /></Suspense>} />
+        <Route path="/checkin/:id" element={<Suspense fallback={<PageFallback />}><CheckinPage /></Suspense>} />
+        <Route path="/certificado/:hash" element={<Suspense fallback={<PageFallback />}><CertificateVerifyPage /></Suspense>} />
 
         {/* Protected routes */}
         <Route path="/consentimento" element={<ProtectedRoute><LgpdConsent /></ProtectedRoute>} />
