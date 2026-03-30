@@ -21,9 +21,10 @@ export const EventCoverUpload: React.FC<Props> = ({ value, onChange }) => {
     if (file.size > 5 * 1024 * 1024) { toast.error('Imagem muito grande (máx. 5MB)'); return; }
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
+      const compressed = await compressImage(file);
+      const ext = compressed.name.split('.').pop() || 'jpg';
       const path = `events/covers/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from(BUCKET).upload(path, file, { contentType: file.type });
+      const { error } = await supabase.storage.from(BUCKET).upload(path, compressed, { contentType: compressed.type });
       if (error) throw error;
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
       onChange(data.publicUrl);

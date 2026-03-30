@@ -24,7 +24,7 @@ export const WysiwygImageBlock: React.FC<Props> = ({ block, isActive, onSelect, 
       const compressed = await compressImage(file);
       const ext = compressed.name.split('.').pop() || 'jpg';
       const path = `editor/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from('document-images').upload(path, file, { contentType: file.type });
+      const { error } = await supabase.storage.from('document-images').upload(path, compressed, { contentType: compressed.type });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from('document-images').getPublicUrl(path);
       const img = new Image();
