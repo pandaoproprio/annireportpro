@@ -65,7 +65,7 @@ const readPdfBlobFromResponse = async (response: Response): Promise<Blob> => {
   }
 
   const reader = response.body.getReader();
-  const chunks: Uint8Array[] = [];
+  const chunks: BlobPart[] = [];
   let totalBytes = 0;
 
   while (true) {
@@ -73,8 +73,9 @@ const readPdfBlobFromResponse = async (response: Response): Promise<Blob> => {
     if (done) break;
     if (!value) continue;
 
-    chunks.push(value);
-    totalBytes += value.byteLength;
+    const chunk = new Uint8Array(value);
+    chunks.push(chunk);
+    totalBytes += chunk.byteLength;
   }
 
   if (totalBytes === 0) throw new Error('PDF vazio retornado');
