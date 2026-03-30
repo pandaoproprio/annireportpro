@@ -3,14 +3,13 @@ import { useAppData } from '@/contexts/AppDataContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Download, Loader2, Eye, Edit, Image, Trash2, Import, Settings2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
   AVAILABLE_SECTIONS,
   DEFAULT_COVER, DEFAULT_HEADER, DEFAULT_FOOTER,
@@ -77,14 +76,12 @@ const ReportObjetoIIPage: React.FC = () => {
     AVAILABLE_SECTIONS.map(s => ({ ...s, enabled: true, content: '', photos: [] }))
   );
 
-  // ── Import from Relatório do Objeto ──
   const handleImportFromReport = useCallback(() => {
     if (!project) { toast.error('Selecione um projeto primeiro.'); return; }
     const rd = project.reportData;
     if (!rd) { toast.error('Nenhum relatório salvo encontrado para este projeto.'); return; }
 
-    const imported = mapReportDataToSections(rd, project.object, project.summary);
-    setSections(imported);
+    setSections(mapReportDataToSections(rd, project.object, project.summary));
 
     setCover(prev => ({
       ...prev,
@@ -97,38 +94,31 @@ const ReportObjetoIIPage: React.FC = () => {
         : '',
     }));
 
-    setHeader(prev => ({
-      ...prev,
+    setHeader({
       logoLeft: rd.logo || visualConfig?.logo || '',
       logoCenter: rd.logoCenter || visualConfig?.logoCenter || '',
       logoRight: rd.logoSecondary || visualConfig?.logoSecondary || '',
-      leftText: rd.headerLeftText || visualConfig?.headerLeftText || '',
-      rightText: rd.headerRightText || visualConfig?.headerRightText || '',
-    }));
+    });
 
-    if (rd.footerText || visualConfig?.footerLine1Text) {
+    if (visualConfig) {
       setFooter(prev => ({
         ...prev,
-        line1: visualConfig?.footerLine1Text || prev.line1,
-        line2: visualConfig?.footerLine2Text || prev.line2,
-        line3: visualConfig?.footerLine3Text || prev.line3,
+        line1: visualConfig.footerLine1Text || prev.line1,
+        line2: visualConfig.footerLine2Text || prev.line2,
+        line3: visualConfig.footerLine3Text || prev.line3,
       }));
     }
 
     toast.success('Dados importados do Relatório do Objeto!');
   }, [project, visualConfig]);
 
-  // ── Section helpers ──
   const toggleSection = (id: string) => setSections(prev => prev.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s));
   const updateContent = (id: string, content: string) => setSections(prev => prev.map(s => s.id === id ? { ...s, content } : s));
 
   const addPhoto = (id: string, photo: PhotoWithCaption) => setSections(prev => prev.map(s => s.id === id ? { ...s, photos: [...s.photos, photo] } : s));
   const removePhoto = (id: string, index: number) => setSections(prev => prev.map(s => s.id === id ? { ...s, photos: s.photos.filter((_, i) => i !== index) } : s));
   const updatePhotoCaption = (sectionId: string, index: number, caption: string) => {
-    setSections(prev => prev.map(s => s.id === sectionId ? {
-      ...s,
-      photos: s.photos.map((p, i) => i === index ? { ...p, caption } : p),
-    } : s));
+    setSections(prev => prev.map(s => s.id === sectionId ? { ...s, photos: s.photos.map((p, i) => i === index ? { ...p, caption } : p) } : s));
   };
 
   const handlePhotoUpload = (sectionId: string, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -136,21 +126,17 @@ const ReportObjetoIIPage: React.FC = () => {
     if (!files) return;
     for (const file of Array.from(files)) {
       const reader = new FileReader();
-      reader.onload = () => {
-        if (reader.result) addPhoto(sectionId, { url: reader.result as string, caption: '' });
-      };
+      reader.onload = () => { if (reader.result) addPhoto(sectionId, { url: reader.result as string, caption: '' }); };
       reader.readAsDataURL(file);
     }
     e.target.value = '';
   };
 
-  const handleLogoUpload = (field: 'logoLeft' | 'logoCenter' | 'logoRight', e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleLogoUpload = (field: keyof HeaderConfig, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
-      if (reader.result) setHeader(prev => ({ ...prev, [field]: reader.result as string }));
-    };
+    reader.onload = () => { if (reader.result) setHeader(prev => ({ ...prev, [field]: reader.result as string })); };
     reader.readAsDataURL(file);
   };
 
@@ -173,8 +159,14 @@ const ReportObjetoIIPage: React.FC = () => {
     }
   };
 
-  // ── Cover config updater ──
   const updateCover = (field: keyof CoverConfig, value: string | boolean) => setCover(prev => ({ ...prev, [field]: value }));
+
+  /** Strip HTML for preview plain rendering */
+  const stripHtml = (html: string) => {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    return div.textContent || div.innerText || '';
+  };
 
   return (
     <div className="space-y-6 p-4 md:p-6">
@@ -182,7 +174,7 @@ const ReportObjetoIIPage: React.FC = () => {
       <div className="flex flex-wrap justify-between items-center bg-card p-4 shadow-sm rounded-lg sticky top-0 z-10 border-b gap-2">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Relatório do Objeto II</h2>
-          <p className="text-muted-foreground text-sm">Padrão ABNT · jsPDF client-side · Seções customizáveis</p>
+          <p className="text-muted-foreground text-sm">Padrão ABNT · Editor rico · Seções customizáveis</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleImportFromReport} className="border-primary/30 text-primary hover:bg-primary/5">
@@ -203,7 +195,7 @@ const ReportObjetoIIPage: React.FC = () => {
 
       {mode === 'edit' ? (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left panel */}
+          {/* Left panel: sections checklist */}
           <div className="lg:col-span-1 space-y-4">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-base">Seções</CardTitle></CardHeader>
@@ -218,12 +210,11 @@ const ReportObjetoIIPage: React.FC = () => {
             </Card>
           </div>
 
-          {/* Main panel with tabs */}
+          {/* Main panel */}
           <div className="lg:col-span-3 space-y-4">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="cover">Capa</TabsTrigger>
-                <TabsTrigger value="header">Cabeçalho</TabsTrigger>
                 <TabsTrigger value="footer">Rodapé</TabsTrigger>
                 <TabsTrigger value="sections">Seções</TabsTrigger>
               </TabsList>
@@ -257,42 +248,31 @@ const ReportObjetoIIPage: React.FC = () => {
                       <Switch checked={cover.showLogos} onCheckedChange={v => updateCover('showLogos', v)} />
                       <Label className="text-sm">Exibir logotipos na capa</Label>
                     </div>
-                  </CardContent>
-                </Card>
-              </TabsContent>
 
-              {/* ── HEADER TAB ── */}
-              <TabsContent value="header">
-                <Card>
-                  <CardHeader><CardTitle className="text-base">Cabeçalho (Barra de Logos)</CardTitle></CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-3 gap-4">
-                      {(['logoLeft', 'logoCenter', 'logoRight'] as const).map(field => (
-                        <div key={field} className="space-y-2">
-                          <Label className="text-sm font-medium">
-                            {field === 'logoLeft' ? 'Logo Esquerdo' : field === 'logoCenter' ? 'Logo Central' : 'Logo Direito'}
-                          </Label>
-                          {header[field] && (
-                            <div className="relative">
-                              <img src={header[field]} alt="" className="h-16 object-contain border rounded p-1" />
-                              <button onClick={() => setHeader(p => ({ ...p, [field]: '' }))} className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5">
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </div>
-                          )}
-                          <input type="file" accept="image/*" onChange={e => handleLogoUpload(field, e)} className="text-xs" />
-                        </div>
-                      ))}
-                    </div>
-                    <Separator />
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label className="text-sm font-medium">Texto Esquerdo</Label>
-                        <Input value={header.leftText} onChange={e => setHeader(p => ({ ...p, leftText: e.target.value }))} className="mt-1" placeholder="Texto abaixo dos logos (esquerda)" />
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">Texto Direito</Label>
-                        <Input value={header.rightText} onChange={e => setHeader(p => ({ ...p, rightText: e.target.value }))} className="mt-1" placeholder="Texto abaixo dos logos (direita)" />
+                    {/* Logo bar (inside cover tab) */}
+                    <div className="border-t pt-4 mt-4">
+                      <Label className="text-sm font-medium mb-3 block">Barra de Logos</Label>
+                      <div className="grid grid-cols-3 gap-4">
+                        {(['logoLeft', 'logoCenter', 'logoRight'] as const).map(field => (
+                          <div key={field} className="space-y-2">
+                            <Label className="text-xs text-muted-foreground">
+                              {field === 'logoLeft' ? 'Esquerdo' : field === 'logoCenter' ? 'Central' : 'Direito'}
+                            </Label>
+                            {header[field] ? (
+                              <div className="relative">
+                                <img src={header[field]} alt="" className="h-14 object-contain border rounded p-1 bg-background" />
+                                <button onClick={() => setHeader(p => ({ ...p, [field]: '' }))} className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground rounded-full p-0.5">
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="h-14 border-2 border-dashed rounded flex items-center justify-center text-muted-foreground text-xs">
+                                Sem logo
+                              </div>
+                            )}
+                            <input type="file" accept="image/*" onChange={e => handleLogoUpload(field, e)} className="text-xs w-full" />
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </CardContent>
@@ -328,19 +308,20 @@ const ReportObjetoIIPage: React.FC = () => {
                 </Card>
               </TabsContent>
 
-              {/* ── SECTIONS TAB ── */}
+              {/* ── SECTIONS TAB (Rich Text Editor) ── */}
               <TabsContent value="sections" className="space-y-4">
                 {enabledSections.map(section => (
                   <Card key={section.id}>
                     <CardHeader className="pb-2"><CardTitle className="text-base">{section.title}</CardTitle></CardHeader>
                     <CardContent className="space-y-3">
-                      <Textarea
+                      <RichTextEditor
                         value={section.content}
-                        onChange={e => updateContent(section.id, e.target.value)}
-                        placeholder={`Conteúdo da seção "${section.title}"...`}
-                        rows={5}
+                        onChange={val => updateContent(section.id, val)}
+                        placeholder={`Escreva o conteúdo de "${section.title}"...`}
+                        enableImages
                       />
 
+                      {/* Photo upload with captions */}
                       <div>
                         <Label className="text-sm flex items-center gap-1 mb-2"><Image className="w-4 h-4" /> Registros Fotográficos</Label>
                         <input type="file" accept="image/*" multiple onChange={e => handlePhotoUpload(section.id, e)} className="text-sm" />
@@ -360,7 +341,7 @@ const ReportObjetoIIPage: React.FC = () => {
                                 <Input
                                   value={photo.caption}
                                   onChange={e => updatePhotoCaption(section.id, idx, e.target.value)}
-                                  placeholder="Legenda da foto..."
+                                  placeholder="Legenda..."
                                   className="text-xs h-7"
                                 />
                               </div>
@@ -376,10 +357,9 @@ const ReportObjetoIIPage: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* ── PREVIEW MODE ── */
+        /* ── PREVIEW ── */
         <Card className="max-w-4xl mx-auto">
           <CardContent className="p-8 space-y-6" style={{ fontFamily: '"Times New Roman", Times, serif' }}>
-            {/* Preview header */}
             {(header.logoLeft || header.logoCenter || header.logoRight) && (
               <div className="flex justify-between items-center border-b pb-3 mb-4">
                 <div className="flex-1 flex justify-start">{header.logoLeft && <img src={header.logoLeft} alt="" className="h-12 object-contain" />}</div>
@@ -388,7 +368,6 @@ const ReportObjetoIIPage: React.FC = () => {
               </div>
             )}
 
-            {/* Preview cover */}
             <div className="text-center space-y-2 py-8 border-b">
               <h1 className="text-2xl font-bold uppercase">{cover.title}</h1>
               {cover.subtitle && <p className="text-lg">{cover.subtitle}</p>}
@@ -397,13 +376,18 @@ const ReportObjetoIIPage: React.FC = () => {
               {cover.period && <p className="text-muted-foreground text-sm">{cover.period}</p>}
             </div>
 
-            {/* Preview sections */}
             {enabledSections.map((section, i) => (
               <div key={section.id} className="space-y-2">
                 <h2 className="text-base font-bold uppercase">{`${i + 1}. ${section.title}`}</h2>
-                <p className="text-sm text-justify leading-relaxed whitespace-pre-wrap" style={{ textIndent: '1.25cm' }}>
-                  {section.content || <span className="text-muted-foreground italic">Sem conteúdo</span>}
-                </p>
+                {section.content ? (
+                  <div
+                    className="text-sm text-justify leading-relaxed prose prose-sm max-w-none"
+                    style={{ textIndent: '1.25cm' }}
+                    dangerouslySetInnerHTML={{ __html: section.content }}
+                  />
+                ) : (
+                  <p className="text-sm text-muted-foreground italic">Sem conteúdo</p>
+                )}
                 {section.photos.length > 0 && (
                   <div className="grid grid-cols-3 gap-3">
                     {section.photos.map((photo, idx) => (
@@ -417,7 +401,6 @@ const ReportObjetoIIPage: React.FC = () => {
               </div>
             ))}
 
-            {/* Preview footer */}
             {footer.enabled && (
               <div className="border-t pt-3 mt-6 text-center text-muted-foreground">
                 {footer.line1 && <p className="text-xs font-medium">{footer.line1}</p>}
