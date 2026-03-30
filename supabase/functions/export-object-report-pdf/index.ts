@@ -968,6 +968,23 @@ function buildHtml(payload: ReportPayload): string {
           word-break: break-word;
         }
         .body-copy { margin: 0 0 4mm; text-indent: 12.5mm; }
+        .section p { text-indent: 12.5mm; margin: 0 0 4mm; }
+        .section p.subheading,
+        .section p.cover-eyebrow,
+        .section p.cover-meta,
+        .section p.cover-project-name,
+        .section p.cover-subtitle,
+        .section p.signature-date,
+        .section p.signature-label,
+        .section p.signature-name,
+        .section li p,
+        .section .photo-group-title,
+        .section .caption p,
+        .section .activity-meta p,
+        .toc-section p,
+        .cover p,
+        .institutional-footer p,
+        .audit-footer p { text-indent: 0; }
 
         /* Rich-text list styles from editor */
         .section ul, .section ol { display: block; list-style-position: outside; margin: 0 0 4mm; padding-left: 12.5mm; }
