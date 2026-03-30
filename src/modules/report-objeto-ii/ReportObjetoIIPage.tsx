@@ -21,26 +21,42 @@ import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import type { ReportData } from '@/types';
 
 function mapReportDataToSections(rd: ReportData, projectObject?: string, projectSummary?: string): ReportObjIISection[] {
+  const photoMeta = rd.photoMetadata || {};
+
+  const getPhotosWithCaptions = (key: string, urls: string[]): PhotoWithCaption[] => {
+    const metas = photoMeta[key] || [];
+    return urls.map((url, i) => ({
+      url,
+      caption: metas[i]?.caption || '',
+    }));
+  };
+
+  const goalPhotos: PhotoWithCaption[] = rd.goalPhotos
+    ? Object.entries(rd.goalPhotos).flatMap(([goalId, urls]) =>
+        getPhotosWithCaptions(`goal_${goalId}`, urls)
+      )
+    : [];
+
   const contentMap: Record<string, { content: string; photos: PhotoWithCaption[] }> = {
     object: { content: rd.objectOverride || projectObject || '', photos: [] },
     summary: { content: rd.executiveSummary || projectSummary || '', photos: [] },
     goals: {
       content: rd.goalNarratives ? Object.values(rd.goalNarratives).filter(Boolean).join('\n\n') : '',
-      photos: rd.goalPhotos ? Object.values(rd.goalPhotos).flat().map(u => ({ url: u, caption: '' })) : [],
+      photos: goalPhotos,
     },
     other: {
       content: rd.otherActionsText || '',
-      photos: (rd.otherActionsPhotos || []).map(u => ({ url: u, caption: '' })),
+      photos: getPhotosWithCaptions('otherActions', rd.otherActionsPhotos || []),
     },
     communication: {
       content: rd.communicationText || '',
-      photos: (rd.communicationPhotos || []).map(u => ({ url: u, caption: '' })),
+      photos: getPhotosWithCaptions('communication', rd.communicationPhotos || []),
     },
     satisfaction: { content: rd.satisfactionText || '', photos: [] },
     future: { content: rd.futureActionsText || '', photos: [] },
     expenses: {
       content: rd.expenses ? rd.expenses.map(e => `${e.itemName}: ${e.description}`).filter(Boolean).join('\n') : '',
-      photos: rd.expenses ? rd.expenses.map(e => e.image).filter(Boolean).map(u => ({ url: u!, caption: '' })) : [],
+      photos: rd.expenses ? rd.expenses.map(e => e.image).filter(Boolean).map((u, i) => ({ url: u!, caption: (photoMeta['expenses'] || [])[i]?.caption || '' })) : [],
     },
     links: {
       content: [
