@@ -1097,6 +1097,41 @@ function buildHtml(payload: ReportPayload): string {
 
         /* ─── Inline images in rich text ─── */
         img { max-width: 100%; height: auto; }
+
+        /* ─── TABLE OF CONTENTS ─── */
+        .toc-section {
+          break-after: page;
+          page-break-after: always;
+        }
+        .toc-title {
+          font-size: 16pt;
+          font-weight: 700;
+          text-transform: uppercase;
+          text-align: center;
+          margin: 0 0 10mm;
+        }
+        .toc-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        .toc-item {
+          display: flex;
+          align-items: baseline;
+          margin: 0 0 4mm;
+          font-size: 12pt;
+          line-height: 1.8;
+        }
+        .toc-text {
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .toc-dots {
+          flex: 1;
+          border-bottom: 1px dotted #9ca3af;
+          margin: 0 3mm;
+          min-width: 10mm;
+        }
       </style>
     </head>
     <body>
