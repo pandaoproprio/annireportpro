@@ -5,7 +5,8 @@ import { FileEdit, Link2, Sparkles, Loader2, Bot, Cpu, Zap } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { NarrativeInsertDialog } from '@/components/report/NarrativeInsertDialog';
-import { exportReportToPdf } from '@/lib/reportPdfExport';
+import { generateReport, downloadReport } from '@/lib/pdf/generate';
+import { mapObjetoIToReportData } from '@/lib/pdf/mappers/mapObjetoI';
 import { exportToDocx } from '@/lib/docxExport';
 import { createAsanaTaskOnPublish } from '@/lib/asanaAutoTask';
 import { useReportState } from '@/hooks/useReportState';
@@ -142,18 +143,10 @@ export const ReportGenerator: React.FC = () => {
     setIsExporting(true);
     setExportType('pdf');
     try {
-      await exportReportToPdf({
-        project, activities, sections, objectText, summary,
-        goalNarratives, goalPhotos,
-        otherActionsNarrative, otherActionsPhotos,
-        communicationNarrative, communicationPhotos,
-        satisfaction, futureActions, expenses, links, linkDisplayNames,
-        sectionPhotos, photoMetadata,
-        visualConfig: vc.config,
-        pageLayouts,
-        sectionPhotoGroups,
-        selectedVideoUrls: state.selectedVideoUrls,
-      });
+      const orgLogoUrl = vc.config?.logo ?? undefined;
+      const data = mapObjetoIToReportData(state, orgLogoUrl);
+      const blob = await generateReport(data, 'objeto-i');
+      downloadReport(blob, `relatorio-objeto-i-${Date.now()}`);
       if (project?.id) {
         createAsanaTaskOnPublish({
           entityType: 'activity',
