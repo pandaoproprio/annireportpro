@@ -1194,13 +1194,15 @@ Deno.serve(async (req) => {
             waitUntil: "networkidle2",
             timeout: 45000,
           },
+          waitForFunction: {
+            fn: "() => window.__imagesReady",
+            timeout: 15000,
+          },
           options: {
             format: "A4",
             printBackground: true,
             timeout: 55000,
-            // ABNT NBR 14724: top 3cm + 6mm header gap = 36mm, bottom 2cm, left 3cm, right 2cm
-            // The fixed header (26mm) renders at top:0 within this margin area.
-            margin: { top: "36mm", right: "20mm", bottom: "20mm", left: "30mm" },
+            preferCSSPageSize: true,
           },
         }),
       },
