@@ -577,7 +577,8 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
 }
 
 function buildCoverHtml(payload: ReportPayload): string {
-  const coverLogo = payload.visualConfig?.coverLogo || payload.visualConfig?.logo || payload.visualConfig?.logoCenter;
+  const rawCoverLogo = payload.visualConfig?.coverLogo || payload.visualConfig?.logo || payload.visualConfig?.logoCenter;
+  const coverLogo = isNonEmptyString(rawCoverLogo) ? optimizeStorageImageUrl(rawCoverLogo.trim(), 600, 80) : "";
   const coverTitle = payload.visualConfig?.coverTitle?.trim() || "RELATÓRIO PARCIAL DE CUMPRIMENTO DO OBJETO";
   const coverSubtitle = payload.visualConfig?.coverHideSubtitle ? "" : (payload.visualConfig?.coverSubtitle?.trim() || "");
 
