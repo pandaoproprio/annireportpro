@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
-  Database, LogOut, Edit, Save, Plus, Trash2, X, Loader2, FolderCog, List, ShieldCheck, ShieldOff 
+  Database, LogOut, Edit, Save, Plus, Trash2, X, Loader2, FolderCog, List, ShieldCheck, ShieldOff, ImageIcon 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logAction } from '@/lib/systemLog';
