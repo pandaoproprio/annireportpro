@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useAppData } from '@/contexts/AppDataContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,12 +6,57 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Loader2, Eye, Edit, Image, Trash2 } from 'lucide-react';
+import { Download, Loader2, Eye, Edit, Image, Trash2, Import } from 'lucide-react';
 import { toast } from 'sonner';
 import { AVAILABLE_SECTIONS, type ReportObjIISection, type ReportObjIIData } from './types';
 import { exportReportObjIIPdf } from './pdfExport';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
+import type { ReportData } from '@/types';
+
+/**
+ * Maps ReportData (from Relatório do Objeto I) into Objeto II sections.
+ */
+function mapReportDataToSections(rd: ReportData, projectObject?: string, projectSummary?: string): ReportObjIISection[] {
+  const contentMap: Record<string, { content: string; photos: string[] }> = {
+    object: { content: rd.objectOverride || projectObject || '', photos: [] },
+    summary: { content: rd.executiveSummary || projectSummary || '', photos: [] },
+    goals: {
+      content: rd.goalNarratives
+        ? Object.values(rd.goalNarratives).filter(Boolean).join('\n\n')
+        : '',
+      photos: rd.goalPhotos
+        ? Object.values(rd.goalPhotos).flat()
+        : [],
+    },
+    other: { content: rd.otherActionsText || '', photos: rd.otherActionsPhotos || [] },
+    communication: { content: rd.communicationText || '', photos: rd.communicationPhotos || [] },
+    satisfaction: { content: rd.satisfactionText || '', photos: [] },
+    future: { content: rd.futureActionsText || '', photos: [] },
+    expenses: {
+      content: rd.expenses
+        ? rd.expenses.map(e => `${e.itemName}: ${e.description}`).filter(Boolean).join('\n')
+        : '',
+      photos: rd.expenses
+        ? rd.expenses.map(e => e.image).filter(Boolean) as string[]
+        : [],
+    },
+    links: {
+      content: [
+        rd.links?.attendanceList && `Lista de presença: ${rd.links.attendanceList}`,
+        rd.links?.registrationList && `Ficha de inscrição: ${rd.links.registrationList}`,
+        rd.links?.mediaFolder && `Mídias: ${rd.links.mediaFolder}`,
+      ].filter(Boolean).join('\n'),
+      photos: [],
+    },
+  };
+
+  return AVAILABLE_SECTIONS.map(s => ({
+    ...s,
+    enabled: true,
+    content: contentMap[s.key]?.content || '',
+    photos: contentMap[s.key]?.photos || [],
+  }));
+}
 
 const ReportObjetoIIPage: React.FC = () => {
   const { activeProject: project } = useAppData();
@@ -29,6 +74,22 @@ const ReportObjetoIIPage: React.FC = () => {
       photos: [],
     }))
   );
+
+  const handleImportFromReport = useCallback(() => {
+    if (!project) {
+      toast.error('Selecione um projeto primeiro.');
+      return;
+    }
+    const rd = project.reportData;
+    if (!rd) {
+      toast.error('Nenhum relatório salvo encontrado para este projeto.');
+      return;
+    }
+    const imported = mapReportDataToSections(rd, project.object, project.summary);
+    setSections(imported);
+    if (rd.coverTitle) setTitle(rd.coverTitle);
+    toast.success('Dados importados do Relatório do Objeto com sucesso!');
+  }, [project]);
 
   const toggleSection = (id: string) => {
     setSections(prev => prev.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s));
@@ -99,12 +160,15 @@ const ReportObjetoIIPage: React.FC = () => {
   return (
     <div className="space-y-6 p-4 md:p-6">
       {/* Toolbar */}
-      <div className="flex justify-between items-center bg-card p-4 shadow-sm rounded-lg sticky top-0 z-10 border-b">
+      <div className="flex flex-wrap justify-between items-center bg-card p-4 shadow-sm rounded-lg sticky top-0 z-10 border-b gap-2">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Relatório do Objeto II</h2>
           <p className="text-muted-foreground text-sm">Geração client-side com jsPDF — selecione as seções desejadas.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={handleImportFromReport} className="border-primary/30 text-primary hover:bg-primary/5">
+            <Import className="w-4 h-4 mr-2" /> Importar do Relatório
+          </Button>
           <Button variant={mode === 'edit' ? 'default' : 'outline'} onClick={() => setMode('edit')}>
             <Edit className="w-4 h-4 mr-2" /> Editar
           </Button>
