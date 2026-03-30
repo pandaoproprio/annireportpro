@@ -1,4 +1,26 @@
-import { StyleSheet } from '@react-pdf/renderer'
+import { StyleSheet, Font } from '@react-pdf/renderer'
+
+// ══════════════════════════════════════════════════════════════
+// ABNT NBR 14724 — Styles for @react-pdf/renderer
+// Single source of truth — all values in POINTS (1mm ≈ 2.8346pt)
+// ══════════════════════════════════════════════════════════════
+
+const MM = 2.8346 // 1 mm in points
+
+// ── ABNT Margins (mm → pt) ──
+export const ABNT = {
+  marginTop: 30 * MM,      // 3 cm
+  marginBottom: 20 * MM,   // 2 cm
+  marginLeft: 30 * MM,     // 3 cm
+  marginRight: 20 * MM,    // 2 cm
+  fontSize: 12,            // 12pt body
+  fontCaption: 10,         // 10pt captions
+  lineHeight: 1.5,         // 1.5 spacing
+  indent: 12.5 * MM,       // 1.25cm paragraph indent
+  logoBarHeight: 20 * MM,  // 20mm logo bar
+  logoWidth: 30 * MM,      // 30mm default logo width
+  logoGap: 4 * MM,         // 4mm gap between logos
+}
 
 export const COLORS = {
   primary: '#1a1a2e',
@@ -12,42 +34,63 @@ export const COLORS = {
 }
 
 export const FONTS = {
-  regular: 'Helvetica',
-  bold: 'Helvetica-Bold',
-  oblique: 'Helvetica-Oblique',
-}
-
-export const PAGE = {
-  marginTop: 60,
-  marginBottom: 60,
-  marginLeft: 50,
-  marginRight: 50,
+  regular: 'Times-Roman',
+  bold: 'Times-Bold',
+  italic: 'Times-Italic',
+  boldItalic: 'Times-BoldItalic',
 }
 
 export const styles = StyleSheet.create({
+  // ── Page ──
   page: {
     fontFamily: FONTS.regular,
-    fontSize: 10,
+    fontSize: ABNT.fontSize,
     color: COLORS.text,
-    paddingTop: PAGE.marginTop,
-    paddingBottom: PAGE.marginBottom,
-    paddingLeft: PAGE.marginLeft,
-    paddingRight: PAGE.marginRight,
+    paddingTop: ABNT.marginTop,
+    paddingBottom: ABNT.marginBottom + 20, // extra room for footer
+    paddingLeft: ABNT.marginLeft,
+    paddingRight: ABNT.marginRight,
     backgroundColor: COLORS.white,
   },
-  // Cabeçalho
+  coverPage: {
+    fontFamily: FONTS.regular,
+    fontSize: ABNT.fontSize,
+    color: COLORS.text,
+    paddingTop: ABNT.marginTop,
+    paddingBottom: ABNT.marginBottom,
+    paddingLeft: ABNT.marginLeft,
+    paddingRight: ABNT.marginRight,
+    backgroundColor: COLORS.white,
+  },
+
+  // ── Logo Bar Header ──
+  logoBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1.5,
+    borderBottomColor: COLORS.accent,
+  },
+  logoImage: {
+    height: ABNT.logoBarHeight * 0.85,
+    objectFit: 'contain' as const,
+  },
+
+  // ── Legacy single-logo header ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
-    paddingBottom: 12,
-    borderBottomWidth: 2,
+    marginBottom: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1.5,
     borderBottomColor: COLORS.accent,
   },
   headerLogo: {
     width: 48,
     height: 48,
-    objectFit: 'contain',
+    objectFit: 'contain' as const,
     marginRight: 12,
   },
   headerTextBlock: {
@@ -55,7 +98,7 @@ export const styles = StyleSheet.create({
   },
   headerTitle: {
     fontFamily: FONTS.bold,
-    fontSize: 14,
+    fontSize: 13,
     color: COLORS.primary,
   },
   headerSubtitle: {
@@ -67,49 +110,76 @@ export const styles = StyleSheet.create({
     fontSize: 9,
     color: COLORS.muted,
   },
-  // Rodapé
+
+  // ── Footer institucional ──
   footer: {
     position: 'absolute',
-    bottom: 24,
-    left: PAGE.marginLeft,
-    right: PAGE.marginRight,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
+    bottom: ABNT.marginBottom * 0.5,
+    left: ABNT.marginLeft,
+    right: ABNT.marginRight,
+    borderTopWidth: 0.75,
     borderTopColor: COLORS.border,
-    paddingTop: 6,
+    paddingTop: 4,
   },
-  footerText: {
+  footerLine1: {
+    fontFamily: FONTS.bold,
     fontSize: 8,
     color: COLORS.muted,
+    textAlign: 'center',
+    marginBottom: 2,
   },
-  // Seções
+  footerLine2: {
+    fontFamily: FONTS.regular,
+    fontSize: 7,
+    color: COLORS.muted,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  footerLine3: {
+    fontFamily: FONTS.regular,
+    fontSize: 7,
+    color: COLORS.muted,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  footerPageNumber: {
+    fontFamily: FONTS.regular,
+    fontSize: ABNT.fontSize,
+    textAlign: 'right',
+    color: COLORS.text,
+    position: 'absolute',
+    bottom: ABNT.marginBottom * 0.3,
+    right: 0,
+  },
+
+  // ── Sections ──
   sectionTitle: {
     fontFamily: FONTS.bold,
-    fontSize: 12,
+    fontSize: ABNT.fontSize,
     color: COLORS.accent,
-    marginTop: 18,
+    marginTop: 14,
     marginBottom: 6,
-    paddingBottom: 4,
-    borderBottomWidth: 1,
+    paddingBottom: 3,
+    borderBottomWidth: 0.75,
     borderBottomColor: COLORS.border,
   },
   subsectionTitle: {
     fontFamily: FONTS.bold,
-    fontSize: 10,
+    fontSize: ABNT.fontSize,
     color: COLORS.secondary,
     marginTop: 10,
     marginBottom: 4,
   },
   paragraph: {
-    fontSize: 10,
-    lineHeight: 1.6,
+    fontSize: ABNT.fontSize,
+    lineHeight: ABNT.lineHeight,
     color: COLORS.text,
     marginBottom: 6,
     textAlign: 'justify',
+    textIndent: ABNT.indent,
   },
-  // Grid de fotos
+
+  // ── Photo Grid (3 columns) ──
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -123,23 +193,25 @@ export const styles = StyleSheet.create({
   photoImage: {
     width: '100%',
     height: 110,
-    objectFit: 'cover',
-    borderRadius: 3,
+    objectFit: 'cover' as const,
+    borderRadius: 2,
   },
   photoCaption: {
-    fontSize: 7.5,
+    fontFamily: FONTS.italic,
+    fontSize: 8,
     color: COLORS.muted,
     textAlign: 'center',
-    marginTop: 3,
+    marginTop: 2,
   },
-  // Tabela
+
+  // ── Table ──
   table: {
     marginTop: 8,
     marginBottom: 8,
   },
   tableRow: {
     flexDirection: 'row',
-    borderBottomWidth: 1,
+    borderBottomWidth: 0.5,
     borderBottomColor: COLORS.border,
   },
   tableHeader: {
@@ -161,7 +233,8 @@ export const styles = StyleSheet.create({
   tableRowAlt: {
     backgroundColor: COLORS.light,
   },
-  // Caixa de destaque
+
+  // ── Info box ──
   infoBox: {
     backgroundColor: COLORS.light,
     borderLeftWidth: 3,
@@ -174,6 +247,6 @@ export const styles = StyleSheet.create({
   infoBoxText: {
     fontSize: 9.5,
     color: COLORS.text,
-    lineHeight: 1.5,
+    lineHeight: ABNT.lineHeight,
   },
 })
