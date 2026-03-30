@@ -24,7 +24,7 @@ export const WysiwygTextBlock: React.FC<Props> = ({ block, isActive, onSelect, o
     onFocus: () => onSelect(),
     editorProps: {
       attributes: {
-        class: 'outline-none min-h-[1.5em] w-full',
+        class: 'outline-none min-h-[1.5em] w-full abnt-body-editor',
         style: [
           `font-size: ${block.fontSize}pt`,
           `font-family: ${block.fontFamily}`,
