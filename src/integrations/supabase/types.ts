@@ -1226,6 +1226,42 @@ export type Database = {
           },
         ]
       }
+      login_reminders: {
+        Row: {
+          email_message_id: string | null
+          first_login_at: string | null
+          id: string
+          notified_admins_at: string | null
+          sent_at: string
+          sent_by: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          email_message_id?: string | null
+          first_login_at?: string | null
+          id?: string
+          notified_admins_at?: string | null
+          sent_at?: string
+          sent_by: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }
+        Update: {
+          email_message_id?: string | null
+          first_login_at?: string | null
+          id?: string
+          notified_admins_at?: string | null
+          sent_at?: string
+          sent_by?: string
+          user_email?: string
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: []
+      }
       performance_config: {
         Row: {
           created_at: string
