@@ -99,10 +99,11 @@ const ReportObjetoIIPage: React.FC = () => {
 
     setSections(mapReportDataToSections(rd, project.object, project.summary));
 
+    // Import cover data
     setCover(prev => ({
       ...prev,
-      title: rd.coverTitle || prev.title,
-      subtitle: rd.coverSubtitle || '',
+      title: rd.coverTitle || visualConfig?.coverTitle || prev.title,
+      subtitle: rd.coverSubtitle || visualConfig?.coverSubtitle || '',
       organizationName: project.organizationName || '',
       fomentoNumber: project.fomentoNumber || '',
       period: project.startDate && project.endDate
@@ -110,18 +111,29 @@ const ReportObjetoIIPage: React.FC = () => {
         : '',
     }));
 
+    // Import logos from reportData first, fallback to visualConfig
     setHeader({
       logoLeft: rd.logo || visualConfig?.logo || '',
       logoCenter: rd.logoCenter || visualConfig?.logoCenter || '',
       logoRight: rd.logoSecondary || visualConfig?.logoSecondary || '',
     });
 
+    // Import footer from visualConfig
     if (visualConfig) {
-      setFooter(prev => ({
-        ...prev,
-        line1: visualConfig.footerLine1Text || prev.line1,
-        line2: visualConfig.footerLine2Text || prev.line2,
-        line3: visualConfig.footerLine3Text || prev.line3,
+      setFooter({
+        enabled: visualConfig.footerInstitutionalEnabled ?? true,
+        line1: visualConfig.footerLine1Text || '',
+        line2: visualConfig.footerLine2Text || '',
+        line3: visualConfig.footerLine3Text || '',
+      });
+    }
+
+    // Import sections visibility from reportData.sections if available
+    if (rd.sections && rd.sections.length > 0) {
+      setSections(prev => prev.map(s => {
+        const match = rd.sections?.find(rs => rs.key === s.key);
+        if (match) return { ...s, enabled: match.isVisible };
+        return s;
       }));
     }
 
