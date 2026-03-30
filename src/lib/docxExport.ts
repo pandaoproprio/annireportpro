@@ -52,11 +52,113 @@ const formatActivityDate = (date: string, endDate?: string) => {
   return start;
 };
 
-// Helper: split text by \n into multiple ABNT-formatted paragraphs
-const textToParagraphs = (
+// Strip HTML tags and return plain text
+const stripHtml = (html: string): string => {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<\/div>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+};
+
+// Parse HTML into TextRun segments preserving bold/italic/underline
+const parseHtmlToRuns = (html: string): TextRun[] => {
+  if (!html || !html.trim()) return [new TextRun({ text: '', font: 'Times New Roman', size: 24 })];
+
+  // If no HTML tags, return plain text
+  if (!/[<][a-z!/]/i.test(html)) {
+    return [new TextRun({ text: html.trim(), font: 'Times New Roman', size: 24 })];
+  }
+
+  const runs: TextRun[] = [];
+  // Simple state-based parser for bold/italic/underline
+  let text = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .replace(/<\/div>\s*<div[^>]*>/gi, '\n');
+
+  // Match segments with inline formatting
+  const regex = /<(strong|b|em|i|u)>([\s\S]*?)<\/\1>/gi;
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add text before this match
+    if (match.index > lastIndex) {
+      const before = stripHtml(text.substring(lastIndex, match.index));
+      if (before) runs.push(new TextRun({ text: before, font: 'Times New Roman', size: 24 }));
+    }
+
+    const tag = match[1].toLowerCase();
+    const content = stripHtml(match[2]);
+    if (content) {
+      runs.push(new TextRun({
+        text: content,
+        font: 'Times New Roman',
+        size: 24,
+        bold: tag === 'strong' || tag === 'b',
+        italics: tag === 'em' || tag === 'i',
+        underline: tag === 'u' ? {} : undefined,
+      }));
+    }
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Remaining text
+  if (lastIndex < text.length) {
+    const remaining = stripHtml(text.substring(lastIndex));
+    if (remaining) runs.push(new TextRun({ text: remaining, font: 'Times New Roman', size: 24 }));
+  }
+
+  if (runs.length === 0) {
+    const plain = stripHtml(html);
+    runs.push(new TextRun({ text: plain || '', font: 'Times New Roman', size: 24 }));
+  }
+
+  return runs;
+};
+
+// Helper: convert text/HTML into multiple ABNT-formatted paragraphs
+const richTextToParagraphs = (
   text: string,
   options?: { alignment?: (typeof AlignmentType)[keyof typeof AlignmentType]; bold?: boolean }
 ): Paragraph[] => {
+  if (!text || !text.trim()) return [new Paragraph({ text: '', spacing: { after: 200 } })];
+
+  // If it contains HTML, parse it
+  if (/[<][a-z!/]/i.test(text)) {
+    const plainText = stripHtml(text);
+    const lines = plainText.split('\n').filter(line => line.trim() !== '');
+    if (lines.length === 0) return [new Paragraph({ text: '', spacing: { after: 200 } })];
+    return lines.map(
+      line =>
+        new Paragraph({
+          alignment: options?.alignment ?? AlignmentType.JUSTIFIED,
+          spacing: { after: 200, line: 360 },
+          indent: { firstLine: 709 },
+          children: [
+            new TextRun({
+              text: line,
+              font: 'Times New Roman',
+              size: 24,
+              bold: options?.bold,
+            }),
+          ],
+        })
+    );
+  }
+
+  // Plain text fallback
   const lines = text.split('\n').filter(line => line.trim() !== '');
   if (lines.length === 0) return [new Paragraph({ text: '', spacing: { after: 200 } })];
   return lines.map(
@@ -76,6 +178,9 @@ const textToParagraphs = (
       })
   );
 };
+
+// Legacy alias
+const textToParagraphs = richTextToParagraphs;
 
 export const exportToDocx = async (data: ExportData) => {
   const {
