@@ -543,13 +543,28 @@ function renderExpensesSection(payload: ReportPayload, renderedPhotoKeys: Set<st
           </tbody>
         </table>
       </div>
+      ${groupedPhotos.length > 0 ? `
+        <div class="expense-photos-section">
+          <h3 class="section-title expense-photos-title">REGISTROS FOTOGRÁFICOS – COMPROVAÇÃO DA EXECUÇÃO DOS ITENS DE DESPESA</h3>
+          ${groups.map((group) => {
+            const groupItems = uniqueStrings(group.photoIds.map((id) => {
+              const index = Number(id);
+              if (Number.isNaN(index) || index < 0 || index >= normalizePhotoItems(groupedPhotos, groupedCaptions).length) return "";
+              return String(index);
+            }))
+              .map((value) => normalizePhotoItems(groupedPhotos, groupedCaptions)[Number(value)])
+              .filter(Boolean);
+            if (groupItems.length === 0) return "";
+            return `
+              <div class="expense-photo-group">
+                <h4 class="photo-group-title">${escapeHtml(group.caption)}</h4>
+                ${renderPhotoGrid(groupItems)}
+              </div>
+            `;
+          }).join("")}
+        </div>
+      ` : ""}
     </section>
-    ${renderGroupedPhotoBlocks(
-      groupedPhotos,
-      groupedCaptions,
-      groups,
-      "REGISTROS FOTOGRÁFICOS – COMPROVAÇÃO DA EXECUÇÃO DOS ITENS DE DESPESA",
-    )}
     ${extraExpensePhotos.length > 0 ? renderGroupedPhotoBlocks(
       extraExpensePhotos,
       extraExpenseMetas,
