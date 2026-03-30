@@ -962,7 +962,7 @@ function buildHtml(payload: ReportPayload): string {
         }
 
         /* ─── CONTENT ─── */
-        .pdf-content { padding: 0; }
+        .pdf-body-cell { padding: 0; }
 
         /* ─── COVER ─── */
         .cover {
