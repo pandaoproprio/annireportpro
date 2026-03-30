@@ -1250,14 +1250,24 @@ function buildHtml(payload: ReportPayload): string {
     </head>
     <body>
       ${buildCoverHtml(payload)}
-      <div class="pdf-body-cell">
-        ${buildTocHtml(payload.sections)}
-        ${sectionsHtml}
-        ${signatureHtml}
-        <div class="audit-footer">
-          Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
-        </div>
-      </div>
+      <table class="pdf-layout">
+        <thead>
+          <tr><td class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</td></tr>
+        </thead>
+        <tfoot>
+          <tr><td class="pdf-footer-cell">${buildFooterHtml(payload.visualConfig)}</td></tr>
+        </tfoot>
+        <tbody>
+          <tr><td>
+            ${buildTocHtml(payload.sections)}
+            ${sectionsHtml}
+            ${signatureHtml}
+            <div class="audit-footer">
+              Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
       <script>
         // 1. Force eager loading on all images
         (function() {
@@ -1272,7 +1282,7 @@ function buildHtml(payload: ReportPayload): string {
         // 2. Generate SHA-256 hash of document content for audit integrity
         (async function() {
           try {
-            var content = document.querySelector('.pdf-body-cell').innerText;
+            var content = document.querySelector('.pdf-layout tbody').innerText;
             var encoder = new TextEncoder();
             var data = encoder.encode(content);
             var hashBuffer = await crypto.subtle.digest('SHA-256', data);
