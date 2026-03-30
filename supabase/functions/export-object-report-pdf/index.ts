@@ -1261,8 +1261,8 @@ Deno.serve(async (req) => {
             preferCSSPageSize: true,
             displayHeaderFooter: true,
             headerTemplate: "<span></span>",
-            footerTemplate: `<div style="width:100%;text-align:center;font-size:8pt;color:#9ca3af;font-family:'Times New Roman',serif;padding:0 30mm;">
-              <span class="pageNumber"></span> / <span class="totalPages"></span>
+            footerTemplate: `<div style="width:100%;text-align:right;font-size:10pt;color:#000;font-family:'Times New Roman',serif;padding-right:20mm;padding-bottom:2mm;">
+              <span class="pageNumber"></span>
             </div>`,
           },
         }),
