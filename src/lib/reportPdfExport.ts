@@ -59,16 +59,34 @@ const normalizePdfResult = (result: unknown): Blob => {
 };
 
 export async function exportReportToPdf(data: ReportPdfExportData): Promise<void> {
-  const { data: result, error } = await supabase.functions.invoke('export-object-report-pdf', {
-    body: data,
-    headers: { 'Content-Type': 'application/json' },
+  // Build full URL to avoid supabase.functions.invoke JSON parsing issues with binary
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  if (!token) throw new Error('Usuário não autenticado');
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/export-object-report-pdf`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+    },
+    body: JSON.stringify(data),
   });
 
-  if (error) {
-    throw new Error(error.message || 'Erro ao gerar PDF');
+  if (!response.ok) {
+    let msg = 'Erro ao gerar PDF';
+    try {
+      const errJson = await response.json();
+      msg = errJson.error || msg;
+    } catch { /* ignore */ }
+    throw new Error(msg);
   }
 
-  const pdfBlob = normalizePdfResult(result);
+  const pdfBlob = await response.blob();
+  if (pdfBlob.size === 0) throw new Error('PDF vazio retornado');
+
   const safeProjectName = data.project.name.replace(/[^a-zA-Z0-9-_À-ÿ\s]/g, '').trim().replace(/\s+/g, '_');
   const filename = `Relatorio_${safeProjectName || 'Projeto'}_${new Date().toISOString().split('T')[0]}.pdf`;
   saveAs(pdfBlob, filename);
