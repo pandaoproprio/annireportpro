@@ -21,7 +21,8 @@ export const WysiwygImageBlock: React.FC<Props> = ({ block, isActive, onSelect, 
     if (file.size > 10 * 1024 * 1024) { toast.error('Imagem muito grande (máx. 10MB)'); return; }
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
+      const compressed = await compressImage(file);
+      const ext = compressed.name.split('.').pop() || 'jpg';
       const path = `editor/${crypto.randomUUID()}.${ext}`;
       const { error } = await supabase.storage.from('document-images').upload(path, file, { contentType: file.type });
       if (error) throw error;
