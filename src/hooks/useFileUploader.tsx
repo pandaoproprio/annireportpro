@@ -30,7 +30,11 @@ const removeFromStorage = async (url: string, pathSegments = 5) => {
 
 /** Upload a single file and return its public URL */
 const uploadFile = async (file: File, storagePath: string): Promise<string | null> => {
-  const { error } = await supabase.storage.from(BUCKET).upload(storagePath, file, { cacheControl: '3600', upsert: false });
+  const { error } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: file.type,
+  });
   if (error) {
     toast.error(`Erro ao enviar: ${file.name}`);
     return null;
