@@ -140,7 +140,7 @@ export default function PublicFormPage() {
   React.useEffect(() => {
     if (!form) return;
     const ogImage = design.coverImageUrl || design.headerImageUrl || design.logoUrl || '';
-    const ogTitle = form.title || 'GIRA Forms';
+    const ogTitle = form.title || 'GIRA Formulários';
     const ogDesc = (form.description || '').slice(0, 160);
 
     document.title = ogTitle;
