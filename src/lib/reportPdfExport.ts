@@ -58,17 +58,38 @@ const normalizePdfResult = (result: unknown): Blob => {
   throw new Error('Formato de resposta inesperado ao gerar PDF');
 };
 
-export async function exportReportToPdf(data: ReportPdfExportData): Promise<void> {
-  // Build full URL to avoid supabase.functions.invoke JSON parsing issues with binary
+const readPdfBlobFromResponse = async (response: Response): Promise<Blob> => {
+  if (!response.body) {
+    const buffer = await response.arrayBuffer();
+    return new Blob([buffer], { type: 'application/pdf' });
+  }
+
+  const reader = response.body.getReader();
+  const chunks: BlobPart[] = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (!value) continue;
+
+    const chunk = new Uint8Array(value);
+    chunks.push(chunk);
+    totalBytes += chunk.byteLength;
+  }
+
+  if (totalBytes === 0) throw new Error('PDF vazio retornado');
+  return new Blob(chunks, { type: 'application/pdf' });
+};
+
+const fetchPdfBlob = async (data: ReportPdfExportData, token: string): Promise<Blob> => {
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-  const { data: sessionData } = await supabase.auth.getSession();
-  const token = sessionData?.session?.access_token;
-  if (!token) throw new Error('Usuário não autenticado');
 
   const response = await fetch(`${supabaseUrl}/functions/v1/export-object-report-pdf`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      'Accept': 'application/pdf, application/json',
       'Authorization': `Bearer ${token}`,
       'apikey': import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
     },
@@ -84,7 +105,40 @@ export async function exportReportToPdf(data: ReportPdfExportData): Promise<void
     throw new Error(msg);
   }
 
-  const pdfBlob = await response.blob();
+  return readPdfBlobFromResponse(response);
+};
+
+const invokePdfBlob = async (data: ReportPdfExportData): Promise<Blob> => {
+  const { data: result, error } = await supabase.functions.invoke('export-object-report-pdf', {
+    body: data,
+    headers: {
+      'Accept': 'application/pdf, application/json',
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Erro ao gerar PDF');
+  }
+
+  return normalizePdfResult(result);
+};
+
+export async function exportReportToPdf(data: ReportPdfExportData): Promise<void> {
+  const { data: sessionData } = await supabase.auth.getSession();
+  const token = sessionData?.session?.access_token;
+  if (!token) throw new Error('Usuário não autenticado');
+
+  let pdfBlob: Blob;
+  try {
+    pdfBlob = await fetchPdfBlob(data, token);
+  } catch (error) {
+    const message = error instanceof Error ? error.message.toLowerCase() : '';
+    const shouldFallback = message.includes('failed to fetch') || message.includes('network') || message.includes('load failed');
+    if (!shouldFallback) throw error;
+    pdfBlob = await invokePdfBlob(data);
+  }
+
   if (pdfBlob.size === 0) throw new Error('PDF vazio retornado');
 
   const safeProjectName = data.project.name.replace(/[^a-zA-Z0-9-_À-ÿ\s]/g, '').trim().replace(/\s+/g, '_');
