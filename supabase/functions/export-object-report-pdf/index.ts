@@ -1142,6 +1142,7 @@ function buildHtml(payload: ReportPayload): string {
       </div>
       <div class="pdf-content">
         ${buildCoverHtml(payload)}
+        ${buildTocHtml(payload.sections)}
         ${sectionsHtml}
         ${signatureHtml}
         ${buildFooterHtml(payload.visualConfig)}
