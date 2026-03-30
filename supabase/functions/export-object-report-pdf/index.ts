@@ -1420,22 +1420,42 @@ Deno.serve(async (req) => {
     const rawPdfBuffer = await browserlessResponse.arrayBuffer();
     console.log(`Raw PDF size: ${(rawPdfBuffer.byteLength / 1024).toFixed(1)}KB`);
 
-    // Post-processing: remove page number from cover (page 1) using pdf-lib
+    // Post-processing: fix page numbering using pdf-lib
+    // Reference format: cover has NO number, content pages start at "1"
+    // Puppeteer numbers all pages starting at 1, so we redraw with offset
     let pdfBuffer: ArrayBuffer;
     try {
       const pdfDoc = await PDFDocument.load(rawPdfBuffer);
+      const timesFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
       const pages = pdfDoc.getPages();
-      if (pages.length > 0) {
-        const firstPage = pages[0];
-        const { width } = firstPage.getSize();
-        // Draw white rectangle over the page number "1" in bottom-right corner
-        firstPage.drawRectangle({
-          x: width - 55,
-          y: 18,
-          width: 45,
-          height: 20,
+
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        const { width } = page.getSize();
+
+        // Draw white rectangle over Puppeteer's page number on ALL pages
+        // The number sits in the bottom-right margin area
+        page.drawRectangle({
+          x: width - 70,
+          y: 12,
+          width: 60,
+          height: 24,
           color: rgb(1, 1, 1),
         });
+
+        // Redraw correct number on content pages (skip cover = page 0)
+        if (i > 0) {
+          const pageNum = String(i); // page 1 of content = "1", page 2 = "2", etc.
+          const textWidth = timesFont.widthOfTextAtSize(pageNum, 10);
+          // Position: right-aligned at ~20mm (56.7pt) from right edge
+          page.drawText(pageNum, {
+            x: width - 56.7 - textWidth / 2,
+            y: 20,
+            size: 10,
+            font: timesFont,
+            color: rgb(0, 0, 0),
+          });
+        }
       }
       const finalPdfBytes = await pdfDoc.save();
       pdfBuffer = finalPdfBytes.buffer;
