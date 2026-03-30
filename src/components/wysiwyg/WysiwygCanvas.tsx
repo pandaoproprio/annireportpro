@@ -2,6 +2,8 @@ import React, { useMemo, useCallback } from 'react';
 import { DocumentPage, DocumentBlock, LayoutConfig, HeaderFooterConfig } from '@/types/document';
 import { StructuredRichContent, structuredToHtml, htmlToStructured, createDefaultStructuredContent, VARIABLE_LABELS, RichTextVariable } from '@/types/richText';
 import { WysiwygBlockRenderer } from './WysiwygBlockRenderer';
+import type * as Y from 'yjs';
+import type { Awareness } from 'y-protocols/awareness';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, DragEndEvent,
@@ -142,6 +144,10 @@ interface WysiwygCanvasProps {
   onUpdateGlobalHeader: (updates: Partial<HeaderFooterConfig>) => void;
   onUpdateGlobalFooter: (updates: Partial<HeaderFooterConfig>) => void;
   documentTitle: string;
+  /** Yjs doc for collaborative editing (optional) */
+  ydoc?: Y.Doc | null;
+  /** Yjs awareness for cursor display (optional) */
+  awareness?: Awareness | null;
 }
 
 export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
@@ -150,6 +156,7 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
   onReorderBlocks, onDeselectBlock,
   onUpdateGlobalHeader, onUpdateGlobalFooter,
   documentTitle,
+  ydoc, awareness,
 }) => {
   const pageW = layout.pageWidth * MM_TO_PX;
   const pageH = layout.pageHeight * MM_TO_PX;
@@ -243,6 +250,8 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
                               onSelect={() => onSelectBlock(block.id)}
                               onUpdate={(updates) => onUpdateBlock(block.id, updates)}
                               onRemove={() => onRemoveBlock(block.id)}
+                              ydoc={ydoc}
+                              awareness={awareness}
                             />
                           </SortableItem>
                         ))}

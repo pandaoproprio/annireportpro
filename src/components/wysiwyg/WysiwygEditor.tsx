@@ -4,6 +4,8 @@ import { WysiwygToolbar } from './WysiwygToolbar';
 import { WysiwygPropertiesPanel } from './WysiwygPropertiesPanel';
 import { useDocumentModel } from '@/components/editor/hooks/useDocumentModel';
 import { useExportEngine } from '@/components/editor/hooks/useExportEngine';
+import { useYjsCollaboration } from '@/hooks/useYjsCollaboration';
+import { CollaborationPresenceBar } from '@/components/CollaborationPresenceBar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface Props {
@@ -13,6 +15,12 @@ interface Props {
 export const WysiwygEditor: React.FC<Props> = ({ documentId }) => {
   const doc = useDocumentModel(documentId);
   const exportEngine = useExportEngine(doc.model, doc.title);
+
+  // Yjs collaboration — enabled when we have a documentId
+  const { ydoc, awareness, connected } = useYjsCollaboration({
+    channelKey: documentId ? `doc:${documentId}` : '',
+    enabled: !!documentId,
+  });
 
   return (
     <TooltipProvider>
@@ -26,6 +34,14 @@ export const WysiwygEditor: React.FC<Props> = ({ documentId }) => {
           isSaving={doc.isSaving}
           title={doc.title}
         />
+
+        {/* Collaboration presence indicator */}
+        {connected && awareness && (
+          <div className="px-4 py-1 bg-muted/50 border-b flex items-center gap-2 text-xs text-muted-foreground">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <span>Edição colaborativa ativa (Yjs CRDT)</span>
+          </div>
+        )}
 
         <div className="flex flex-1 overflow-hidden">
           {/* Canvas area — scrollable, center-aligned */}
@@ -44,6 +60,8 @@ export const WysiwygEditor: React.FC<Props> = ({ documentId }) => {
               onUpdateGlobalHeader={doc.updateGlobalHeader}
               onUpdateGlobalFooter={doc.updateGlobalFooter}
               documentTitle={doc.title}
+              ydoc={ydoc}
+              awareness={awareness}
             />
           </div>
 

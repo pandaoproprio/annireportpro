@@ -4,8 +4,11 @@ import { WysiwygTextBlock } from './blocks/WysiwygTextBlock';
 import { WysiwygImageBlock } from './blocks/WysiwygImageBlock';
 import { WysiwygTableBlock } from './blocks/WysiwygTableBlock';
 import { WysiwygSpacerBlock } from './blocks/WysiwygSpacerBlock';
+import { CollaborativeTextBlock } from './CollaborativeTextBlock';
 import { GripVertical, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import type * as Y from 'yjs';
+import type { Awareness } from 'y-protocols/awareness';
 
 interface Props {
   block: DocumentBlock;
@@ -13,12 +16,20 @@ interface Props {
   onSelect: () => void;
   onUpdate: (updates: Partial<DocumentBlock>) => void;
   onRemove: () => void;
+  /** Yjs doc for collaborative editing (optional) */
+  ydoc?: Y.Doc | null;
+  /** Yjs awareness for cursor display (optional) */
+  awareness?: Awareness | null;
 }
 
-export const WysiwygBlockRenderer: React.FC<Props> = ({ block, isActive, onSelect, onUpdate, onRemove }) => {
+export const WysiwygBlockRenderer: React.FC<Props> = ({ block, isActive, onSelect, onUpdate, onRemove, ydoc, awareness }) => {
   const renderBlock = () => {
     switch (block.type) {
       case 'text':
+        // Use collaborative block when Yjs is available
+        if (ydoc && awareness) {
+          return <CollaborativeTextBlock block={block} isActive={isActive} onSelect={onSelect} onUpdate={onUpdate} ydoc={ydoc} awareness={awareness} />;
+        }
         return <WysiwygTextBlock block={block} isActive={isActive} onSelect={onSelect} onUpdate={onUpdate} />;
       case 'image':
         return <WysiwygImageBlock block={block} isActive={isActive} onSelect={onSelect} onUpdate={onUpdate} />;
