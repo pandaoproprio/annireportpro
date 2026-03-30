@@ -106,27 +106,6 @@ export const ActivityList: React.FC<ActivityListProps> = ({
                 {act.results && (
                   <p className="text-sm text-muted-foreground"><strong>Resultados:</strong> {act.results}</p>
                 )}
-                {act.photos && act.photos.length > 0 && (
-                  <div className="flex gap-2 mt-2">
-                    {act.photos.slice(0, 4).map((photo, idx) => (
-                      photo.match(/\.(mp4|mov|webm|avi)(\?|$)/i) ? (
-                        <div key={idx} className="relative h-16 w-16 cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); onPhotoClick(photo); }}>
-                          <video src={photo} muted className="h-16 w-16 object-cover rounded border" />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded">
-                            <Play className="w-5 h-5 text-white fill-white" />
-                          </div>
-                        </div>
-                      ) : (
-                        <img key={idx} src={photo} alt="" className="h-16 w-16 object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity" onClick={(e) => { e.stopPropagation(); onPhotoClick(photo); }} />
-                      )
-                    ))}
-                    {act.photos.length > 4 && (
-                      <div className="h-16 w-16 rounded border bg-muted flex items-center justify-center text-sm text-muted-foreground">
-                        +{act.photos.length - 4}
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
               <div className="flex md:flex-col gap-2">
                 <Button variant="outline" size="sm" onClick={() => onView(act)} title="Ver detalhes">
