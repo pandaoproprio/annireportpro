@@ -943,6 +943,9 @@ function buildHtml(payload: ReportPayload): string {
         /* ─── SECTIONS ─── */
         .section { margin: 0 0 10mm; }
 
+        /* Smart typography: prevent orphans/widows */
+        p, li { orphans: 3; widows: 3; }
+
         .section-title, .subsection-title, .photo-group-title,
         h1, h2, h3 {
           font-weight: 700;
