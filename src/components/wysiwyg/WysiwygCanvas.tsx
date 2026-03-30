@@ -250,6 +250,8 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
                               onSelect={() => onSelectBlock(block.id)}
                               onUpdate={(updates) => onUpdateBlock(block.id, updates)}
                               onRemove={() => onRemoveBlock(block.id)}
+                              ydoc={ydoc}
+                              awareness={awareness}
                             />
                           </SortableItem>
                         ))}
