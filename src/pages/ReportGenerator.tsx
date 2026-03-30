@@ -143,18 +143,10 @@ export const ReportGenerator: React.FC = () => {
     setIsExporting(true);
     setExportType('pdf');
     try {
-      await exportReportToPdf({
-        project, activities, sections, objectText, summary,
-        goalNarratives, goalPhotos,
-        otherActionsNarrative, otherActionsPhotos,
-        communicationNarrative, communicationPhotos,
-        satisfaction, futureActions, expenses, links, linkDisplayNames,
-        sectionPhotos, photoMetadata,
-        visualConfig: vc.config,
-        pageLayouts,
-        sectionPhotoGroups,
-        selectedVideoUrls: state.selectedVideoUrls,
-      });
+      const orgLogoUrl = vc.config?.logoUrl ?? undefined;
+      const data = mapObjetoIToReportData(state, orgLogoUrl);
+      const blob = await generateReport(data, 'objeto-i');
+      downloadReport(blob, `relatorio-objeto-i-${Date.now()}`);
       if (project?.id) {
         createAsanaTaskOnPublish({
           entityType: 'activity',
