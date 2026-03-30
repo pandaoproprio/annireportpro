@@ -1227,19 +1227,21 @@ function buildHtml(payload: ReportPayload): string {
       </style>
     </head>
     <body>
+      ${buildCoverHtml(payload)}
       <div class="pdf-header-table">
         <div class="pdf-header-row">
           <div class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</div>
         </div>
-      </div>
-      <div class="pdf-content">
-        ${buildCoverHtml(payload)}
-        ${buildTocHtml(payload.sections)}
-        ${sectionsHtml}
-        ${signatureHtml}
-        ${buildFooterHtml(payload.visualConfig)}
-        <div class="audit-footer">
-          Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
+        <div class="pdf-body-row">
+          <div class="pdf-body-cell">
+            ${buildTocHtml(payload.sections)}
+            ${sectionsHtml}
+            ${signatureHtml}
+            ${buildFooterHtml(payload.visualConfig)}
+            <div class="audit-footer">
+              Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
+            </div>
+          </div>
         </div>
       </div>
       <script>
