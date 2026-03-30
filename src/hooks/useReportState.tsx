@@ -307,17 +307,18 @@ export const useReportState = () => {
 
   const handleExpenseImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, expenseId: string) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+      const rawFile = e.target.files[0];
       try {
+        const file = await compressImage(rawFile, { maxWidth: 1920, maxHeight: 1920, quality: 0.8 });
         const photoId = crypto.randomUUID();
         const fileExt = file.name.split('.').pop() || 'jpg';
         const filePath = `reports/${project?.id}/expenses/${photoId}.${fileExt}`;
-        const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
-        if (error) { toast.error(`Erro ao enviar imagem: ${file.name}`); return; }
+        const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+        if (error) { toast.error(`Erro ao enviar imagem: ${rawFile.name}`); return; }
         const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
         updateExpense(expenseId, 'image', urlData.publicUrl);
-        toast.success(`Imagem ${file.name} enviada com sucesso`);
-      } catch { toast.error(`Erro ao processar imagem: ${file.name}`); }
+        toast.success(`Imagem ${rawFile.name} enviada com sucesso`);
+      } catch { toast.error(`Erro ao processar imagem: ${rawFile.name}`); }
     }
   };
 
