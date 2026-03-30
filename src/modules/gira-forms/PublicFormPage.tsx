@@ -582,7 +582,7 @@ export default function PublicFormPage() {
                 <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Forms</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
-              {form.description && <p className="mt-1 text-sm" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
+              {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
             </div>
           </div>
 
