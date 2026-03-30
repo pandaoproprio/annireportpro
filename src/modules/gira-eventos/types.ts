@@ -26,6 +26,39 @@ export interface EventRegistration {
   status: string;
   registered_at: string;
   user_id: string | null;
+  qr_token: string | null;
+}
+
+export interface EventCheckin {
+  id: string;
+  event_id: string;
+  registration_id: string;
+  checkin_at: string;
+  checkin_method: string;
+  signature_type: 'drawing' | 'digital_accept';
+  signature_data: string | null;
+  signature_hash: string;
+  full_name: string;
+  document_number: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  geolocation: Record<string, unknown> | null;
+  metadata: Record<string, unknown>;
+}
+
+export interface EventCertificate {
+  id: string;
+  event_id: string;
+  registration_id: string;
+  checkin_id: string;
+  certificate_hash: string;
+  issued_at: string;
+  participant_name: string;
+  participant_document: string | null;
+  event_title: string;
+  event_date: string;
+  event_duration_hours: number | null;
+  verification_url: string | null;
 }
 
 export const EVENT_CATEGORIES = [
