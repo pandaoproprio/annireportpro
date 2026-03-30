@@ -63,6 +63,7 @@ export const sidebarSections: SidebarSection[] = [
       { to: '/team-report', label: 'Relatório da Equipe', iconName: 'Users', permission: 'report_team' },
       { to: '/justificativa', label: 'Justificativa Prorrogação', iconName: 'FileText', permission: 'report_team' },
       { to: '/report-v2', label: 'Relatório V2', iconName: 'BarChart3', permission: 'report_object' },
+      { to: '/report-objeto-ii', label: 'Relatório do Objeto II', iconName: 'FileCheck', permission: 'report_object' },
       { to: '/team', label: 'Gestão de Equipes', iconName: 'UsersRound', permission: 'team_management' },
       // ⚠️ GIRA Forms — MÓDULO PROTEGIDO
       { to: '/forms', label: 'GIRA Forms', iconName: 'ClipboardList', permission: 'forms_view' },

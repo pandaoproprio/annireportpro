@@ -60,6 +60,7 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/wysiwyg/:id', element: WysiwygEditorPage },
   { path: '/wysiwyg', element: WysiwygEditorPage },
   { path: '/report-v2', element: ReportV2Page, permission: 'report_object' },
+  { path: '/report-objeto-ii', element: ReportObjetoIIPage, permission: 'report_object' },
   { path: '/forms', element: FormsListPage, permission: 'forms_view' },
   { path: '/forms/:id', element: FormBuilderPage, permission: 'forms_view' },
   { path: '/eventos', element: EventsListPage, permission: 'events_view' },

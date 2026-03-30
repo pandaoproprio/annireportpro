@@ -77,13 +77,13 @@ const ReportObjetoIIPage: React.FC = () => {
     try {
       const data: ReportObjIIData = {
         title,
-        logoLeft: visualConfig?.logoLeft || '',
+        logoLeft: visualConfig?.logo || '',
         logoCenter: visualConfig?.logoCenter || '',
-        logoRight: visualConfig?.logoRight || '',
+        logoRight: visualConfig?.logoSecondary || '',
         sections,
         projectName: project.name,
-        projectPeriod: project.start_date && project.end_date
-          ? `${new Date(project.start_date).toLocaleDateString('pt-BR')} a ${new Date(project.end_date).toLocaleDateString('pt-BR')}`
+        projectPeriod: project.startDate && project.endDate
+          ? `${new Date(project.startDate).toLocaleDateString('pt-BR')} a ${new Date(project.endDate).toLocaleDateString('pt-BR')}`
           : '',
       };
       await exportReportObjIIPdf(data);
