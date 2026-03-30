@@ -9,7 +9,8 @@ import type { ReportV2Data } from './types';
 import { DEFAULT_HEADER } from './types';
 import ReportForm from './ReportForm';
 import ReportPreview from './ReportPreview';
-import { generateReportPdf } from './reportService';
+import { generateReport, downloadReport } from '@/lib/pdf/generate';
+import type { ReportData } from '@/lib/pdf/schema';
 
 type Mode = 'edit' | 'preview';
 
@@ -109,14 +110,25 @@ const ReportV2Page: React.FC = () => {
   const handleGeneratePdf = async () => {
     setGenerating(true);
     try {
-      const blob = await generateReportPdf(data);
-      const filename = `${data.title || 'relatorio'}.pdf`.replace(/\s+/g, '_');
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
+      const reportData: ReportData = {
+        meta: {
+          title: data.title || 'Relatório',
+          subtitle: '',
+          organization: activeProject?.organizationName ?? '',
+          logoUrl: undefined,
+          period: '',
+          generatedAt: new Date().toISOString(),
+        },
+        sections: (data.sections ?? []).map((s, i) => ({
+          id: s.id ?? `section-${i}`,
+          title: s.title ?? `Seção ${i + 1}`,
+          content: s.content ?? '',
+        })),
+        assets: [],
+      };
+
+      const blob = await generateReport(reportData, 'relatorio-v2');
+      downloadReport(blob, `relatorio-v2-${Date.now()}`);
       toast.success('PDF gerado com sucesso!');
     } catch (err) {
       console.error(err);
