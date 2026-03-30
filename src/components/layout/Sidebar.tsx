@@ -99,7 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
                       key={item.to}
                       to={item.to}
                       icon={renderIcon(item.iconName)}
-                      label={item.to === '/' && role === 'OFICINEIRO' ? 'Meu Resumo' : item.label}
+                      label={item.to === '/' && (role === 'OFICINEIRO' || role === 'VOLUNTARIO') ? 'Meu Resumo' : item.label}
                       onClick={onClose}
                     />
                   ))}
