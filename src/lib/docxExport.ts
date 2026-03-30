@@ -472,7 +472,7 @@ export const exportToDocx = async (data: ExportData) => {
 
       default:
         if (section.type === 'custom' && section.content) {
-          docSections.push(...textToParagraphs(section.content));
+          docSections.push(...richTextToParagraphs(section.content));
         }
     }
   }
