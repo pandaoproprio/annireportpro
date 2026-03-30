@@ -15,7 +15,7 @@ import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 
 const ReportObjetoIIPage: React.FC = () => {
   const { activeProject: project } = useAppData();
-  const { config: visualConfig } = useReportVisualConfig();
+  const { config: visualConfig } = useReportVisualConfig(project?.id, 'report_object');
 
   const [title, setTitle] = useState('RELATÓRIO DO OBJETO');
   const [mode, setMode] = useState<'edit' | 'preview'>('edit');
