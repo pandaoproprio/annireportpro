@@ -230,7 +230,21 @@
   }
 }
 
-/* PWA Safe Area Support (iOS notch) */
+/* ─── ABNT WYSIWYG editor body: first-line indent ─── */
+.abnt-body-editor p {
+  text-indent: 12.5mm;
+}
+.abnt-body-editor p:first-child {
+  text-indent: 12.5mm;
+}
+/* Citações longas no editor */
+.abnt-body-editor blockquote {
+  margin-left: 40mm;
+  font-size: 10pt;
+  line-height: 1.0;
+  text-indent: 0;
+}
+
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
