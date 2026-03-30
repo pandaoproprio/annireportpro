@@ -1186,23 +1186,6 @@ export const exportToDocx = async (data: ExportData) => {
                 }));
               }
 
-              // Page numbers
-              children.push(new Paragraph({
-                alignment: AlignmentType.CENTER,
-                  spacing: { after: 20 },
-                  children: [new TextRun({ text: l3Text, size: l3Size, font: 'Times New Roman' })],
-              }));
-              }
-
-              const customText = vc?.footerText;
-              if (customText) {
-                children.push(new Paragraph({
-                  alignment: AlignmentType.CENTER,
-                  spacing: { after: 20 },
-                  children: [new TextRun({ text: customText, size: 14, font: 'Times New Roman', italics: true })],
-                }));
-              }
-
               // NO page numbers on cover page
               return children;
             })(),
