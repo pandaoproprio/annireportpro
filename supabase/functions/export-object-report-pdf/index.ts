@@ -1196,9 +1196,10 @@ function buildHtml(payload: ReportPayload): string {
             img.addEventListener('load', check);
             img.addEventListener('error', check);
           });
-          // Safety timeout: resolve after 12s regardless
-          setTimeout(function() { resolve(true); }, 12000);
+          // Safety timeout: resolve after 5s regardless
+          setTimeout(function() { resolve(true); }, 5000);
         });
+        window.__imagesReady.then(function() { window.__imagesReady = true; });
       </script>
     </body>
   </html>`;
@@ -1247,36 +1248,47 @@ Deno.serve(async (req) => {
 
     console.log(`HTML size: ${(html.length / 1024).toFixed(1)}KB`);
 
-    const browserlessResponse = await fetch(
-      `https://chrome.browserless.io/pdf?token=${browserlessApiKey}&timeout=55000&bestAttempt=true`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          html,
-          bestAttempt: true,
-          gotoOptions: {
-            waitUntil: "networkidle2",
-            timeout: 45000,
-          },
-          waitForFunction: {
-            fn: "() => window.__imagesReady",
-            timeout: 15000,
-          },
-          options: {
-            format: "A4",
-            printBackground: true,
-            timeout: 55000,
-            preferCSSPageSize: true,
-            displayHeaderFooter: true,
-            headerTemplate: "<span></span>",
-            footerTemplate: `<div style="width:100%;text-align:right;font-size:10pt;color:#000;font-family:'Times New Roman',serif;padding-right:20mm;padding-bottom:2mm;">
-              <span class="pageNumber"></span>
-            </div>`,
-          },
-        }),
-      },
-    );
+    let browserlessResponse: Response;
+    try {
+      const controller = new AbortController();
+      const abortTimer = setTimeout(() => controller.abort(), 50000);
+
+      browserlessResponse = await fetch(
+        `https://chrome.browserless.io/pdf?token=${browserlessApiKey}&timeout=45000&bestAttempt=true`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
+          body: JSON.stringify({
+            html,
+            bestAttempt: true,
+            gotoOptions: {
+              waitUntil: "domcontentloaded",
+              timeout: 30000,
+            },
+            options: {
+              format: "A4",
+              printBackground: true,
+              timeout: 40000,
+              preferCSSPageSize: true,
+              displayHeaderFooter: true,
+              headerTemplate: "<span></span>",
+              footerTemplate: `<div style="width:100%;text-align:right;font-size:10pt;color:#000;font-family:'Times New Roman',serif;padding-right:20mm;padding-bottom:2mm;">
+                <span class="pageNumber"></span>
+              </div>`,
+            },
+          }),
+        },
+      );
+
+      clearTimeout(abortTimer);
+    } catch (fetchErr) {
+      console.error("Browserless fetch failed:", fetchErr);
+      return new Response(JSON.stringify({ error: `Browserless fetch failed: ${fetchErr instanceof Error ? fetchErr.message : String(fetchErr)}` }), {
+        status: 502,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     if (!browserlessResponse.ok) {
       const errorText = await browserlessResponse.text();
@@ -1287,7 +1299,9 @@ Deno.serve(async (req) => {
       });
     }
 
+    console.log("Browserless OK, reading PDF buffer...");
     const pdfBuffer = await browserlessResponse.arrayBuffer();
+    console.log(`PDF size: ${(pdfBuffer.byteLength / 1024).toFixed(1)}KB`);
     const safeFilename = encodeURIComponent(`Relatorio_${(payload.project?.name || "Projeto").replace(/\s+/g, "_")}.pdf`);
 
     return new Response(pdfBuffer, {
