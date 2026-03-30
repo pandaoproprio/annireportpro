@@ -136,6 +136,43 @@ export default function PublicFormPage() {
   const fields = fieldsQuery.data || [];
   const design: FormDesignSettings = (form?.settings || {}) as FormDesignSettings;
 
+  // ─── Dynamic OG meta tags for social previews ─────────────
+  React.useEffect(() => {
+    if (!form) return;
+    const ogImage = design.coverImageUrl || design.headerImageUrl || design.logoUrl || '';
+    const ogTitle = form.title || 'GIRA Forms';
+    const ogDesc = (form.description || '').slice(0, 160);
+
+    document.title = ogTitle;
+
+    const setMeta = (property: string, content: string) => {
+      let el = document.querySelector(`meta[property="${property}"]`) || document.querySelector(`meta[name="${property}"]`);
+      if (!el) {
+        el = document.createElement('meta');
+        if (property.startsWith('og:')) el.setAttribute('property', property);
+        else el.setAttribute('name', property);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+
+    setMeta('og:title', ogTitle);
+    setMeta('og:description', ogDesc);
+    setMeta('og:type', 'website');
+    if (ogImage) setMeta('og:image', ogImage);
+    setMeta('twitter:title', ogTitle);
+    setMeta('twitter:description', ogDesc);
+    if (ogImage) {
+      setMeta('twitter:image', ogImage);
+      setMeta('twitter:card', 'summary_large_image');
+    }
+    setMeta('description', ogDesc);
+
+    return () => {
+      document.title = 'GIRA Relatórios';
+    };
+  }, [form, design]);
+
   // ─── Find the respondent name/email fields ────────────────
   const nameFieldId = useMemo(() => fields.find(f => isNameField(f.label))?.id, [fields]);
   const emailFieldId = useMemo(() => fields.find(f => isEmailField(f.label))?.id, [fields]);
