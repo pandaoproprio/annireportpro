@@ -1,158 +1,71 @@
 
 
-# Auditoria Tecnica Completa — GIRA Relatorios: Exportacao e Evolucao
+# Correção Definitiva: PDF Export — thead/tfoot + pdf-lib
 
----
+## Problema
+O `headerTemplate`/`footerTemplate` do Puppeteer executam em contexto DOM isolado. Imagens (logos) não carregam, scripts não funcionam, e não há API para ocultar elementos por página.
 
-## 1. DIAGNOSTICO GERAL
+## Solução (3 partes)
 
-O sistema possui **dois motores de exportacao PDF completamente distintos** e um motor DOCX parcialmente implementado:
+### Parte 1: Reestruturar HTML (`buildHtml`)
 
-| Motor | Usado por | Tecnologia | Execucao |
-|---|---|---|---|
-| **Browserless/Puppeteer** | Relatorio do Objeto (`export-object-report-pdf`) | HTML → PDF server-side | Edge Function |
-| **jsPDF** (client-side) | Relatorio da Equipe, Justificativa | Canvas manual com calculo Y | Navegador |
-| **docx** (client-side) | Relatorio do Objeto | Gerador estruturado | Navegador |
+**Capa** — `<div class="cover">` com `break-after: page` (já existe, linha 660). Contém seu próprio rodapé institucional inline (já existe, linha 651-657). Fica FORA da tabela.
 
----
+**Corpo** — Envolver o conteúdo (TOC + seções + assinatura) em uma `<table class="pdf-layout">`:
+- `<thead>`: cabeçalho institucional (logos via `buildHeaderHtml`) — repete automaticamente pelo Chromium
+- `<tfoot>`: rodapé institucional (via `buildFooterHtml`) — repete automaticamente
+- `<tbody>`: sumário + seções + assinatura + audit footer
 
-## 2. CAUSAS RAIZ DOS ERROS DE EXPORTACAO (Priorizadas)
-
-### CR-1: Conflito `position: fixed` + `@page margin: 0` + margem Puppeteer
-
-**Problema**: O CSS define `@page { margin: 0 }` (linha 818) e delega as margens ao Puppeteer (`margin: { top: "36mm", ... }` — linha 1146). O header usa `position: fixed; top: 0; left: 30mm; right: 20mm; height: 26mm`. Em Chromium headless, `position: fixed` em contexto de impressao se comporta como `position: running(header)` — o elemento e repetido em TODAS as paginas, mas ocupa espaco DENTRO da area de margem definida pelo Puppeteer.
-
-**Por que falha**: A margem de 36mm do Puppeteer cria um espaco VAZIO acima do conteudo. O header fixo renderiza nesse espaco. MAS — o conteudo do `<body>` começa na posicao Y=0 do viewport (pois `@page margin: 0`), e o Puppeteer empurra 36mm. O header com `left: 30mm; right: 20mm` fica desalinhado quando a margem esquerda do Puppeteer tambem e 30mm, duplicando o offset (o header recua 30mm da margem, que ja recua 30mm da borda).
-
-**Tentativas anteriores falharam porque**: Ajustaram margem do Puppeteer OU CSS, nunca ambos em sincronia.
-
-### CR-2: Imagens nao carregadas antes da captura
-
-**Problema**: O script inline (linhas 1070-1079) seta `loading="eager"` e `decoding="sync"`, mas NAO AGUARDA o carregamento. O `gotoOptions.waitUntil: "networkidle2"` espera que a rede fique ociosa, mas imagens do Supabase Storage que exigem redirect (render/image) podem nao ser contadas como requests pendentes pelo Chromium.
-
-**Por que falha**: Nao ha `Promise.all` + `img.decode()` nem `waitForFunction` que garanta que todas as imagens tenham `naturalWidth > 0`.
-
-### CR-3: Tabela de despesas com overflow oculto
-
-**Problema**: A classe `.table-wrap` tinha `overflow: hidden` removido (comentario na linha 948), mas a tabela com `table-layout: fixed` e colunas com largura percentual (24%/46%/30%) pode clipar conteudo longo em celulas. A thumbnail (`.expense-thumb`) tem `max-height: 100px` com `object-fit: cover`, o que reduz drasticamente fotos horizontais.
-
-### CR-4: Grid de fotos com `grid-template-columns: repeat(2, 1fr)` sem fallback
-
-**Problema**: CSS Grid em contexto de impressao Chromium pode gerar itens com altura 0 quando o container nao tem altura explicita e o item usa `break-inside: avoid`. Se um item de foto (imagem 200px + caption) nao cabe no restante da pagina, ele e empurrado para a proxima, mas o grid slot original permanece vazio.
-
-### CR-5: Motor jsPDF (Equipe/Justificativa) — calculo manual de paginacao
-
-**Problema**: Os relatorios da Equipe e Justificativa usam `src/lib/pdf/` (jsPDF), que calcula posicao Y manualmente. A funcao `ensureSpace` verifica se ha espaco, mas nao lida com blocos de rich-text que excedem uma pagina inteira. Imagens grandes ou galerias com muitas fotos podem estourar `MAX_Y` sem quebra.
-
-### CR-6: DOCX sem fotos nem rich-text
-
-**Problema**: `src/lib/docxExport.ts` NAO renderiza fotos (nem thumbnails de despesas, nem galerias). Rich-text HTML e tratado como texto plano (`textToParagraphs` faz `text.split('\n')`). A tabela de despesas DOCX tem apenas 2 colunas (Item + Descricao) — sem coluna de Registro Fotografico.
-
----
-
-## 3. PONTOS EXATOS DO SISTEMA AFETADOS
-
-```text
-supabase/functions/export-object-report-pdf/index.ts
-  L818   @page { margin: 0 }           ← conflito com margem Puppeteer
-  L835   left: 30mm; right: 20mm       ← offset duplicado
-  L1146  margin: { top: "36mm", ... }  ← colide com @page
-  L1070  Script inline sem await        ← imagens nao garantidas
-
-src/lib/docxExport.ts
-  L258-298  Tabela despesas sem fotos
-  L56-78    textToParagraphs ignora HTML
-  L351-353  Custom sections: texto plano
-
-src/lib/pdf/ (jsPDF — Equipe/Justificativa)
-  pageLayout.ts    ensureSpace nao fraciona blocos grandes
-  imageHelpers.ts  loadImage com fallback triplo (funcional, mas lento)
-
-src/lib/reportPdfExport.ts
-  L61-74  Client-side apenas invoca Edge Function (OK)
+CSS necessário:
+```css
+.pdf-layout { width: 100%; border-collapse: collapse; }
+.pdf-layout thead { display: table-header-group; }
+.pdf-layout tfoot { display: table-footer-group; }
+.pdf-layout td { padding: 0; border: none; vertical-align: top; }
+.pdf-header-cell { padding-bottom: 4mm; border-bottom: 1px solid #9ca3af; }
+.pdf-footer-cell { padding-top: 2mm; border-top: 1px solid #9ca3af; }
 ```
 
----
+### Parte 2: Simplificar Puppeteer options
 
-## 4. DETECCAO DE DUPLICIDADE E INTEGRIDADE
+```typescript
+displayHeaderFooter: true,
+headerTemplate: '<span></span>',  // vazio mas obrigatório
+footerTemplate: '<div style="width:100%;text-align:right;padding-right:20mm;font-size:10pt;font-family:serif;"><span class="pageNumber"></span></div>',
+margin: { top: "30mm", bottom: "25mm", left: "30mm", right: "20mm" }
+```
 
-| Problema | Localizacao |
-|---|---|
-| Filtro de atividades deletadas implementado 3x com logica identica | Edge Function (`isSoftDeletedActivity`), `docxExport.ts` (`isDeletedActivity`), `src/lib/pdf/` |
-| `headerConfig` construido separadamente em 3 exportadores | `teamReportPdfExport`, `justificationPdfExport`, Edge Function |
-| Nenhum exportador usa `DISTINCT` ou `GROUP BY` — sao arrays recebidos do frontend | N/A (nao ha queries SQL nos exportadores) |
-| Fotos duplicadas: sem deduplicacao global entre `goalPhotos`, `sectionPhotos` e `activity.photos` | Edge Function linhas 639-643, client jsPDF |
+Logos e texto institucional agora estão no HTML do corpo (thead/tfoot), não nos templates isolados.
 
----
+### Parte 3: Post-processing com pdf-lib (remover nº página 1)
 
-## 5. EVOLUCAO DA INTELIGENCIA (Analytics)
+Após receber o buffer do Browserless:
+```typescript
+import { PDFDocument, rgb } from 'https://esm.sh/pdf-lib@1.17.1';
 
-### Estado atual
-O sistema **lista dados** e gera narrativas via IA, mas NAO faz:
-- Analise de Desvio (Planned vs Actual)
-- Predicao de Burn Rate
-- Alertas de Inconsistencia Contabil
+const pdfDoc = await PDFDocument.load(pdfBuffer);
+const firstPage = pdfDoc.getPages()[0];
+const { width } = firstPage.getSize();
+// Retângulo branco sobre a numeração "1" no canto inferior direito
+firstPage.drawRectangle({
+  x: width - 55, y: 18, width: 45, height: 20,
+  color: rgb(1, 1, 1),
+});
+const finalPdf = await pdfDoc.save();
+```
 
-### Componentes existentes que servem de base
-- `PredictiveAnalysisDashboard.tsx` — projeta atrasos com baseline historico
-- `BenchmarkingDashboard.tsx` — comparativo entre projetos
-- `performance_snapshots` — tabela de snapshots mensais
-- `report_performance_tracking` — lead/cycle time por relatorio
+## Arquivo editado
+`supabase/functions/export-object-report-pdf/index.ts` — único arquivo. Nenhuma mudança nos consumidores client-side.
 
-### Roteiro para Dashboards Preditivos
-1. **Desvio Planejado vs Realizado**: Cruzar `projects.goals` (metas planejadas) com `activities` (execucao real) para calcular % de conclusao por meta
-2. **Burn Rate**: Usar `project_budget` + `budget_adjustments` para projetar data de esgotamento
-3. **Alertas Contabeis**: Comparar soma de `expenses` com orcamento aprovado e gerar alertas quando desvio > threshold
+## Mudanças específicas no código
 
----
+1. **Linhas 906-1295** (`buildHtml`): Reestruturar o body para `cover` + `table.pdf-layout` com thead/tfoot/tbody
+2. **Linhas 1363-1377** (Puppeteer options): Simplificar headerTemplate/footerTemplate para apenas numeração
+3. **Linhas 1400-1403** (pós-Browserless): Adicionar import de pdf-lib e post-processing do buffer
+4. **CSS** (linhas 910-1240): Adicionar estilos para `.pdf-layout`, `.pdf-header-cell`, `.pdf-footer-cell`
 
-## 6. INTERFACE DE AUDITORIA
-
-O sistema **NAO** inclui:
-- Data da Extracao no rodape do PDF
-- Hash de Integridade (SHA-256 do conteudo)
-- Versionamento do documento gerado
-
-O campo `formatLongDate()` (linha 176) gera a data atual para assinatura, mas nao e um timestamp de extracao com hora/minuto.
-
----
-
-## 7. RISCOS DE CONTINUAR COM A ABORDAGEM ATUAL
-
-1. **Header sempre vai sobrepor** enquanto houver conflito `@page margin: 0` + `position: fixed` + margem Puppeteer
-2. **Imagens vao falhar esporadicamente** sem mecanismo de espera deterministico
-3. **DOCX e um documento incompleto** — usuarios que dependem dele perdem fotos e formatacao
-4. **Dois motores PDF (jsPDF vs Browserless)** geram documentos visualmente diferentes para o mesmo sistema
-5. **Sem hash de integridade**, documentos nao tem validade juridica para auditoria externa
-
----
-
-## 8. PLANO DE CORRECAO (Ordem de Execucao)
-
-### Fase 1 — Estabilizar PDF do Objeto (Edge Function)
-1. Eliminar conflito de margens: Remover `position: fixed` do header. Usar tecnica de `display: table-header-group` para repetir header em cada pagina, ou usar a API `headerTemplate` do Puppeteer
-2. Implementar espera deterministica de imagens: Adicionar `waitForFunction` que verifica `document.images` todas com `complete === true`
-3. Permitir que tabelas e grids de fotos quebrem naturalmente entre paginas
-
-### Fase 2 — Corrigir DOCX
-4. Adicionar coluna "Registro Fotografico" com `ImageRun` (biblioteca `docx` suporta)
-5. Implementar parser HTML → `docx` Paragraphs com formatacao (bold, italic, listas)
-
-### Fase 3 — Unificar motores
-6. Migrar Relatorio da Equipe e Justificativa de jsPDF para Browserless (mesma Edge Function parametrizada ou funcoes separadas com CSS compartilhado)
-7. Extrair CSS compartilhado para template reutilizavel
-
-### Fase 4 — Integridade e Auditoria
-8. Adicionar timestamp de extracao (`DD/MM/AAAA HH:mm`) no rodape do PDF
-9. Gerar SHA-256 do HTML antes de enviar ao Browserless e incluir no rodape
-10. Registrar exportacao em `audit_logs`
-
-### Fase 5 — Analytics Preditivos
-11. Criar funcao `calculate_goal_deviation` (planejado vs realizado)
-12. Criar funcao `project_burn_rate` (orcamento restante / velocidade de gasto)
-13. Criar componente `DeviationAlertBanner` no Dashboard
-
----
-
-Deseja que eu execute o Plano comecando pela **Fase 1** (estabilizar o PDF do Objeto)?
+## Resultado esperado
+- **Capa**: Logo + título + info + rodapé institucional, SEM numeração, SEM cabeçalho repetido
+- **Páginas 2+**: Cabeçalho com logos (via thead), rodapé institucional (via tfoot), numeração (via Puppeteer)
+- **Determinístico**: Sem scripts, sem heurísticas, sem dependência de contexto isolado
 
