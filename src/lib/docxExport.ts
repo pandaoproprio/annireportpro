@@ -16,7 +16,7 @@ import {
   NumberFormat,
 } from 'docx';
 import { saveAs } from 'file-saver';
-import { Project, Activity, ActivityType, ExpenseItem, ReportSection } from '@/types';
+import { Project, Activity, ActivityType, ExpenseItem, ReportSection, PhotoGroup } from '@/types';
 import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
 
 interface ExportData {
@@ -35,7 +35,16 @@ interface ExportData {
   linkDisplayNames?: { attendance: string; registration: string; media: string };
   visualConfig?: ReportVisualConfig;
   selectedVideoUrls?: string[];
+  goalPhotos?: Record<string, string[]>;
+  otherActionsPhotos?: string[];
+  communicationPhotos?: string[];
+  sectionPhotos?: Record<string, string[]>;
+  photoMetadata?: Record<string, any[]>;
+  sectionPhotoGroups?: Record<string, PhotoGroup[]>;
 }
+
+const isDeletedActivity = (a: Activity) =>
+  Boolean((a as any).deleted_at || (a as any).deletedAt || (a as any).deleted);
 
 const formatActivityDate = (date: string, endDate?: string) => {
   const start = new Date(date).toLocaleDateString('pt-BR');
@@ -86,13 +95,13 @@ export const exportToDocx = async (data: ExportData) => {
   } = data;
 
   const getActivitiesByGoal = (goalId: string) =>
-    activities.filter(a => a.goalId === goalId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    activities.filter(a => a.goalId === goalId && !isDeletedActivity(a)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const getCommunicationActivities = () =>
-    activities.filter(a => a.type === ActivityType.COMUNICACAO).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    activities.filter(a => a.type === ActivityType.COMUNICACAO && !isDeletedActivity(a)).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const getOtherActivities = () =>
-    activities.filter(a => a.type === ActivityType.OUTROS || a.type === ActivityType.ADMINISTRATIVO || a.type === ActivityType.OCORRENCIA)
+    activities.filter(a => (a.type === ActivityType.OUTROS || a.type === ActivityType.ADMINISTRATIVO || a.type === ActivityType.OCORRENCIA) && !isDeletedActivity(a))
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   // Build document sections
@@ -303,13 +312,18 @@ export const exportToDocx = async (data: ExportData) => {
            );
 
           // Only render media section if there's actual content
+          const videoUrls = selectedVideoUrls || [];
           const mediaText = dn.media || links.media || '';
-          if (mediaText.trim()) {
-            const mediaUrls = mediaText.split('\n').filter(l => l.trim());
-            if (dn.media || mediaUrls.length <= 1) {
+          const allMediaUrls = [
+            ...mediaText.split('\n').filter(l => l.trim()),
+            ...videoUrls.filter(u => u.trim()),
+          ];
+          const uniqueMediaUrls = Array.from(new Set(allMediaUrls));
+          if (uniqueMediaUrls.length > 0) {
+            if (dn.media || uniqueMediaUrls.length <= 1) {
               docSections.push(
                 new Paragraph({
-                  text: `Mídias (Fotos/Vídeos): ${dn.media || mediaUrls[0] || ''}`,
+                  text: `Mídias (Fotos/Vídeos): ${dn.media || uniqueMediaUrls[0] || ''}`,
                   spacing: { after: 200 },
                 })
               );
@@ -320,7 +334,7 @@ export const exportToDocx = async (data: ExportData) => {
                   children: [new TextRun({ text: 'Mídias (Fotos/Vídeos):', bold: true, font: 'Times New Roman', size: 24 })],
                 })
               );
-              for (const mUrl of mediaUrls) {
+              for (const mUrl of uniqueMediaUrls) {
                 docSections.push(
                   new Paragraph({
                     spacing: { after: 60 },
