@@ -547,25 +547,30 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   const secondaryLogoVisible = isNonEmptyString(config.logoSecondary) && config.logoSecondaryConfig?.visible !== false;
 
   if (showBanner) {
+    const bannerUrl = optimizeStorageImageUrl(config.headerBannerUrl!.trim(), 1200, 75);
     return `
       <div class="header-banner-wrap">
-        <img src="${escapeHtml(config.headerBannerUrl!.trim())}" alt="Cabeçalho institucional" class="header-banner" style="object-fit:${bannerFit};" />
+        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" class="header-banner" style="object-fit:${bannerFit};" />
       </div>
     `;
   }
 
+  const logoUrl = primaryLogoVisible ? optimizeStorageImageUrl(config.logo!.trim(), 400, 80) : "";
+  const centerUrl = centerLogoVisible ? optimizeStorageImageUrl(config.logoCenter!.trim(), 400, 80) : "";
+  const secUrl = secondaryLogoVisible ? optimizeStorageImageUrl(config.logoSecondary!.trim(), 400, 80) : "";
+
   return `
     <div class="header-logos">
       <div class="header-slot header-slot-left">
-        ${primaryLogoVisible ? `<img src="${escapeHtml(config.logo!.trim())}" alt="Logo principal" class="header-logo" />` : ""}
+        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" class="header-logo" />` : ""}
         ${isNonEmptyString(config.headerLeftText) ? `<span class="header-text">${escapeHtml(config.headerLeftText.trim())}</span>` : ""}
       </div>
       <div class="header-slot header-slot-center">
-        ${centerLogoVisible ? `<img src="${escapeHtml(config.logoCenter!.trim())}" alt="Logo central" class="header-logo" />` : ""}
+        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" class="header-logo" />` : ""}
       </div>
       <div class="header-slot header-slot-right">
         ${isNonEmptyString(config.headerRightText) ? `<span class="header-text">${escapeHtml(config.headerRightText.trim())}</span>` : ""}
-        ${secondaryLogoVisible ? `<img src="${escapeHtml(config.logoSecondary!.trim())}" alt="Logo secundário" class="header-logo" />` : ""}
+        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" class="header-logo" />` : ""}
       </div>
     </div>
   `;
