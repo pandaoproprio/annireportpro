@@ -969,6 +969,15 @@ function buildHtml(payload: ReportPayload): string {
         }
         .body-copy { margin: 0 0 4mm; text-indent: 12.5mm; }
 
+        /* Rich-text list styles from editor */
+        .section ul, .section ol { display: block; list-style-position: outside; margin: 0 0 4mm; padding-left: 12.5mm; }
+        .section ul { list-style-type: disc; }
+        .section ul ul { list-style-type: circle; }
+        .section ul ul ul { list-style-type: square; }
+        .section ol { list-style-type: decimal; }
+        .section li { display: list-item; margin: 0 0 2mm; line-height: 1.5; text-align: justify; overflow-wrap: anywhere; word-break: break-word; }
+        .section li p { text-indent: 0; margin: 0; }
+
         .activity-list { margin-top: 5mm; }
         .subheading { margin: 0 0 3mm; font-weight: 700; }
         .activity-bullets { margin: 0; padding-left: 6mm; list-style: disc; }

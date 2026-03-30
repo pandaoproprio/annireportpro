@@ -67,7 +67,7 @@ const RichContent: React.FC<{ html: string; className?: string; style?: React.CS
 
   temp.childNodes.forEach((node, idx) => processNode(node, idx));
 
-  return <div className={className} style={style}>{parts}</div>;
+  return <div className={`report-preview-rich ${className || ''}`} style={style}>{parts}</div>;
 };
 
 // ABNT-aligned text indent (1.25 cm = 12.5 mm)

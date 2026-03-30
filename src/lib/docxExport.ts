@@ -16,6 +16,7 @@ import {
   ImageRun,
   ShadingType,
   TableOfContents,
+  LevelFormat,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Project, Activity, ActivityType, ExpenseItem, ReportSection, PhotoGroup, ReportPhotoMeta } from '@/types';
@@ -130,35 +131,111 @@ const parseHtmlToRuns = (html: string): TextRun[] => {
   return runs;
 };
 
-// Helper: convert text/HTML into multiple ABNT-formatted paragraphs
+// Helper: convert text/HTML into multiple ABNT-formatted paragraphs (with list support)
 const richTextToParagraphs = (
   text: string,
   options?: { alignment?: (typeof AlignmentType)[keyof typeof AlignmentType]; bold?: boolean }
 ): Paragraph[] => {
   if (!text || !text.trim()) return [new Paragraph({ text: '', spacing: { after: 200 } })];
 
+  // If it contains HTML, parse it properly
   if (/[<][a-z!/]/i.test(text)) {
-    const plainText = stripHtml(text);
-    const lines = plainText.split('\n').filter(line => line.trim() !== '');
-    if (lines.length === 0) return [new Paragraph({ text: '', spacing: { after: 200 } })];
-    return lines.map(
-      line =>
-        new Paragraph({
+    const paragraphs: Paragraph[] = [];
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(`<div>${text}</div>`, 'text/html');
+    const root = doc.body.firstElementChild || doc.body;
+
+    const processNode = (node: Node, listLevel?: number, listType?: 'bullet' | 'number') => {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const t = node.textContent?.trim();
+        if (t) {
+          paragraphs.push(new Paragraph({
+            alignment: options?.alignment ?? AlignmentType.JUSTIFIED,
+            spacing: { after: 200, line: 360 },
+            indent: { firstLine: 709 },
+            children: [new TextRun({ text: t, font: 'Times New Roman', size: 24, bold: options?.bold })],
+          }));
+        }
+        return;
+      }
+
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const el = node as Element;
+      const tag = el.tagName.toLowerCase();
+
+      if (tag === 'ul' || tag === 'ol') {
+        const type = tag === 'ul' ? 'bullet' : 'number';
+        const level = listLevel !== undefined ? listLevel + 1 : 0;
+        el.childNodes.forEach(child => processNode(child, level, type));
+        return;
+      }
+
+      if (tag === 'li') {
+        const runs = extractInlineRuns(el);
+        paragraphs.push(new Paragraph({
+          alignment: options?.alignment ?? AlignmentType.JUSTIFIED,
+          spacing: { after: 100, line: 360 },
+          numbering: {
+            reference: listType === 'number' ? 'docx-ordered-list' : 'docx-bullet-list',
+            level: listLevel ?? 0,
+          },
+          children: runs,
+        }));
+        // Process nested lists inside li
+        el.childNodes.forEach(child => {
+          if (child.nodeType === Node.ELEMENT_NODE) {
+            const childTag = (child as Element).tagName.toLowerCase();
+            if (childTag === 'ul' || childTag === 'ol') {
+              processNode(child, listLevel ?? 0, childTag === 'ul' ? 'bullet' : 'number');
+            }
+          }
+        });
+        return;
+      }
+
+      if (tag === 'p' || tag === 'div') {
+        const runs = extractInlineRuns(el);
+        if (runs.length > 0) {
+          paragraphs.push(new Paragraph({
+            alignment: options?.alignment ?? AlignmentType.JUSTIFIED,
+            spacing: { after: 200, line: 360 },
+            indent: { firstLine: 709 },
+            children: runs,
+          }));
+        }
+        return;
+      }
+
+      if (tag === 'br') return;
+
+      // Default: treat as inline container
+      const runs = extractInlineRuns(el);
+      if (runs.length > 0) {
+        paragraphs.push(new Paragraph({
           alignment: options?.alignment ?? AlignmentType.JUSTIFIED,
           spacing: { after: 200, line: 360 },
           indent: { firstLine: 709 },
-          children: [
-            new TextRun({
-              text: line,
-              font: 'Times New Roman',
-              size: 24,
-              bold: options?.bold,
-            }),
-          ],
-        })
-    );
+          children: runs,
+        }));
+      }
+    };
+
+    root.childNodes.forEach(child => processNode(child));
+
+    if (paragraphs.length === 0) {
+      const plain = stripHtml(text);
+      if (plain) paragraphs.push(new Paragraph({
+        alignment: options?.alignment ?? AlignmentType.JUSTIFIED,
+        spacing: { after: 200, line: 360 },
+        indent: { firstLine: 709 },
+        children: [new TextRun({ text: plain, font: 'Times New Roman', size: 24, bold: options?.bold })],
+      }));
+    }
+
+    return paragraphs;
   }
 
+  // Plain text fallback
   const lines = text.split('\n').filter(line => line.trim() !== '');
   if (lines.length === 0) return [new Paragraph({ text: '', spacing: { after: 200 } })];
   return lines.map(
@@ -178,6 +255,53 @@ const richTextToParagraphs = (
       })
   );
 };
+
+// Extract inline runs from an element (handles bold, italic, underline)
+function extractInlineRuns(el: Element): TextRun[] {
+  const runs: TextRun[] = [];
+
+  const walk = (node: Node, bold = false, italic = false, underline = false) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const t = node.textContent || '';
+      if (t) {
+        runs.push(new TextRun({
+          text: t,
+          font: 'Times New Roman',
+          size: 24,
+          bold: bold || undefined,
+          italics: italic || undefined,
+          underline: underline ? {} : undefined,
+        }));
+      }
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    const childEl = node as Element;
+    const tag = childEl.tagName.toLowerCase();
+
+    // Skip nested lists (handled by processNode)
+    if (tag === 'ul' || tag === 'ol') return;
+
+    const isBold = bold || tag === 'strong' || tag === 'b';
+    const isItalic = italic || tag === 'em' || tag === 'i';
+    const isUnderline = underline || tag === 'u';
+
+    if (tag === 'br') {
+      runs.push(new TextRun({ text: '\n', font: 'Times New Roman', size: 24, break: 1 }));
+      return;
+    }
+
+    childEl.childNodes.forEach(child => walk(child, isBold, isItalic, isUnderline));
+  };
+
+  el.childNodes.forEach(child => {
+    const childEl = child as Element;
+    if (child.nodeType === Node.ELEMENT_NODE && ['ul', 'ol'].includes(childEl.tagName?.toLowerCase())) return;
+    walk(child);
+  });
+
+  return runs;
+}
 
 const textToParagraphs = richTextToParagraphs;
 
@@ -856,6 +980,26 @@ export const exportToDocx = async (data: ExportData) => {
 
   // Create the document
   const doc = new Document({
+    numbering: {
+      config: [
+        {
+          reference: 'docx-bullet-list',
+          levels: [
+            { level: 0, format: LevelFormat.BULLET, text: '\u2022', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
+            { level: 1, format: LevelFormat.BULLET, text: '\u25E6', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
+            { level: 2, format: LevelFormat.BULLET, text: '\u25AA', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 2160, hanging: 360 } } } },
+          ],
+        },
+        {
+          reference: 'docx-ordered-list',
+          levels: [
+            { level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
+            { level: 1, format: LevelFormat.DECIMAL, text: '%2.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
+            { level: 2, format: LevelFormat.DECIMAL, text: '%3.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 2160, hanging: 360 } } } },
+          ],
+        },
+      ],
+    },
     styles: {
       default: {
         document: {
