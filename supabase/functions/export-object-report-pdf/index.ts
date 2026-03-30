@@ -1196,9 +1196,10 @@ function buildHtml(payload: ReportPayload): string {
             img.addEventListener('load', check);
             img.addEventListener('error', check);
           });
-          // Safety timeout: resolve after 12s regardless
-          setTimeout(function() { resolve(true); }, 12000);
+          // Safety timeout: resolve after 5s regardless
+          setTimeout(function() { resolve(true); }, 5000);
         });
+        window.__imagesReady.then(function() { window.__imagesReady = true; });
       </script>
     </body>
   </html>`;
