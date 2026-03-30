@@ -1213,8 +1213,8 @@ function buildHtml(payload: ReportPayload): string {
             img.addEventListener('load', check);
             img.addEventListener('error', check);
           });
-          // Safety timeout: resolve after 5s regardless
-          setTimeout(function() { resolve(true); }, 5000);
+          // Safety timeout: resolve after 8s regardless
+          setTimeout(function() { resolve(true); }, 8000);
         });
         window.__imagesReady.then(function() { window.__imagesReady = true; });
       </script>
