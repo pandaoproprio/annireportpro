@@ -980,6 +980,26 @@ export const exportToDocx = async (data: ExportData) => {
 
   // Create the document
   const doc = new Document({
+    numbering: {
+      config: [
+        {
+          reference: 'docx-bullet-list',
+          levels: [
+            { level: 0, format: LevelFormat.BULLET, text: '\u2022', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
+            { level: 1, format: LevelFormat.BULLET, text: '\u25E6', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
+            { level: 2, format: LevelFormat.BULLET, text: '\u25AA', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 2160, hanging: 360 } } } },
+          ],
+        },
+        {
+          reference: 'docx-ordered-list',
+          levels: [
+            { level: 0, format: LevelFormat.DECIMAL, text: '%1.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 720, hanging: 360 } } } },
+            { level: 1, format: LevelFormat.DECIMAL, text: '%2.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 1440, hanging: 360 } } } },
+            { level: 2, format: LevelFormat.DECIMAL, text: '%3.', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 2160, hanging: 360 } } } },
+          ],
+        },
+      ],
+    },
     styles: {
       default: {
         document: {
