@@ -89,7 +89,7 @@ export const CollaborativeTextBlock: React.FC<Props> = ({
   // Initialize Yjs fragment with existing content if it's empty
   useEffect(() => {
     if (editor && fragment && fragment.length === 0 && block.content) {
-      editor.commands.setContent(block.content, false);
+      editor.commands.setContent(block.content, { emitUpdate: false });
     }
   }, [editor, fragment, block.content]);
 
