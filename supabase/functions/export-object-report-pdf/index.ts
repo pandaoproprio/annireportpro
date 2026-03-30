@@ -1,3 +1,5 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
@@ -830,9 +832,9 @@ function buildHtml(payload: ReportPayload): string {
         /* ─── HEADER: fixed = repeats every page, lives in Puppeteer top margin ─── */
         .pdf-header {
           position: fixed;
-          top: 0; left: 0; right: 0;
-          height: 24mm;
-          padding: 3mm 12mm 2mm;
+          top: 0; left: 30mm; right: 20mm;
+          height: 26mm;
+          padding: 3mm 0 2mm;
           background: #fff;
           border-bottom: 1px solid #d1d5db;
           display: flex;
@@ -1015,11 +1017,11 @@ function buildHtml(payload: ReportPayload): string {
         .photo-item img {
           display: block;
           width: 100%;
-          height: 180px;
+          height: 200px;
           object-fit: cover;
           background: #f8f8f8;
         }
-        .rich-photo-item img { height: 180px; }
+        .rich-photo-item img { height: 200px; }
 
         .caption {
           padding: 6px 8px;
@@ -1086,6 +1088,30 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Auth validation
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: userData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const payload = await req.json() as ReportPayload;
     let html = buildHtml(payload);
 
@@ -1115,10 +1141,9 @@ Deno.serve(async (req) => {
             format: "A4",
             printBackground: true,
             timeout: 55000,
-            // Puppeteer margin controls the content box.
-            // top: 32mm reserves space for the 24mm fixed header + 8mm gap.
-            // The fixed header renders at top:0 of the PAPER (inside this margin area).
-            margin: { top: "32mm", right: "12mm", bottom: "18mm", left: "12mm" },
+            // ABNT NBR 14724: top 3cm + 6mm header gap = 36mm, bottom 2cm, left 3cm, right 2cm
+            // The fixed header (26mm) renders at top:0 within this margin area.
+            margin: { top: "36mm", right: "20mm", bottom: "20mm", left: "30mm" },
           },
         }),
       },
