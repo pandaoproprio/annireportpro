@@ -3,6 +3,7 @@ import { ImageBlock as ImageBlockType } from '@/types/document';
 import { ImageIcon, Upload, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/imageCompression';
 
 interface Props {
   block: ImageBlockType;
@@ -20,9 +21,10 @@ export const WysiwygImageBlock: React.FC<Props> = ({ block, isActive, onSelect, 
     if (file.size > 10 * 1024 * 1024) { toast.error('Imagem muito grande (máx. 10MB)'); return; }
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
+      const compressed = await compressImage(file);
+      const ext = compressed.name.split('.').pop() || 'jpg';
       const path = `editor/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from('document-images').upload(path, file, { contentType: file.type });
+      const { error } = await supabase.storage.from('document-images').upload(path, compressed, { contentType: compressed.type });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from('document-images').getPublicUrl(path);
       const img = new Image();
