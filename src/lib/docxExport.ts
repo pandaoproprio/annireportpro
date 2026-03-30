@@ -658,6 +658,17 @@ export const exportToDocx = async (data: ExportData) => {
                 }));
               }
 
+              // Page numbers
+              children.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 40 },
+                children: [
+                  new TextRun({ size: 16, font: 'Times New Roman', color: '9CA3AF', children: [PageNumber.CURRENT] }),
+                  new TextRun({ text: ' / ', size: 16, font: 'Times New Roman', color: '9CA3AF' }),
+                  new TextRun({ size: 16, font: 'Times New Roman', color: '9CA3AF', children: [PageNumber.TOTAL_PAGES] }),
+                ],
+              }));
+
               return children;
             })(),
           }),
