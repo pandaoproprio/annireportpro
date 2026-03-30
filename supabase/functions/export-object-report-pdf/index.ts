@@ -1258,7 +1258,7 @@ function buildHtml(payload: ReportPayload): string {
         // 2. Generate SHA-256 hash of document content for audit integrity
         (async function() {
           try {
-            var content = document.querySelector('.pdf-content').innerText;
+            var content = document.querySelector('.pdf-body-cell').innerText;
             var encoder = new TextEncoder();
             var data = encoder.encode(content);
             var hashBuffer = await crypto.subtle.digest('SHA-256', data);
