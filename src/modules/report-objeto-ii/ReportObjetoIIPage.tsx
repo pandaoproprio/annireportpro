@@ -16,7 +16,8 @@ import {
   type ReportObjIISection, type ReportObjIIData,
   type CoverConfig, type HeaderConfig, type FooterConfig, type PhotoWithCaption,
 } from './types';
-import { exportReportObjIIPdf } from './pdfExport';
+import { generateReport, downloadReport } from '@/lib/pdf/generate';
+import { mapObjetoIIToReportData } from '@/lib/pdf/mappers/mapObjetoII';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import type { ReportData } from '@/types';
 
