@@ -889,7 +889,7 @@ export default function PublicFormPage() {
         </div>
 
         <p className="text-center text-xs pb-4" style={{ color: 'var(--form-muted)' }}>
-          Powered by <span className="font-semibold">GIRA Forms</span>
+          Desenvolvido com <span className="font-semibold">GIRA Formulários</span>
         </p>
       </motion.div>
     </div>
