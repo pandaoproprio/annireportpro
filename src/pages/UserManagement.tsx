@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { useAdminUsers, AdminUser, AdminRole } from '@/hooks/useAdminUsers';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -12,12 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3, ShieldCheck, UserCheck, ShieldOff } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3, ShieldCheck, UserCheck, ShieldOff, Send, Filter, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { CollaboratorProjectsDialog } from '@/components/CollaboratorProjectsDialog';
 import { UserPermissionsDialog } from '@/components/UserPermissionsDialog';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Navigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
 
 const roleLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   usuario: { label: 'Usuário', icon: <Users className="w-3 h-3" />, color: 'bg-secondary text-secondary-foreground' },
@@ -29,8 +31,17 @@ const roleLabels: Record<string, { label: string; icon: React.ReactNode; color: 
   super_admin: { label: 'Super Admin', icon: <Crown className="w-3 h-3" />, color: 'bg-amber-500/20 text-amber-700 dark:text-amber-300' },
 };
 
+type LoginFilter = 'all' | 'never_logged' | 'logged';
+
+interface ReminderRecord {
+  user_id: string;
+  sent_at: string;
+  first_login_at: string | null;
+}
+
 export const UserManagement: React.FC = () => {
   const { role } = useAuth();
+  const { toast } = useToast();
   const { users, isLoading, fetchUsers, createUser, updateUser, deleteUser, disableMfa } = useAdminUsers();
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -45,6 +56,14 @@ export const UserManagement: React.FC = () => {
   const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null);
   const [newPassword, setNewPassword] = useState('');
   
+  // Filter state
+  const [loginFilter, setLoginFilter] = useState<LoginFilter>('all');
+  
+  // Reminder state
+  const [selectedForReminder, setSelectedForReminder] = useState<Set<string>>(new Set());
+  const [isSendingReminder, setIsSendingReminder] = useState(false);
+  const [reminderRecords, setReminderRecords] = useState<ReminderRecord[]>([]);
+  
   // Form state
   const [email, setEmail] = useState('');
   const [editEmail, setEditEmail] = useState('');
@@ -55,15 +74,23 @@ export const UserManagement: React.FC = () => {
   // Fetch team members to show linked member info
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string; email: string | null; function_role: string }>>([]);
 
+  const fetchReminders = useCallback(async () => {
+    const { data } = await supabase
+      .from('login_reminders')
+      .select('user_id, sent_at, first_login_at')
+      .order('sent_at', { ascending: false });
+    if (data) setReminderRecords(data as ReminderRecord[]);
+  }, []);
+
   useEffect(() => {
     if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
       fetchUsers();
-      // Fetch team members for linking
+      fetchReminders();
       supabase.from('team_members').select('id, name, email, function_role').then(({ data }) => {
         if (data) setTeamMembers(data);
       });
     }
-  }, [role, fetchUsers]);
+  }, [role, fetchUsers, fetchReminders]);
 
   // Map user email -> team member
   const teamMemberByEmail = useMemo(() => {
@@ -73,6 +100,27 @@ export const UserManagement: React.FC = () => {
     });
     return map;
   }, [teamMembers]);
+
+  // Reminder tracking maps
+  const reminderByUserId = useMemo(() => {
+    const map = new Map<string, ReminderRecord>();
+    reminderRecords.forEach(r => {
+      // Keep the latest reminder per user
+      if (!map.has(r.user_id) || new Date(r.sent_at) > new Date(map.get(r.user_id)!.sent_at)) {
+        map.set(r.user_id, r);
+      }
+    });
+    return map;
+  }, [reminderRecords]);
+
+  // Filter users
+  const filteredUsers = useMemo(() => {
+    if (loginFilter === 'all') return users;
+    if (loginFilter === 'never_logged') return users.filter(u => !u.lastSignIn);
+    return users.filter(u => !!u.lastSignIn);
+  }, [users, loginFilter]);
+
+  const neverLoggedCount = useMemo(() => users.filter(u => !u.lastSignIn).length, [users]);
 
   const resetForm = () => {
     setEmail('');
@@ -105,7 +153,6 @@ export const UserManagement: React.FC = () => {
       role: selectedRole
     };
     
-    // Only send email if it changed
     if (editEmail && editEmail !== editingUser.email) {
       updates.email = editEmail;
     }
@@ -139,6 +186,90 @@ export const UserManagement: React.FC = () => {
     setEditEmail(user.email);
     setSelectedRole(user.role);
     setIsEditOpen(true);
+  };
+
+  // Reminder selection helpers
+  const toggleReminderSelect = (userId: string) => {
+    setSelectedForReminder(prev => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  const neverLoggedUsers = useMemo(() => users.filter(u => !u.lastSignIn), [users]);
+
+  const selectAllNeverLogged = () => {
+    setSelectedForReminder(new Set(neverLoggedUsers.map(u => u.id)));
+  };
+
+  const deselectAll = () => setSelectedForReminder(new Set());
+
+  const handleSendReminders = async () => {
+    const usersToRemind = users.filter(u => selectedForReminder.has(u.id) && !u.lastSignIn);
+    if (usersToRemind.length === 0) return;
+
+    setIsSendingReminder(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-login-reminder', {
+        body: {
+          action: 'send-batch',
+          users: usersToRemind.map(u => ({ id: u.id, email: u.email, name: u.name })),
+        },
+      });
+
+      if (error) throw error;
+
+      const sent = data?.sent || 0;
+      const total = data?.total || usersToRemind.length;
+
+      toast({
+        title: 'Lembretes enviados',
+        description: `${sent} de ${total} e-mail(s) enviado(s) com sucesso. CC: juanpablorj@gmail.com e rapha.araujo.cultura@gmail.com`,
+      });
+
+      setSelectedForReminder(new Set());
+      fetchReminders();
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao enviar lembretes',
+        description: err.message || 'Erro desconhecido',
+      });
+    } finally {
+      setIsSendingReminder(false);
+    }
+  };
+
+  const handleSendSingleReminder = async (user: AdminUser) => {
+    setIsSendingReminder(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-login-reminder', {
+        body: {
+          userId: user.id,
+          userEmail: user.email,
+          userName: user.name,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Lembrete enviado',
+        description: `E-mail de lembrete enviado para ${user.email}. CC: juanpablorj@gmail.com e rapha.araujo.cultura@gmail.com`,
+      });
+
+      fetchReminders();
+    } catch (err: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Erro ao enviar lembrete',
+        description: err.message || 'Erro desconhecido',
+      });
+    } finally {
+      setIsSendingReminder(false);
+    }
   };
 
   return (
@@ -256,11 +387,74 @@ export const UserManagement: React.FC = () => {
         </Dialog>
       </div>
 
+      {/* Filter & Reminder Banner */}
+      <Card>
+        <CardContent className="pt-4 pb-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-muted-foreground">Status de login:</span>
+            </div>
+            <div className="flex gap-1.5">
+              <Button
+                size="sm"
+                variant={loginFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setLoginFilter('all')}
+                className="h-8"
+              >
+                Todos ({users.length})
+              </Button>
+              <Button
+                size="sm"
+                variant={loginFilter === 'never_logged' ? 'default' : 'outline'}
+                onClick={() => setLoginFilter('never_logged')}
+                className="h-8"
+              >
+                <AlertCircle className="w-3.5 h-3.5 mr-1" />
+                Nunca logaram ({neverLoggedCount})
+              </Button>
+              <Button
+                size="sm"
+                variant={loginFilter === 'logged' ? 'default' : 'outline'}
+                onClick={() => setLoginFilter('logged')}
+                className="h-8"
+              >
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
+                Já logaram ({users.length - neverLoggedCount})
+              </Button>
+            </div>
+
+            {loginFilter === 'never_logged' && neverLoggedUsers.length > 0 && (
+              <div className="flex items-center gap-2 ml-auto">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={selectedForReminder.size > 0 ? deselectAll : selectAllNeverLogged}
+                  className="h-8 text-xs"
+                >
+                  {selectedForReminder.size > 0 ? 'Desmarcar todos' : 'Selecionar todos'}
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSendReminders}
+                  disabled={selectedForReminder.size === 0 || isSendingReminder}
+                  className="h-8 gap-1.5"
+                >
+                  {isSendingReminder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  Enviar lembrete ({selectedForReminder.size})
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Usuários</CardTitle>
           <CardDescription>
-            {users.length} usuário{users.length !== 1 ? 's' : ''} cadastrado{users.length !== 1 ? 's' : ''}
+            {filteredUsers.length} usuário{filteredUsers.length !== 1 ? 's' : ''} 
+            {loginFilter === 'never_logged' ? ' que nunca acessaram' : loginFilter === 'logged' ? ' que já acessaram' : ' cadastrado' + (filteredUsers.length !== 1 ? 's' : '')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -273,17 +467,29 @@ export const UserManagement: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  {loginFilter === 'never_logged' && <TableHead className="w-10"></TableHead>}
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Papel</TableHead>
                   <TableHead className="hidden lg:table-cell">Membro de Equipe</TableHead>
                   <TableHead className="hidden md:table-cell">Último acesso</TableHead>
+                  {loginFilter === 'never_logged' && <TableHead className="hidden md:table-cell">Lembrete</TableHead>}
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {filteredUsers.map((user) => {
+                  const reminder = reminderByUserId.get(user.id);
+                  return (
                   <TableRow key={user.id}>
+                    {loginFilter === 'never_logged' && (
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedForReminder.has(user.id)}
+                          onCheckedChange={() => toggleReminderSelect(user.id)}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -318,11 +524,44 @@ export const UserManagement: React.FC = () => {
                     <TableCell className="hidden md:table-cell">
                       {user.lastSignIn 
                         ? format(new Date(user.lastSignIn), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
-                        : 'Nunca'
+                        : <Badge variant="outline" className="text-xs text-amber-600 border-amber-300 dark:text-amber-400 dark:border-amber-600">Nunca</Badge>
                       }
                     </TableCell>
+                    {loginFilter === 'never_logged' && (
+                      <TableCell className="hidden md:table-cell">
+                        {reminder ? (
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              Enviado {format(new Date(reminder.sent_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                            </div>
+                            {reminder.first_login_at ? (
+                              <div className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400">
+                                <CheckCircle2 className="w-3 h-3" />
+                                Logou {format(new Date(reminder.first_login_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-amber-600 dark:text-amber-400">Aguardando login…</span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Não enviado</span>
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
+                        {!user.lastSignIn && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Enviar lembrete de acesso"
+                            onClick={() => handleSendSingleReminder(user)}
+                            disabled={isSendingReminder}
+                          >
+                            <Send className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                          </Button>
+                        )}
                         <Button variant="ghost" size="icon" title="Projetos vinculados" onClick={() => { setProjectsUser(user); setIsProjectsOpen(true); }}>
                           <FolderOpen className="w-4 h-4" />
                         </Button>
@@ -394,7 +633,8 @@ export const UserManagement: React.FC = () => {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
             </div>
