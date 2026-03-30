@@ -1268,7 +1268,7 @@ Deno.serve(async (req) => {
     let browserlessResponse: Response;
     try {
       const controller = new AbortController();
-      const abortTimer = setTimeout(() => controller.abort(), 50000);
+      const abortTimer = setTimeout(() => controller.abort(), 55000);
 
       browserlessResponse = await fetch(
         `https://chrome.browserless.io/pdf?token=${browserlessApiKey}&timeout=45000&bestAttempt=true`,
