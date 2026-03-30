@@ -370,7 +370,7 @@ function renderPhotoGrid(items: Array<{ src: string; caption: string }>, title?:
           <div class="${gridClass}">
             ${chunk.map((item, index) => `
               <figure class="photo-item">
-                <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.caption || `Foto ${index + 1}`)}" loading="eager" decoding="async" />
+                <img src="${escapeHtml(item.src)}" alt="${escapeHtml(item.caption || `Foto ${index + 1}`)}" loading="eager" decoding="sync" />
                 <figcaption class="caption">${escapeHtml(item.caption || `Foto ${index + 1}`)}</figcaption>
               </figure>
             `).join("")}
