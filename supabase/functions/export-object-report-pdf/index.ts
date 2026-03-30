@@ -767,6 +767,23 @@ function buildStandardSection(payload: ReportPayload, section: ReportSection, re
   return "";
 }
 
+function buildTocHtml(sections: ReportSection[]): string {
+  const visibleSections = sections.filter((s) => s.isVisible);
+  if (visibleSections.length === 0) return "";
+
+  const items = visibleSections.map((s, idx) => {
+    const num = idx + 1;
+    return `<li class="toc-item"><span class="toc-text">${num}. ${escapeHtml(s.title)}</span><span class="toc-dots"></span></li>`;
+  }).join("");
+
+  return `
+    <section class="toc-section">
+      <h2 class="toc-title">SUMÁRIO</h2>
+      <ol class="toc-list">${items}</ol>
+    </section>
+  `;
+}
+
 function buildHtml(payload: ReportPayload): string {
   const renderedPhotoKeys = new Set<string>();
   const sectionPhotos = payload.sectionPhotos || {};
