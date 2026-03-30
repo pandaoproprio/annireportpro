@@ -267,7 +267,6 @@ async function buildPhotoSection(
               cellChildren.push(new Paragraph({
                 alignment: AlignmentType.CENTER,
                 children: [new ImageRun({
-                  type: imgData.type,
                   data: imgData.buffer,
                   transformation: { width: 220, height: 165 },
                   altText: { title: 'Foto', description: 'Foto', name: 'Foto' },
