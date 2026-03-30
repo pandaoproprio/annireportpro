@@ -659,7 +659,6 @@ export const exportToDocx = async (data: ExportData) => {
                 cellChildren.push(new Paragraph({
                   alignment: AlignmentType.CENTER,
                   children: [new ImageRun({
-                    type: imgData.type,
                     data: imgData.buffer,
                     transformation: { width: 150, height: 112 },
                     altText: { title: 'Comprovante', description: 'Comprovante de despesa', name: 'Comprovante' },
