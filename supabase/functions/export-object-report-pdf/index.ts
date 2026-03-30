@@ -915,6 +915,14 @@ function buildHtml(payload: ReportPayload): string {
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ─── PDF LAYOUT TABLE: thead/tfoot repeat on every page ─── */
+        .pdf-layout { width: 100%; border-collapse: collapse; }
+        .pdf-layout thead { display: table-header-group; }
+        .pdf-layout tfoot { display: table-footer-group; }
+        .pdf-layout td { padding: 0; border: none; vertical-align: top; }
+        .pdf-header-cell { padding-bottom: 4mm; border-bottom: 1px solid #9ca3af; }
+        .pdf-footer-cell { padding-top: 2mm; border-top: 1px solid #9ca3af; }
         html, body {
           margin: 0; padding: 0;
           font-family: "Times New Roman", Times, serif;
