@@ -1,22 +1,31 @@
 import React from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Trash2, Download } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Trash2, Download, QrCode } from 'lucide-react';
 import { format } from 'date-fns';
-import type { EventRegistration } from '../types';
+import type { EventRegistration, EventCheckin } from '../types';
 
 interface RegistrationsListProps {
   registrations: EventRegistration[];
   onDelete: (id: string) => void;
   isLoading?: boolean;
+  onShowQr?: (reg: EventRegistration) => void;
+  checkins?: EventCheckin[];
 }
 
-export const RegistrationsList: React.FC<RegistrationsListProps> = ({ registrations, onDelete, isLoading }) => {
+export const RegistrationsList: React.FC<RegistrationsListProps> = ({
+  registrations, onDelete, isLoading, onShowQr, checkins = [],
+}) => {
+  const checkinMap = new Map<string, EventCheckin>();
+  checkins.forEach(c => checkinMap.set(c.registration_id, c));
+
   const exportCsv = () => {
-    const header = 'Nome,E-mail,Telefone,Documento,Status,Data Inscrição\n';
-    const rows = registrations.map(r =>
-      `"${r.name}","${r.email ?? ''}","${r.phone ?? ''}","${r.document ?? ''}","${r.status}","${format(new Date(r.registered_at), 'dd/MM/yyyy HH:mm')}"`
-    ).join('\n');
+    const header = 'Nome,E-mail,Telefone,Documento,Status,Data Inscrição,Check-in\n';
+    const rows = registrations.map(r => {
+      const ci = checkinMap.get(r.id);
+      return `"${r.name}","${r.email ?? ''}","${r.phone ?? ''}","${r.document ?? ''}","${r.status}","${format(new Date(r.registered_at), 'dd/MM/yyyy HH:mm')}","${ci ? 'Sim' : 'Não'}"`;
+    }).join('\n');
     const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -47,25 +56,45 @@ export const RegistrationsList: React.FC<RegistrationsListProps> = ({ registrati
                 <TableHead>E-mail</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>Documento</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Data</TableHead>
-                <TableHead className="w-10"></TableHead>
+                <TableHead className="w-20"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {registrations.map(r => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.name}</TableCell>
-                  <TableCell>{r.email ?? '—'}</TableCell>
-                  <TableCell>{r.phone ?? '—'}</TableCell>
-                  <TableCell>{r.document ?? '—'}</TableCell>
-                  <TableCell>{format(new Date(r.registered_at), 'dd/MM/yyyy')}</TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => onDelete(r.id)} disabled={isLoading}>
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {registrations.map(r => {
+                const ci = checkinMap.get(r.id);
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-medium">{r.name}</TableCell>
+                    <TableCell>{r.email ?? '—'}</TableCell>
+                    <TableCell>{r.phone ?? '—'}</TableCell>
+                    <TableCell>{r.document ?? '—'}</TableCell>
+                    <TableCell>
+                      {ci ? (
+                        <Badge className="bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))] text-[10px]">
+                          ✓ Check-in
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px]">Inscrito</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{format(new Date(r.registered_at), 'dd/MM/yyyy')}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {onShowQr && r.qr_token && (
+                          <Button variant="ghost" size="icon" onClick={() => onShowQr(r)}>
+                            <QrCode className="w-4 h-4 text-primary" />
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="icon" onClick={() => onDelete(r.id)} disabled={isLoading}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
