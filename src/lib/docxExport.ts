@@ -208,7 +208,6 @@ function createImageParagraph(
     spacing: { after: 100 },
     children: [
       new ImageRun({
-        type: imageData.type,
         data: imageData.buffer,
         transformation: {
           width: Math.round(widthEmu / 9525), // EMU to pixels (approx)
