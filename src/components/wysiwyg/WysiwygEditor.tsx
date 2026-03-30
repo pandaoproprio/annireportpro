@@ -38,7 +38,7 @@ export const WysiwygEditor: React.FC<Props> = ({ documentId }) => {
         {/* Collaboration presence indicator */}
         {connected && awareness && (
           <div className="px-4 py-1 bg-muted/50 border-b flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
             <span>Edição colaborativa ativa (Yjs CRDT)</span>
           </div>
         )}
