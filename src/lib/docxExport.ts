@@ -505,6 +505,19 @@ export const exportToDocx = async (data: ExportData) => {
     new Paragraph({
       text: project.organizationName,
       alignment: AlignmentType.CENTER,
+    }),
+    // Audit trail
+    new Paragraph({ text: '', spacing: { after: 600 } }),
+    new Paragraph({
+      alignment: AlignmentType.RIGHT,
+      spacing: { after: 0 },
+      children: [new TextRun({
+        text: `Documento gerado em ${new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })} (Brasília)`,
+        font: 'Times New Roman',
+        size: 14,
+        color: '9CA3AF',
+        italics: true,
+      })],
     })
   );
 
