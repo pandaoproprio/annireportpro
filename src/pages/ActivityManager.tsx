@@ -8,6 +8,7 @@ import { useActivityData } from '@/contexts/ActivityContext';
 import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
 import { canEditActivity, deriveSetor } from '@/lib/diaryEditRules';
 import { logUnified } from '@/lib/unifiedLog';
+import { compressImage } from '@/lib/imageCompression';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -256,20 +257,22 @@ export const ActivityManager: React.FC = () => {
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-      for (const file of files) {
-        const isVideo = file.type.startsWith('video/');
-        const isImage = file.type.startsWith('image/');
-        if (!isVideo && !isImage) { toast.error(`Tipo não suportado: ${file.name}`); continue; }
+      for (const rawFile of files) {
+        const isVideo = rawFile.type.startsWith('video/');
+        const isImage = rawFile.type.startsWith('image/');
+        if (!isVideo && !isImage) { toast.error(`Tipo não suportado: ${rawFile.name}`); continue; }
         try {
+          // Compress images before upload (videos are left as-is)
+          const file = isImage ? await compressImage(rawFile, { maxWidth: 1920, maxHeight: 1920, quality: 0.8 }) : rawFile;
           const photoId = crypto.randomUUID();
           const fileExt = file.name.split('.').pop() || (isVideo ? 'mp4' : 'jpg');
           const filePath = `activities/${project?.id}/${photoId}.${fileExt}`;
-          const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false });
-          if (error) { toast.error(`Erro ao enviar: ${file.name}`); continue; }
+          const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+          if (error) { toast.error(`Erro ao enviar: ${rawFile.name}`); continue; }
           const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
           setNewActivity(prev => ({ ...prev, photos: [...(prev.photos || []), urlData.publicUrl] }));
-          toast.success(`${isVideo ? 'Vídeo' : 'Foto'} ${file.name} enviado(a)`);
-        } catch { toast.error(`Erro ao processar: ${file.name}`); }
+          toast.success(`${isVideo ? 'Vídeo' : 'Foto'} ${rawFile.name} enviado(a)`);
+        } catch { toast.error(`Erro ao processar: ${rawFile.name}`); }
       }
       e.target.value = '';
     }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/imageCompression';
 
 export interface SectionDoc {
   name: string;
@@ -29,7 +30,11 @@ const removeFromStorage = async (url: string, pathSegments = 5) => {
 
 /** Upload a single file and return its public URL */
 const uploadFile = async (file: File, storagePath: string): Promise<string | null> => {
-  const { error } = await supabase.storage.from(BUCKET).upload(storagePath, file, { cacheControl: '3600', upsert: false });
+  const { error } = await supabase.storage.from(BUCKET).upload(storagePath, file, {
+    cacheControl: '3600',
+    upsert: false,
+    contentType: file.type,
+  });
   if (error) {
     toast.error(`Erro ao enviar: ${file.name}`);
     return null;
@@ -51,8 +56,10 @@ export const useFileUploader = ({ projectId, basePath }: UseFileUploaderOptions)
 
   const handleSectionPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, sectionKey: string) => {
     if (!e.target.files || !e.target.files.length || !projectId) return;
-    for (const file of Array.from(e.target.files)) {
+    for (const rawFile of Array.from(e.target.files)) {
       try {
+        // Compress image before upload (max 1920px, 80% quality)
+        const file = await compressImage(rawFile, { maxWidth: 1920, maxHeight: 1920, quality: 0.8 });
         const photoId = crypto.randomUUID();
         const fileExt = file.name.split('.').pop() || 'jpg';
         const filePath = `${basePath}/${sectionKey}/${photoId}.${fileExt}`;
@@ -63,7 +70,7 @@ export const useFileUploader = ({ projectId, basePath }: UseFileUploaderOptions)
             [sectionKey]: [...(prev[sectionKey] || []), url],
           }));
         }
-      } catch { toast.error(`Erro ao processar foto: ${file.name}`); }
+      } catch { toast.error(`Erro ao processar foto: ${rawFile.name}`); }
     }
     e.target.value = '';
     toast.success('Foto(s) enviada(s) com sucesso!');
