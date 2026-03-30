@@ -1263,13 +1263,17 @@ Deno.serve(async (req) => {
             html,
             bestAttempt: true,
             gotoOptions: {
-              waitUntil: "domcontentloaded",
-              timeout: 30000,
+              waitUntil: "networkidle0",
+              timeout: 40000,
+            },
+            waitForFunction: {
+              fn: "() => window.__imagesReady === true",
+              timeout: 12000,
             },
             options: {
               format: "A4",
               printBackground: true,
-              timeout: 40000,
+              timeout: 50000,
               preferCSSPageSize: true,
               displayHeaderFooter: true,
               headerTemplate: "<span></span>",
