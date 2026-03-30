@@ -16,6 +16,7 @@ const ReportTemplateEditor = lazy(() => import('@/pages/ReportTemplateEditor').t
 const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'));
 const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'));
 const ReportV2Page = lazy(() => import('@/modules/reports-v2/ReportV2Page'));
+const ReportObjetoIIPage = lazy(() => import('@/modules/report-objeto-ii/ReportObjetoIIPage'));
 const FormsListPage = lazy(() => import('@/modules/gira-forms/FormsListPage'));
 const FormBuilderPage = lazy(() => import('@/modules/gira-forms/FormBuilderPage'));
 const EventsListPage = lazy(() => import('@/modules/gira-eventos/EventsListPage'));
