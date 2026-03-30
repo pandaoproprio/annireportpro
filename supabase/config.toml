@@ -29,3 +29,5 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.send-login-reminder]
     verify_jwt = false
+  [functions.send-event-confirmation]
+    verify_jwt = false
