@@ -968,6 +968,23 @@ function buildHtml(payload: ReportPayload): string {
           word-break: break-word;
         }
         .body-copy { margin: 0 0 4mm; text-indent: 12.5mm; }
+        .section p { text-indent: 12.5mm; margin: 0 0 4mm; }
+        .section p.subheading,
+        .section p.cover-eyebrow,
+        .section p.cover-meta,
+        .section p.cover-project-name,
+        .section p.cover-subtitle,
+        .section p.signature-date,
+        .section p.signature-label,
+        .section p.signature-name,
+        .section li p,
+        .section .photo-group-title,
+        .section .caption p,
+        .section .activity-meta p,
+        .toc-section p,
+        .cover p,
+        .institutional-footer p,
+        .audit-footer p { text-indent: 0; }
 
         /* Rich-text list styles from editor */
         .section ul, .section ol { display: block; list-style-position: outside; margin: 0 0 4mm; padding-left: 12.5mm; }
@@ -1196,8 +1213,8 @@ function buildHtml(payload: ReportPayload): string {
             img.addEventListener('load', check);
             img.addEventListener('error', check);
           });
-          // Safety timeout: resolve after 5s regardless
-          setTimeout(function() { resolve(true); }, 5000);
+          // Safety timeout: resolve after 8s regardless
+          setTimeout(function() { resolve(true); }, 8000);
         });
         window.__imagesReady.then(function() { window.__imagesReady = true; });
       </script>
@@ -1251,7 +1268,7 @@ Deno.serve(async (req) => {
     let browserlessResponse: Response;
     try {
       const controller = new AbortController();
-      const abortTimer = setTimeout(() => controller.abort(), 50000);
+      const abortTimer = setTimeout(() => controller.abort(), 55000);
 
       browserlessResponse = await fetch(
         `https://chrome.browserless.io/pdf?token=${browserlessApiKey}&timeout=45000&bestAttempt=true`,
@@ -1263,13 +1280,17 @@ Deno.serve(async (req) => {
             html,
             bestAttempt: true,
             gotoOptions: {
-              waitUntil: "domcontentloaded",
-              timeout: 30000,
+              waitUntil: "networkidle0",
+              timeout: 40000,
+            },
+            waitForFunction: {
+              fn: "() => window.__imagesReady === true",
+              timeout: 12000,
             },
             options: {
               format: "A4",
               printBackground: true,
-              timeout: 40000,
+              timeout: 50000,
               preferCSSPageSize: true,
               displayHeaderFooter: true,
               headerTemplate: "<span></span>",
