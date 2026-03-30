@@ -143,7 +143,7 @@ export const ReportGenerator: React.FC = () => {
     setIsExporting(true);
     setExportType('pdf');
     try {
-      const orgLogoUrl = vc.config?.logoUrl ?? undefined;
+      const orgLogoUrl = vc.config?.logo ?? undefined;
       const data = mapObjetoIToReportData(state, orgLogoUrl);
       const blob = await generateReport(data, 'objeto-i');
       downloadReport(blob, `relatorio-objeto-i-${Date.now()}`);
