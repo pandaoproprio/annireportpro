@@ -16,7 +16,8 @@ import {
   type ReportObjIISection, type ReportObjIIData,
   type CoverConfig, type HeaderConfig, type FooterConfig, type PhotoWithCaption,
 } from './types';
-import { exportReportObjIIPdf } from './pdfExport';
+import { generateReport, downloadReport } from '@/lib/pdf/generate';
+import { mapObjetoIIToReportData } from '@/lib/pdf/mappers/mapObjetoII';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import type { ReportData } from '@/types';
 
@@ -177,7 +178,10 @@ const ReportObjetoIIPage: React.FC = () => {
 
     setIsExporting(true);
     try {
-      await exportReportObjIIPdf({ cover, header, footer, sections, projectName: project.name });
+      const reportState = { sections, titulo: project.name, organizacao: project.organizationName, periodo: '' };
+      const data = mapObjetoIIToReportData(reportState, visualConfig?.logo ?? header.logoCenter ?? undefined);
+      const blob = await generateReport(data, 'objeto-ii');
+      downloadReport(blob, `relatorio-objeto-ii-${Date.now()}`);
       toast.success('PDF exportado com sucesso!');
     } catch (err) {
       console.error('Export error:', err);
