@@ -9,7 +9,8 @@ import type { ReportV2Data } from './types';
 import { DEFAULT_HEADER } from './types';
 import ReportForm from './ReportForm';
 import ReportPreview from './ReportPreview';
-import { generateReportPdf } from './reportService';
+import { generateReport, downloadReport } from '@/lib/pdf/generate';
+import type { ReportData } from '@/lib/pdf/schema';
 
 type Mode = 'edit' | 'preview';
 
