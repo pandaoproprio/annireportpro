@@ -21,26 +21,42 @@ import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import type { ReportData } from '@/types';
 
 function mapReportDataToSections(rd: ReportData, projectObject?: string, projectSummary?: string): ReportObjIISection[] {
+  const photoMeta = rd.photoMetadata || {};
+
+  const getPhotosWithCaptions = (key: string, urls: string[]): PhotoWithCaption[] => {
+    const metas = photoMeta[key] || [];
+    return urls.map((url, i) => ({
+      url,
+      caption: metas[i]?.caption || '',
+    }));
+  };
+
+  const goalPhotos: PhotoWithCaption[] = rd.goalPhotos
+    ? Object.entries(rd.goalPhotos).flatMap(([goalId, urls]) =>
+        getPhotosWithCaptions(`goal_${goalId}`, urls)
+      )
+    : [];
+
   const contentMap: Record<string, { content: string; photos: PhotoWithCaption[] }> = {
     object: { content: rd.objectOverride || projectObject || '', photos: [] },
     summary: { content: rd.executiveSummary || projectSummary || '', photos: [] },
     goals: {
       content: rd.goalNarratives ? Object.values(rd.goalNarratives).filter(Boolean).join('\n\n') : '',
-      photos: rd.goalPhotos ? Object.values(rd.goalPhotos).flat().map(u => ({ url: u, caption: '' })) : [],
+      photos: goalPhotos,
     },
     other: {
       content: rd.otherActionsText || '',
-      photos: (rd.otherActionsPhotos || []).map(u => ({ url: u, caption: '' })),
+      photos: getPhotosWithCaptions('otherActions', rd.otherActionsPhotos || []),
     },
     communication: {
       content: rd.communicationText || '',
-      photos: (rd.communicationPhotos || []).map(u => ({ url: u, caption: '' })),
+      photos: getPhotosWithCaptions('communication', rd.communicationPhotos || []),
     },
     satisfaction: { content: rd.satisfactionText || '', photos: [] },
     future: { content: rd.futureActionsText || '', photos: [] },
     expenses: {
       content: rd.expenses ? rd.expenses.map(e => `${e.itemName}: ${e.description}`).filter(Boolean).join('\n') : '',
-      photos: rd.expenses ? rd.expenses.map(e => e.image).filter(Boolean).map(u => ({ url: u!, caption: '' })) : [],
+      photos: rd.expenses ? rd.expenses.map(e => e.image).filter(Boolean).map((u, i) => ({ url: u!, caption: (photoMeta['expenses'] || [])[i]?.caption || '' })) : [],
     },
     links: {
       content: [
@@ -83,10 +99,11 @@ const ReportObjetoIIPage: React.FC = () => {
 
     setSections(mapReportDataToSections(rd, project.object, project.summary));
 
+    // Import cover data
     setCover(prev => ({
       ...prev,
-      title: rd.coverTitle || prev.title,
-      subtitle: rd.coverSubtitle || '',
+      title: rd.coverTitle || visualConfig?.coverTitle || prev.title,
+      subtitle: rd.coverSubtitle || visualConfig?.coverSubtitle || '',
       organizationName: project.organizationName || '',
       fomentoNumber: project.fomentoNumber || '',
       period: project.startDate && project.endDate
@@ -94,18 +111,29 @@ const ReportObjetoIIPage: React.FC = () => {
         : '',
     }));
 
+    // Import logos from reportData first, fallback to visualConfig
     setHeader({
       logoLeft: rd.logo || visualConfig?.logo || '',
       logoCenter: rd.logoCenter || visualConfig?.logoCenter || '',
       logoRight: rd.logoSecondary || visualConfig?.logoSecondary || '',
     });
 
+    // Import footer from visualConfig
     if (visualConfig) {
-      setFooter(prev => ({
-        ...prev,
-        line1: visualConfig.footerLine1Text || prev.line1,
-        line2: visualConfig.footerLine2Text || prev.line2,
-        line3: visualConfig.footerLine3Text || prev.line3,
+      setFooter({
+        enabled: visualConfig.footerInstitutionalEnabled ?? true,
+        line1: visualConfig.footerLine1Text || '',
+        line2: visualConfig.footerLine2Text || '',
+        line3: visualConfig.footerLine3Text || '',
+      });
+    }
+
+    // Import sections visibility from reportData.sections if available
+    if (rd.sections && rd.sections.length > 0) {
+      setSections(prev => prev.map(s => {
+        const match = rd.sections?.find(rs => rs.key === s.key);
+        if (match) return { ...s, enabled: match.isVisible };
+        return s;
       }));
     }
 
