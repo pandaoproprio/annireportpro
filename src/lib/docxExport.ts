@@ -241,6 +241,18 @@ export const exportToDocx = async (data: ExportData) => {
       spacing: { after: 200 },
       children: [new TextRun({ text: project.organizationName, bold: true, size: 28, font: 'Times New Roman' })],
     }),
+    new Paragraph({ children: [new PageBreak()] }),
+    // Table of Contents
+    new Paragraph({
+      text: 'SUMÁRIO',
+      heading: HeadingLevel.HEADING_1,
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 400 },
+    }),
+    new TableOfContents("Sumário", {
+      hyperlink: true,
+      headingStyleRange: "1-3",
+    }),
     new Paragraph({ children: [new PageBreak()] })
   );
 
