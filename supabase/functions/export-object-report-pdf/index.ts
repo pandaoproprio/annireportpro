@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.93.3";
+import { PDFDocument, rgb } from "https://esm.sh/pdf-lib@1.17.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -914,6 +915,14 @@ function buildHtml(payload: ReportPayload): string {
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        /* ─── PDF LAYOUT TABLE: thead/tfoot repeat on every page ─── */
+        .pdf-layout { width: 100%; border-collapse: collapse; }
+        .pdf-layout thead { display: table-header-group; }
+        .pdf-layout tfoot { display: table-footer-group; }
+        .pdf-layout td { padding: 0; border: none; vertical-align: top; }
+        .pdf-header-cell { padding-bottom: 4mm; border-bottom: 1px solid #9ca3af; }
+        .pdf-footer-cell { padding-top: 2mm; border-top: 1px solid #9ca3af; }
         html, body {
           margin: 0; padding: 0;
           font-family: "Times New Roman", Times, serif;
@@ -1241,14 +1250,24 @@ function buildHtml(payload: ReportPayload): string {
     </head>
     <body>
       ${buildCoverHtml(payload)}
-      <div class="pdf-body-cell">
-        ${buildTocHtml(payload.sections)}
-        ${sectionsHtml}
-        ${signatureHtml}
-        <div class="audit-footer">
-          Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
-        </div>
-      </div>
+      <table class="pdf-layout">
+        <thead>
+          <tr><td class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</td></tr>
+        </thead>
+        <tfoot>
+          <tr><td class="pdf-footer-cell">${buildFooterHtml(payload.visualConfig)}</td></tr>
+        </tfoot>
+        <tbody>
+          <tr><td>
+            ${buildTocHtml(payload.sections)}
+            ${sectionsHtml}
+            ${signatureHtml}
+            <div class="audit-footer">
+              Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
+            </div>
+          </td></tr>
+        </tbody>
+      </table>
       <script>
         // 1. Force eager loading on all images
         (function() {
@@ -1263,7 +1282,7 @@ function buildHtml(payload: ReportPayload): string {
         // 2. Generate SHA-256 hash of document content for audit integrity
         (async function() {
           try {
-            var content = document.querySelector('.pdf-body-cell').innerText;
+            var content = document.querySelector('.pdf-layout tbody').innerText;
             var encoder = new TextEncoder();
             var data = encoder.encode(content);
             var hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -1368,12 +1387,12 @@ Deno.serve(async (req) => {
               displayHeaderFooter: true,
               margin: {
                 top: "30mm",
-                bottom: "20mm",
+                bottom: "25mm",
                 left: "30mm",
                 right: "20mm",
               },
-              headerTemplate: `<div style="width:100%;padding:0 20mm 0 30mm;font-family:'Times New Roman',serif;"><div style="width:100%;padding:0 0 4mm 0;border-bottom:1px solid #9ca3af;">${buildHeaderHtml(payload.visualConfig)}</div></div>`,
-              footerTemplate: `<style>#header,#footer{padding:0 !important;}</style><div style="width:100%;padding:0 20mm 0 30mm;font-family:'Times New Roman',serif;font-size:8.5pt;"><div style="width:100%;padding-top:2mm;border-top:1px solid #9ca3af;">${buildFooterHtml(payload.visualConfig)}<div style="text-align:right;font-size:10pt;color:#000;margin-top:1mm;"><span class="pageNumber"></span></div></div></div>`,
+              headerTemplate: '<span></span>',
+              footerTemplate: '<div style="width:100%;text-align:right;padding-right:20mm;font-size:10pt;font-family:serif;"><span class="pageNumber"></span></div>',
             },
           }),
         },
@@ -1398,8 +1417,34 @@ Deno.serve(async (req) => {
     }
 
     console.log("Browserless OK, reading PDF buffer...");
-    const pdfBuffer = await browserlessResponse.arrayBuffer();
-    console.log(`PDF size: ${(pdfBuffer.byteLength / 1024).toFixed(1)}KB`);
+    const rawPdfBuffer = await browserlessResponse.arrayBuffer();
+    console.log(`Raw PDF size: ${(rawPdfBuffer.byteLength / 1024).toFixed(1)}KB`);
+
+    // Post-processing: remove page number from cover (page 1) using pdf-lib
+    let pdfBuffer: ArrayBuffer;
+    try {
+      const pdfDoc = await PDFDocument.load(rawPdfBuffer);
+      const pages = pdfDoc.getPages();
+      if (pages.length > 0) {
+        const firstPage = pages[0];
+        const { width } = firstPage.getSize();
+        // Draw white rectangle over the page number "1" in bottom-right corner
+        firstPage.drawRectangle({
+          x: width - 55,
+          y: 18,
+          width: 45,
+          height: 20,
+          color: rgb(1, 1, 1),
+        });
+      }
+      const finalPdfBytes = await pdfDoc.save();
+      pdfBuffer = finalPdfBytes.buffer;
+      console.log(`Final PDF size: ${(pdfBuffer.byteLength / 1024).toFixed(1)}KB`);
+    } catch (pdfLibErr) {
+      console.error("pdf-lib post-processing failed, using raw PDF:", pdfLibErr);
+      pdfBuffer = rawPdfBuffer;
+    }
+
     const safeFilename = encodeURIComponent(`Relatorio_${(payload.project?.name || "Projeto").replace(/\s+/g, "_")}.pdf`);
 
     return new Response(pdfBuffer, {
