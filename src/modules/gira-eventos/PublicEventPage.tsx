@@ -34,7 +34,7 @@ const PublicEventPage: React.FC = () => {
 
   const handleRegister = (data: { name: string; email: string; phone: string; document: string }) => {
     createRegistration.mutate(
-      { event_id: id!, ...data, status: 'confirmado', user_id: null },
+      { event_id: id!, ...data, status: 'confirmado', user_id: null, qr_token: null },
       { onSuccess: () => setSubmitted(true) }
     );
   };
