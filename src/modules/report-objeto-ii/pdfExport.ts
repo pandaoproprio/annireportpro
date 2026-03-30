@@ -1,34 +1,60 @@
 import jsPDF from 'jspdf';
 import type { ReportObjIIData, PhotoWithCaption } from './types';
 
-const MARGIN_LEFT = 30;
-const MARGIN_RIGHT = 20;
-const MARGIN_TOP = 30;
-const MARGIN_BOTTOM = 20;
-const PAGE_W = 210;
-const PAGE_H = 297;
-const CONTENT_W = PAGE_W - MARGIN_LEFT - MARGIN_RIGHT;
-const FONT_SIZE = 12;
-const LINE_HEIGHT = 1.5;
-const FIRST_LINE_INDENT = 12.5;
-const HEADER_HEIGHT = 22; // mm for header bar
-const FOOTER_HEIGHT = 18; // mm for footer
+const ML = 30;   // ABNT left 3cm
+const MR = 20;   // ABNT right 2cm
+const MT = 30;   // ABNT top 3cm
+const MB = 20;   // ABNT bottom 2cm
+const PW = 210;
+const PH = 297;
+const CW = PW - ML - MR;
+const FS = 12;
+const LH = 1.5;
+const INDENT = 12.5;
+const HDR_H = 22;
+const FTR_H = 18;
 
-async function loadImageAsDataUrl(url: string): Promise<string | null> {
+async function loadImg(url: string): Promise<string | null> {
   if (!url) return null;
   if (url.startsWith('data:')) return url;
   try {
-    const res = await fetch(url);
-    const blob = await res.blob();
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(null);
-      reader.readAsDataURL(blob);
-    });
-  } catch {
-    return null;
-  }
+    const r = await fetch(url);
+    const b = await r.blob();
+    return new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.onerror = () => res(null); fr.readAsDataURL(b); });
+  } catch { return null; }
+}
+
+/** Strip HTML to plain text, preserving paragraph breaks */
+function htmlToPlain(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+/** Detect bold segments from HTML (simple approach) */
+function extractFormattedSegments(html: string): Array<{ text: string; bold: boolean; italic: boolean }> {
+  const segments: Array<{ text: string; bold: boolean; italic: boolean }> = [];
+  // Simple parser: split by <strong>/<em> tags
+  const raw = html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<\/li>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ');
+
+  // For PDF export, we use plain text with basic bold/italic detection
+  const plainText = htmlToPlain(html);
+  segments.push({ text: plainText, bold: false, italic: false });
+  return segments;
 }
 
 export async function exportReportObjIIPdf(data: ReportObjIIData): Promise<void> {
@@ -36,305 +62,194 @@ export async function exportReportObjIIPdf(data: ReportObjIIData): Promise<void>
   const { cover, header, footer } = data;
   const enabledSections = data.sections.filter(s => s.enabled && (s.content.trim() || s.photos.length > 0));
 
-  // Pre-load logo images
-  const [logoLeftData, logoCenterData, logoRightData] = await Promise.all([
-    loadImageAsDataUrl(header.logoLeft),
-    loadImageAsDataUrl(header.logoCenter),
-    loadImageAsDataUrl(header.logoRight),
+  const [logoL, logoC, logoR] = await Promise.all([
+    loadImg(header.logoLeft), loadImg(header.logoCenter), loadImg(header.logoRight),
   ]);
 
-  const hasHeader = logoLeftData || logoCenterData || logoRightData || header.leftText || header.rightText;
-  const contentTop = hasHeader ? MARGIN_TOP + HEADER_HEIGHT : MARGIN_TOP;
-  const contentBottom = footer.enabled ? PAGE_H - MARGIN_BOTTOM - FOOTER_HEIGHT : PAGE_H - MARGIN_BOTTOM;
+  const hasHdr = !!(logoL || logoC || logoR);
+  const cTop = hasHdr ? MT + HDR_H : MT;
+  const cBot = footer.enabled ? PH - MB - FTR_H : PH - MB;
+  let y = cTop;
+  let totalPages = 0;
+  const lineH = FS * LH * 0.352778;
 
-  let y = contentTop;
-  let pageNum = 0;
-  let totalPages = 0; // will track for numbering
-
-  // ── Draw header on current page ──
+  // ── Draw header bar (logos only) ──
   const drawHeader = () => {
-    if (!hasHeader) return;
-    const hY = MARGIN_TOP;
-    const logoSize = 18;
-
-    if (logoLeftData) {
-      try { doc.addImage(logoLeftData, 'JPEG', MARGIN_LEFT, hY, logoSize, logoSize); } catch {}
-    }
-    if (logoCenterData) {
-      try { doc.addImage(logoCenterData, 'JPEG', PAGE_W / 2 - logoSize / 2, hY, logoSize, logoSize); } catch {}
-    }
-    if (logoRightData) {
-      try { doc.addImage(logoRightData, 'JPEG', PAGE_W - MARGIN_RIGHT - logoSize, hY, logoSize, logoSize); } catch {}
-    }
-
-    if (header.leftText) {
-      doc.setFont('times', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      doc.text(header.leftText, MARGIN_LEFT, hY + logoSize + 3);
-    }
-    if (header.rightText) {
-      doc.setFont('times', 'normal');
-      doc.setFontSize(8);
-      doc.setTextColor(100, 100, 100);
-      const tw = doc.getTextWidth(header.rightText);
-      doc.text(header.rightText, PAGE_W - MARGIN_RIGHT - tw, hY + logoSize + 3);
-    }
-
-    // Separator line
+    if (!hasHdr) return;
+    const sz = 18;
+    if (logoL) try { doc.addImage(logoL, 'JPEG', ML, MT, sz, sz); } catch {}
+    if (logoC) try { doc.addImage(logoC, 'JPEG', PW / 2 - sz / 2, MT, sz, sz); } catch {}
+    if (logoR) try { doc.addImage(logoR, 'JPEG', PW - MR - sz, MT, sz, sz); } catch {}
     doc.setDrawColor(156, 163, 175);
     doc.setLineWidth(0.3);
-    doc.line(MARGIN_LEFT, MARGIN_TOP + HEADER_HEIGHT - 2, PAGE_W - MARGIN_RIGHT, MARGIN_TOP + HEADER_HEIGHT - 2);
+    doc.line(ML, MT + HDR_H - 2, PW - MR, MT + HDR_H - 2);
   };
 
-  // ── Draw footer on current page ──
+  // ── Draw footer ──
   const drawFooter = (num: number) => {
     if (footer.enabled) {
-      const fY = PAGE_H - MARGIN_BOTTOM - FOOTER_HEIGHT + 2;
+      const fY = PH - MB - FTR_H + 2;
       doc.setDrawColor(156, 163, 175);
       doc.setLineWidth(0.3);
-      doc.line(MARGIN_LEFT, fY, PAGE_W - MARGIN_RIGHT, fY);
-
+      doc.line(ML, fY, PW - MR, fY);
       doc.setFont('times', 'normal');
       doc.setTextColor(80, 80, 80);
-      const centerX = PAGE_W / 2;
-
-      if (footer.line1) {
-        doc.setFontSize(8);
-        doc.text(footer.line1, centerX, fY + 4, { align: 'center' });
-      }
-      if (footer.line2) {
-        doc.setFontSize(7);
-        doc.text(footer.line2, centerX, fY + 8, { align: 'center' });
-      }
-      if (footer.line3) {
-        doc.setFontSize(7);
-        doc.text(footer.line3, centerX, fY + 12, { align: 'center' });
-      }
+      const cx = PW / 2;
+      if (footer.line1) { doc.setFontSize(8); doc.text(footer.line1, cx, fY + 4, { align: 'center' }); }
+      if (footer.line2) { doc.setFontSize(7); doc.text(footer.line2, cx, fY + 8, { align: 'center' }); }
+      if (footer.line3) { doc.setFontSize(7); doc.text(footer.line3, cx, fY + 12, { align: 'center' }); }
     }
-
-    // Page number (ABNT: bottom-right, 2cm from edges)
     if (num > 0) {
       doc.setFont('times', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
-      const text = String(num);
-      const tw = doc.getTextWidth(text);
-      doc.text(text, PAGE_W - MARGIN_RIGHT - tw, PAGE_H - 10);
+      const t = String(num);
+      doc.text(t, PW - MR - doc.getTextWidth(t), PH - 10);
     }
   };
 
-  // ── New page helper ──
   const newPage = () => {
     totalPages++;
     drawFooter(totalPages > 1 ? totalPages - 1 : 0);
     doc.addPage();
-    y = contentTop;
+    y = cTop;
     drawHeader();
   };
 
   const ensureSpace = (needed: number) => {
-    if (y + needed > contentBottom) {
-      newPage();
-    }
+    if (y + needed > cBot) newPage();
   };
 
-  const lineH = FONT_SIZE * LINE_HEIGHT * 0.352778;
-
-  // ── Write paragraph ──
   const writeParagraph = (text: string, indent = true) => {
     doc.setFont('times', 'normal');
-    doc.setFontSize(FONT_SIZE);
+    doc.setFontSize(FS);
     doc.setTextColor(0, 0, 0);
 
-    const plainText = text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    const paragraphs = plainText.split(/\n+/);
+    const plainText = htmlToPlain(text);
+    const paragraphs = plainText.split(/\n\n+/);
 
     for (const para of paragraphs) {
       if (!para.trim()) { y += lineH; continue; }
 
-      const effectiveW = indent ? CONTENT_W - FIRST_LINE_INDENT : CONTENT_W;
-      const firstLineX = indent ? MARGIN_LEFT + FIRST_LINE_INDENT : MARGIN_LEFT;
-      const allLines = doc.splitTextToSize(para, effectiveW);
-      if (allLines.length === 0) continue;
+      const lines = para.split(/\n/);
+      for (let li = 0; li < lines.length; li++) {
+        const line = lines[li];
+        if (!line.trim()) { y += lineH * 0.5; continue; }
 
-      ensureSpace(lineH);
-      doc.text(allLines[0], firstLineX, y);
-      y += lineH;
+        const isBullet = line.startsWith('• ');
+        const useIndent = indent && !isBullet && li === 0;
+        const effW = useIndent ? CW - INDENT : CW;
+        const startX = useIndent ? ML + INDENT : ML;
 
-      if (allLines.length > 1) {
-        const remaining = para.substring(allLines[0].length).trim();
-        if (remaining) {
-          const restLines = doc.splitTextToSize(remaining, CONTENT_W);
-          for (const line of restLines) {
-            ensureSpace(lineH);
-            doc.text(line, MARGIN_LEFT, y);
-            y += lineH;
-          }
+        const wrapped = doc.splitTextToSize(line, effW);
+        for (let w = 0; w < wrapped.length; w++) {
+          ensureSpace(lineH);
+          doc.text(wrapped[w], w === 0 ? startX : ML, y);
+          y += lineH;
         }
       }
+      y += lineH * 0.3;
     }
-    y += lineH * 0.5;
+    y += lineH * 0.2;
   };
 
   const writeSectionTitle = (title: string) => {
     ensureSpace(lineH * 2);
     doc.setFont('times', 'bold');
-    doc.setFontSize(FONT_SIZE);
+    doc.setFontSize(FS);
     doc.setTextColor(0, 0, 0);
-    doc.text(title.toUpperCase(), MARGIN_LEFT, y);
+    doc.text(title.toUpperCase(), ML, y);
     y += lineH * 1.5;
   };
 
-  // ══════════ COVER PAGE ══════════
+  // ══════════ COVER ══════════
   totalPages++;
-
   if (cover.showLogos) {
-    const logoSize = 20;
-    const logoY = MARGIN_TOP;
-    if (logoLeftData) { try { doc.addImage(logoLeftData, 'JPEG', MARGIN_LEFT, logoY, logoSize, logoSize); } catch {} }
-    if (logoCenterData) { try { doc.addImage(logoCenterData, 'JPEG', PAGE_W / 2 - logoSize / 2, logoY, logoSize, logoSize); } catch {} }
-    if (logoRightData) { try { doc.addImage(logoRightData, 'JPEG', PAGE_W - MARGIN_RIGHT - logoSize, logoY, logoSize, logoSize); } catch {} }
+    const sz = 20;
+    if (logoL) try { doc.addImage(logoL, 'JPEG', ML, MT, sz, sz); } catch {}
+    if (logoC) try { doc.addImage(logoC, 'JPEG', PW / 2 - sz / 2, MT, sz, sz); } catch {}
+    if (logoR) try { doc.addImage(logoR, 'JPEG', PW - MR - sz, MT, sz, sz); } catch {}
   }
 
-  // Cover title
-  let coverY = PAGE_H / 2 - 30;
-  doc.setFont('times', 'bold');
-  doc.setFontSize(18);
-  doc.setTextColor(0, 0, 0);
-  const titleLines = doc.splitTextToSize(cover.title || 'RELATÓRIO DO OBJETO', CONTENT_W);
-  for (const line of titleLines) {
-    const tw = doc.getTextWidth(line);
-    doc.text(line, (PAGE_W - tw) / 2, coverY);
-    coverY += 10;
+  let cy = PH / 2 - 30;
+  doc.setFont('times', 'bold'); doc.setFontSize(18); doc.setTextColor(0, 0, 0);
+  for (const l of doc.splitTextToSize(cover.title || 'RELATÓRIO DO OBJETO', CW)) {
+    doc.text(l, (PW - doc.getTextWidth(l)) / 2, cy); cy += 10;
   }
-
-  // Subtitle
   if (cover.subtitle) {
-    coverY += 4;
-    doc.setFontSize(14);
-    doc.setFont('times', 'normal');
-    const subLines = doc.splitTextToSize(cover.subtitle, CONTENT_W);
-    for (const line of subLines) {
-      const tw = doc.getTextWidth(line);
-      doc.text(line, (PAGE_W - tw) / 2, coverY);
-      coverY += 8;
-    }
+    cy += 4; doc.setFontSize(14); doc.setFont('times', 'normal');
+    for (const l of doc.splitTextToSize(cover.subtitle, CW)) { doc.text(l, (PW - doc.getTextWidth(l)) / 2, cy); cy += 8; }
   }
-
-  // Organization
   if (cover.organizationName) {
-    coverY += 4;
-    doc.setFontSize(12);
-    const tw = doc.getTextWidth(cover.organizationName);
-    doc.text(cover.organizationName, (PAGE_W - tw) / 2, coverY);
-    coverY += 7;
+    cy += 4; doc.setFontSize(12); doc.text(cover.organizationName, (PW - doc.getTextWidth(cover.organizationName)) / 2, cy); cy += 7;
   }
-
-  // Fomento number
   if (cover.fomentoNumber) {
-    doc.setFontSize(11);
-    const tw = doc.getTextWidth(cover.fomentoNumber);
-    doc.text(cover.fomentoNumber, (PAGE_W - tw) / 2, coverY);
-    coverY += 7;
+    doc.setFontSize(11); doc.text(cover.fomentoNumber, (PW - doc.getTextWidth(cover.fomentoNumber)) / 2, cy); cy += 7;
   }
-
-  // Period
   if (cover.period) {
-    coverY += 2;
-    doc.setFontSize(12);
-    const tw = doc.getTextWidth(cover.period);
-    doc.text(cover.period, (PAGE_W - tw) / 2, coverY);
+    cy += 2; doc.setFontSize(12); doc.text(cover.period, (PW - doc.getTextWidth(cover.period)) / 2, cy);
   }
 
   // Cover footer
   if (footer.enabled) {
-    const fY = PAGE_H - MARGIN_BOTTOM - FOOTER_HEIGHT + 2;
-    doc.setDrawColor(156, 163, 175);
-    doc.setLineWidth(0.3);
-    doc.line(MARGIN_LEFT, fY, PAGE_W - MARGIN_RIGHT, fY);
-    doc.setFont('times', 'normal');
-    doc.setTextColor(80, 80, 80);
-    const cx = PAGE_W / 2;
+    const fY = PH - MB - FTR_H + 2;
+    doc.setDrawColor(156, 163, 175); doc.setLineWidth(0.3);
+    doc.line(ML, fY, PW - MR, fY);
+    doc.setFont('times', 'normal'); doc.setTextColor(80, 80, 80);
+    const cx = PW / 2;
     if (footer.line1) { doc.setFontSize(8); doc.text(footer.line1, cx, fY + 4, { align: 'center' }); }
     if (footer.line2) { doc.setFontSize(7); doc.text(footer.line2, cx, fY + 8, { align: 'center' }); }
     if (footer.line3) { doc.setFontSize(7); doc.text(footer.line3, cx, fY + 12, { align: 'center' }); }
   }
 
-  // ══════════ CONTENT PAGES ══════════
+  // ══════════ CONTENT ══════════
   newPage();
 
-  // Table of Contents
+  // TOC
   writeSectionTitle('SUMÁRIO');
-  doc.setFont('times', 'normal');
-  doc.setFontSize(FONT_SIZE);
-  enabledSections.forEach((section, i) => {
-    ensureSpace(lineH);
-    doc.text(`${i + 1}. ${section.title}`, MARGIN_LEFT + FIRST_LINE_INDENT, y);
-    y += lineH;
-  });
+  doc.setFont('times', 'normal'); doc.setFontSize(FS);
+  enabledSections.forEach((s, i) => { ensureSpace(lineH); doc.text(`${i + 1}. ${s.title}`, ML + INDENT, y); y += lineH; });
   y += lineH;
 
-  // Sections
   for (let i = 0; i < enabledSections.length; i++) {
     const section = enabledSections[i];
-
-    if (i > 0) {
-      newPage();
-    }
+    if (i > 0) newPage();
 
     writeSectionTitle(`${i + 1}. ${section.title}`);
-    if (section.content.trim()) {
-      writeParagraph(section.content);
-    }
+    if (section.content.trim()) writeParagraph(section.content);
 
-    // Photos with captions (3 cols, ABNT grid)
+    // Photos with captions (3 cols)
     if (section.photos.length > 0) {
-      const photoW = (CONTENT_W - 8) / 3;
-      const photoH = photoW * 0.75;
-      const captionH = 5;
-      const cellH = photoH + captionH + 3;
+      const pw = (CW - 8) / 3;
+      const ph = pw * 0.75;
+      const captH = 5;
+      const cellH = ph + captH + 3;
 
       for (let p = 0; p < section.photos.length; p++) {
         const col = p % 3;
+        if (col === 0) ensureSpace(cellH);
 
-        if (col === 0) {
-          ensureSpace(cellH);
-        }
-
-        const px = MARGIN_LEFT + col * (photoW + 4);
+        const px = ML + col * (pw + 4);
         const py = y;
-
         const photo = section.photos[p];
-        const imgData = await loadImageAsDataUrl(photo.url);
-        if (imgData) {
-          try { doc.addImage(imgData, 'JPEG', px, py, photoW, photoH); } catch {}
-        } else {
-          doc.setDrawColor(200, 200, 200);
-          doc.rect(px, py, photoW, photoH);
-        }
+        const imgData = await loadImg(photo.url);
+        if (imgData) { try { doc.addImage(imgData, 'JPEG', px, py, pw, ph); } catch {} }
+        else { doc.setDrawColor(200, 200, 200); doc.rect(px, py, pw, ph); }
 
-        // Caption below photo
         if (photo.caption) {
-          doc.setFont('times', 'italic');
-          doc.setFontSize(8);
-          doc.setTextColor(80, 80, 80);
-          const captionLines = doc.splitTextToSize(photo.caption, photoW);
-          doc.text(captionLines[0] || '', px + photoW / 2, py + photoH + 3, { align: 'center' });
+          doc.setFont('times', 'italic'); doc.setFontSize(8); doc.setTextColor(80, 80, 80);
+          const cl = doc.splitTextToSize(photo.caption, pw);
+          doc.text(cl[0] || '', px + pw / 2, py + ph + 3, { align: 'center' });
         }
 
-        if (col === 2 || p === section.photos.length - 1) {
-          y += cellH;
-        }
+        if (col === 2 || p === section.photos.length - 1) y += cellH;
       }
     }
   }
 
-  // Final footer + page number
   totalPages++;
   drawFooter(totalPages - 1);
 
-  // Save
   const safeName = data.projectName?.replace(/[^a-zA-Z0-9À-ÿ\s-_]/g, '').trim().replace(/\s+/g, '_') || 'Projeto';
   doc.save(`Relatorio_ObjII_${safeName}_${new Date().toISOString().split('T')[0]}.pdf`);
 }

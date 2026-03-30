@@ -8,7 +8,7 @@ export interface ReportObjIISection {
   key: string;
   title: string;
   enabled: boolean;
-  content: string;
+  content: string; // HTML content from TipTap
   photos: PhotoWithCaption[];
 }
 
@@ -37,8 +37,6 @@ export interface HeaderConfig {
   logoLeft: string;
   logoCenter: string;
   logoRight: string;
-  leftText: string;
-  rightText: string;
 }
 
 export interface FooterConfig {
@@ -69,8 +67,6 @@ export const DEFAULT_HEADER: HeaderConfig = {
   logoLeft: '',
   logoCenter: '',
   logoRight: '',
-  leftText: '',
-  rightText: '',
 };
 
 export const DEFAULT_FOOTER: FooterConfig = {
