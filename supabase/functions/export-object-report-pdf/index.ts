@@ -879,13 +879,9 @@ function buildHtml(payload: ReportPayload): string {
     <head>
       <meta charset="UTF-8" />
       <style>
-        /* ─── Page: ABNT margins handled via @page ─── */
+        /* ─── Page: ABNT size only — margins handled by Puppeteer ─── */
         @page {
           size: A4;
-          margin: 30mm 20mm 20mm 30mm;
-        }
-        @page :first {
-          margin-top: 20mm;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -916,8 +912,13 @@ function buildHtml(payload: ReportPayload): string {
           border-bottom: 1px solid #d1d5db;
           vertical-align: middle;
         }
-        /* Hide header on cover page */
-        .cover-page ~ .pdf-header-table { display: none; }
+        .pdf-body-row {
+          display: table-row-group;
+        }
+        .pdf-body-cell {
+          display: table-cell;
+          vertical-align: top;
+        }
 
         .header-banner-wrap,
         .header-logos {
@@ -961,7 +962,7 @@ function buildHtml(payload: ReportPayload): string {
         }
 
         /* ─── CONTENT ─── */
-        .pdf-content { padding: 0; }
+        .pdf-body-cell { padding: 0; }
 
         /* ─── COVER ─── */
         .cover {
@@ -1226,19 +1227,21 @@ function buildHtml(payload: ReportPayload): string {
       </style>
     </head>
     <body>
+      ${buildCoverHtml(payload)}
       <div class="pdf-header-table">
         <div class="pdf-header-row">
           <div class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</div>
         </div>
-      </div>
-      <div class="pdf-content">
-        ${buildCoverHtml(payload)}
-        ${buildTocHtml(payload.sections)}
-        ${sectionsHtml}
-        ${signatureHtml}
-        ${buildFooterHtml(payload.visualConfig)}
-        <div class="audit-footer">
-          Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
+        <div class="pdf-body-row">
+          <div class="pdf-body-cell">
+            ${buildTocHtml(payload.sections)}
+            ${sectionsHtml}
+            ${signatureHtml}
+            ${buildFooterHtml(payload.visualConfig)}
+            <div class="audit-footer">
+              Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
+            </div>
+          </div>
         </div>
       </div>
       <script>
@@ -1255,7 +1258,7 @@ function buildHtml(payload: ReportPayload): string {
         // 2. Generate SHA-256 hash of document content for audit integrity
         (async function() {
           try {
-            var content = document.querySelector('.pdf-content').innerText;
+            var content = document.querySelector('.pdf-body-cell').innerText;
             var encoder = new TextEncoder();
             var data = encoder.encode(content);
             var hashBuffer = await crypto.subtle.digest('SHA-256', data);
@@ -1356,12 +1359,15 @@ Deno.serve(async (req) => {
               format: "A4",
               printBackground: true,
               timeout: 50000,
-              preferCSSPageSize: true,
               displayHeaderFooter: true,
+              margin: {
+                top: "30mm",
+                bottom: "22mm",
+                left: "30mm",
+                right: "20mm",
+              },
               headerTemplate: "<span></span>",
-              footerTemplate: `<div style="width:100%;text-align:right;font-size:10pt;color:#000;font-family:'Times New Roman',serif;padding-right:20mm;padding-bottom:2mm;">
-                <span class="pageNumber"></span>
-              </div>`,
+              footerTemplate: `<div id="ft" style="width:100%;text-align:right;font-size:10pt;color:#000;font-family:'Times New Roman',serif;padding-right:0mm;"><span class="pageNumber"></span></div><script>var pn=document.querySelector('.pageNumber');if(pn&&pn.textContent.trim()==='1'){document.getElementById('ft').style.visibility='hidden';}</script>`,
             },
           }),
         },
