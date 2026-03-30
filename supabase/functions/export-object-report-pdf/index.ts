@@ -1417,8 +1417,34 @@ Deno.serve(async (req) => {
     }
 
     console.log("Browserless OK, reading PDF buffer...");
-    const pdfBuffer = await browserlessResponse.arrayBuffer();
-    console.log(`PDF size: ${(pdfBuffer.byteLength / 1024).toFixed(1)}KB`);
+    const rawPdfBuffer = await browserlessResponse.arrayBuffer();
+    console.log(`Raw PDF size: ${(rawPdfBuffer.byteLength / 1024).toFixed(1)}KB`);
+
+    // Post-processing: remove page number from cover (page 1) using pdf-lib
+    let pdfBuffer: ArrayBuffer;
+    try {
+      const pdfDoc = await PDFDocument.load(rawPdfBuffer);
+      const pages = pdfDoc.getPages();
+      if (pages.length > 0) {
+        const firstPage = pages[0];
+        const { width } = firstPage.getSize();
+        // Draw white rectangle over the page number "1" in bottom-right corner
+        firstPage.drawRectangle({
+          x: width - 55,
+          y: 18,
+          width: 45,
+          height: 20,
+          color: rgb(1, 1, 1),
+        });
+      }
+      const finalPdfBytes = await pdfDoc.save();
+      pdfBuffer = finalPdfBytes.buffer;
+      console.log(`Final PDF size: ${(pdfBuffer.byteLength / 1024).toFixed(1)}KB`);
+    } catch (pdfLibErr) {
+      console.error("pdf-lib post-processing failed, using raw PDF:", pdfLibErr);
+      pdfBuffer = rawPdfBuffer;
+    }
+
     const safeFilename = encodeURIComponent(`Relatorio_${(payload.project?.name || "Projeto").replace(/\s+/g, "_")}.pdf`);
 
     return new Response(pdfBuffer, {
