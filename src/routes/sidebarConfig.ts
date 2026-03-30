@@ -78,7 +78,7 @@ export const sidebarSections: SidebarSection[] = [
     items: [
       { to: '/templates', label: 'Templates de Relatórios', iconName: 'Layers' },
       { to: '/editor', label: 'Editor de Documentos', iconName: 'FileCode2' },
-      { to: '/wysiwyg', label: 'Editor WYSIWYG', iconName: 'PenTool' },
+      
     ],
   },
   {
