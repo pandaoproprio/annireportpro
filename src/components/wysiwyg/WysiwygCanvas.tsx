@@ -144,6 +144,10 @@ interface WysiwygCanvasProps {
   onUpdateGlobalHeader: (updates: Partial<HeaderFooterConfig>) => void;
   onUpdateGlobalFooter: (updates: Partial<HeaderFooterConfig>) => void;
   documentTitle: string;
+  /** Yjs doc for collaborative editing (optional) */
+  ydoc?: Y.Doc | null;
+  /** Yjs awareness for cursor display (optional) */
+  awareness?: Awareness | null;
 }
 
 export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
@@ -152,6 +156,7 @@ export const WysiwygCanvas: React.FC<WysiwygCanvasProps> = ({
   onReorderBlocks, onDeselectBlock,
   onUpdateGlobalHeader, onUpdateGlobalFooter,
   documentTitle,
+  ydoc, awareness,
 }) => {
   const pageW = layout.pageWidth * MM_TO_PX;
   const pageH = layout.pageHeight * MM_TO_PX;
