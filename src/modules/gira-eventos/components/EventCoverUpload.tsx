@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { ImageIcon, Upload, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { compressImage } from '@/lib/imageCompression';
 
 interface Props {
   value: string | null;
