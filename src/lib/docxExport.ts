@@ -16,6 +16,7 @@ import {
   ImageRun,
   ShadingType,
   TableOfContents,
+  LevelFormat,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Project, Activity, ActivityType, ExpenseItem, ReportSection, PhotoGroup, ReportPhotoMeta } from '@/types';
