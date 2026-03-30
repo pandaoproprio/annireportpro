@@ -585,7 +585,7 @@ function buildCoverHtml(payload: ReportPayload): string {
   return `
     <section class="cover page-break-after">
       <div class="cover-inner">
-        ${isNonEmptyString(coverLogo) ? `<img src="${escapeHtml(coverLogo.trim())}" alt="Logo de capa" class="cover-logo" loading="eager" />` : ""}
+        ${coverLogo ? `<img src="${escapeHtml(coverLogo)}" alt="Logo de capa" class="cover-logo" loading="eager" />` : ""}
         <p class="cover-eyebrow">Relatório institucional</p>
         <h1 class="cover-title">${escapeHtml(coverTitle)}</h1>
         ${coverSubtitle ? `<p class="cover-subtitle">${escapeHtml(coverSubtitle)}</p>` : ""}
