@@ -109,7 +109,7 @@ export default function FormsListPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <ClipboardList className="w-7 h-7 text-primary" />
-            GIRA Forms
+            GIRA Formulários
           </h1>
           <p className="text-muted-foreground text-sm mt-1">Crie e gerencie formulários online configuráveis</p>
         </div>

@@ -140,7 +140,7 @@ export default function PublicFormPage() {
   React.useEffect(() => {
     if (!form) return;
     const ogImage = design.coverImageUrl || design.headerImageUrl || design.logoUrl || '';
-    const ogTitle = form.title || 'GIRA Forms';
+    const ogTitle = form.title || 'GIRA Formulários';
     const ogDesc = (form.description || '').slice(0, 160);
 
     document.title = ogTitle;
@@ -616,7 +616,7 @@ export default function PublicFormPage() {
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1" style={{ color: 'var(--form-primary)' }}>
                 {!design.logoUrl && <ClipboardList className="w-4 h-4" />}
-                <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Forms</span>
+                <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Formulários</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
               {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
@@ -889,7 +889,7 @@ export default function PublicFormPage() {
         </div>
 
         <p className="text-center text-xs pb-4" style={{ color: 'var(--form-muted)' }}>
-          Powered by <span className="font-semibold">GIRA Forms</span>
+          Desenvolvido com <span className="font-semibold">GIRA Formulários</span>
         </p>
       </motion.div>
     </div>
