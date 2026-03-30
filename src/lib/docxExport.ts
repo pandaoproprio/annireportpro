@@ -1067,6 +1067,7 @@ export const exportToDocx = async (data: ExportData) => {
     sections: [
       {
         properties: {
+          titlePage: true,
           page: {
             size: {
               width: PAGE_WIDTH,
@@ -1137,6 +1138,72 @@ export const exportToDocx = async (data: ExportData) => {
                 ],
               }));
 
+              return children;
+            })(),
+          }),
+          first: new Footer({
+            children: (() => {
+              const vc = data.visualConfig;
+              const children: Paragraph[] = [];
+              const instEnabled = vc ? vc.footerInstitutionalEnabled !== false : true;
+
+              if (instEnabled) {
+                const CEAP_L1 = 'Centro de Articulação de Populações Marginalizadas - CEAP';
+                const CEAP_L2 = 'R. Sr. dos Passos, 174 - Sl 701 - Centro, Rio de Janeiro - RJ, 20061-011';
+                const CEAP_L3 = 'ceapoficial.org.br | falecom@ceapoficial.org.br | (21) 9 7286-4717';
+
+                const l1Text = vc?.footerLine1Text || CEAP_L1;
+                const l1Size = Math.round((vc?.footerLine1FontSize ?? 9) * 2);
+                children.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 40 },
+                  children: [new TextRun({ text: l1Text, size: l1Size, font: 'Times New Roman', bold: true })],
+                }));
+
+                const l2Text = vc?.footerLine2Text || CEAP_L2;
+                const l2Size = Math.round((vc?.footerLine2FontSize ?? 7) * 2);
+                children.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: l2Text, size: l2Size, font: 'Times New Roman' })],
+                }));
+
+                const l3Text = vc?.footerLine3Text || CEAP_L3;
+                const l3Size = Math.round((vc?.footerLine3FontSize ?? 7) * 2);
+                children.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: l3Text, size: l3Size, font: 'Times New Roman' })],
+                }));
+              }
+
+              const customText = vc?.footerText;
+              if (customText) {
+                children.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: customText, size: 14, font: 'Times New Roman', italics: true })],
+                }));
+              }
+
+              // Page numbers
+              children.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: l3Text, size: l3Size, font: 'Times New Roman' })],
+              }));
+              }
+
+              const customText = vc?.footerText;
+              if (customText) {
+                children.push(new Paragraph({
+                  alignment: AlignmentType.CENTER,
+                  spacing: { after: 20 },
+                  children: [new TextRun({ text: customText, size: 14, font: 'Times New Roman', italics: true })],
+                }));
+              }
+
+              // NO page numbers on cover page
               return children;
             })(),
           }),
