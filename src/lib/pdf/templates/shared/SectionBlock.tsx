@@ -13,8 +13,9 @@ export function SectionBlock({ section, level = 0 }: SectionBlockProps) {
   const titleStyle = level === 0 ? styles.sectionTitle : styles.subsectionTitle
 
   return (
-    <View wrap={false} style={{ marginBottom: 4 }}>
-      <Text style={titleStyle}>{section.title}</Text>
+    <View style={{ marginBottom: 4 }}>
+      {/* Title stays with at least some content */}
+      <Text style={titleStyle} orphans={3} widows={3}>{section.title}</Text>
 
       {section.content && (
         <Text style={styles.paragraph}>{section.content}</Text>

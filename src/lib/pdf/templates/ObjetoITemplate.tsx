@@ -1,6 +1,6 @@
 import React from 'react'
 import { Document, Page, View, Text } from '@react-pdf/renderer'
-import { styles, COLORS } from './shared/styles'
+import { styles, COLORS, ABNT } from './shared/styles'
 import { ReportHeader, ReportFooter } from './shared/HeaderFooter'
 import { SectionBlock } from './shared/SectionBlock'
 import type { ReportData } from '../schema'
@@ -13,8 +13,8 @@ export function ObjetoITemplate(data: ReportData) {
       subject={data.meta.subtitle}
       creator="GIRA ERP — AnnITech"
     >
-      {/* Capa */}
-      <Page size="A4" style={styles.page}>
+      {/* ── Capa ── */}
+      <Page size="A4" style={styles.coverPage}>
         <View
           style={{
             flex: 1,
@@ -26,7 +26,7 @@ export function ObjetoITemplate(data: ReportData) {
           <Text
             style={{
               fontSize: 22,
-              fontFamily: 'Helvetica-Bold',
+              fontFamily: 'Times-Bold',
               color: COLORS.primary,
               textAlign: 'center',
             }}
@@ -38,6 +38,7 @@ export function ObjetoITemplate(data: ReportData) {
             <Text
               style={{
                 fontSize: 13,
+                fontFamily: 'Times-Roman',
                 color: COLORS.muted,
                 textAlign: 'center',
               }}
@@ -55,17 +56,17 @@ export function ObjetoITemplate(data: ReportData) {
             }}
           />
 
-          <Text style={{ fontSize: 11, color: COLORS.text }}>
+          <Text style={{ fontSize: 12, fontFamily: 'Times-Roman', color: COLORS.text }}>
             {data.meta.organization}
           </Text>
 
           {data.meta.period && (
-            <Text style={{ fontSize: 10, color: COLORS.muted }}>
+            <Text style={{ fontSize: 11, fontFamily: 'Times-Roman', color: COLORS.muted }}>
               {data.meta.period}
             </Text>
           )}
 
-          <Text style={{ fontSize: 9, color: COLORS.muted, marginTop: 24 }}>
+          <Text style={{ fontSize: 9, fontFamily: 'Times-Italic', color: COLORS.muted, marginTop: 24 }}>
             Gerado em{' '}
             {new Date(data.meta.generatedAt).toLocaleDateString('pt-BR', {
               day: '2-digit',
@@ -76,8 +77,8 @@ export function ObjetoITemplate(data: ReportData) {
         </View>
       </Page>
 
-      {/* Conteúdo */}
-      <Page size="A4" style={styles.page}>
+      {/* ── Conteúdo (com paginação automática) ── */}
+      <Page size="A4" style={styles.page} wrap>
         <ReportHeader meta={data.meta} />
 
         {data.sections.map((section) => (

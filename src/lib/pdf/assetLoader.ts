@@ -35,6 +35,14 @@ function extractUrls(data: ReportData): string[] {
 
   if (data.meta.logoUrl) urls.push(data.meta.logoUrl)
 
+  // Logo bar URLs
+  const lb = data.meta.logoBar
+  if (lb) {
+    if (lb.leftLogoUrl) urls.push(lb.leftLogoUrl)
+    if (lb.centerLogoUrl) urls.push(lb.centerLogoUrl)
+    if (lb.rightLogoUrl) urls.push(lb.rightLogoUrl)
+  }
+
   function collectFromSections(sections: ReportSection[]) {
     for (const section of sections) {
       section.photos?.forEach((p: ReportPhoto) => {
@@ -76,11 +84,21 @@ export async function preloadAssets(data: ReportData): Promise<ReportData> {
     }
   }
 
+  // Hydrate logo bar
+  const logoBar = data.meta.logoBar
+  const hydratedLogoBar = logoBar ? {
+    ...logoBar,
+    leftLogoBase64: logoBar.leftLogoUrl ? (assetMap.get(logoBar.leftLogoUrl) ?? undefined) : undefined,
+    centerLogoBase64: logoBar.centerLogoUrl ? (assetMap.get(logoBar.centerLogoUrl) ?? undefined) : undefined,
+    rightLogoBase64: logoBar.rightLogoUrl ? (assetMap.get(logoBar.rightLogoUrl) ?? undefined) : undefined,
+  } : undefined
+
   return {
     ...data,
     meta: {
       ...data.meta,
       logoUrl: data.meta.logoUrl ? (assetMap.get(data.meta.logoUrl) ?? data.meta.logoUrl) : undefined,
+      logoBar: hydratedLogoBar,
     },
     sections: data.sections.map(hydrateSection),
     assets,

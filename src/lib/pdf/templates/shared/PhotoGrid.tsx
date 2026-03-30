@@ -11,9 +11,9 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
   if (!photos || photos.length === 0) return null
 
   return (
-    <View style={styles.photoGrid}>
+    <View style={styles.photoGrid} wrap={true}>
       {photos.map((photo, index) => (
-        <View key={index} style={styles.photoCell}>
+        <View key={index} style={styles.photoCell} wrap={false}>
           <Image
             src={photo.base64 ?? photo.url}
             style={styles.photoImage}
