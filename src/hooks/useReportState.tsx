@@ -4,6 +4,7 @@ import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta, Ph
 import { PageLayout } from '@/types/imageLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { compressImage } from '@/lib/imageCompression';
 import { useSectionManager } from '@/hooks/useSectionManager';
 import { useFileUploader, SectionDoc } from '@/hooks/useFileUploader';
 
