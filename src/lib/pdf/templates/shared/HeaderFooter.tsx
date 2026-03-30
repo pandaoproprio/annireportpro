@@ -1,97 +1,12 @@
 import React from 'react'
 import { View, Text, Image } from '@react-pdf/renderer'
-import { styles, ABNT, COLORS } from './styles'
+import { styles, ABNT, COLORS, FONTS } from './styles'
 import type { ReportMeta, InstitutionalFooter, LogoBarConfig } from '../../schema'
 import { CEAP_FOOTER_DEFAULTS } from '../../schema'
 
 // ══════════════════════════════════════════════════════════════
-// Logo Bar Header — 3 slots (left / center / right)
-// Equivalent to the jsPDF renderHeaderOnPage
-// ══════════════════════════════════════════════════════════════
-
-interface LogoBarProps {
-  logoBar?: LogoBarConfig
-  legacyLogoUrl?: string  // backward compat: single logo
-  meta: ReportMeta
-}
-
-export function ReportLogoBar({ logoBar, legacyLogoUrl, meta }: LogoBarProps) {
-  const leftSrc = logoBar?.leftLogoBase64 ?? logoBar?.leftLogoUrl
-  const centerSrc = logoBar?.centerLogoBase64 ?? logoBar?.centerLogoUrl
-  const rightSrc = logoBar?.rightLogoBase64 ?? logoBar?.rightLogoUrl
-
-  const hasLogos = leftSrc || centerSrc || rightSrc || legacyLogoUrl
-
-  if (!hasLogos) {
-    // Fallback: text-only header
-    return (
-      <View style={styles.header} fixed>
-        <View style={styles.headerTextBlock}>
-          <Text style={styles.headerTitle}>{meta.title}</Text>
-          {meta.subtitle && <Text style={styles.headerSubtitle}>{meta.subtitle}</Text>}
-          <Text style={styles.headerOrg}>{meta.organization}</Text>
-        </View>
-      </View>
-    )
-  }
-
-  // If no logoBar but has legacyLogoUrl, render single-logo layout
-  if (!logoBar && legacyLogoUrl) {
-    return (
-      <View style={styles.header} fixed>
-        <Image src={legacyLogoUrl} style={styles.headerLogo} />
-        <View style={styles.headerTextBlock}>
-          <Text style={styles.headerTitle}>{meta.title}</Text>
-          {meta.subtitle && <Text style={styles.headerSubtitle}>{meta.subtitle}</Text>}
-          <Text style={styles.headerOrg}>{meta.organization}</Text>
-        </View>
-      </View>
-    )
-  }
-
-  // Full 3-slot logo bar
-  const logoH = (logoBar?.heightMm ?? 20) * 2.8346 * 0.85
-  const alignment = logoBar?.alignment ?? 'space-between'
-
-  const justifyContent =
-    alignment === 'space-between' ? 'space-between' :
-    alignment === 'space-around' ? 'space-around' :
-    alignment === 'center' ? 'center' :
-    alignment === 'right' ? 'flex-end' :
-    'flex-start'
-
-  return (
-    <View
-      style={{
-        ...styles.logoBar,
-        justifyContent: justifyContent as any,
-      }}
-      fixed
-    >
-      {leftSrc && (
-        <Image
-          src={leftSrc}
-          style={{ height: logoH, objectFit: 'contain' as any }}
-        />
-      )}
-      {centerSrc && (
-        <Image
-          src={centerSrc}
-          style={{ height: logoH, objectFit: 'contain' as any }}
-        />
-      )}
-      {rightSrc && (
-        <Image
-          src={rightSrc}
-          style={{ height: logoH, objectFit: 'contain' as any }}
-        />
-      )}
-    </View>
-  )
-}
-
-// ══════════════════════════════════════════════════════════════
-// Legacy Header (backward compatible)
+// Logo Bar Header — single bar spanning the header area
+// 3 slots (left / center / right), height = headerHeight
 // ══════════════════════════════════════════════════════════════
 
 interface HeaderProps {
@@ -99,18 +14,55 @@ interface HeaderProps {
 }
 
 export function ReportHeader({ meta }: HeaderProps) {
+  const lb = meta.logoBar
+  const leftSrc = lb?.leftLogoBase64 ?? lb?.leftLogoUrl
+  const centerSrc = lb?.centerLogoBase64 ?? lb?.centerLogoUrl
+  const rightSrc = lb?.rightLogoBase64 ?? lb?.rightLogoUrl
+  const legacySrc = meta.logoUrl
+  const hasLogos = leftSrc || centerSrc || rightSrc || legacySrc
+
+  if (!hasLogos) return null
+
+  const barH = ((lb?.heightMm ?? 20) * 2.8346) * 0.85
+  const alignment = lb?.alignment ?? 'space-between'
+  const justifyContent =
+    alignment === 'space-between' ? 'space-between' :
+    alignment === 'space-around' ? 'space-around' :
+    alignment === 'center' ? 'center' :
+    alignment === 'right' ? 'flex-end' : 'flex-start'
+
+  // Collect sources: use 3-slot if available, otherwise legacy single logo
+  const sources: (string | undefined)[] = lb
+    ? [leftSrc, centerSrc, rightSrc]
+    : [legacySrc, undefined, undefined]
+
+  const activeLogos = sources.filter(Boolean) as string[]
+
   return (
-    <ReportLogoBar
-      logoBar={meta.logoBar}
-      legacyLogoUrl={meta.logoUrl}
-      meta={meta}
-    />
+    <View
+      style={{
+        ...styles.logoBar,
+        height: barH,
+        justifyContent: justifyContent as any,
+      }}
+      fixed
+    >
+      {activeLogos.map((src, i) => (
+        <Image
+          key={i}
+          src={src}
+          style={{ height: barH, objectFit: 'contain' as any }}
+        />
+      ))}
+    </View>
   )
 }
 
+// Legacy alias
+export const ReportLogoBar = ReportHeader
+
 // ══════════════════════════════════════════════════════════════
 // Institutional Footer — 3 lines + page number (ABNT)
-// CEAP defaults as fallback
 // ══════════════════════════════════════════════════════════════
 
 interface FooterProps {
@@ -120,7 +72,7 @@ interface FooterProps {
 
 export function ReportFooter({ meta, showPageNumber = true }: FooterProps) {
   const f = meta.footer ?? {}
-  const enabled = f.enabled !== false // default true
+  const enabled = f.enabled !== false
   const line1 = f.line1 || CEAP_FOOTER_DEFAULTS.line1
   const line2 = f.line2 || CEAP_FOOTER_DEFAULTS.line2
   const line3 = f.line3 || CEAP_FOOTER_DEFAULTS.line3
@@ -139,7 +91,7 @@ export function ReportFooter({ meta, showPageNumber = true }: FooterProps) {
       {showPageNumber && (
         <Text
           style={styles.footerPageNumber}
-          render={({ pageNumber, totalPages }) =>
+          render={({ pageNumber }) =>
             pageNumber > 1 ? `${pageNumber}` : ''
           }
         />
