@@ -14,6 +14,9 @@ import {
   Footer,
   PageNumber,
   NumberFormat,
+  TabStopType,
+  TabStopPosition,
+  TableOfContents,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Project, Activity, ActivityType, ExpenseItem, ReportSection, PhotoGroup } from '@/types';
