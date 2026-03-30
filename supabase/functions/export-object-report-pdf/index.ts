@@ -767,6 +767,23 @@ function buildStandardSection(payload: ReportPayload, section: ReportSection, re
   return "";
 }
 
+function buildTocHtml(sections: ReportSection[]): string {
+  const visibleSections = sections.filter((s) => s.isVisible);
+  if (visibleSections.length === 0) return "";
+
+  const items = visibleSections.map((s, idx) => {
+    const num = idx + 1;
+    return `<li class="toc-item"><span class="toc-text">${num}. ${escapeHtml(s.title)}</span><span class="toc-dots"></span></li>`;
+  }).join("");
+
+  return `
+    <section class="toc-section">
+      <h2 class="toc-title">SUMÁRIO</h2>
+      <ol class="toc-list">${items}</ol>
+    </section>
+  `;
+}
+
 function buildHtml(payload: ReportPayload): string {
   const renderedPhotoKeys = new Set<string>();
   const sectionPhotos = payload.sectionPhotos || {};
@@ -926,6 +943,9 @@ function buildHtml(payload: ReportPayload): string {
         /* ─── SECTIONS ─── */
         .section { margin: 0 0 10mm; }
 
+        /* Smart typography: prevent orphans/widows */
+        p, li { orphans: 3; widows: 3; }
+
         .section-title, .subsection-title, .photo-group-title,
         h1, h2, h3 {
           font-weight: 700;
@@ -1077,6 +1097,41 @@ function buildHtml(payload: ReportPayload): string {
 
         /* ─── Inline images in rich text ─── */
         img { max-width: 100%; height: auto; }
+
+        /* ─── TABLE OF CONTENTS ─── */
+        .toc-section {
+          break-after: page;
+          page-break-after: always;
+        }
+        .toc-title {
+          font-size: 16pt;
+          font-weight: 700;
+          text-transform: uppercase;
+          text-align: center;
+          margin: 0 0 10mm;
+        }
+        .toc-list {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+        }
+        .toc-item {
+          display: flex;
+          align-items: baseline;
+          margin: 0 0 4mm;
+          font-size: 12pt;
+          line-height: 1.8;
+        }
+        .toc-text {
+          white-space: nowrap;
+          flex-shrink: 0;
+        }
+        .toc-dots {
+          flex: 1;
+          border-bottom: 1px dotted #9ca3af;
+          margin: 0 3mm;
+          min-width: 10mm;
+        }
       </style>
     </head>
     <body>
@@ -1087,6 +1142,7 @@ function buildHtml(payload: ReportPayload): string {
       </div>
       <div class="pdf-content">
         ${buildCoverHtml(payload)}
+        ${buildTocHtml(payload.sections)}
         ${sectionsHtml}
         ${signatureHtml}
         ${buildFooterHtml(payload.visualConfig)}
@@ -1203,6 +1259,11 @@ Deno.serve(async (req) => {
             printBackground: true,
             timeout: 55000,
             preferCSSPageSize: true,
+            displayHeaderFooter: true,
+            headerTemplate: "<span></span>",
+            footerTemplate: `<div style="width:100%;text-align:center;font-size:8pt;color:#9ca3af;font-family:'Times New Roman',serif;padding:0 30mm;">
+              <span class="pageNumber"></span> / <span class="totalPages"></span>
+            </div>`,
           },
         }),
       },

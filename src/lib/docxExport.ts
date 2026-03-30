@@ -14,6 +14,9 @@ import {
   Footer,
   PageNumber,
   NumberFormat,
+  TabStopType,
+  TabStopPosition,
+  TableOfContents,
 } from 'docx';
 import { saveAs } from 'file-saver';
 import { Project, Activity, ActivityType, ExpenseItem, ReportSection, PhotoGroup } from '@/types';
@@ -237,6 +240,18 @@ export const exportToDocx = async (data: ExportData) => {
       alignment: AlignmentType.CENTER,
       spacing: { after: 200 },
       children: [new TextRun({ text: project.organizationName, bold: true, size: 28, font: 'Times New Roman' })],
+    }),
+    new Paragraph({ children: [new PageBreak()] }),
+    // Table of Contents
+    new Paragraph({
+      text: 'SUMÁRIO',
+      heading: HeadingLevel.HEADING_1,
+      alignment: AlignmentType.CENTER,
+      spacing: { after: 400 },
+    }),
+    new TableOfContents("Sumário", {
+      hyperlink: true,
+      headingStyleRange: "1-3",
     }),
     new Paragraph({ children: [new PageBreak()] })
   );
@@ -642,6 +657,17 @@ export const exportToDocx = async (data: ExportData) => {
                   children: [new TextRun({ text: customText, size: 14, font: 'Times New Roman', italics: true })],
                 }));
               }
+
+              // Page numbers
+              children.push(new Paragraph({
+                alignment: AlignmentType.CENTER,
+                spacing: { before: 40 },
+                children: [
+                  new TextRun({ size: 16, font: 'Times New Roman', color: '9CA3AF', children: [PageNumber.CURRENT] }),
+                  new TextRun({ text: ' / ', size: 16, font: 'Times New Roman', color: '9CA3AF' }),
+                  new TextRun({ size: 16, font: 'Times New Roman', color: '9CA3AF', children: [PageNumber.TOTAL_PAGES] }),
+                ],
+              }));
 
               return children;
             })(),
