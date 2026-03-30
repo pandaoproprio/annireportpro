@@ -36,6 +36,7 @@ export const Settings: React.FC = () => {
   const [showMfaSetup, setShowMfaSetup] = useState(false);
   const [showMfaDisableConfirm, setShowMfaDisableConfirm] = useState(false);
   const [isDisablingMfa, setIsDisablingMfa] = useState(false);
+  const [isOptimizingImages, setIsOptimizingImages] = useState(false);
 
   const isAdminRole = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
