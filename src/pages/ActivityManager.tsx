@@ -8,6 +8,7 @@ import { useActivityData } from '@/contexts/ActivityContext';
 import { Activity, ActivityType, AttendanceFile, ExpenseRecord } from '@/types';
 import { canEditActivity, deriveSetor } from '@/lib/diaryEditRules';
 import { logUnified } from '@/lib/unifiedLog';
+import { compressImage } from '@/lib/imageCompression';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
