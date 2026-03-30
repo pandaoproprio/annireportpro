@@ -2,6 +2,8 @@ import React, { useMemo, useCallback } from 'react';
 import { DocumentPage, DocumentBlock, LayoutConfig, HeaderFooterConfig } from '@/types/document';
 import { StructuredRichContent, structuredToHtml, htmlToStructured, createDefaultStructuredContent, VARIABLE_LABELS, RichTextVariable } from '@/types/richText';
 import { WysiwygBlockRenderer } from './WysiwygBlockRenderer';
+import type * as Y from 'yjs';
+import type { Awareness } from 'y-protocols/awareness';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor,
   useSensor, useSensors, DragEndEvent,
