@@ -809,13 +809,26 @@ function buildHtml(payload: ReportPayload): string {
     </section>
   `;
 
+  // Generate extraction timestamp for audit trail
+  const extractionTimestamp = new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    timeZone: "America/Sao_Paulo",
+  }).format(new Date());
+
   return `<!DOCTYPE html>
   <html lang="pt-BR">
     <head>
       <meta charset="UTF-8" />
       <style>
-        /* ─── Page: Puppeteer margin controls space; NO @page margin ─── */
-        @page { size: A4; margin: 0; }
+        /* ─── Page: ABNT margins handled via @page ─── */
+        @page {
+          size: A4;
+          margin: 30mm 20mm 20mm 30mm;
+        }
+        @page :first {
+          margin-top: 20mm;
+        }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body {
@@ -829,19 +842,24 @@ function buildHtml(payload: ReportPayload): string {
           print-color-adjust: exact;
         }
 
-        /* ─── HEADER: fixed = repeats every page, lives in Puppeteer top margin ─── */
-        .pdf-header {
-          position: fixed;
-          top: 0; left: 30mm; right: 20mm;
-          height: 26mm;
-          padding: 3mm 0 2mm;
-          background: #fff;
-          border-bottom: 1px solid #d1d5db;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 100;
+        /* ─── HEADER: uses table-header-group trick to repeat on every page ─── */
+        .pdf-header-table {
+          display: table;
+          width: 100%;
+          table-layout: fixed;
         }
+        .pdf-header-row {
+          display: table-header-group;
+        }
+        .pdf-header-cell {
+          display: table-cell;
+          height: 24mm;
+          padding: 2mm 0 2mm;
+          border-bottom: 1px solid #d1d5db;
+          vertical-align: middle;
+        }
+        /* Hide header on cover page */
+        .cover-page ~ .pdf-header-table { display: none; }
 
         .header-banner-wrap,
         .header-logos {
@@ -884,12 +902,12 @@ function buildHtml(payload: ReportPayload): string {
           word-break: break-word;
         }
 
-        /* ─── CONTENT: flows normally; Puppeteer margin keeps it clear of header ─── */
+        /* ─── CONTENT ─── */
         .pdf-content { padding: 0; }
 
         /* ─── COVER ─── */
         .cover {
-          min-height: 220mm;
+          min-height: 240mm;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -905,10 +923,9 @@ function buildHtml(payload: ReportPayload): string {
         .cover-project-name { font-size: 16pt; font-weight: 700; }
         .cover-meta.strong { font-weight: 700; }
 
-        /* ─── SECTIONS: CAN break across pages (critical fix!) ─── */
+        /* ─── SECTIONS ─── */
         .section { margin: 0 0 10mm; }
 
-        /* Titles: never break AFTER (stay with content) and never break INSIDE */
         .section-title, .subsection-title, .photo-group-title,
         h1, h2, h3 {
           font-weight: 700;
@@ -940,20 +957,17 @@ function buildHtml(payload: ReportPayload): string {
         .activity-description { margin: 0; }
         .goal-block { margin-bottom: 10mm; }
 
-        /* ─── TABLES: wrapper CAN break; individual rows avoid break ─── */
+        /* ─── TABLES ─── */
         .table-wrap {
           border: 1px solid #d1d5db;
           border-radius: 6px;
-          /* NO overflow:hidden — it clips content in print */
-          /* NO break-inside:avoid — table may span pages */
         }
 
         .expense-table {
           width: 100%;
           border-collapse: collapse;
-          table-layout: fixed;
         }
-        .expense-table thead { display: table-header-group; } /* repeat header on each page */
+        .expense-table thead { display: table-header-group; }
         .expense-table tr {
           break-inside: avoid;
           page-break-inside: avoid;
@@ -976,7 +990,7 @@ function buildHtml(payload: ReportPayload): string {
 
         .expense-thumb {
           width: 100%;
-          max-height: 100px;
+          max-height: 120px;
           object-fit: cover;
           border-radius: 6px;
           display: block;
@@ -990,7 +1004,7 @@ function buildHtml(payload: ReportPayload): string {
           padding-top: 10px;
         }
 
-        /* ─── PHOTOS: grid CAN break; individual items avoid break ─── */
+        /* ─── PHOTOS ─── */
         .photo-section { margin-bottom: 10mm; }
         .photo-block { margin-bottom: 8mm; }
         .photo-group { margin-bottom: 8mm; }
@@ -1047,6 +1061,14 @@ function buildHtml(payload: ReportPayload): string {
         }
         .institutional-footer p { margin: 0 0 2mm; }
 
+        /* ─── AUDIT FOOTER ─── */
+        .audit-footer {
+          margin-top: 10mm; padding-top: 4mm;
+          border-top: 1px solid #e5e7eb;
+          font-size: 7pt; color: #9ca3af; text-align: right;
+          break-inside: avoid; page-break-inside: avoid;
+        }
+
         /* ─── LINKS ─── */
         .link-list { margin: 0; padding-left: 6mm; }
         .link-list li { margin: 0 0 3mm; word-break: break-word; }
@@ -1058,25 +1080,60 @@ function buildHtml(payload: ReportPayload): string {
       </style>
     </head>
     <body>
-      <div class="pdf-header">${buildHeaderHtml(payload.visualConfig)}</div>
+      <div class="pdf-header-table">
+        <div class="pdf-header-row">
+          <div class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</div>
+        </div>
+      </div>
       <div class="pdf-content">
         ${buildCoverHtml(payload)}
         ${sectionsHtml}
         ${signatureHtml}
         ${buildFooterHtml(payload.visualConfig)}
+        <div class="audit-footer">
+          Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
+        </div>
       </div>
       <script>
-        // Deterministic image loading: force ALL images to eager + wait for completion
+        // 1. Force eager loading on all images
         (function() {
           var imgs = [].slice.call(document.querySelectorAll('img'));
           imgs.forEach(function(img) {
             img.loading = 'eager';
             img.decoding = 'sync';
-            if (!img.complete) {
-              img.onerror = function() { this.style.background = '#f3f4f6'; };
-            }
+            img.onerror = function() { this.style.background = '#f3f4f6'; this.alt = '[Imagem indisponível]'; };
           });
         })();
+
+        // 2. Generate SHA-256 hash of document content for audit integrity
+        (async function() {
+          try {
+            var content = document.querySelector('.pdf-content').innerText;
+            var encoder = new TextEncoder();
+            var data = encoder.encode(content);
+            var hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            var hashArray = Array.from(new Uint8Array(hashBuffer));
+            var hashHex = hashArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+            var el = document.getElementById('doc-hash');
+            if (el) el.textContent = hashHex.substring(0, 16).toUpperCase();
+          } catch(e) { /* hash generation failed silently */ }
+        })();
+
+        // 3. Signal readiness when all images loaded
+        window.__imagesReady = new Promise(function(resolve) {
+          var imgs = [].slice.call(document.querySelectorAll('img'));
+          if (imgs.length === 0) { resolve(true); return; }
+          var loaded = 0;
+          var total = imgs.length;
+          function check() { loaded++; if (loaded >= total) resolve(true); }
+          imgs.forEach(function(img) {
+            if (img.complete && img.naturalWidth > 0) { check(); return; }
+            img.addEventListener('load', check);
+            img.addEventListener('error', check);
+          });
+          // Safety timeout: resolve after 12s regardless
+          setTimeout(function() { resolve(true); }, 12000);
+        });
       </script>
     </body>
   </html>`;
