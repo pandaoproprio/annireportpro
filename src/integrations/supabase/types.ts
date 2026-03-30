@@ -766,6 +766,139 @@ export type Database = {
           },
         ]
       }
+      event_certificates: {
+        Row: {
+          certificate_hash: string
+          checkin_id: string
+          event_date: string
+          event_duration_hours: number | null
+          event_id: string
+          event_title: string
+          id: string
+          issued_at: string
+          participant_document: string | null
+          participant_name: string
+          registration_id: string
+          verification_url: string | null
+        }
+        Insert: {
+          certificate_hash: string
+          checkin_id: string
+          event_date: string
+          event_duration_hours?: number | null
+          event_id: string
+          event_title: string
+          id?: string
+          issued_at?: string
+          participant_document?: string | null
+          participant_name: string
+          registration_id: string
+          verification_url?: string | null
+        }
+        Update: {
+          certificate_hash?: string
+          checkin_id?: string
+          event_date?: string
+          event_duration_hours?: number | null
+          event_id?: string
+          event_title?: string
+          id?: string
+          issued_at?: string
+          participant_document?: string | null
+          participant_name?: string
+          registration_id?: string
+          verification_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_certificates_checkin_id_fkey"
+            columns: ["checkin_id"]
+            isOneToOne: false
+            referencedRelation: "event_checkins"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_certificates_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_certificates_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: true
+            referencedRelation: "event_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_checkins: {
+        Row: {
+          checkin_at: string
+          checkin_method: string
+          document_number: string | null
+          event_id: string
+          full_name: string
+          geolocation: Json | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          registration_id: string
+          signature_data: string | null
+          signature_hash: string
+          signature_type: string
+          user_agent: string | null
+        }
+        Insert: {
+          checkin_at?: string
+          checkin_method?: string
+          document_number?: string | null
+          event_id: string
+          full_name: string
+          geolocation?: Json | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          registration_id: string
+          signature_data?: string | null
+          signature_hash: string
+          signature_type: string
+          user_agent?: string | null
+        }
+        Update: {
+          checkin_at?: string
+          checkin_method?: string
+          document_number?: string | null
+          event_id?: string
+          full_name?: string
+          geolocation?: Json | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          registration_id?: string
+          signature_data?: string | null
+          signature_hash?: string
+          signature_type?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_checkins_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_checkins_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: true
+            referencedRelation: "event_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_registrations: {
         Row: {
           document: string | null
@@ -774,6 +907,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
+          qr_token: string | null
           registered_at: string
           status: string
           user_id: string | null
@@ -785,6 +919,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
+          qr_token?: string | null
           registered_at?: string
           status?: string
           user_id?: string | null
@@ -796,6 +931,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
+          qr_token?: string | null
           registered_at?: string
           status?: string
           user_id?: string | null
