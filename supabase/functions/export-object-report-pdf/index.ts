@@ -879,13 +879,9 @@ function buildHtml(payload: ReportPayload): string {
     <head>
       <meta charset="UTF-8" />
       <style>
-        /* ─── Page: ABNT margins handled via @page ─── */
+        /* ─── Page: ABNT size only — margins handled by Puppeteer ─── */
         @page {
           size: A4;
-          margin: 30mm 20mm 20mm 30mm;
-        }
-        @page :first {
-          margin-top: 20mm;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -916,8 +912,13 @@ function buildHtml(payload: ReportPayload): string {
           border-bottom: 1px solid #d1d5db;
           vertical-align: middle;
         }
-        /* Hide header on cover page */
-        .cover-page ~ .pdf-header-table { display: none; }
+        .pdf-body-row {
+          display: table-row-group;
+        }
+        .pdf-body-cell {
+          display: table-cell;
+          vertical-align: top;
+        }
 
         .header-banner-wrap,
         .header-logos {
