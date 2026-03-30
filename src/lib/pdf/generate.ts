@@ -1,3 +1,27 @@
+/*
+  COMO USAR — exemplo para o botão de exportar do Objeto I:
+
+  import { generateReport, downloadReport } from '@/lib/pdf/generate'
+  import type { ReportData } from '@/lib/pdf/schema'
+
+  async function handleExport() {
+    const data: ReportData = {
+      meta: {
+        title: 'Relatório do Objeto I',
+        subtitle: 'Prestação de Contas',
+        organization: 'CEAP',
+        logoUrl: orgLogoUrl,       // URL do Supabase Storage
+        period: 'Jan–Dez 2025',
+        generatedAt: new Date().toISOString(),
+      },
+      sections: mapReportStateToDomain(reportState), // seu mapper existente
+      assets: [],  // preloadAssets preenche automaticamente
+    }
+
+    const blob = await generateReport(data, 'objeto-i')
+    downloadReport(blob, `relatorio-objeto-i-${Date.now()}`)
+  }
+*/
 import { pdf } from '@react-pdf/renderer'
 import type { ReportData, TemplateName } from './schema'
 import { preloadAssets } from './assetLoader'
