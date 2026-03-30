@@ -16,6 +16,7 @@ const ReportTemplateEditor = lazy(() => import('@/pages/ReportTemplateEditor').t
 const DocumentEditorPage = lazy(() => import('@/pages/DocumentEditorPage'));
 const WysiwygEditorPage = lazy(() => import('@/pages/WysiwygEditorPage'));
 const ReportV2Page = lazy(() => import('@/modules/reports-v2/ReportV2Page'));
+const ReportObjetoIIPage = lazy(() => import('@/modules/report-objeto-ii/ReportObjetoIIPage'));
 const FormsListPage = lazy(() => import('@/modules/gira-forms/FormsListPage'));
 const FormBuilderPage = lazy(() => import('@/modules/gira-forms/FormBuilderPage'));
 const EventsListPage = lazy(() => import('@/modules/gira-eventos/EventsListPage'));
@@ -59,6 +60,7 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/wysiwyg/:id', element: WysiwygEditorPage },
   { path: '/wysiwyg', element: WysiwygEditorPage },
   { path: '/report-v2', element: ReportV2Page, permission: 'report_object' },
+  { path: '/report-objeto-ii', element: ReportObjetoIIPage, permission: 'report_object' },
   { path: '/forms', element: FormsListPage, permission: 'forms_view' },
   { path: '/forms/:id', element: FormBuilderPage, permission: 'forms_view' },
   { path: '/eventos', element: EventsListPage, permission: 'events_view' },
