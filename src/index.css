@@ -177,22 +177,56 @@
   100% { transform: scale(1); opacity: 1; }
 }
 
-/* Print Styles */
+/* ══════════════════════════════════════════════════════════════
+   ABNT NBR 14724 — Global Print Stylesheet (imutável)
+   Margens: Superior/Esquerda 3cm, Inferior/Direita 2cm
+   Fonte: Times New Roman 12pt, espaçamento 1,5
+   ══════════════════════════════════════════════════════════════ */
 @media print {
   .no-print { display: none !important; }
   .print-only { display: block !important; }
-  body { background: white; }
-  .page-break { page-break-before: always; }
-  
+
+  body {
+    background: white !important;
+    font-family: 'Times New Roman', Times, serif !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+    color: #000 !important;
+  }
+
   @page {
     size: A4;
-    margin: 15mm 10mm 20mm 10mm;
-    
-    @bottom-center {
-      content: "Página " counter(page) " de " counter(pages);
-      font-size: 9pt;
-      color: #888;
-    }
+    margin: 30mm 20mm 20mm 30mm; /* ABNT: sup 3cm, dir 2cm, inf 2cm, esq 3cm */
+  }
+
+  /* Paginação inteligente */
+  p, li, blockquote { orphans: 3; widows: 3; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; page-break-after: avoid; }
+  table, figure, .photo-item { break-inside: avoid; page-break-inside: avoid; }
+  thead { display: table-header-group; }
+  tfoot { display: table-footer-group; }
+  .page-break { page-break-before: always; break-before: page; }
+
+  /* Corpo do texto ABNT */
+  .body-copy, .abnt-body {
+    text-align: justify !important;
+    text-indent: 12.5mm !important;
+    font-size: 12pt !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Citações longas (> 3 linhas): recuo 4cm, tamanho 10, simples */
+  blockquote, .long-quote {
+    margin-left: 40mm !important;
+    font-size: 10pt !important;
+    line-height: 1.0 !important;
+    text-indent: 0 !important;
+  }
+
+  /* Notas de rodapé e legendas */
+  .footnote, .caption, figcaption {
+    font-size: 10pt !important;
+    line-height: 1.0 !important;
   }
 }
 
