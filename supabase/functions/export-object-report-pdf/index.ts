@@ -584,8 +584,8 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   if (showBanner) {
     const bannerUrl = optimizeStorageImageUrl(config.headerBannerUrl!.trim(), IMAGE_PRESETS.banner.width, IMAGE_PRESETS.banner.quality);
     return `
-      <div class="header-banner-wrap">
-        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" class="header-banner" style="object-fit:${bannerFit};" />
+      <div style="width:100%;height:18mm;display:flex;align-items:center;justify-content:center;">
+        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" style="width:100%;height:100%;display:block;object-fit:${bannerFit};" />
       </div>
     `;
   }
@@ -595,51 +595,32 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   const secUrl = secondaryLogoVisible ? optimizeStorageImageUrl(config.logoSecondary!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
 
   return `
-    <div class="header-logos">
-      <div class="header-slot header-slot-left">
-        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" class="header-logo" />` : ""}
-        ${isNonEmptyString(config.headerLeftText) ? `<span class="header-text">${escapeHtml(config.headerLeftText.trim())}</span>` : ""}
+    <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12mm;">
+      <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;gap:4mm;min-width:0;">
+        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="max-height:12mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${isNonEmptyString(config.headerLeftText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;">${escapeHtml(config.headerLeftText.trim())}</span>` : ""}
       </div>
-      <div class="header-slot header-slot-center">
-        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" class="header-logo" />` : ""}
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;min-width:0;">
+        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="max-height:12mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
-      <div class="header-slot header-slot-right">
-        ${isNonEmptyString(config.headerRightText) ? `<span class="header-text">${escapeHtml(config.headerRightText.trim())}</span>` : ""}
-        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" class="header-logo" />` : ""}
+      <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:4mm;min-width:0;">
+        ${isNonEmptyString(config.headerRightText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;text-align:right;">${escapeHtml(config.headerRightText.trim())}</span>` : ""}
+        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="max-height:12mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
     </div>
-  `;
-}
-
-function buildCoverHtml(payload: ReportPayload): string {
-  const rawCoverLogo = payload.visualConfig?.coverLogo || payload.visualConfig?.logo || payload.visualConfig?.logoCenter;
-  const coverLogo = isNonEmptyString(rawCoverLogo) ? optimizeStorageImageUrl(rawCoverLogo.trim(), IMAGE_PRESETS.coverLogo.width, IMAGE_PRESETS.coverLogo.quality) : "";
-  const coverTitle = payload.visualConfig?.coverTitle?.trim() || "RELATÓRIO PARCIAL DE CUMPRIMENTO DO OBJETO";
-  const coverSubtitle = payload.visualConfig?.coverHideSubtitle ? "" : (payload.visualConfig?.coverSubtitle?.trim() || "");
-
-  return `
-    <section class="cover page-break-after">
-      <div class="cover-inner">
-        ${coverLogo ? `<img src="${escapeHtml(coverLogo)}" alt="Logo de capa" class="cover-logo" loading="eager" />` : ""}
-        <p class="cover-eyebrow">Relatório institucional</p>
-        <h1 class="cover-title">${escapeHtml(coverTitle)}</h1>
-        ${coverSubtitle ? `<p class="cover-subtitle">${escapeHtml(coverSubtitle)}</p>` : ""}
-        <p class="cover-project-name">${escapeHtml(payload.project.name)}</p>
-        ${payload.visualConfig?.coverHideFomento ? "" : `<p class="cover-meta">Termo de Fomento nº ${escapeHtml(payload.project.fomentoNumber)}</p>`}
-        ${payload.visualConfig?.coverHideOrg ? "" : `<p class="cover-meta strong">${escapeHtml(payload.project.organizationName)}</p>`}
-      </div>
-    </section>
   `;
 }
 
 function buildFooterHtml(config: VisualConfig = {}): string {
   if (config.footerInstitutionalEnabled === false) return "";
   return `
-    <footer class="institutional-footer">
-      <p>${escapeHtml(config.footerLine1Text || CEAP_FOOTER.line1)}</p>
-      <p>${escapeHtml(config.footerLine2Text || CEAP_FOOTER.line2)}</p>
-      <p>${escapeHtml(config.footerLine3Text || CEAP_FOOTER.line3)}</p>
-    </footer>
+    <div style="width:100%;font-family:'Times New Roman',serif;color:#4b5563;font-size:8.5pt;line-height:1.25;">
+      <div style="width:100%;border-top:1px solid #9ca3af;padding-top:2.5mm;text-align:center;">
+        <div>${escapeHtml(config.footerLine1Text || CEAP_FOOTER.line1)}</div>
+        <div>${escapeHtml(config.footerLine2Text || CEAP_FOOTER.line2)}</div>
+        <div>${escapeHtml(config.footerLine3Text || CEAP_FOOTER.line3)}</div>
+      </div>
+    </div>
   `;
 }
 
@@ -896,22 +877,6 @@ function buildHtml(payload: ReportPayload): string {
           print-color-adjust: exact;
         }
 
-        /* ─── HEADER: uses table-header-group trick to repeat on every page ─── */
-        .pdf-header-table {
-          display: table;
-          width: 100%;
-          table-layout: fixed;
-        }
-        .pdf-header-row {
-          display: table-header-group;
-        }
-        .pdf-header-cell {
-          display: table-cell;
-          height: 24mm;
-          padding: 2mm 0 2mm;
-          border-bottom: 1px solid #d1d5db;
-          vertical-align: middle;
-        }
         .pdf-body-row {
           display: table-row-group;
         }
@@ -1228,20 +1193,12 @@ function buildHtml(payload: ReportPayload): string {
     </head>
     <body>
       ${buildCoverHtml(payload)}
-      <div class="pdf-header-table">
-        <div class="pdf-header-row">
-          <div class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</div>
-        </div>
-        <div class="pdf-body-row">
-          <div class="pdf-body-cell">
-            ${buildTocHtml(payload.sections)}
-            ${sectionsHtml}
-            ${signatureHtml}
-            ${buildFooterHtml(payload.visualConfig)}
-            <div class="audit-footer">
-              Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
-            </div>
-          </div>
+      <div class="pdf-body-cell">
+        ${buildTocHtml(payload.sections)}
+        ${sectionsHtml}
+        ${signatureHtml}
+        <div class="audit-footer">
+          Documento gerado em ${extractionTimestamp} (Brasília) · ID: <span id="doc-hash"></span>
         </div>
       </div>
       <script>
@@ -1359,15 +1316,16 @@ Deno.serve(async (req) => {
               format: "A4",
               printBackground: true,
               timeout: 50000,
+              preferCSSPageSize: false,
               displayHeaderFooter: true,
               margin: {
                 top: "30mm",
-                bottom: "22mm",
+                bottom: "20mm",
                 left: "30mm",
                 right: "20mm",
               },
-              headerTemplate: "<span></span>",
-              footerTemplate: `<div id="ft" style="width:100%;text-align:right;font-size:10pt;color:#000;font-family:'Times New Roman',serif;padding-right:0mm;"><span class="pageNumber"></span></div><script>var pn=document.querySelector('.pageNumber');if(pn&&pn.textContent.trim()==='1'){document.getElementById('ft').style.visibility='hidden';}</script>`,
+              headerTemplate: `<div style="width:100%;padding:0 20mm 0 30mm;font-family:'Times New Roman',serif;"><div style="width:100%;padding:0 0 4mm 0;border-bottom:1px solid #9ca3af;">${buildHeaderHtml(payload.visualConfig)}</div></div>`,
+              footerTemplate: `<div id="pdf-footer" style="width:100%;padding:0 20mm 0 30mm;font-family:'Times New Roman',serif;"><div style="width:100%;padding-top:3mm;border-top:1px solid #9ca3af;text-align:center;font-size:8.5pt;line-height:1.25;color:#4b5563;">${buildFooterHtml(payload.visualConfig)}<div style="text-align:right;font-size:10pt;color:#000;line-height:1;margin-top:1mm;"><span class="pageNumber"></span></div></div></div><script>if(Number(document.querySelector('.pageNumber')?.textContent||'1')===1){document.body.style.visibility='hidden';}</script>`,
             },
           }),
         },
