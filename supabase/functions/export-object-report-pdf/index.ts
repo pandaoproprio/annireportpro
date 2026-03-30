@@ -1359,12 +1359,15 @@ Deno.serve(async (req) => {
               format: "A4",
               printBackground: true,
               timeout: 50000,
-              preferCSSPageSize: true,
               displayHeaderFooter: true,
+              margin: {
+                top: "30mm",
+                bottom: "22mm",
+                left: "30mm",
+                right: "20mm",
+              },
               headerTemplate: "<span></span>",
-              footerTemplate: `<div style="width:100%;text-align:right;font-size:10pt;color:#000;font-family:'Times New Roman',serif;padding-right:20mm;padding-bottom:2mm;">
-                <span class="pageNumber"></span>
-              </div>`,
+              footerTemplate: `<div id="ft" style="width:100%;text-align:right;font-size:10pt;color:#000;font-family:'Times New Roman',serif;padding-right:0mm;"><span class="pageNumber"></span></div><script>var pn=document.querySelector('.pageNumber');if(pn&&pn.textContent.trim()==='1'){document.getElementById('ft').style.visibility='hidden';}</script>`,
             },
           }),
         },
