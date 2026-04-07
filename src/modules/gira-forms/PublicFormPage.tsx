@@ -564,14 +564,14 @@ export default function PublicFormPage() {
   if (submitted) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
-        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+        <motion.div initial={false} animate={{ scale: 1, opacity: 1 }}>
           <div className="max-w-md w-full rounded-xl p-8 text-center space-y-4 shadow-lg" style={{ background: 'var(--form-card-bg)' }}>
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
               <CheckCircle2 className="w-16 h-16 mx-auto" style={{ color: 'var(--form-primary)' }} />
             </motion.div>
             <h2 className="text-2xl font-bold">Resposta enviada!</h2>
             <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
+            <motion.div initial={false} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
               <button
                 onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); }}
                 className="px-4 py-2 rounded-lg border text-sm font-medium hover:opacity-80 transition-opacity"
@@ -592,7 +592,7 @@ export default function PublicFormPage() {
 
   return (
     <div className="min-h-screen py-6 px-4" ref={containerRef} style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className={`mx-auto space-y-4 ${isFullWidth ? 'max-w-4xl' : 'max-w-2xl'}`}>
+      <motion.div initial={false} animate={{ opacity: 1, y: 0 }} className={`mx-auto space-y-4 ${isFullWidth ? 'max-w-4xl' : 'max-w-2xl'}`}>
 
         {/* Cover image */}
         {design.coverImageUrl && (
@@ -664,10 +664,10 @@ export default function PublicFormPage() {
         </div>
 
         {/* Step Title */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={currentStep}
-            initial={{ opacity: 0, x: 20 }}
+            initial={false}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.2 }}
@@ -687,10 +687,10 @@ export default function PublicFormPage() {
         </AnimatePresence>
 
         {/* Step Content */}
-        <AnimatePresence mode="wait">
+        <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={currentStep}
-            initial={{ opacity: 0, y: 15 }}
+            initial={false}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -15 }}
             transition={{ duration: 0.25 }}
@@ -700,7 +700,7 @@ export default function PublicFormPage() {
             {activeStep.type === 'section' && activeStep.fields.map((field, i) => (
               <motion.div
                 key={field.id}
-                initial={{ opacity: 0, y: 8 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
               >
