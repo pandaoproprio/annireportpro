@@ -1038,11 +1038,8 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
     }
     case 'multi_select':
     case 'checkbox': {
-      const selected = (value as string[]) || [];
       const allowOtherMulti = !!(field.settings?.allowOther);
-      const otherEntry = selected.find(s => s.startsWith('__other__:'));
-      const isOtherChecked = !!otherEntry;
-      const otherTextMulti = otherEntry ? otherEntry.replace('__other__:', '') : '';
+      // Single boolean checkbox (no options) — must check BEFORE casting to array
       if (options.length === 0 && !allowOtherMulti) {
         return (
           <div className="flex items-center gap-2">
@@ -1051,6 +1048,10 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
           </div>
         );
       }
+      const selected = Array.isArray(value) ? value as string[] : [];
+      const otherEntry = selected.find(s => s.startsWith('__other__:'));
+      const isOtherChecked = !!otherEntry;
+      const otherTextMulti = otherEntry ? otherEntry.replace('__other__:', '') : '';
       return (
         <div className="space-y-2">
           {options.map((opt, i) => (
