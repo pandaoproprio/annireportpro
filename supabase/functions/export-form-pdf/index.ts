@@ -30,9 +30,15 @@ function formatAnswer(val: unknown): string {
 function buildTableHtml(formTitle: string, fields: Field[], responses: FormResponse[]): string {
   const now = formatDate(new Date().toISOString());
   const totalCols = fields.length + 3;
-  const baseFontTh = totalCols > 12 ? 6.5 : totalCols > 8 ? 7.5 : 9;
-  const baseFontTd = totalCols > 12 ? 7 : totalCols > 8 ? 8 : 9.5;
-  const cellPad = totalCols > 12 ? '3px 4px' : totalCols > 8 ? '4px 5px' : '5px 8px';
+
+  // For forms with many fields (>10 data columns), use a card/ficha layout instead of a wide table
+  if (totalCols > 13) {
+    return buildCardTableHtml(formTitle, fields, responses, now);
+  }
+
+  const baseFontTh = totalCols > 8 ? 7 : 9;
+  const baseFontTd = totalCols > 8 ? 7.5 : 9.5;
+  const cellPad = totalCols > 8 ? '4px 5px' : '5px 8px';
 
   const headerCells = ["<th>Data</th>","<th>Respondente</th>","<th>E-mail</th>",...fields.map(f=>`<th>${escapeHtml(f.label)}</th>`)].join("");
   const rows = responses.map(r => {
@@ -46,14 +52,60 @@ body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:9px;line-he
 .header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #0DA3E7;padding-bottom:8px;margin-bottom:10px}
 .header h1{font-size:14px;font-weight:700;color:#0DA3E7;text-transform:uppercase;max-width:75%;line-height:1.2}
 .header .meta{text-align:right;font-size:8px;color:#666;white-space:nowrap}.meta span{display:block}
-table{width:100%;border-collapse:collapse;table-layout:fixed;word-wrap:break-word}
-th{background:#0DA3E7;color:#fff;font-weight:600;font-size:${baseFontTh}px;text-transform:uppercase;padding:${cellPad};text-align:left;border:1px solid #0b8ec9;overflow-wrap:break-word;word-break:break-word;hyphens:auto}
-td{padding:${cellPad};border:1px solid #e0e0e0;font-size:${baseFontTd}px;vertical-align:top;overflow-wrap:break-word;word-break:break-word}
-tr:nth-child(even){background:#f7fafc}tr:hover{background:#eef6fb}
+table{width:100%;border-collapse:collapse;table-layout:auto}
+th{background:#0DA3E7;color:#fff;font-weight:600;font-size:${baseFontTh}px;text-transform:uppercase;padding:${cellPad};text-align:left;border:1px solid #0b8ec9;white-space:normal;word-break:break-word}
+td{padding:${cellPad};border:1px solid #e0e0e0;font-size:${baseFontTd}px;vertical-align:top;white-space:normal;word-break:break-word}
+tr:nth-child(even){background:#f7fafc}
 .footer{margin-top:16px;text-align:center;font-size:9px;color:#999}
 </style></head><body>
 <div class="header"><h1>${escapeHtml(formTitle)}</h1><div class="meta"><span><strong>${responses.length}</strong> resposta${responses.length!==1?"s":""}</span><span>Exportado em ${now}</span></div></div>
 <table><thead><tr>${headerCells}</tr></thead><tbody>${rows}</tbody></table>
+<div class="footer">Relatório gerado automaticamente pelo GIRA Forms</div>
+</body></html>`;
+}
+
+// Card-based layout for forms with many fields — each response becomes a readable card
+function buildCardTableHtml(formTitle: string, fields: Field[], responses: FormResponse[], now: string): string {
+  const cards = responses.map((r, idx) => {
+    const rows = fields.map(f => {
+      const val = formatAnswer(r.answers?.[f.id]);
+      if (val === "—" || val === "") return "";
+      return `<tr><td class="lbl">${escapeHtml(f.label)}</td><td class="val">${escapeHtml(val)}</td></tr>`;
+    }).filter(Boolean).join("");
+
+    return `<div class="card${idx > 0 ? ' page-break' : ''}">
+      <div class="card-head">
+        <div class="card-title">Resposta #${idx + 1}</div>
+        <div class="card-meta">
+          <span><strong>Respondente:</strong> ${escapeHtml(r.respondent_name || r.respondent_email || 'Anônimo')}</span>
+          ${r.respondent_email ? `<span><strong>E-mail:</strong> ${escapeHtml(r.respondent_email)}</span>` : ''}
+          <span><strong>Data:</strong> ${formatDate(r.submitted_at)}</span>
+        </div>
+      </div>
+      <table><tbody>${rows}</tbody></table>
+    </div>`;
+  }).join("\n");
+
+  return `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><style>
+@page{size:A4 portrait;margin:12mm}*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:10px;line-height:1.4}
+.doc-header{border-bottom:3px solid #0DA3E7;padding-bottom:10px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-end}
+.doc-header h1{font-size:16px;font-weight:700;color:#0DA3E7;text-transform:uppercase;max-width:70%;line-height:1.2}
+.doc-header .meta{text-align:right;font-size:8px;color:#666}.meta span{display:block}
+.page-break{page-break-before:always}
+.card{margin-bottom:20px}
+.card-head{border-bottom:2px solid #0DA3E7;padding-bottom:8px;margin-bottom:10px}
+.card-title{font-size:13px;font-weight:700;color:#0DA3E7;margin-bottom:4px}
+.card-meta{display:flex;flex-wrap:wrap;gap:12px;font-size:9px;color:#444}
+table{width:100%;border-collapse:collapse}
+td{padding:6px 10px;border:1px solid #e0e0e0;font-size:10px;vertical-align:top;word-break:break-word}
+td.lbl{background:#f1f5f9;font-weight:600;width:35%;color:#334155}
+td.val{width:65%}
+tr:nth-child(even) td.val{background:#fafbfc}
+.footer{margin-top:20px;text-align:center;font-size:8px;color:#999}
+</style></head><body>
+<div class="doc-header"><h1>${escapeHtml(formTitle)}</h1><div class="meta"><span><strong>${responses.length}</strong> resposta${responses.length!==1?"s":""}</span><span>Exportado em ${now}</span></div></div>
+${cards}
 <div class="footer">Relatório gerado automaticamente pelo GIRA Forms</div>
 </body></html>`;
 }
