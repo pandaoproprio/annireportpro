@@ -28,6 +28,7 @@ export interface EventRegistration {
   registered_at: string;
   user_id: string | null;
   qr_token: string | null;
+  registration_number: number | null;
 }
 
 export interface EventCheckin {
