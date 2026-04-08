@@ -24,7 +24,7 @@ export const RegistrationsList: React.FC<RegistrationsListProps> = ({
     const header = 'Nº,Nome,E-mail,Telefone,Documento,Status,Data Inscrição,Check-in\n';
     const rows = registrations.map(r => {
       const ci = checkinMap.get(r.id);
-      return `"${r.name}","${r.email ?? ''}","${r.phone ?? ''}","${r.document ?? ''}","${r.status}","${format(new Date(r.registered_at), 'dd/MM/yyyy HH:mm')}","${ci ? 'Sim' : 'Não'}"`;
+      return `"${r.registration_number ?? ''}","${r.name}","${r.email ?? ''}","${r.phone ?? ''}","${r.document ?? ''}","${r.status}","${format(new Date(r.registered_at), 'dd/MM/yyyy HH:mm')}","${ci ? 'Sim' : 'Não'}"`;
     }).join('\n');
     const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
