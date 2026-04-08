@@ -73,6 +73,7 @@ export interface FormDesignSettings {
   successMessage?: string;
   maxResponses?: number | null;
   showRegistrationNumber?: boolean;
+  singlePage?: boolean;
 }
 
 export type FormStatus = 'ativo' | 'inativo' | 'pausado' | 'encerrado';
