@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,77 +8,15 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  CheckCircle2, AlertCircle, Search, QrCode, Users, UserCheck,
-  Lock, Eye, EyeOff, Camera, X
+  CheckCircle2, AlertCircle, Search, Users, UserCheck,
+  Lock, Camera, X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Form } from '../types';
 
-// ─── Password Gate ──────────────────────────────────────────
-function PasswordGate({ onUnlock }: { onUnlock: () => void }) {
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    // Authenticate with supabase
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: password.includes('@') ? password : `${password}@placeholder.com`,
-      password,
-    });
-    // If login works, they're authenticated
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      onUnlock();
-    } else {
-      setError('Senha inválida. Use suas credenciais do sistema.');
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-muted flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <Lock className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-          <CardTitle className="text-lg">Painel de Check-in</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            Acesso restrito à equipe do evento
-          </p>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <Input
-              type="email"
-              placeholder="E-mail"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoFocus
-            />
-            <Input
-              type="password"
-              placeholder="Senha"
-              id="checkin-password"
-            />
-            {error && (
-              <p className="text-sm text-destructive flex items-center gap-1">
-                <AlertCircle className="w-4 h-4" /> {error}
-              </p>
-            )}
-            <Button type="submit" className="w-full">
-              Entrar
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-// ─── Check-in Panel ─────────────────────────────────────────
-interface FormResponse {
+interface FormResponseRow {
   id: string;
   form_id: string;
   respondent_name: string | null;
@@ -93,10 +31,16 @@ interface FormResponse {
 
 export default function FormCheckinPanel() {
   const { id: formId } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const qrToken = searchParams.get('token');
   const queryClient = useQueryClient();
+
   const [authenticated, setAuthenticated] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -132,10 +76,10 @@ export default function FormCheckinPanel() {
         .eq('form_id', formId!)
         .order('submitted_at', { ascending: false });
       if (error) throw error;
-      return data as unknown as FormResponse[];
+      return data as unknown as FormResponseRow[];
     },
     enabled: !!formId && authenticated,
-    refetchInterval: 5000, // Auto-refresh every 5 seconds
+    refetchInterval: 5000,
   });
 
   // Realtime subscription
@@ -176,6 +120,20 @@ export default function FormCheckinPanel() {
     onError: () => toast.error('Erro ao registrar check-in'),
   });
 
+  // Auto-checkin via QR token in URL
+  useEffect(() => {
+    if (!qrToken || !authenticated || !responsesQuery.data) return;
+    const match = responsesQuery.data.find(r => r.qr_token === qrToken);
+    if (match) {
+      if (match.checked_in_at) {
+        toast.info(`${match.respondent_name || 'Participante'} já fez check-in.`);
+      } else {
+        checkinMutation.mutate(match.id);
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [qrToken, authenticated, responsesQuery.data]);
+
   // Scanner logic
   const startScanner = useCallback(async () => {
     try {
@@ -199,57 +157,37 @@ export default function FormCheckinPanel() {
     setScannerActive(false);
   }, []);
 
-  // QR code scanning via URL token
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get('token');
-    if (token && authenticated && responsesQuery.data) {
-      const match = responsesQuery.data.find(r => r.qr_token === token);
-      if (match) {
-        if (match.checked_in_at) {
-          toast.info(`${match.respondent_name || 'Participante'} já fez check-in.`);
-        } else {
-          checkinMutation.mutate(match.id);
-        }
-        // Clear token from URL
-        window.history.replaceState({}, '', window.location.pathname);
-      }
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginEmail,
+      password: loginPassword,
+    });
+    if (error) {
+      setLoginError('Credenciais inválidas.');
+    } else {
+      setAuthenticated(true);
     }
-  }, [authenticated, responsesQuery.data]);
+  };
 
-  if (!authenticated) {
-    return <PasswordGate onUnlock={() => setAuthenticated(true)} />;
-  }
-
+  // ─── Derived data ───────────────────────────────────────────
   const responses = responsesQuery.data ?? [];
   const total = responses.length;
   const checkedIn = responses.filter(r => r.checked_in_at).length;
 
-  // Filter responses by search term
   const filtered = searchTerm.trim()
     ? responses.filter(r => {
         const term = searchTerm.trim().toLowerCase();
         const name = (r.respondent_name || '').toLowerCase();
         const email = (r.respondent_email || '').toLowerCase();
         const code = (r.checkin_code || '').toLowerCase();
-        // Search in answers for CPF
         const answersStr = JSON.stringify(r.answers || {}).toLowerCase();
         return name.includes(term) || email.includes(term) || code.includes(term) || answersStr.includes(term);
       })
     : responses;
 
-  // Auto-checkin when search matches a single code exactly
-  useEffect(() => {
-    if (!searchTerm.trim()) return;
-    const exactCodeMatch = responses.find(
-      r => r.checkin_code?.toLowerCase() === searchTerm.trim().toLowerCase()
-    );
-    if (exactCodeMatch && !exactCodeMatch.checked_in_at && filtered.length === 1) {
-      // Don't auto-checkin, just highlight it
-    }
-  }, [searchTerm, responses, filtered]);
-
-  const handleCheckin = (response: FormResponse) => {
+  const handleCheckin = (response: FormResponseRow) => {
     if (response.checked_in_at) {
       toast.error('Este participante já fez check-in!', {
         description: `Check-in realizado em ${format(new Date(response.checked_in_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
@@ -258,6 +196,49 @@ export default function FormCheckinPanel() {
     }
     checkinMutation.mutate(response.id);
   };
+
+  // ─── Render ─────────────────────────────────────────────────
+
+  if (!authenticated) {
+    return (
+      <div className="min-h-screen bg-muted flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm">
+          <CardHeader className="text-center">
+            <Lock className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
+            <CardTitle className="text-lg">Painel de Check-in</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Acesso restrito à equipe do evento
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleLogin} className="space-y-3">
+              <Input
+                type="email"
+                placeholder="E-mail"
+                value={loginEmail}
+                onChange={e => setLoginEmail(e.target.value)}
+                autoFocus
+              />
+              <Input
+                type="password"
+                placeholder="Senha"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+              />
+              {loginError && (
+                <p className="text-sm text-destructive flex items-center gap-1">
+                  <AlertCircle className="w-4 h-4" /> {loginError}
+                </p>
+              )}
+              <Button type="submit" className="w-full">
+                Entrar
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (formQuery.isLoading) {
     return (
@@ -357,7 +338,8 @@ export default function FormCheckinPanel() {
             return (
               <Card
                 key={response.id}
-                className={`transition-all ${isCheckedIn ? 'opacity-70 border-l-4 border-l-green-500' : 'border-l-4 border-l-transparent'}`}
+                className={`transition-all ${isCheckedIn ? 'opacity-70' : ''}`}
+                style={isCheckedIn ? { borderLeft: '4px solid hsl(var(--primary))' } : undefined}
               >
                 <CardContent className="p-3 flex items-center gap-3">
                   <div className="flex-1 min-w-0">
@@ -375,7 +357,7 @@ export default function FormCheckinPanel() {
                       )}
                     </div>
                     {isCheckedIn && (
-                      <p className="text-[10px] text-green-600 mt-0.5">
+                      <p className="text-[10px] text-primary mt-0.5">
                         ✓ Check-in em {format(new Date(response.checked_in_at!), "dd/MM 'às' HH:mm", { locale: ptBR })}
                       </p>
                     )}
@@ -388,7 +370,7 @@ export default function FormCheckinPanel() {
                     className="shrink-0"
                   >
                     {isCheckedIn ? (
-                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                      <CheckCircle2 className="w-4 h-4 text-primary" />
                     ) : (
                       <>
                         <UserCheck className="w-4 h-4 mr-1" />
