@@ -647,9 +647,33 @@ export default function PublicFormPage() {
     );
   }
 
+  // ─── Vacancy check: block if linked event is full ─────────
+  if (linkedEvent && spotsRemaining !== null && spotsRemaining <= 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#ef4444' }} />
+            <h2 className="text-xl font-semibold">Vagas esgotadas</h2>
+            <p className="text-sm" style={{ color: '#666' }}>
+              Todas as {maxParticipants} vagas para <strong>{linkedEvent.title}</strong> foram preenchidas.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const successMsg = design.successMessage || 'Obrigado por preencher o formulário. Suas informações foram registradas com segurança.';
 
   if (submitted) {
+    const checkinUrl = registrationResult
+      ? `${window.location.origin}/checkin/${linkedEvent?.id}?token=${registrationResult.qr_token}`
+      : null;
+    const qrImageUrl = checkinUrl
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(checkinUrl)}&format=png&margin=8`
+      : null;
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
         <motion.div initial={false} animate={{ scale: 1, opacity: 1 }}>
@@ -657,11 +681,41 @@ export default function PublicFormPage() {
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
               <CheckCircle2 className="w-16 h-16 mx-auto" style={{ color: 'var(--form-primary)' }} />
             </motion.div>
-            <h2 className="text-2xl font-bold">Resposta enviada!</h2>
-            <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
+
+            {registrationResult ? (
+              <>
+                <h2 className="text-2xl font-bold">Inscrição confirmada!</h2>
+                <div className="rounded-lg p-4 space-y-2" style={{ background: 'var(--form-bg)', border: '1px solid var(--form-primary)' }}>
+                  <p className="text-3xl font-bold" style={{ color: 'var(--form-primary)' }}>
+                    Nº {String(registrationResult.registration_number).padStart(3, '0')}
+                  </p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--form-muted)' }}>Número de inscrição</p>
+                </div>
+                <p className="text-sm font-medium">{registrationResult.event_title}</p>
+                <p className="text-xs" style={{ color: 'var(--form-muted)' }}>
+                  📅 {new Date(registrationResult.event_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {registrationResult.event_location && ` · 📍 ${registrationResult.event_location}`}
+                </p>
+                {qrImageUrl && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-xs font-semibold">Seu QR Code de Check-in</p>
+                    <img src={qrImageUrl} alt="QR Code" width={180} height={180} className="mx-auto rounded-lg" style={{ border: '1px solid #e2e8f0' }} />
+                    <p className="text-[10px]" style={{ color: 'var(--form-muted)' }}>
+                      Apresente este QR Code na entrada do evento. Salve uma captura de tela!
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold">Resposta enviada!</h2>
+                <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
+              </>
+            )}
+
             <motion.div initial={false} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
               <button
-                onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); }}
+                onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); setRegistrationResult(null); }}
                 className="px-4 py-2 rounded-lg border text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)' }}
               >
