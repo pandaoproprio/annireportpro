@@ -212,6 +212,8 @@ export default function PublicFormPage() {
   // ─── Find the respondent name/email fields ────────────────
   const nameFieldId = useMemo(() => fields.find(f => isNameField(f.label))?.id, [fields]);
   const emailFieldId = useMemo(() => fields.find(f => isEmailField(f.label))?.id, [fields]);
+  const phoneFieldId = useMemo(() => fields.find(f => /\btelefone\b|\bwhatsapp\b|\bcelular\b/i.test(f.label))?.id, [fields]);
+  const cpfFieldId = useMemo(() => fields.find(f => /\bcpf\b/i.test(f.label) && f.type !== 'section_header')?.id, [fields]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
