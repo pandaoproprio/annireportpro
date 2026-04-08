@@ -789,14 +789,14 @@ export default function PublicFormPage() {
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
               {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
-              {/* Vacancy badge for linked events */}
-              {linkedEvent && spotsRemaining !== null && (
+              {/* Vacancy badge */}
+              {effectiveSpotsRemaining !== null && (
                 <div className="mt-2 flex items-center gap-2">
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full" style={{
-                    background: spotsRemaining <= 10 ? '#fef2f2' : '#f0fdf4',
-                    color: spotsRemaining <= 10 ? '#dc2626' : '#16a34a',
+                    background: effectiveSpotsRemaining <= 10 ? '#fef2f2' : '#f0fdf4',
+                    color: effectiveSpotsRemaining <= 10 ? '#dc2626' : '#16a34a',
                   }}>
-                    {spotsRemaining <= 10 ? '⚠️' : '✅'} {spotsRemaining} {spotsRemaining === 1 ? 'vaga restante' : 'vagas restantes'} de {maxParticipants}
+                    {effectiveSpotsRemaining <= 10 ? '⚠️' : '✅'} {effectiveSpotsRemaining} {effectiveSpotsRemaining === 1 ? 'vaga restante' : 'vagas restantes'} de {effectiveMaxSlots}
                   </span>
                 </div>
               )}
