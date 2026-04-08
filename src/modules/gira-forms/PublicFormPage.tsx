@@ -673,8 +673,9 @@ export default function PublicFormPage() {
     );
   }
 
-  // ─── Vacancy check: block if linked event is full ─────────
-  if (linkedEvent && spotsRemaining !== null && spotsRemaining <= 0) {
+  // ─── Vacancy check: block if full ─────────────────────────
+  if (effectiveSpotsRemaining !== null && effectiveSpotsRemaining <= 0) {
+    const label = linkedEvent ? linkedEvent.title : form.title;
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
         <Card className="max-w-md w-full">
@@ -682,7 +683,7 @@ export default function PublicFormPage() {
             <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#ef4444' }} />
             <h2 className="text-xl font-semibold">Vagas esgotadas</h2>
             <p className="text-sm" style={{ color: '#666' }}>
-              Todas as {maxParticipants} vagas para <strong>{linkedEvent.title}</strong> foram preenchidas.
+              Todas as {effectiveMaxSlots} vagas para <strong>{label}</strong> foram preenchidas.
             </p>
           </CardContent>
         </Card>
