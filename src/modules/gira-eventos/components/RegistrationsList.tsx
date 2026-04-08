@@ -21,7 +21,7 @@ export const RegistrationsList: React.FC<RegistrationsListProps> = ({
   checkins.forEach(c => checkinMap.set(c.registration_id, c));
 
   const exportCsv = () => {
-    const header = 'Nome,E-mail,Telefone,Documento,Status,Data Inscrição,Check-in\n';
+    const header = 'Nº,Nome,E-mail,Telefone,Documento,Status,Data Inscrição,Check-in\n';
     const rows = registrations.map(r => {
       const ci = checkinMap.get(r.id);
       return `"${r.name}","${r.email ?? ''}","${r.phone ?? ''}","${r.document ?? ''}","${r.status}","${format(new Date(r.registered_at), 'dd/MM/yyyy HH:mm')}","${ci ? 'Sim' : 'Não'}"`;
@@ -52,6 +52,7 @@ export const RegistrationsList: React.FC<RegistrationsListProps> = ({
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Nº</TableHead>
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Telefone</TableHead>
@@ -66,6 +67,7 @@ export const RegistrationsList: React.FC<RegistrationsListProps> = ({
                 const ci = checkinMap.get(r.id);
                 return (
                   <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs">{r.registration_number ? String(r.registration_number).padStart(3, '0') : '—'}</TableCell>
                     <TableCell className="font-medium">{r.name}</TableCell>
                     <TableCell>{r.email ?? '—'}</TableCell>
                     <TableCell>{r.phone ?? '—'}</TableCell>
