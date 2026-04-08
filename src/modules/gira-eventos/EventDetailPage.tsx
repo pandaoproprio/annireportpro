@@ -58,6 +58,7 @@ const EventDetailPage: React.FC = () => {
         id: event.id,
         ...data,
         project_id: data.project_id || null,
+        linked_form_id: data.linked_form_id || null,
         max_participants: data.max_participants ? Number(data.max_participants) : null,
         event_date: new Date(data.event_date).toISOString(),
         event_end_date: data.event_end_date ? new Date(data.event_end_date).toISOString() : null,
