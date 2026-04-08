@@ -248,6 +248,39 @@ export default function PublicFormPage() {
       });
       if (error) throw error;
 
+      // ─── Auto-register in linked event ──────────────────────
+      if (linkedEvent?.id) {
+        const regId = crypto.randomUUID();
+        const qrToken = crypto.randomUUID();
+        const phone = phoneFieldId ? String(answers[phoneFieldId] || '').trim() : '';
+        const doc = cpfFieldId ? String(answers[cpfFieldId] || '').trim() : '';
+
+        const { data: regData, error: regError } = await supabase
+          .from('event_registrations')
+          .insert({
+            id: regId,
+            event_id: linkedEvent.id,
+            name: respondentName || 'Participante',
+            email: respondentEmail || null,
+            phone: phone || null,
+            document: doc || null,
+            status: 'confirmado',
+            qr_token: qrToken,
+          } as any)
+          .select('registration_number')
+          .single();
+
+        if (!regError && regData) {
+          setRegistrationResult({
+            registration_number: (regData as any).registration_number,
+            qr_token: qrToken,
+            event_title: linkedEvent.title,
+            event_date: linkedEvent.event_date,
+            event_location: linkedEvent.location,
+          });
+        }
+      }
+
       // Non-blocking notification
       if (form?.user_id) {
         try {
