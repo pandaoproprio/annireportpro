@@ -185,12 +185,28 @@ export default function PublicFormPage() {
       // Generate a client-side ID so we can reference it for notifications
       const responseId = crypto.randomUUID();
 
+      // Clean up __other__: prefix from answers before saving
+      const cleanedAnswers: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(answers)) {
+        if (typeof val === 'string' && val.startsWith('__other__:')) {
+          cleanedAnswers[key] = val.replace('__other__:', '') || 'Outro';
+        } else if (Array.isArray(val)) {
+          cleanedAnswers[key] = val.map(v =>
+            typeof v === 'string' && v.startsWith('__other__:')
+              ? (v.replace('__other__:', '') || 'Outro')
+              : v
+          );
+        } else {
+          cleanedAnswers[key] = val;
+        }
+      }
+
       const { error } = await supabase.from('form_responses').insert({
         id: responseId,
         form_id: formId!,
         respondent_name: respondentName,
         respondent_email: respondentEmail,
-        answers: { ...answers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
+        answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
       });
       if (error) throw error;
 
@@ -394,7 +410,8 @@ export default function PublicFormPage() {
     }
 
     const errors: Record<string, string> = {};
-    const inputFields = step.fields.filter(f => f.type !== 'info_text' && f.type !== 'section_header');
+    // Only validate visible fields (skip fields hidden by conditional logic)
+    const inputFields = step.fields.filter(f => f.type !== 'info_text' && f.type !== 'section_header' && isFieldVisible(f));
 
     for (const field of inputFields) {
       const smart = detectSmartType(field);
