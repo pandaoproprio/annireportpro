@@ -86,6 +86,7 @@ export default function PublicFormPage() {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [submitted, setSubmitted] = useState(false);
   const [registrationResult, setRegistrationResult] = useState<{ registration_number: number; qr_token: string; event_title: string; event_date: string; event_location: string } | null>(null);
+  const [standaloneRegNumber, setStandaloneRegNumber] = useState<number | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [lgpdError, setLgpdError] = useState(false);
