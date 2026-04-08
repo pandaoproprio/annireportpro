@@ -241,6 +241,25 @@ export default function FormBuilderPage() {
               }}
             />
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Check-in:</span>
+            <Switch
+              checked={(form.settings as any)?.enableCheckin ?? false}
+              onCheckedChange={(checked) => {
+                updateForm.mutateAsync({ id: id!, settings: { ...form.settings, enableCheckin: checked } as any });
+              }}
+            />
+            {(form.settings as any)?.enableCheckin && (
+              <a
+                href={`/form-checkin/${id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary hover:underline ml-1"
+              >
+                Abrir painel →
+              </a>
+            )}
+          </div>
         </CardContent>
       </Card>
 
