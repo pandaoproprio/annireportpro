@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -8,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EVENT_CATEGORIES } from '../types';
 import type { GiraEvent } from '../types';
 import { EventCoverUpload } from './EventCoverUpload';
+import { supabase } from '@/integrations/supabase/client';
+import { ClipboardList } from 'lucide-react';
 
 interface EventFormProps {
   defaultValues?: Partial<GiraEvent>;
@@ -29,16 +32,32 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
       max_participants: defaultValues?.max_participants ?? '',
       project_id: defaultValues?.project_id ?? '',
       status: defaultValues?.status ?? 'ativo' as 'ativo' | 'encerrado' | 'cancelado',
+      linked_form_id: defaultValues?.linked_form_id ?? '',
     },
   });
 
   const category = watch('category');
   const status = watch('status');
   const projectId = watch('project_id');
+  const linkedFormId = watch('linked_form_id');
   const [coverUrl, setCoverUrl] = useState<string | null>(defaultValues?.cover_image_url ?? null);
 
+  // Fetch available forms
+  const formsQuery = useQuery({
+    queryKey: ['gira-forms-for-linking'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('forms')
+        .select('id, title, status')
+        .eq('status', 'ativo')
+        .order('title');
+      if (error) return [];
+      return data as { id: string; title: string; status: string }[];
+    },
+  });
+
   const onFormSubmit = (data: any) => {
-    onSubmit({ ...data, cover_image_url: coverUrl });
+    onSubmit({ ...data, cover_image_url: coverUrl, linked_form_id: data.linked_form_id || null });
   };
 
   return (
@@ -91,6 +110,26 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
           <Label htmlFor="max_participants">Máx. Participantes</Label>
           <Input id="max_participants" type="number" {...register('max_participants')} placeholder="Ilimitado" />
         </div>
+      </div>
+
+      {/* Link to GIRA Form */}
+      <div>
+        <Label className="flex items-center gap-1.5">
+          <ClipboardList className="w-4 h-4" />
+          Formulário de inscrição (GIRA Forms)
+        </Label>
+        <Select value={linkedFormId || '__none__'} onValueChange={v => setValue('linked_form_id', v === '__none__' ? '' : v)}>
+          <SelectTrigger><SelectValue placeholder="Nenhum (inscrição padrão)" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">Nenhum (inscrição padrão)</SelectItem>
+            {(formsQuery.data || []).map(f => (
+              <SelectItem key={f.id} value={f.id}>{f.title}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground mt-1">
+          Vincule um formulário personalizado para coletar dados detalhados na inscrição.
+        </p>
       </div>
 
       {projects && projects.length > 0 && (
