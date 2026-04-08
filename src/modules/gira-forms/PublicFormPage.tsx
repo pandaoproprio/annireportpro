@@ -774,6 +774,239 @@ export default function PublicFormPage() {
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
 
+  // ─── Validate ALL fields (for single page mode) ───────────
+  const validateAllFields = (): boolean => {
+    const errors: Record<string, string> = {};
+    for (const step of steps) {
+      if (step.type !== 'section') continue;
+      const inputFields = step.fields.filter(f => f.type !== 'info_text' && f.type !== 'section_header' && isFieldVisible(f));
+      for (const field of inputFields) {
+        const smart = detectSmartType(field);
+        const val = answers[field.id];
+        if (field.required) {
+          if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
+            errors[field.id] = 'Este campo é obrigatório.';
+            continue;
+          }
+        }
+        if (!val) continue;
+        if (smart === 'email' || field.type === 'email') {
+          if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val))) errors[field.id] = 'Informe um e-mail válido.';
+        }
+        if (smart === 'cpf_cnpj' || field.type === 'cpf_cnpj') {
+          const digits = String(val).replace(/\D/g, '');
+          if (digits.length !== 11 && digits.length !== 14) errors[field.id] = 'CPF (11) ou CNPJ (14) dígitos';
+        }
+        if (smart === 'cpf') {
+          const digits = String(val).replace(/\D/g, '');
+          if (digits.length !== 11) errors[field.id] = 'CPF deve ter 11 dígitos';
+        }
+        if (smart === 'phone') {
+          if (String(val).replace(/\D/g, '').length < 10) errors[field.id] = 'Telefone inválido';
+        }
+      }
+    }
+    setValidationErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      toast.error('Preencha os campos obrigatórios.');
+      // Scroll to first error
+      const firstErrorId = Object.keys(errors)[0];
+      const el = document.getElementById(`field-${firstErrorId}`);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return false;
+    }
+    return true;
+  };
+
+  const handleSinglePageSubmit = () => {
+    if (!validateAllFields()) return;
+    if (!lgpdConsent) { setLgpdError(true); toast.error('Aceite os termos de proteção de dados.'); return; }
+    submitMutation.mutate();
+  };
+
+  // ─── Render field card (shared between modes) ─────────────
+  const renderFieldCard = (field: FormField, i: number) => (
+    <div key={field.id} id={`field-${field.id}`}>
+      {field.type === 'info_text' ? (
+        <div className="rounded-xl p-5 shadow-sm" style={{ background: 'var(--form-card-bg)' }}>
+          {field.label && <h3 className="font-semibold mb-2">{field.label}</h3>}
+          {field.description && (
+            <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--form-text)' }}>
+              {renderFormattedText(field.description)}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          className="rounded-xl p-5 shadow-sm space-y-3 transition-all"
+          style={{
+            background: 'var(--form-card-bg)',
+            ...(validationErrors[field.id] ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
+          }}
+        >
+          <div>
+            <Label className="text-sm font-medium">
+              {field.label}
+              {field.required && <span className="ml-1" style={{ color: '#ef4444' }}>*</span>}
+            </Label>
+            {field.description && <p className="text-xs mt-0.5" style={{ color: 'var(--form-muted)' }}>{field.description}</p>}
+          </div>
+          <SmartFieldInput
+            field={field}
+            value={answers[field.id]}
+            onChange={val => updateAnswer(field.id, val)}
+            onCepAutoFill={(data) => handleCepAutoFill(data, field.id)}
+            isDark={isDark}
+            formId={formId}
+            onAudioUrl={(fieldId, url) => {
+              setAnswers(prev => ({ ...prev, [`${fieldId}_audio_url`]: url }));
+            }}
+          />
+          {validationErrors[field.id] && (
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs" style={{ color: '#ef4444' }}>
+              {validationErrors[field.id]}
+            </motion.p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+
+  // ─── LGPD block (shared) ──────────────────────────────────
+  const renderLgpd = () => (
+    <div
+      className="rounded-xl p-5 shadow-sm space-y-3"
+      style={{
+        background: 'var(--form-card-bg)',
+        ...(lgpdError && !lgpdConsent ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
+      }}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <ShieldCheck className="w-5 h-5" style={{ color: 'var(--form-primary)' }} />
+        <h3 className="font-semibold text-sm">Proteção de Dados (LGPD)</h3>
+      </div>
+      <p className="text-xs leading-relaxed" style={{ color: 'var(--form-muted)' }}>
+        De acordo com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), informamos que os dados coletados
+        neste formulário serão utilizados exclusivamente para os fins descritos. Seus dados serão tratados com
+        sigilo e segurança, não sendo compartilhados com terceiros sem seu consentimento, exceto quando exigido
+        por lei. Você pode solicitar a exclusão dos seus dados a qualquer momento.
+      </p>
+      <div className="flex items-start gap-2 pt-2">
+        <Checkbox
+          id="lgpd-consent"
+          checked={lgpdConsent}
+          onCheckedChange={(checked) => {
+            setLgpdConsent(!!checked);
+            if (checked) setLgpdError(false);
+          }}
+        />
+        <Label htmlFor="lgpd-consent" className="text-sm font-normal cursor-pointer leading-snug">
+          Li e concordo com os termos de proteção de dados.
+          <span className="ml-1" style={{ color: '#ef4444' }}>*</span>
+        </Label>
+      </div>
+      {lgpdError && !lgpdConsent && (
+        <p className="text-xs" style={{ color: '#ef4444' }}>Você precisa aceitar os termos para enviar.</p>
+      )}
+    </div>
+  );
+
+  // ═══════════════════════════════════════════════════════════
+  // SINGLE PAGE MODE
+  // ═══════════════════════════════════════════════════════════
+  if (isSinglePage) {
+    return (
+      <div className="min-h-screen py-6 px-4" ref={containerRef} style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
+        <div className={`mx-auto space-y-4 ${isFullWidth ? 'max-w-4xl' : 'max-w-2xl'}`}>
+
+          {/* Cover image */}
+          {design.coverImageUrl && (
+            <div className="rounded-xl overflow-hidden shadow-md">
+              <img src={design.coverImageUrl} alt="" className="w-full h-40 object-cover" />
+            </div>
+          )}
+
+          {/* Header Card (once) */}
+          <div className="rounded-xl overflow-hidden shadow-md" style={{ background: 'var(--form-card-bg)', borderTop: `4px solid var(--form-primary)` }}>
+            {design.headerImageUrl && (
+              <div className="w-full h-40">
+                <img src={design.headerImageUrl} alt="" className="w-full h-full object-cover" />
+              </div>
+            )}
+            <div className="p-5">
+              <div className="flex items-start gap-3">
+                {design.logoUrl && (
+                  <img src={design.logoUrl} alt="Logo" className="h-10 w-10 object-contain rounded" />
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1" style={{ color: 'var(--form-primary)' }}>
+                    {!design.logoUrl && <ClipboardList className="w-4 h-4" />}
+                    <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Formulários</span>
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
+                  {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
+                  {effectiveSpotsRemaining !== null && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full" style={{
+                        background: effectiveSpotsRemaining <= 10 ? '#fef2f2' : '#f0fdf4',
+                        color: effectiveSpotsRemaining <= 10 ? '#dc2626' : '#16a34a',
+                      }}>
+                        {effectiveSpotsRemaining <= 10 ? '⚠️' : '✅'} {effectiveSpotsRemaining} {effectiveSpotsRemaining === 1 ? 'vaga restante' : 'vagas restantes'} de {effectiveMaxSlots}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* All sections inline */}
+          {steps.filter(s => s.type === 'section').map((section, sIdx) => (
+            <div key={sIdx} className="space-y-3">
+              {/* Section header */}
+              <div className="rounded-xl overflow-hidden shadow-sm" style={{ background: 'var(--form-primary)' }}>
+                <div className="px-5 py-3">
+                  <h2 className="text-base sm:text-lg font-bold text-white">{section.title}</h2>
+                </div>
+              </div>
+              {/* Section fields */}
+              {section.fields.map((field, i) => renderFieldCard(field, i))}
+            </div>
+          ))}
+
+          {/* LGPD */}
+          {renderLgpd()}
+
+          {/* Submit button */}
+          <div className="pb-4">
+            <motion.button
+              type="button"
+              onClick={handleSinglePageSubmit}
+              disabled={submitMutation.isPending}
+              className="w-full py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              style={{ background: 'var(--form-button)' }}
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              {submitMutation.isPending ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+              ) : (
+                <><Send className="w-4 h-4" /> Enviar Inscrição</>
+              )}
+            </motion.button>
+          </div>
+
+          <p className="text-center text-xs pb-4" style={{ color: 'var(--form-muted)' }}>
+            Desenvolvido com <span className="font-semibold">GIRA Formulários</span>
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════
+  // WIZARD (MULTI-STEP) MODE — original behavior
+  // ═══════════════════════════════════════════════════════════
   return (
     <div className="min-h-screen py-6 px-4" ref={containerRef} style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
       <motion.div initial={false} animate={{ opacity: 1, y: 0 }} className={`mx-auto space-y-4 ${isFullWidth ? 'max-w-4xl' : 'max-w-2xl'}`}>
@@ -891,7 +1124,6 @@ export default function PublicFormPage() {
             transition={{ duration: 0.25 }}
             className="space-y-4"
           >
-            {/* ─── Section Fields Step ─────────────────────────────── */}
             {activeStep.type === 'section' && activeStep.fields.map((field, i) => (
               <motion.div
                 key={field.id}
@@ -899,52 +1131,10 @@ export default function PublicFormPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.03 }}
               >
-                {field.type === 'info_text' ? (
-                  <div className="rounded-xl p-5 shadow-sm" style={{ background: 'var(--form-card-bg)' }}>
-                    {field.label && <h3 className="font-semibold mb-2">{field.label}</h3>}
-                    {field.description && (
-                      <div className="text-sm leading-relaxed whitespace-pre-line" style={{ color: 'var(--form-text)' }}>
-                        {renderFormattedText(field.description)}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div
-                    className="rounded-xl p-5 shadow-sm space-y-3 transition-all"
-                    style={{
-                      background: 'var(--form-card-bg)',
-                      ...(validationErrors[field.id] ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
-                    }}
-                  >
-                    <div>
-                      <Label className="text-sm font-medium">
-                        {field.label}
-                        {field.required && <span className="ml-1" style={{ color: '#ef4444' }}>*</span>}
-                      </Label>
-                      {field.description && <p className="text-xs mt-0.5" style={{ color: 'var(--form-muted)' }}>{field.description}</p>}
-                    </div>
-                    <SmartFieldInput
-                      field={field}
-                      value={answers[field.id]}
-                      onChange={val => updateAnswer(field.id, val)}
-                      onCepAutoFill={(data) => handleCepAutoFill(data, field.id)}
-                      isDark={isDark}
-                      formId={formId}
-                      onAudioUrl={(fieldId, url) => {
-                        setAnswers(prev => ({ ...prev, [`${fieldId}_audio_url`]: url }));
-                      }}
-                    />
-                    {validationErrors[field.id] && (
-                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs" style={{ color: '#ef4444' }}>
-                        {validationErrors[field.id]}
-                      </motion.p>
-                    )}
-                  </div>
-                )}
+                {renderFieldCard(field, i)}
               </motion.div>
             ))}
 
-            {/* ─── Review & LGPD Step ─────────────────────────────── */}
             {activeStep.type === 'lgpd_review' && (
               <>
                 <div className="rounded-xl p-5 shadow-sm space-y-4" style={{ background: 'var(--form-card-bg)' }}>
@@ -952,7 +1142,6 @@ export default function PublicFormPage() {
                     <Eye className="w-4 h-4" style={{ color: 'var(--form-primary)' }} />
                     Resumo das suas respostas
                   </h3>
-
                   <div className="space-y-3">
                     {steps.filter(s => s.type === 'section').map((section, sIdx) => {
                       const sectionInputs = section.fields.filter(f => f.type !== 'info_text');
@@ -998,42 +1187,7 @@ export default function PublicFormPage() {
                   </div>
                 </div>
 
-                {/* LGPD Consent */}
-                <div
-                  className="rounded-xl p-5 shadow-sm space-y-3"
-                  style={{
-                    background: 'var(--form-card-bg)',
-                    ...(lgpdError && !lgpdConsent ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
-                  }}
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <ShieldCheck className="w-5 h-5" style={{ color: 'var(--form-primary)' }} />
-                    <h3 className="font-semibold text-sm">Proteção de Dados (LGPD)</h3>
-                  </div>
-                  <p className="text-xs leading-relaxed" style={{ color: 'var(--form-muted)' }}>
-                    De acordo com a Lei Geral de Proteção de Dados (Lei nº 13.709/2018), informamos que os dados coletados
-                    neste formulário serão utilizados exclusivamente para os fins descritos. Seus dados serão tratados com
-                    sigilo e segurança, não sendo compartilhados com terceiros sem seu consentimento, exceto quando exigido
-                    por lei. Você pode solicitar a exclusão dos seus dados a qualquer momento.
-                  </p>
-                  <div className="flex items-start gap-2 pt-2">
-                    <Checkbox
-                      id="lgpd-consent"
-                      checked={lgpdConsent}
-                      onCheckedChange={(checked) => {
-                        setLgpdConsent(!!checked);
-                        if (checked) setLgpdError(false);
-                      }}
-                    />
-                    <Label htmlFor="lgpd-consent" className="text-sm font-normal cursor-pointer leading-snug">
-                      Li e concordo com os termos de proteção de dados.
-                      <span className="ml-1" style={{ color: '#ef4444' }}>*</span>
-                    </Label>
-                  </div>
-                  {lgpdError && !lgpdConsent && (
-                    <p className="text-xs" style={{ color: '#ef4444' }}>Você precisa aceitar os termos para enviar.</p>
-                  )}
-                </div>
+                {renderLgpd()}
               </>
             )}
           </motion.div>
