@@ -155,6 +155,23 @@ export default function PublicFormPage() {
   const registrationCount = regCountQuery.data ?? 0;
   const maxParticipants = linkedEvent?.max_participants ?? null;
   const spotsRemaining = maxParticipants ? maxParticipants - registrationCount : null;
+
+  // ─── Standalone response count (for forms without linked event) ──
+  const formResponseCountQuery = useQuery({
+    queryKey: ['form-response-count', formId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('form_responses')
+        .select('*', { count: 'exact', head: true })
+        .eq('form_id', formId!);
+      if (error) return 0;
+      return count || 0;
+    },
+    enabled: !!formId && !linkedEvent,
+  });
+
+  const formResponseCount = formResponseCountQuery.data ?? 0;
+
   const fieldsQuery = useQuery({
     queryKey: ['public-form-fields', formId],
     queryFn: async () => {
