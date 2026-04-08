@@ -305,6 +305,9 @@ export default function PublicFormPage() {
             event_location: linkedEvent.location,
           });
         }
+      } else if (showRegNumber) {
+        // Standalone registration number (count-based)
+        setStandaloneRegNumber(formResponseCount + 1);
       }
 
       // Non-blocking notification
