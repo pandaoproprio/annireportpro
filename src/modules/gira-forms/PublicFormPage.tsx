@@ -266,14 +266,17 @@ export default function PublicFormPage() {
         }
       }
 
-      const { error } = await supabase.from('form_responses').insert({
+      const { data: insertedResponse, error } = await supabase.from('form_responses').insert({
         id: responseId,
         form_id: formId!,
         respondent_name: respondentName,
         respondent_email: respondentEmail,
         answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
-      });
+      }).select('checkin_code, qr_token').single();
       if (error) throw error;
+
+      const checkinCode = (insertedResponse as any)?.checkin_code;
+      const qrTokenVal = (insertedResponse as any)?.qr_token;
 
       // ─── Auto-register in linked event ──────────────────────
       if (linkedEvent?.id) {
@@ -309,6 +312,31 @@ export default function PublicFormPage() {
       } else if (showRegNumber) {
         // Standalone registration number (count-based)
         setStandaloneRegNumber(formResponseCount + 1);
+      }
+
+      // ─── Set checkin result for success screen ──────────────
+      const enableCheckin = design.enableCheckin ?? false;
+      if (enableCheckin && checkinCode && qrTokenVal) {
+        setCheckinResult({ checkin_code: checkinCode, qr_token: qrTokenVal });
+
+        // Send checkin email (non-blocking)
+        if (respondentEmail) {
+          try {
+            await supabase.functions.invoke('send-form-checkin', {
+              body: {
+                respondent_name: respondentName,
+                respondent_email: respondentEmail,
+                form_title: form?.title || '',
+                checkin_code: checkinCode,
+                qr_token: qrTokenVal,
+                form_id: formId,
+                registration_number: standaloneRegNumber ?? (formResponseCount + 1),
+              },
+            });
+          } catch {
+            // Email is non-critical
+          }
+        }
       }
 
       // Non-blocking notification
