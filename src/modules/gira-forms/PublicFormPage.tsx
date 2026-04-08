@@ -736,6 +736,17 @@ export default function PublicFormPage() {
                   </div>
                 )}
               </>
+            ) : standaloneRegNumber ? (
+              <>
+                <h2 className="text-2xl font-bold">Inscrição confirmada!</h2>
+                <div className="rounded-lg p-4 space-y-2" style={{ background: 'var(--form-bg)', border: '1px solid var(--form-primary)' }}>
+                  <p className="text-3xl font-bold" style={{ color: 'var(--form-primary)' }}>
+                    Nº {String(standaloneRegNumber).padStart(3, '0')}
+                  </p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--form-muted)' }}>Número de inscrição</p>
+                </div>
+                <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
+              </>
             ) : (
               <>
                 <h2 className="text-2xl font-bold">Resposta enviada!</h2>
