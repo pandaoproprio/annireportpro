@@ -87,6 +87,7 @@ export default function PublicFormPage() {
   const [submitted, setSubmitted] = useState(false);
   const [registrationResult, setRegistrationResult] = useState<{ registration_number: number; qr_token: string; event_title: string; event_date: string; event_location: string } | null>(null);
   const [standaloneRegNumber, setStandaloneRegNumber] = useState<number | null>(null);
+  const [checkinResult, setCheckinResult] = useState<{ checkin_code: string; qr_token: string } | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [lgpdError, setLgpdError] = useState(false);
@@ -265,14 +266,17 @@ export default function PublicFormPage() {
         }
       }
 
-      const { error } = await supabase.from('form_responses').insert({
+      const { data: insertedResponse, error } = await supabase.from('form_responses').insert({
         id: responseId,
         form_id: formId!,
         respondent_name: respondentName,
         respondent_email: respondentEmail,
         answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
-      });
+      }).select('checkin_code, qr_token').single();
       if (error) throw error;
+
+      const checkinCode = (insertedResponse as any)?.checkin_code;
+      const qrTokenVal = (insertedResponse as any)?.qr_token;
 
       // ─── Auto-register in linked event ──────────────────────
       if (linkedEvent?.id) {
@@ -308,6 +312,31 @@ export default function PublicFormPage() {
       } else if (showRegNumber) {
         // Standalone registration number (count-based)
         setStandaloneRegNumber(formResponseCount + 1);
+      }
+
+      // ─── Set checkin result for success screen ──────────────
+      const enableCheckin = design.enableCheckin ?? false;
+      if (enableCheckin && checkinCode && qrTokenVal) {
+        setCheckinResult({ checkin_code: checkinCode, qr_token: qrTokenVal });
+
+        // Send checkin email (non-blocking)
+        if (respondentEmail) {
+          try {
+            await supabase.functions.invoke('send-form-checkin', {
+              body: {
+                respondent_name: respondentName,
+                respondent_email: respondentEmail,
+                form_title: form?.title || '',
+                checkin_code: checkinCode,
+                qr_token: qrTokenVal,
+                form_id: formId,
+                registration_number: standaloneRegNumber ?? (formResponseCount + 1),
+              },
+            });
+          } catch {
+            // Email is non-critical
+          }
+        }
       }
 
       // Non-blocking notification
@@ -700,7 +729,9 @@ export default function PublicFormPage() {
   if (submitted) {
     const checkinUrl = registrationResult
       ? `${window.location.origin}/checkin/${linkedEvent?.id}?token=${registrationResult.qr_token}`
-      : null;
+      : checkinResult
+        ? `${window.location.origin}/form-checkin/${formId}?token=${checkinResult.qr_token}`
+        : null;
     const qrImageUrl = checkinUrl
       ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(checkinUrl)}&format=png&margin=8`
       : null;
@@ -746,7 +777,29 @@ export default function PublicFormPage() {
                   </p>
                   <p className="text-xs font-medium" style={{ color: 'var(--form-muted)' }}>Número de inscrição</p>
                 </div>
-                <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
+                {checkinResult && (
+                  <>
+                    {qrImageUrl && (
+                      <div className="space-y-2 pt-2">
+                        <p className="text-xs font-semibold">Seu QR Code de Check-in</p>
+                        <img src={qrImageUrl} alt="QR Code" width={180} height={180} className="mx-auto rounded-lg" style={{ border: '1px solid #e2e8f0' }} />
+                      </div>
+                    )}
+                    <div className="rounded-lg p-3 space-y-1" style={{ background: '#fef3c7', border: '1px solid #fcd34d' }}>
+                      <p className="text-[10px] font-semibold" style={{ color: '#92400e' }}>Código de Check-in</p>
+                      <p className="text-2xl font-bold font-mono tracking-[6px]" style={{ color: '#92400e' }}>
+                        {checkinResult.checkin_code}
+                      </p>
+                      <p className="text-[10px]" style={{ color: '#b45309' }}>
+                        Use este código caso não consiga ler o QR Code
+                      </p>
+                    </div>
+                    <p className="text-[10px]" style={{ color: 'var(--form-muted)' }}>
+                      📧 Um e-mail com o QR Code e código foi enviado para seu endereço. Salve uma captura de tela!
+                    </p>
+                  </>
+                )}
+                {!checkinResult && <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>}
               </>
             ) : (
               <>
@@ -757,7 +810,7 @@ export default function PublicFormPage() {
 
             <motion.div initial={false} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
               <button
-                onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); setRegistrationResult(null); setStandaloneRegNumber(null); }}
+                onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); setRegistrationResult(null); setStandaloneRegNumber(null); setCheckinResult(null); }}
                 className="px-4 py-2 rounded-lg border text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)' }}
               >

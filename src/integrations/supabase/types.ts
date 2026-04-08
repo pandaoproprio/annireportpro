@@ -1172,24 +1172,36 @@ export type Database = {
       form_responses: {
         Row: {
           answers: Json
+          checked_in_at: string | null
+          checked_in_by: string | null
+          checkin_code: string | null
           form_id: string
           id: string
+          qr_token: string | null
           respondent_email: string | null
           respondent_name: string | null
           submitted_at: string
         }
         Insert: {
           answers?: Json
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          checkin_code?: string | null
           form_id: string
           id?: string
+          qr_token?: string | null
           respondent_email?: string | null
           respondent_name?: string | null
           submitted_at?: string
         }
         Update: {
           answers?: Json
+          checked_in_at?: string | null
+          checked_in_by?: string | null
+          checkin_code?: string | null
           form_id?: string
           id?: string
+          qr_token?: string | null
           respondent_email?: string | null
           respondent_name?: string | null
           submitted_at?: string
