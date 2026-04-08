@@ -11,6 +11,7 @@ import { FormDesignEditor } from './components/FormDesignEditor';
 import { FormDigestConfig } from './components/FormDigestConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
@@ -217,6 +218,29 @@ export default function FormBuilderPage() {
               O formulário será encerrado automaticamente em {new Date(closesAt).toLocaleString('pt-BR')}
             </span>
           )}
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Limite de respostas:</span>
+            <Input
+              type="number"
+              min={0}
+              value={(form.settings as any)?.maxResponses || ''}
+              onChange={e => {
+                const val = e.target.value ? parseInt(e.target.value) : null;
+                updateForm.mutateAsync({ id: id!, settings: { ...form.settings, maxResponses: val } as any });
+              }}
+              placeholder="Sem limite"
+              className="h-8 text-xs w-28"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0">Nº de inscrição:</span>
+            <Switch
+              checked={(form.settings as any)?.showRegistrationNumber ?? false}
+              onCheckedChange={(checked) => {
+                updateForm.mutateAsync({ id: id!, settings: { ...form.settings, showRegistrationNumber: checked } as any });
+              }}
+            />
+          </div>
         </CardContent>
       </Card>
 

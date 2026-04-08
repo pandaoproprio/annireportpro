@@ -86,6 +86,7 @@ export default function PublicFormPage() {
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [submitted, setSubmitted] = useState(false);
   const [registrationResult, setRegistrationResult] = useState<{ registration_number: number; qr_token: string; event_title: string; event_date: string; event_location: string } | null>(null);
+  const [standaloneRegNumber, setStandaloneRegNumber] = useState<number | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [lgpdError, setLgpdError] = useState(false);
@@ -154,6 +155,23 @@ export default function PublicFormPage() {
   const registrationCount = regCountQuery.data ?? 0;
   const maxParticipants = linkedEvent?.max_participants ?? null;
   const spotsRemaining = maxParticipants ? maxParticipants - registrationCount : null;
+
+  // ─── Standalone response count (for forms without linked event) ──
+  const formResponseCountQuery = useQuery({
+    queryKey: ['form-response-count', formId],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('form_responses')
+        .select('*', { count: 'exact', head: true })
+        .eq('form_id', formId!);
+      if (error) return 0;
+      return count || 0;
+    },
+    enabled: !!formId && !linkedEvent,
+  });
+
+  const formResponseCount = formResponseCountQuery.data ?? 0;
+
   const fieldsQuery = useQuery({
     queryKey: ['public-form-fields', formId],
     queryFn: async () => {
@@ -171,6 +189,14 @@ export default function PublicFormPage() {
   const form = formQuery.data;
   const fields = fieldsQuery.data || [];
   const design: FormDesignSettings = (form?.settings || {}) as FormDesignSettings;
+
+  // ─── Standalone vacancy & registration number logic ───────
+  const standaloneMaxResponses = design.maxResponses ?? null;
+  const standaloneSpotsRemaining = standaloneMaxResponses ? standaloneMaxResponses - formResponseCount : null;
+  const showRegNumber = design.showRegistrationNumber ?? false;
+  // Unified vacancy: use linked event if available, otherwise standalone
+  const effectiveMaxSlots = linkedEvent ? maxParticipants : standaloneMaxResponses;
+  const effectiveSpotsRemaining = linkedEvent ? spotsRemaining : standaloneSpotsRemaining;
 
   // ─── Dynamic OG meta tags for social previews ─────────────
   React.useEffect(() => {
@@ -279,6 +305,9 @@ export default function PublicFormPage() {
             event_location: linkedEvent.location,
           });
         }
+      } else if (showRegNumber) {
+        // Standalone registration number (count-based)
+        setStandaloneRegNumber(formResponseCount + 1);
       }
 
       // Non-blocking notification
@@ -647,8 +676,9 @@ export default function PublicFormPage() {
     );
   }
 
-  // ─── Vacancy check: block if linked event is full ─────────
-  if (linkedEvent && spotsRemaining !== null && spotsRemaining <= 0) {
+  // ─── Vacancy check: block if full ─────────────────────────
+  if (effectiveSpotsRemaining !== null && effectiveSpotsRemaining <= 0) {
+    const label = linkedEvent ? linkedEvent.title : form.title;
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
         <Card className="max-w-md w-full">
@@ -656,7 +686,7 @@ export default function PublicFormPage() {
             <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#ef4444' }} />
             <h2 className="text-xl font-semibold">Vagas esgotadas</h2>
             <p className="text-sm" style={{ color: '#666' }}>
-              Todas as {maxParticipants} vagas para <strong>{linkedEvent.title}</strong> foram preenchidas.
+              Todas as {effectiveMaxSlots} vagas para <strong>{label}</strong> foram preenchidas.
             </p>
           </CardContent>
         </Card>
@@ -706,6 +736,17 @@ export default function PublicFormPage() {
                   </div>
                 )}
               </>
+            ) : standaloneRegNumber ? (
+              <>
+                <h2 className="text-2xl font-bold">Inscrição confirmada!</h2>
+                <div className="rounded-lg p-4 space-y-2" style={{ background: 'var(--form-bg)', border: '1px solid var(--form-primary)' }}>
+                  <p className="text-3xl font-bold" style={{ color: 'var(--form-primary)' }}>
+                    Nº {String(standaloneRegNumber).padStart(3, '0')}
+                  </p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--form-muted)' }}>Número de inscrição</p>
+                </div>
+                <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
+              </>
             ) : (
               <>
                 <h2 className="text-2xl font-bold">Resposta enviada!</h2>
@@ -715,7 +756,7 @@ export default function PublicFormPage() {
 
             <motion.div initial={false} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
               <button
-                onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); setRegistrationResult(null); }}
+                onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); setRegistrationResult(null); setStandaloneRegNumber(null); }}
                 className="px-4 py-2 rounded-lg border text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)' }}
               >
@@ -762,14 +803,14 @@ export default function PublicFormPage() {
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
               {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
-              {/* Vacancy badge for linked events */}
-              {linkedEvent && spotsRemaining !== null && (
+              {/* Vacancy badge */}
+              {effectiveSpotsRemaining !== null && (
                 <div className="mt-2 flex items-center gap-2">
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full" style={{
-                    background: spotsRemaining <= 10 ? '#fef2f2' : '#f0fdf4',
-                    color: spotsRemaining <= 10 ? '#dc2626' : '#16a34a',
+                    background: effectiveSpotsRemaining <= 10 ? '#fef2f2' : '#f0fdf4',
+                    color: effectiveSpotsRemaining <= 10 ? '#dc2626' : '#16a34a',
                   }}>
-                    {spotsRemaining <= 10 ? '⚠️' : '✅'} {spotsRemaining} {spotsRemaining === 1 ? 'vaga restante' : 'vagas restantes'} de {maxParticipants}
+                    {effectiveSpotsRemaining <= 10 ? '⚠️' : '✅'} {effectiveSpotsRemaining} {effectiveSpotsRemaining === 1 ? 'vaga restante' : 'vagas restantes'} de {effectiveMaxSlots}
                   </span>
                 </div>
               )}

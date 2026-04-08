@@ -71,6 +71,8 @@ export interface FormDesignSettings {
   theme?: 'light' | 'dark';
   pageLayout?: 'centered' | 'full';
   successMessage?: string;
+  maxResponses?: number | null;
+  showRegistrationNumber?: boolean;
 }
 
 export type FormStatus = 'ativo' | 'inativo' | 'pausado' | 'encerrado';
