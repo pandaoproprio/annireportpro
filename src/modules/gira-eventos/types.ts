@@ -11,6 +11,7 @@ export interface GiraEvent {
   status: 'ativo' | 'encerrado' | 'cancelado';
   max_participants: number | null;
   cover_image_url: string | null;
+  linked_form_id: string | null;
   settings: Record<string, unknown>;
   created_at: string;
   updated_at: string;
