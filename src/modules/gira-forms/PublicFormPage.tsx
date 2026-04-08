@@ -85,6 +85,7 @@ export default function PublicFormPage() {
   const { id } = useParams<{ id: string }>();
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<{ registration_number: number; qr_token: string; event_title: string; event_date: string; event_location: string } | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [lgpdError, setLgpdError] = useState(false);
@@ -118,6 +119,41 @@ export default function PublicFormPage() {
 
   const formId = formQuery.data?.id;
 
+  // ─── Linked Event query ───────────────────────────────────
+  const linkedEventQuery = useQuery({
+    queryKey: ['linked-event-for-form', formId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, title, event_date, location, max_participants, status, linked_form_id')
+        .eq('linked_form_id', formId!)
+        .eq('status', 'ativo')
+        .single();
+      if (error) return null;
+      return data as { id: string; title: string; event_date: string; location: string; max_participants: number | null; status: string };
+    },
+    enabled: !!formId,
+  });
+
+  const linkedEvent = linkedEventQuery.data;
+
+  // ─── Registration count for linked event ──────────────────
+  const regCountQuery = useQuery({
+    queryKey: ['event-reg-count', linkedEvent?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('event_registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', linkedEvent!.id);
+      if (error) return 0;
+      return count || 0;
+    },
+    enabled: !!linkedEvent?.id,
+  });
+
+  const registrationCount = regCountQuery.data ?? 0;
+  const maxParticipants = linkedEvent?.max_participants ?? null;
+  const spotsRemaining = maxParticipants ? maxParticipants - registrationCount : null;
   const fieldsQuery = useQuery({
     queryKey: ['public-form-fields', formId],
     queryFn: async () => {
@@ -176,6 +212,8 @@ export default function PublicFormPage() {
   // ─── Find the respondent name/email fields ────────────────
   const nameFieldId = useMemo(() => fields.find(f => isNameField(f.label))?.id, [fields]);
   const emailFieldId = useMemo(() => fields.find(f => isEmailField(f.label))?.id, [fields]);
+  const phoneFieldId = useMemo(() => fields.find(f => /\btelefone\b|\bwhatsapp\b|\bcelular\b/i.test(f.label))?.id, [fields]);
+  const cpfFieldId = useMemo(() => fields.find(f => /\bcpf\b/i.test(f.label) && f.type !== 'section_header')?.id, [fields]);
 
   const submitMutation = useMutation({
     mutationFn: async () => {
@@ -209,6 +247,39 @@ export default function PublicFormPage() {
         answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
       });
       if (error) throw error;
+
+      // ─── Auto-register in linked event ──────────────────────
+      if (linkedEvent?.id) {
+        const regId = crypto.randomUUID();
+        const qrToken = crypto.randomUUID();
+        const phone = phoneFieldId ? String(answers[phoneFieldId] || '').trim() : '';
+        const doc = cpfFieldId ? String(answers[cpfFieldId] || '').trim() : '';
+
+        const { data: regData, error: regError } = await supabase
+          .from('event_registrations')
+          .insert({
+            id: regId,
+            event_id: linkedEvent.id,
+            name: respondentName || 'Participante',
+            email: respondentEmail || null,
+            phone: phone || null,
+            document: doc || null,
+            status: 'confirmado',
+            qr_token: qrToken,
+          } as any)
+          .select('registration_number')
+          .single();
+
+        if (!regError && regData) {
+          setRegistrationResult({
+            registration_number: (regData as any).registration_number,
+            qr_token: qrToken,
+            event_title: linkedEvent.title,
+            event_date: linkedEvent.event_date,
+            event_location: linkedEvent.location,
+          });
+        }
+      }
 
       // Non-blocking notification
       if (form?.user_id) {
@@ -576,9 +647,33 @@ export default function PublicFormPage() {
     );
   }
 
+  // ─── Vacancy check: block if linked event is full ─────────
+  if (linkedEvent && spotsRemaining !== null && spotsRemaining <= 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
+        <Card className="max-w-md w-full">
+          <CardContent className="p-8 text-center space-y-3">
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#ef4444' }} />
+            <h2 className="text-xl font-semibold">Vagas esgotadas</h2>
+            <p className="text-sm" style={{ color: '#666' }}>
+              Todas as {maxParticipants} vagas para <strong>{linkedEvent.title}</strong> foram preenchidas.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const successMsg = design.successMessage || 'Obrigado por preencher o formulário. Suas informações foram registradas com segurança.';
 
   if (submitted) {
+    const checkinUrl = registrationResult
+      ? `${window.location.origin}/checkin/${linkedEvent?.id}?token=${registrationResult.qr_token}`
+      : null;
+    const qrImageUrl = checkinUrl
+      ? `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(checkinUrl)}&format=png&margin=8`
+      : null;
+
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ ...brandStyles, background: 'var(--form-bg)', color: 'var(--form-text)' }}>
         <motion.div initial={false} animate={{ scale: 1, opacity: 1 }}>
@@ -586,11 +681,41 @@ export default function PublicFormPage() {
             <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.2 }}>
               <CheckCircle2 className="w-16 h-16 mx-auto" style={{ color: 'var(--form-primary)' }} />
             </motion.div>
-            <h2 className="text-2xl font-bold">Resposta enviada!</h2>
-            <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
+
+            {registrationResult ? (
+              <>
+                <h2 className="text-2xl font-bold">Inscrição confirmada!</h2>
+                <div className="rounded-lg p-4 space-y-2" style={{ background: 'var(--form-bg)', border: '1px solid var(--form-primary)' }}>
+                  <p className="text-3xl font-bold" style={{ color: 'var(--form-primary)' }}>
+                    Nº {String(registrationResult.registration_number).padStart(3, '0')}
+                  </p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--form-muted)' }}>Número de inscrição</p>
+                </div>
+                <p className="text-sm font-medium">{registrationResult.event_title}</p>
+                <p className="text-xs" style={{ color: 'var(--form-muted)' }}>
+                  📅 {new Date(registrationResult.event_date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  {registrationResult.event_location && ` · 📍 ${registrationResult.event_location}`}
+                </p>
+                {qrImageUrl && (
+                  <div className="space-y-2 pt-2">
+                    <p className="text-xs font-semibold">Seu QR Code de Check-in</p>
+                    <img src={qrImageUrl} alt="QR Code" width={180} height={180} className="mx-auto rounded-lg" style={{ border: '1px solid #e2e8f0' }} />
+                    <p className="text-[10px]" style={{ color: 'var(--form-muted)' }}>
+                      Apresente este QR Code na entrada do evento. Salve uma captura de tela!
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold">Resposta enviada!</h2>
+                <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
+              </>
+            )}
+
             <motion.div initial={false} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
               <button
-                onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); }}
+                onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); setRegistrationResult(null); }}
                 className="px-4 py-2 rounded-lg border text-sm font-medium hover:opacity-80 transition-opacity"
                 style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)' }}
               >
@@ -637,6 +762,17 @@ export default function PublicFormPage() {
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
               {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
+              {/* Vacancy badge for linked events */}
+              {linkedEvent && spotsRemaining !== null && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full" style={{
+                    background: spotsRemaining <= 10 ? '#fef2f2' : '#f0fdf4',
+                    color: spotsRemaining <= 10 ? '#dc2626' : '#16a34a',
+                  }}>
+                    {spotsRemaining <= 10 ? '⚠️' : '✅'} {spotsRemaining} {spotsRemaining === 1 ? 'vaga restante' : 'vagas restantes'} de {maxParticipants}
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

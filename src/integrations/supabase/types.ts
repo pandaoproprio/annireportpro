@@ -909,6 +909,7 @@ export type Database = {
           phone: string | null
           qr_token: string | null
           registered_at: string
+          registration_number: number | null
           status: string
           user_id: string | null
         }
@@ -921,6 +922,7 @@ export type Database = {
           phone?: string | null
           qr_token?: string | null
           registered_at?: string
+          registration_number?: number | null
           status?: string
           user_id?: string | null
         }
@@ -933,6 +935,7 @@ export type Database = {
           phone?: string | null
           qr_token?: string | null
           registered_at?: string
+          registration_number?: number | null
           status?: string
           user_id?: string | null
         }
@@ -955,6 +958,7 @@ export type Database = {
           event_date: string
           event_end_date: string | null
           id: string
+          linked_form_id: string | null
           location: string
           max_participants: number | null
           project_id: string | null
@@ -972,6 +976,7 @@ export type Database = {
           event_date: string
           event_end_date?: string | null
           id?: string
+          linked_form_id?: string | null
           location?: string
           max_participants?: number | null
           project_id?: string | null
@@ -989,6 +994,7 @@ export type Database = {
           event_date?: string
           event_end_date?: string | null
           id?: string
+          linked_form_id?: string | null
           location?: string
           max_participants?: number | null
           project_id?: string | null
@@ -999,6 +1005,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "events_linked_form_id_fkey"
+            columns: ["linked_form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "events_project_id_fkey"
             columns: ["project_id"]
