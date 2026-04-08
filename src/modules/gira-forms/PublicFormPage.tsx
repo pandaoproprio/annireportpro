@@ -85,6 +85,7 @@ export default function PublicFormPage() {
   const { id } = useParams<{ id: string }>();
   const [answers, setAnswers] = useState<Record<string, unknown>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<{ registration_number: number; qr_token: string; event_title: string; event_date: string; event_location: string } | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [lgpdError, setLgpdError] = useState(false);
@@ -118,6 +119,41 @@ export default function PublicFormPage() {
 
   const formId = formQuery.data?.id;
 
+  // ─── Linked Event query ───────────────────────────────────
+  const linkedEventQuery = useQuery({
+    queryKey: ['linked-event-for-form', formId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('events')
+        .select('id, title, event_date, location, max_participants, status, linked_form_id')
+        .eq('linked_form_id', formId!)
+        .eq('status', 'ativo')
+        .single();
+      if (error) return null;
+      return data as { id: string; title: string; event_date: string; location: string; max_participants: number | null; status: string };
+    },
+    enabled: !!formId,
+  });
+
+  const linkedEvent = linkedEventQuery.data;
+
+  // ─── Registration count for linked event ──────────────────
+  const regCountQuery = useQuery({
+    queryKey: ['event-reg-count', linkedEvent?.id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('event_registrations')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', linkedEvent!.id);
+      if (error) return 0;
+      return count || 0;
+    },
+    enabled: !!linkedEvent?.id,
+  });
+
+  const registrationCount = regCountQuery.data ?? 0;
+  const maxParticipants = linkedEvent?.max_participants ?? null;
+  const spotsRemaining = maxParticipants ? maxParticipants - registrationCount : null;
   const fieldsQuery = useQuery({
     queryKey: ['public-form-fields', formId],
     queryFn: async () => {
