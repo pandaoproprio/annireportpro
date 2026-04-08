@@ -190,6 +190,14 @@ export default function PublicFormPage() {
   const fields = fieldsQuery.data || [];
   const design: FormDesignSettings = (form?.settings || {}) as FormDesignSettings;
 
+  // ─── Standalone vacancy & registration number logic ───────
+  const standaloneMaxResponses = design.maxResponses ?? null;
+  const standaloneSpotsRemaining = standaloneMaxResponses ? standaloneMaxResponses - formResponseCount : null;
+  const showRegNumber = design.showRegistrationNumber ?? false;
+  // Unified vacancy: use linked event if available, otherwise standalone
+  const effectiveMaxSlots = linkedEvent ? maxParticipants : standaloneMaxResponses;
+  const effectiveSpotsRemaining = linkedEvent ? spotsRemaining : standaloneSpotsRemaining;
+
   // ─── Dynamic OG meta tags for social previews ─────────────
   React.useEffect(() => {
     if (!form) return;
