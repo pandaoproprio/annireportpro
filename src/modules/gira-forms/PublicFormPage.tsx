@@ -1102,14 +1102,21 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       );
     }
     case 'scale': {
-      const numVal = typeof value === 'number' ? value : 5;
+      const hasValue = value !== undefined && value !== null && value !== '';
+      const numVal = hasValue ? (typeof value === 'number' ? value : Number(value)) : undefined;
       const min = (field.settings?.min as number) || 1;
       const max = (field.settings?.max as number) || 10;
+      const displayVal = numVal ?? Math.round((min + max) / 2);
       return (
         <div className="space-y-2">
-          <Slider value={[numVal]} onValueChange={([v]) => onChange(v)} min={min} max={max} step={1} />
+          {!hasValue && (
+            <p className="text-xs" style={{ color: 'var(--form-muted)' }}>Arraste para selecionar um valor</p>
+          )}
+          <Slider value={[displayVal]} onValueChange={([v]) => onChange(v)} min={min} max={max} step={1} />
           <div className="flex justify-between text-xs" style={{ color: 'var(--form-muted)' }}>
-            <span>{min}</span><span className="font-medium text-sm">{numVal}</span><span>{max}</span>
+            <span>{min}</span>
+            <span className="font-medium text-sm">{hasValue ? numVal : '—'}</span>
+            <span>{max}</span>
           </div>
         </div>
       );

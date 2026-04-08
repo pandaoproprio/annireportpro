@@ -32,13 +32,24 @@ export const FormResponsesTab: React.FC<Props> = ({ formId, form, fields }) => {
   const { data: responses, isLoading } = useQuery({
     queryKey: ['gira-form-responses', formId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('form_responses')
-        .select('*')
-        .eq('form_id', formId)
-        .order('submitted_at', { ascending: false });
-      if (error) throw error;
-      return (data || []) as unknown as FormResponse[];
+      // Fetch all responses with pagination to avoid the 1000-row default limit
+      let allData: FormResponse[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      while (true) {
+        const { data, error } = await supabase
+          .from('form_responses')
+          .select('*')
+          .eq('form_id', formId)
+          .order('submitted_at', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allData = allData.concat(data as unknown as FormResponse[]);
+        if (data.length < pageSize) break;
+        page++;
+      }
+      return allData;
     },
   });
 
