@@ -17,7 +17,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { ArrowLeft, Edit, Trash2, ExternalLink, CalendarDays, MapPin, Copy, QrCode, Send } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, ExternalLink, CalendarDays, MapPin, Copy, QrCode, Send, ClipboardList } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { EVENT_STATUS_LABELS } from './types';
@@ -182,9 +182,40 @@ const EventDetailPage: React.FC = () => {
                 </CardContent>
               </Card>
 
+              {/* Linked Form Card */}
+              {(event as any).linked_form_id && (
+                <Card className="border-primary/30">
+                  <CardContent className="pt-6">
+                    <p className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                      <ClipboardList className="w-4 h-4" />
+                      Formulário de inscrição vinculado (GIRA Forms)
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <code className="flex-1 text-xs bg-muted p-2 rounded truncate">
+                        {`${window.location.origin}/formularios/${(event as any).linked_form_id}`}
+                      </code>
+                      <Button variant="outline" size="sm" onClick={() => {
+                        navigator.clipboard.writeText(`${window.location.origin}/formularios/${(event as any).linked_form_id}`);
+                        toast.success('Link do formulário copiado!');
+                      }}>
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                      <Button variant="outline" size="sm" asChild>
+                        <a href={`/formularios/${(event as any).linked_form_id}`} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      As inscrições via formulário geram automaticamente registros com QR Code.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               <Card>
                 <CardContent className="pt-6">
-                  <p className="text-sm font-medium mb-2">Link público de inscrição</p>
+                  <p className="text-sm font-medium mb-2">Link público de inscrição (padrão)</p>
                   <div className="flex items-center gap-2">
                     <code className="flex-1 text-xs bg-muted p-2 rounded truncate">{publicUrl}</code>
                     <Button variant="outline" size="sm" onClick={copyLink}><Copy className="w-4 h-4" /></Button>
