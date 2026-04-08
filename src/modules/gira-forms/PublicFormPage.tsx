@@ -185,12 +185,28 @@ export default function PublicFormPage() {
       // Generate a client-side ID so we can reference it for notifications
       const responseId = crypto.randomUUID();
 
+      // Clean up __other__: prefix from answers before saving
+      const cleanedAnswers: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(answers)) {
+        if (typeof val === 'string' && val.startsWith('__other__:')) {
+          cleanedAnswers[key] = val.replace('__other__:', '') || 'Outro';
+        } else if (Array.isArray(val)) {
+          cleanedAnswers[key] = val.map(v =>
+            typeof v === 'string' && v.startsWith('__other__:')
+              ? (v.replace('__other__:', '') || 'Outro')
+              : v
+          );
+        } else {
+          cleanedAnswers[key] = val;
+        }
+      }
+
       const { error } = await supabase.from('form_responses').insert({
         id: responseId,
         form_id: formId!,
         respondent_name: respondentName,
         respondent_email: respondentEmail,
-        answers: { ...answers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
+        answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
       });
       if (error) throw error;
 
@@ -394,7 +410,8 @@ export default function PublicFormPage() {
     }
 
     const errors: Record<string, string> = {};
-    const inputFields = step.fields.filter(f => f.type !== 'info_text' && f.type !== 'section_header');
+    // Only validate visible fields (skip fields hidden by conditional logic)
+    const inputFields = step.fields.filter(f => f.type !== 'info_text' && f.type !== 'section_header' && isFieldVisible(f));
 
     for (const field of inputFields) {
       const smart = detectSmartType(field);
@@ -1102,14 +1119,21 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       );
     }
     case 'scale': {
-      const numVal = typeof value === 'number' ? value : 5;
+      const hasValue = value !== undefined && value !== null && value !== '';
+      const numVal = hasValue ? (typeof value === 'number' ? value : Number(value)) : undefined;
       const min = (field.settings?.min as number) || 1;
       const max = (field.settings?.max as number) || 10;
+      const displayVal = numVal ?? Math.round((min + max) / 2);
       return (
         <div className="space-y-2">
-          <Slider value={[numVal]} onValueChange={([v]) => onChange(v)} min={min} max={max} step={1} />
+          {!hasValue && (
+            <p className="text-xs" style={{ color: 'var(--form-muted)' }}>Arraste para selecionar um valor</p>
+          )}
+          <Slider value={[displayVal]} onValueChange={([v]) => onChange(v)} min={min} max={max} step={1} />
           <div className="flex justify-between text-xs" style={{ color: 'var(--form-muted)' }}>
-            <span>{min}</span><span className="font-medium text-sm">{numVal}</span><span>{max}</span>
+            <span>{min}</span>
+            <span className="font-medium text-sm">{hasValue ? numVal : '—'}</span>
+            <span>{max}</span>
           </div>
         </div>
       );
