@@ -956,13 +956,21 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       return (
         <div className="space-y-2">
           <div className="relative">
-            <Textarea value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder={enableAudio ? "Sua resposta (digite ou use o microfone 🎙️)" : "Sua resposta"} rows={4} maxLength={5000} />
+            <Textarea value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder={enableAudio ? 'Digite sua resposta aqui. Se preferir, use o botão "Usar microfone" abaixo.' : 'Sua resposta'} rows={4} maxLength={5000} />
             <span className="absolute bottom-2 right-2 text-[10px]" style={{ color: 'var(--form-muted)' }}>
               {((value as string) || '').length}/5000
             </span>
           </div>
           {enableAudio && (
-            <div className="flex items-center gap-2 p-2 rounded-lg" style={{ background: isDark ? '#1e293b' : '#f0fdf4', border: '1px solid', borderColor: isDark ? '#334155' : '#bbf7d0' }}>
+            <div className="space-y-3 rounded-lg p-3" style={{ background: isDark ? '#1e293b' : '#f0fdf4', border: '1px solid', borderColor: isDark ? '#334155' : '#bbf7d0' }}>
+              <div className="space-y-1">
+                <p className="text-sm font-medium" style={{ color: 'var(--form-text)' }}>
+                  Responder por áudio (opcional)
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: 'var(--form-muted)' }}>
+                  Toque em <strong>Usar microfone</strong>. Se o navegador pedir autorização, escolha <strong>Permitir</strong>. Se preferir, você também pode continuar digitando normalmente.
+                </p>
+              </div>
               <AudioRecorderButton
                 onTranscript={(text) => onChange(text)}
                 onAudioUrl={(url) => {
@@ -972,9 +980,6 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
                 lang="pt-BR"
                 storagePath={`forms/${formId}/audio`}
               />
-              <span className="text-xs" style={{ color: 'var(--form-muted)' }}>
-                🎙️ Gravar áudio (transcrição automática + arquivo salvo)
-              </span>
             </div>
           )}
         </div>
