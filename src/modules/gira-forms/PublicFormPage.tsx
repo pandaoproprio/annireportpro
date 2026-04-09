@@ -45,6 +45,19 @@ function maskCep(value: string): string {
 }
 
 // ─── Smart label detection ──────────────────────────────────
+function isBirthDateField(label: string): boolean {
+  return /nascimento|birth/i.test(label);
+}
+
+function calculateAge(dateStr: string): number {
+  const birth = new Date(dateStr);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 function detectSmartType(field: FormField): 'cep' | 'cpf' | 'cnpj' | 'cpf_cnpj' | 'phone' | 'email' | null {
   if (field.type === 'cep' || field.type === 'cpf_cnpj' || field.type === 'phone' || field.type === 'email') {
     return field.type as any;
@@ -246,6 +259,29 @@ export default function PublicFormPage() {
     mutationFn: async () => {
       const respondentName = nameFieldId ? String(answers[nameFieldId] || '').trim() : '';
       const respondentEmail = emailFieldId ? String(answers[emailFieldId] || '').trim() : '';
+      const respondentCpf = cpfFieldId ? String(answers[cpfFieldId] || '').replace(/\D/g, '').trim() : '';
+
+      // ─── Duplicate check ───────────────────────────────────
+      if (respondentCpf || respondentEmail || respondentName) {
+        const { data: existing } = await supabase
+          .from('form_responses')
+          .select('id, respondent_name, respondent_email, answers')
+          .eq('form_id', formId!);
+        if (existing && existing.length > 0) {
+          for (const row of existing) {
+            const rowCpf = cpfFieldId ? String((row.answers as any)?.[cpfFieldId] || '').replace(/\D/g, '') : '';
+            if (respondentCpf && rowCpf && respondentCpf === rowCpf) {
+              throw new Error('DUPLICATE:Já existe uma inscrição com este CPF. Cada participante pode se inscrever apenas uma vez.');
+            }
+            if (respondentEmail && row.respondent_email && respondentEmail.toLowerCase() === row.respondent_email.toLowerCase()) {
+              throw new Error('DUPLICATE:Já existe uma inscrição com este e-mail. Cada participante pode se inscrever apenas uma vez.');
+            }
+            if (respondentName && row.respondent_name && respondentName.toLowerCase() === row.respondent_name.toLowerCase()) {
+              throw new Error('DUPLICATE:Já existe uma inscrição com este nome. Se não é duplicada, entre em contato com a organização.');
+            }
+          }
+        }
+      }
 
       // Generate a client-side ID so we can reference it for notifications
       const responseId = crypto.randomUUID();
@@ -358,7 +394,12 @@ export default function PublicFormPage() {
     onSuccess: () => setSubmitted(true),
     onError: (err) => {
       console.error('Submit error:', err);
-      toast.error('Erro ao enviar. Tente novamente.');
+      const msg = String(err?.message || err || '');
+      if (msg.startsWith('DUPLICATE:')) {
+        toast.error(msg.replace('DUPLICATE:', ''), { duration: 6000 });
+      } else {
+        toast.error('Erro ao enviar. Tente novamente.');
+      }
     },
   });
 
