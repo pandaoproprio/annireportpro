@@ -1055,7 +1055,7 @@ export default function PublicFormPage() {
           {/* Cover image */}
           {design.coverImageUrl && (
             <div className="rounded-xl overflow-hidden shadow-md">
-              <img src={design.coverImageUrl} alt="" className="w-full h-40 object-cover" />
+              <img src={design.coverImageUrl} alt="" className="w-full h-auto max-h-64 sm:max-h-80 object-contain" />
             </div>
           )}
 
@@ -1147,7 +1147,7 @@ export default function PublicFormPage() {
         {/* Cover image */}
         {design.coverImageUrl && (
           <div className="rounded-xl overflow-hidden shadow-md">
-            <img src={design.coverImageUrl} alt="" className="w-full h-40 object-cover" />
+            <img src={design.coverImageUrl} alt="" className="w-full h-auto max-h-64 sm:max-h-80 object-contain" />
           </div>
         )}
 
