@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS "Anon can read own inserted response" ON public.form_responses;
