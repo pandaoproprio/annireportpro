@@ -42,6 +42,7 @@ export default function FormCheckinPanel() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [lastCheckedIn, setLastCheckedIn] = useState<{ name: string; time: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -98,7 +99,7 @@ export default function FormCheckinPanel() {
   }, [formId, authenticated, queryClient]);
 
   const checkinMutation = useMutation({
-    mutationFn: async (responseId: string) => {
+    mutationFn: async ({ responseId, name }: { responseId: string; name: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('form_responses')
@@ -108,10 +109,12 @@ export default function FormCheckinPanel() {
         } as any)
         .eq('id', responseId);
       if (error) throw error;
+      return name;
     },
-    onSuccess: () => {
+    onSuccess: (name) => {
       queryClient.invalidateQueries({ queryKey: ['checkin-responses', formId] });
-      toast.success('✅ Presença confirmada!');
+      setLastCheckedIn({ name, time: format(new Date(), "HH:mm", { locale: ptBR }) });
+      setTimeout(() => setLastCheckedIn(null), 6000);
     },
     onError: () => toast.error('Erro ao registrar check-in'),
   });
@@ -123,7 +126,7 @@ export default function FormCheckinPanel() {
       if (match.checked_in_at) {
         toast.info(`${match.respondent_name || 'Participante'} já fez check-in.`);
       } else {
-        checkinMutation.mutate(match.id);
+        checkinMutation.mutate({ responseId: match.id, name: match.respondent_name || 'Participante' });
       }
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -189,7 +192,7 @@ export default function FormCheckinPanel() {
       });
       return;
     }
-    checkinMutation.mutate(response.id);
+    checkinMutation.mutate({ responseId: response.id, name: response.respondent_name || 'Participante' });
   };
 
   // ─── Login Screen ───────────────────────────────────────────
@@ -334,33 +337,57 @@ export default function FormCheckinPanel() {
       )}
 
       <div className="max-w-2xl mx-auto p-4 space-y-4">
-        {/* Search Bar */}
-        <Card className="shadow-sm">
-          <CardContent className="p-3">
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder="Nome, CPF ou código de 6 letras..."
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                  className="pl-10 h-12 text-base"
-                  autoFocus
-                />
-              </div>
-              <Button
-                variant={scannerActive ? 'destructive' : 'outline'}
-                size="icon"
-                className="h-12 w-12 shrink-0"
-                onClick={scannerActive ? stopScanner : startScanner}
-                title={scannerActive ? 'Fechar câmera' : 'Abrir câmera para ler QR Code'}
-              >
-                {scannerActive ? <X className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
-              </Button>
+        {/* Success Banner */}
+        {lastCheckedIn && (
+          <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-7 h-7 text-green-600 dark:text-green-400" />
             </div>
-            <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1">
+            <div className="flex-1">
+              <p className="font-semibold text-green-800 dark:text-green-300">Presença confirmada!</p>
+              <p className="text-sm text-green-700 dark:text-green-400/80">
+                <strong>{lastCheckedIn.name}</strong> — check-in às {lastCheckedIn.time}
+              </p>
+            </div>
+            <Button variant="ghost" size="icon" className="shrink-0 h-8 w-8" onClick={() => setLastCheckedIn(null)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
+        {/* Search + QR Scanner Button */}
+        <Card className="shadow-sm">
+          <CardContent className="p-3 space-y-2.5">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                placeholder="Nome, CPF ou código de 6 letras..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-10 h-12 text-base"
+                autoFocus
+              />
+            </div>
+            <Button
+              variant={scannerActive ? 'destructive' : 'outline'}
+              className="w-full h-11 gap-2 text-sm font-medium"
+              onClick={scannerActive ? stopScanner : startScanner}
+            >
+              {scannerActive ? (
+                <>
+                  <X className="w-4 h-4" />
+                  Fechar câmera
+                </>
+              ) : (
+                <>
+                  <ScanLine className="w-4 h-4" />
+                  Escanear QR Code do participante
+                </>
+              )}
+            </Button>
+            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <Keyboard className="w-3 h-3" />
-              Dica: peça ao participante o código de 6 letras que ele recebeu por e-mail
+              Dica: se não conseguir escanear, peça o código de 6 letras que o participante recebeu por e-mail
             </p>
           </CardContent>
         </Card>
