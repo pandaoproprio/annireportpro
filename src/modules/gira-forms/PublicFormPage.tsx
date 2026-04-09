@@ -302,17 +302,26 @@ export default function PublicFormPage() {
         }
       }
 
-      const { data: insertedResponse, error } = await supabase.from('form_responses').insert({
+      // Generate checkin_code and qr_token client-side to avoid needing SELECT after insert
+      const genCheckinCode = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ0123456789';
+        let code = '';
+        for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+        return code;
+      };
+      const checkinCode = genCheckinCode();
+      const qrTokenVal = crypto.randomUUID();
+
+      const { error } = await supabase.from('form_responses').insert({
         id: responseId,
         form_id: formId!,
         respondent_name: respondentName,
         respondent_email: respondentEmail,
+        checkin_code: checkinCode,
+        qr_token: qrTokenVal,
         answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
-      }).select('checkin_code, qr_token').single();
+      } as any);
       if (error) throw error;
-
-      const checkinCode = (insertedResponse as any)?.checkin_code;
-      const qrTokenVal = (insertedResponse as any)?.qr_token;
 
       // ─── Auto-register in linked event ──────────────────────
       if (linkedEvent?.id) {
