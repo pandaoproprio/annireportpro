@@ -515,15 +515,41 @@ export default function PublicFormPage() {
       result.push({ title: currentTitle, fields: currentFields, type: 'section' });
     }
 
+    // Merge consecutive small sections (≤ 2 fields each) into one step
+    const merged: Step[] = [];
+    let idx = 0;
+    while (idx < result.length) {
+      const step = result[idx];
+      if (step.type === 'section' && step.fields.length <= 2) {
+        const combinedFields: FormField[] = [...step.fields];
+        const titles: string[] = [step.title];
+        let j = idx + 1;
+        while (j < result.length && result[j].type === 'section' && result[j].fields.length <= 2) {
+          combinedFields.push(...result[j].fields);
+          titles.push(result[j].title);
+          j++;
+        }
+        if (j > idx + 1) {
+          merged.push({ title: titles.join(' · '), fields: combinedFields, type: 'section' });
+        } else {
+          merged.push(step);
+        }
+        idx = j;
+      } else {
+        merged.push(step);
+        idx++;
+      }
+    }
+
     // Final step: LGPD + Review
-    result.push({
+    merged.push({
       title: 'Revisão e Envio',
       description: 'Confira suas respostas antes de enviar',
       fields: [],
       type: 'lgpd_review',
     });
 
-    return result;
+    return merged;
   }, [reorderedFields]);
 
   const totalSteps = steps.length;
@@ -1130,7 +1156,7 @@ export default function PublicFormPage() {
                 <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Formulários</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
-              {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
+              {currentStep === 0 && form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
               {/* Vacancy badge */}
               {effectiveSpotsRemaining !== null && (
                 <div className="mt-2 flex items-center gap-2">
