@@ -45,6 +45,19 @@ function maskCep(value: string): string {
 }
 
 // ─── Smart label detection ──────────────────────────────────
+function isBirthDateField(label: string): boolean {
+  return /nascimento|birth/i.test(label);
+}
+
+function calculateAge(dateStr: string): number {
+  const birth = new Date(dateStr);
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return age;
+}
+
 function detectSmartType(field: FormField): 'cep' | 'cpf' | 'cnpj' | 'cpf_cnpj' | 'phone' | 'email' | null {
   if (field.type === 'cep' || field.type === 'cpf_cnpj' || field.type === 'phone' || field.type === 'email') {
     return field.type as any;
@@ -246,6 +259,29 @@ export default function PublicFormPage() {
     mutationFn: async () => {
       const respondentName = nameFieldId ? String(answers[nameFieldId] || '').trim() : '';
       const respondentEmail = emailFieldId ? String(answers[emailFieldId] || '').trim() : '';
+      const respondentCpf = cpfFieldId ? String(answers[cpfFieldId] || '').replace(/\D/g, '').trim() : '';
+
+      // ─── Duplicate check ───────────────────────────────────
+      if (respondentCpf || respondentEmail || respondentName) {
+        const { data: existing } = await supabase
+          .from('form_responses')
+          .select('id, respondent_name, respondent_email, answers')
+          .eq('form_id', formId!);
+        if (existing && existing.length > 0) {
+          for (const row of existing) {
+            const rowCpf = cpfFieldId ? String((row.answers as any)?.[cpfFieldId] || '').replace(/\D/g, '') : '';
+            if (respondentCpf && rowCpf && respondentCpf === rowCpf) {
+              throw new Error('DUPLICATE:Já existe uma inscrição com este CPF. Cada participante pode se inscrever apenas uma vez.');
+            }
+            if (respondentEmail && row.respondent_email && respondentEmail.toLowerCase() === row.respondent_email.toLowerCase()) {
+              throw new Error('DUPLICATE:Já existe uma inscrição com este e-mail. Cada participante pode se inscrever apenas uma vez.');
+            }
+            if (respondentName && row.respondent_name && respondentName.toLowerCase() === row.respondent_name.toLowerCase()) {
+              throw new Error('DUPLICATE:Já existe uma inscrição com este nome. Se não é duplicada, entre em contato com a organização.');
+            }
+          }
+        }
+      }
 
       // Generate a client-side ID so we can reference it for notifications
       const responseId = crypto.randomUUID();
@@ -358,7 +394,12 @@ export default function PublicFormPage() {
     onSuccess: () => setSubmitted(true),
     onError: (err) => {
       console.error('Submit error:', err);
-      toast.error('Erro ao enviar. Tente novamente.');
+      const msg = String(err?.message || err || '');
+      if (msg.startsWith('DUPLICATE:')) {
+        toast.error(msg.replace('DUPLICATE:', ''), { duration: 6000 });
+      } else {
+        toast.error('Erro ao enviar. Tente novamente.');
+      }
     },
   });
 
@@ -474,15 +515,41 @@ export default function PublicFormPage() {
       result.push({ title: currentTitle, fields: currentFields, type: 'section' });
     }
 
+    // Merge consecutive small sections (≤ 2 fields each) into one step
+    const merged: Step[] = [];
+    let idx = 0;
+    while (idx < result.length) {
+      const step = result[idx];
+      if (step.type === 'section' && step.fields.length <= 2) {
+        const combinedFields: FormField[] = [...step.fields];
+        const titles: string[] = [step.title];
+        let j = idx + 1;
+        while (j < result.length && result[j].type === 'section' && result[j].fields.length <= 2) {
+          combinedFields.push(...result[j].fields);
+          titles.push(result[j].title);
+          j++;
+        }
+        if (j > idx + 1) {
+          merged.push({ title: titles.join(' · '), fields: combinedFields, type: 'section' });
+        } else {
+          merged.push(step);
+        }
+        idx = j;
+      } else {
+        merged.push(step);
+        idx++;
+      }
+    }
+
     // Final step: LGPD + Review
-    result.push({
+    merged.push({
       title: 'Revisão e Envio',
       description: 'Confira suas respostas antes de enviar',
       fields: [],
       type: 'lgpd_review',
     });
 
-    return result;
+    return merged;
   }, [reorderedFields]);
 
   const totalSteps = steps.length;
@@ -570,6 +637,10 @@ export default function PublicFormPage() {
       if (smart === 'cnpj') {
         const digits = String(val).replace(/\D/g, '');
         if (digits.length !== 14) errors[field.id] = 'CNPJ deve ter 14 dígitos';
+      }
+      if (field.type === 'date' && isBirthDateField(field.label)) {
+        const age = calculateAge(String(val));
+        if (age < 18) errors[field.id] = 'Inscrição permitida apenas para maiores de 18 anos.';
       }
       if (smart === 'phone') {
         if (String(val).replace(/\D/g, '').length < 10) errors[field.id] = 'Telefone inválido';
@@ -843,6 +914,15 @@ export default function PublicFormPage() {
           }
         }
         if (!val) continue;
+
+        if (field.type === 'date' && isBirthDateField(field.label)) {
+          const age = calculateAge(String(val));
+          if (age < 18) {
+            errors[field.id] = 'Inscrição permitida apenas para maiores de 18 anos.';
+            continue;
+          }
+        }
+
         if (smart === 'email' || field.type === 'email') {
           if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val))) errors[field.id] = 'Informe um e-mail válido.';
         }
@@ -1089,7 +1169,7 @@ export default function PublicFormPage() {
                 <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Formulários</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
-              {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
+              {currentStep === 0 && form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
               {/* Vacancy badge */}
               {effectiveSpotsRemaining !== null && (
                 <div className="mt-2 flex items-center gap-2">
