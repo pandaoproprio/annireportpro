@@ -330,7 +330,10 @@ export default function PublicFormPage() {
         const phone = phoneFieldId ? String(answers[phoneFieldId] || '').trim() : '';
         const doc = cpfFieldId ? String(answers[cpfFieldId] || '').trim() : '';
 
-        const { data: regData, error: regError } = await supabase
+        // Use count-based registration number to avoid needing SELECT after insert
+        const nextRegNumber = registrationCount + 1;
+
+        const { error: regError } = await supabase
           .from('event_registrations')
           .insert({
             id: regId,
@@ -341,13 +344,11 @@ export default function PublicFormPage() {
             document: doc || null,
             status: 'confirmado',
             qr_token: qrToken,
-          } as any)
-          .select('registration_number')
-          .single();
+          } as any);
 
-        if (!regError && regData) {
+        if (!regError) {
           setRegistrationResult({
-            registration_number: (regData as any).registration_number,
+            registration_number: nextRegNumber,
             qr_token: qrToken,
             event_title: linkedEvent.title,
             event_date: linkedEvent.event_date,
