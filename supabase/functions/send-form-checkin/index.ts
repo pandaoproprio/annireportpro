@@ -92,6 +92,18 @@ serve(async (req) => {
         </p>
       </div>
 
+      ${event_location ? `
+      <div style="margin: 20px 0; text-align: center;">
+        <p style="font-size: 13px; font-weight: bold; color: #1e293b; margin-bottom: 8px;">📍 Como chegar</p>
+        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event_location)}" target="_blank" style="text-decoration: none;">
+          <img src="https://maps.googleapis.com/maps/api/staticmap?center=${encodeURIComponent(event_location)}&zoom=15&size=460x200&scale=2&markers=color:red%7C${encodeURIComponent(event_location)}&key=AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg" alt="Mapa do local" width="460" style="width: 100%; max-width: 460px; border-radius: 8px; border: 1px solid #e2e8f0;" />
+        </a>
+        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event_location)}" target="_blank" style="display: inline-block; margin-top: 8px; padding: 8px 20px; background: #0ea5e9; color: #ffffff; font-size: 13px; font-weight: bold; border-radius: 6px; text-decoration: none;">
+          Abrir no Google Maps
+        </a>
+      </div>
+      ` : ''}
+
       <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 16px;">
         Apresente o QR Code ou informe o código de 6 dígitos na entrada.
       </p>
