@@ -42,6 +42,7 @@ export default function FormCheckinPanel() {
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
   const [showHelp, setShowHelp] = useState(false);
+  const [lastCheckedIn, setLastCheckedIn] = useState<{ name: string; time: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
@@ -98,7 +99,7 @@ export default function FormCheckinPanel() {
   }, [formId, authenticated, queryClient]);
 
   const checkinMutation = useMutation({
-    mutationFn: async (responseId: string) => {
+    mutationFn: async ({ responseId, name }: { responseId: string; name: string }) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('form_responses')
@@ -108,10 +109,12 @@ export default function FormCheckinPanel() {
         } as any)
         .eq('id', responseId);
       if (error) throw error;
+      return name;
     },
-    onSuccess: () => {
+    onSuccess: (name) => {
       queryClient.invalidateQueries({ queryKey: ['checkin-responses', formId] });
-      toast.success('✅ Presença confirmada!');
+      setLastCheckedIn({ name, time: format(new Date(), "HH:mm", { locale: ptBR }) });
+      setTimeout(() => setLastCheckedIn(null), 6000);
     },
     onError: () => toast.error('Erro ao registrar check-in'),
   });
@@ -123,7 +126,7 @@ export default function FormCheckinPanel() {
       if (match.checked_in_at) {
         toast.info(`${match.respondent_name || 'Participante'} já fez check-in.`);
       } else {
-        checkinMutation.mutate(match.id);
+        checkinMutation.mutate({ responseId: match.id, name: match.respondent_name || 'Participante' });
       }
       window.history.replaceState({}, '', window.location.pathname);
     }
@@ -189,7 +192,7 @@ export default function FormCheckinPanel() {
       });
       return;
     }
-    checkinMutation.mutate(response.id);
+    checkinMutation.mutate({ responseId: response.id, name: response.respondent_name || 'Participante' });
   };
 
   // ─── Login Screen ───────────────────────────────────────────
