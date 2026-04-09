@@ -92,6 +92,20 @@ serve(async (req) => {
         </p>
       </div>
 
+      ${event_location ? `
+      <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+        <p style="font-size: 14px; font-weight: bold; color: #0c4a6e; margin: 0 0 4px;">📍 Como chegar</p>
+        <p style="font-size: 12px; color: #475569; margin: 0 0 12px;">${event_location}</p>
+        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event_location)}" target="_blank" style="display: inline-block; padding: 10px 24px; background: #0ea5e9; color: #ffffff; font-size: 13px; font-weight: bold; border-radius: 6px; text-decoration: none;">
+          🗺️ Abrir no Google Maps
+        </a>
+        <br/>
+        <a href="https://waze.com/ul?q=${encodeURIComponent(event_location)}" target="_blank" style="display: inline-block; margin-top: 8px; padding: 8px 20px; background: #33ccff; color: #ffffff; font-size: 12px; font-weight: bold; border-radius: 6px; text-decoration: none;">
+          🚗 Abrir no Waze
+        </a>
+      </div>
+      ` : ''}
+
       <p style="font-size: 11px; color: #94a3b8; text-align: center; margin-top: 16px;">
         Apresente o QR Code ou informe o código de 6 dígitos na entrada.
       </p>
