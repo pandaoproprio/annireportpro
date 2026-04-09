@@ -1066,8 +1066,8 @@ export default function PublicFormPage() {
           {/* Header Card (once) */}
           <div className="rounded-xl overflow-hidden shadow-md" style={{ background: 'var(--form-card-bg)', borderTop: `4px solid var(--form-primary)` }}>
             {design.headerImageUrl && (
-              <div className="w-full h-40">
-                <img src={design.headerImageUrl} alt="" className="w-full h-full object-cover" />
+              <div className="w-full">
+                <img src={design.headerImageUrl} alt="" className="w-full h-auto object-contain" />
               </div>
             )}
             <div className="p-5">
@@ -1162,8 +1162,8 @@ export default function PublicFormPage() {
         {/* Form Header Card */}
         <div className="rounded-xl overflow-hidden shadow-md" style={{ background: 'var(--form-card-bg)', borderTop: `4px solid var(--form-primary)` }}>
           {design.headerImageUrl && (
-            <div className="w-full h-40 -mt-0">
-              <img src={design.headerImageUrl} alt="" className="w-full h-full object-cover" />
+              <div className="w-full">
+                <img src={design.headerImageUrl} alt="" className="w-full h-auto object-contain" />
             </div>
           )}
           <div className="p-5">
