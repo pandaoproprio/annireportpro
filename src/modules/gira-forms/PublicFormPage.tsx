@@ -638,6 +638,10 @@ export default function PublicFormPage() {
         const digits = String(val).replace(/\D/g, '');
         if (digits.length !== 14) errors[field.id] = 'CNPJ deve ter 14 dígitos';
       }
+      if (field.type === 'date' && isBirthDateField(field.label)) {
+        const age = calculateAge(String(val));
+        if (age < 18) errors[field.id] = 'Inscrição permitida apenas para maiores de 18 anos.';
+      }
       if (smart === 'phone') {
         if (String(val).replace(/\D/g, '').length < 10) errors[field.id] = 'Telefone inválido';
       }
@@ -910,6 +914,15 @@ export default function PublicFormPage() {
           }
         }
         if (!val) continue;
+
+        if (field.type === 'date' && isBirthDateField(field.label)) {
+          const age = calculateAge(String(val));
+          if (age < 18) {
+            errors[field.id] = 'Inscrição permitida apenas para maiores de 18 anos.';
+            continue;
+          }
+        }
+
         if (smart === 'email' || field.type === 'email') {
           if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val))) errors[field.id] = 'Informe um e-mail válido.';
         }
