@@ -408,7 +408,7 @@ export default function PublicFormPage() {
       if (msg.startsWith('DUPLICATE:')) {
         toast.error(msg.replace('DUPLICATE:', ''), { duration: 6000 });
       } else {
-        toast.error('Erro ao enviar. Tente novamente.');
+        toast.error(`Erro ao enviar: ${msg}`, { duration: 8000 });
       }
     },
   });
