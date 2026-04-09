@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   CheckCircle2, AlertCircle, Search, Users, UserCheck,
-  Lock, Camera, X
+  Lock, Camera, X, HelpCircle, ScanLine, Keyboard
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -41,17 +41,16 @@ export default function FormCheckinPanel() {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Check if already authenticated
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) setAuthenticated(true);
     });
   }, []);
 
-  // Load form
   const formQuery = useQuery({
     queryKey: ['checkin-form', formId],
     queryFn: async () => {
@@ -66,7 +65,6 @@ export default function FormCheckinPanel() {
     enabled: !!formId && authenticated,
   });
 
-  // Load responses
   const responsesQuery = useQuery({
     queryKey: ['checkin-responses', formId],
     queryFn: async () => {
@@ -82,7 +80,6 @@ export default function FormCheckinPanel() {
     refetchInterval: 5000,
   });
 
-  // Realtime subscription
   useEffect(() => {
     if (!formId || !authenticated) return;
     const channel = supabase
@@ -100,7 +97,6 @@ export default function FormCheckinPanel() {
     return () => { supabase.removeChannel(channel); };
   }, [formId, authenticated, queryClient]);
 
-  // Check-in mutation
   const checkinMutation = useMutation({
     mutationFn: async (responseId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -115,12 +111,11 @@ export default function FormCheckinPanel() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['checkin-responses', formId] });
-      toast.success('Check-in realizado com sucesso!');
+      toast.success('✅ Presença confirmada!');
     },
     onError: () => toast.error('Erro ao registrar check-in'),
   });
 
-  // Auto-checkin via QR token in URL
   useEffect(() => {
     if (!qrToken || !authenticated || !responsesQuery.data) return;
     const match = responsesQuery.data.find(r => r.qr_token === qrToken);
@@ -134,7 +129,6 @@ export default function FormCheckinPanel() {
     }
   }, [qrToken, authenticated, responsesQuery.data]);
 
-  // Scanner logic
   const startScanner = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -165,16 +159,17 @@ export default function FormCheckinPanel() {
       password: loginPassword,
     });
     if (error) {
-      setLoginError('Credenciais inválidas.');
+      setLoginError('E-mail ou senha incorretos. Tente novamente.');
     } else {
       setAuthenticated(true);
     }
   };
 
-  // ─── Derived data ───────────────────────────────────────────
   const responses = responsesQuery.data ?? [];
   const total = responses.length;
   const checkedIn = responses.filter(r => r.checked_in_at).length;
+  const pending = total - checkedIn;
+  const percentage = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
 
   const filtered = searchTerm.trim()
     ? responses.filter(r => {
@@ -189,49 +184,56 @@ export default function FormCheckinPanel() {
 
   const handleCheckin = (response: FormResponseRow) => {
     if (response.checked_in_at) {
-      toast.error('Este participante já fez check-in!', {
-        description: `Check-in realizado em ${format(new Date(response.checked_in_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
+      toast.error('⚠️ Essa pessoa já passou pelo check-in!', {
+        description: `Presença registrada em ${format(new Date(response.checked_in_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
       });
       return;
     }
     checkinMutation.mutate(response.id);
   };
 
-  // ─── Render ─────────────────────────────────────────────────
-
+  // ─── Login Screen ───────────────────────────────────────────
   if (!authenticated) {
     return (
-      <div className="min-h-screen bg-muted flex items-center justify-center p-4">
-        <Card className="w-full max-w-sm">
-          <CardHeader className="text-center">
-            <Lock className="w-12 h-12 mx-auto text-muted-foreground mb-2" />
-            <CardTitle className="text-lg">Painel de Check-in</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Acesso restrito à equipe do evento
+      <div className="min-h-screen bg-gradient-to-b from-primary/10 to-muted flex items-center justify-center p-4">
+        <Card className="w-full max-w-sm shadow-lg">
+          <CardHeader className="text-center pb-2">
+            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
+              <ScanLine className="w-8 h-8 text-primary" />
+            </div>
+            <CardTitle className="text-xl">Check-in do Evento</CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Use seu login da plataforma para acessar o painel de controle de presença.
             </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-3">
-              <Input
-                type="email"
-                placeholder="E-mail"
-                value={loginEmail}
-                onChange={e => setLoginEmail(e.target.value)}
-                autoFocus
-              />
-              <Input
-                type="password"
-                placeholder="Senha"
-                value={loginPassword}
-                onChange={e => setLoginPassword(e.target.value)}
-              />
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
+                <Input
+                  type="email"
+                  placeholder="seu@email.com"
+                  value={loginEmail}
+                  onChange={e => setLoginEmail(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-muted-foreground mb-1 block">Senha</label>
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  value={loginPassword}
+                  onChange={e => setLoginPassword(e.target.value)}
+                />
+              </div>
               {loginError && (
-                <p className="text-sm text-destructive flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" /> {loginError}
-                </p>
+                <div className="bg-destructive/10 text-destructive text-sm p-2.5 rounded-md flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" /> {loginError}
+                </div>
               )}
-              <Button type="submit" className="w-full">
-                Entrar
+              <Button type="submit" className="w-full" size="lg">
+                Acessar Painel
               </Button>
             </form>
           </CardContent>
@@ -248,141 +250,236 @@ export default function FormCheckinPanel() {
     );
   }
 
+  // ─── Main Panel ─────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-muted">
-      {/* Header with counters */}
-      <div className="bg-primary text-primary-foreground p-4 sticky top-0 z-10">
+      {/* Header */}
+      <div className="bg-primary text-primary-foreground p-4 pb-5 sticky top-0 z-10 shadow-md">
         <div className="max-w-2xl mx-auto">
-          <h1 className="text-lg font-bold truncate">{formQuery.data?.title || 'Check-in'}</h1>
-          <div className="flex items-center gap-4 mt-2">
-            <div className="flex items-center gap-1.5">
-              <Users className="w-4 h-4" />
-              <span className="text-sm font-medium">{total} inscritos</span>
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-bold truncate">{formQuery.data?.title || 'Check-in'}</h1>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10 shrink-0"
+              onClick={() => setShowHelp(v => !v)}
+            >
+              <HelpCircle className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-3 mt-3">
+            <div className="bg-primary-foreground/10 rounded-lg p-2.5 text-center">
+              <div className="text-2xl font-bold">{total}</div>
+              <div className="text-[11px] opacity-80 flex items-center justify-center gap-1">
+                <Users className="w-3 h-3" /> Inscritos
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <UserCheck className="w-4 h-4" />
-              <span className="text-sm font-medium">{checkedIn} presentes</span>
+            <div className="bg-primary-foreground/10 rounded-lg p-2.5 text-center">
+              <div className="text-2xl font-bold">{checkedIn}</div>
+              <div className="text-[11px] opacity-80 flex items-center justify-center gap-1">
+                <UserCheck className="w-3 h-3" /> Presentes
+              </div>
             </div>
-            <div className="ml-auto">
-              <Badge variant="secondary" className="text-sm font-bold">
-                {total > 0 ? Math.round((checkedIn / total) * 100) : 0}%
-              </Badge>
+            <div className="bg-primary-foreground/10 rounded-lg p-2.5 text-center">
+              <div className="text-2xl font-bold">{pending}</div>
+              <div className="text-[11px] opacity-80">Aguardando</div>
             </div>
           </div>
+
           {/* Progress bar */}
-          <div className="mt-2 h-2 bg-primary-foreground/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary-foreground/60 rounded-full transition-all duration-500"
-              style={{ width: `${total > 0 ? (checkedIn / total) * 100 : 0}%` }}
-            />
+          <div className="mt-3 flex items-center gap-2">
+            <div className="flex-1 h-2.5 bg-primary-foreground/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-primary-foreground/70 rounded-full transition-all duration-500"
+                style={{ width: `${percentage}%` }}
+              />
+            </div>
+            <span className="text-sm font-bold min-w-[3ch] text-right">{percentage}%</span>
           </div>
         </div>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4 space-y-4">
-        {/* Search and Scanner */}
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, CPF ou código..."
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              className="pl-10"
-              autoFocus
-            />
+      {/* Help banner */}
+      {showHelp && (
+        <div className="bg-accent border-b border-border">
+          <div className="max-w-2xl mx-auto p-4">
+            <div className="flex items-start justify-between mb-2">
+              <h3 className="font-semibold text-sm text-accent-foreground">📖 Como usar este painel</h3>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowHelp(false)}>
+                <X className="w-3.5 h-3.5" />
+              </Button>
+            </div>
+            <div className="space-y-2.5 text-sm text-accent-foreground/80">
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xs font-bold">1</div>
+                <p><strong>Busca rápida:</strong> Digite o nome, CPF ou o código de 6 letras que o participante recebeu por e-mail.</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xs font-bold">2</div>
+                <p><strong>Câmera QR Code:</strong> Toque no ícone 📷 para ler o QR Code do e-mail do participante.</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xs font-bold">3</div>
+                <p><strong>Confirmar presença:</strong> Encontre a pessoa na lista e toque no botão <strong>"Confirmar presença"</strong>.</p>
+              </div>
+              <div className="flex items-start gap-2">
+                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xs font-bold">4</div>
+                <p><strong>Já confirmado?</strong> Se a pessoa já passou, aparecerá com um ✅ verde. Nenhuma ação necessária.</p>
+              </div>
+            </div>
           </div>
-          <Button
-            variant={scannerActive ? 'destructive' : 'outline'}
-            size="icon"
-            onClick={scannerActive ? stopScanner : startScanner}
-          >
-            {scannerActive ? <X className="w-4 h-4" /> : <Camera className="w-4 h-4" />}
-          </Button>
         </div>
+      )}
+
+      <div className="max-w-2xl mx-auto p-4 space-y-4">
+        {/* Search Bar */}
+        <Card className="shadow-sm">
+          <CardContent className="p-3">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Nome, CPF ou código de 6 letras..."
+                  value={searchTerm}
+                  onChange={e => setSearchTerm(e.target.value)}
+                  className="pl-10 h-12 text-base"
+                  autoFocus
+                />
+              </div>
+              <Button
+                variant={scannerActive ? 'destructive' : 'outline'}
+                size="icon"
+                className="h-12 w-12 shrink-0"
+                onClick={scannerActive ? stopScanner : startScanner}
+                title={scannerActive ? 'Fechar câmera' : 'Abrir câmera para ler QR Code'}
+              >
+                {scannerActive ? <X className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground mt-1.5 flex items-center gap-1">
+              <Keyboard className="w-3 h-3" />
+              Dica: peça ao participante o código de 6 letras que ele recebeu por e-mail
+            </p>
+          </CardContent>
+        </Card>
 
         {/* Camera Scanner */}
         {scannerActive && (
-          <Card>
+          <Card className="border-primary/30 shadow-md">
             <CardContent className="p-4">
-              <p className="text-xs text-muted-foreground mb-2 text-center">
-                Aponte a câmera para o QR Code do participante
-              </p>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                <span className="text-sm font-medium">Câmera ativa — aponte para o QR Code</span>
+              </div>
               <video
                 ref={videoRef}
                 className="w-full rounded-lg"
                 style={{ maxHeight: 300 }}
               />
-              <p className="text-[10px] text-muted-foreground text-center mt-2">
-                💡 Dica: Peça ao participante para abrir o QR Code no e-mail de confirmação
+              <p className="text-xs text-muted-foreground text-center mt-2">
+                O participante encontra o QR Code no e-mail de confirmação da inscrição
               </p>
             </CardContent>
           </Card>
         )}
 
         {/* Participant List */}
-        <div className="space-y-2">
-          {filtered.length === 0 && searchTerm.trim() && (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <AlertCircle className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Nenhum participante encontrado para "{searchTerm}"
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {filtered.map(response => {
-            const isCheckedIn = !!response.checked_in_at;
-            return (
-              <Card
-                key={response.id}
-                className={`transition-all ${isCheckedIn ? 'opacity-70' : ''}`}
-                style={isCheckedIn ? { borderLeft: '4px solid hsl(var(--primary))' } : undefined}
-              >
-                <CardContent className="p-3 flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">
-                      {response.respondent_name || 'Sem nome'}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      {response.respondent_email && (
-                        <span className="truncate">{response.respondent_email}</span>
-                      )}
-                      {response.checkin_code && (
-                        <Badge variant="outline" className="text-[10px] font-mono">
-                          {response.checkin_code}
-                        </Badge>
-                      )}
-                    </div>
-                    {isCheckedIn && (
-                      <p className="text-[10px] text-primary mt-0.5">
-                        ✓ Check-in em {format(new Date(response.checked_in_at!), "dd/MM 'às' HH:mm", { locale: ptBR })}
-                      </p>
-                    )}
-                  </div>
-                  <Button
-                    size="sm"
-                    variant={isCheckedIn ? 'ghost' : 'default'}
-                    disabled={isCheckedIn || checkinMutation.isPending}
-                    onClick={() => handleCheckin(response)}
-                    className="shrink-0"
-                  >
-                    {isCheckedIn ? (
-                      <CheckCircle2 className="w-4 h-4 text-primary" />
-                    ) : (
-                      <>
-                        <UserCheck className="w-4 h-4 mr-1" />
-                        Check-in
-                      </>
-                    )}
-                  </Button>
+        {total === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <Users className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
+              <p className="font-medium text-muted-foreground">Nenhuma inscrição ainda</p>
+              <p className="text-sm text-muted-foreground/70 mt-1">
+                Quando alguém se inscrever, aparecerá aqui automaticamente.
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {filtered.length === 0 && searchTerm.trim() && (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <Search className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Nenhum resultado para "{searchTerm}"
+                  </p>
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    Verifique se o nome ou código está correto
+                  </p>
                 </CardContent>
               </Card>
-            );
-          })}
-        </div>
+            )}
+
+            {filtered.map(response => {
+              const isCheckedIn = !!response.checked_in_at;
+              return (
+                <Card
+                  key={response.id}
+                  className={`transition-all ${isCheckedIn ? 'bg-primary/5 border-primary/20' : 'hover:shadow-md'}`}
+                >
+                  <CardContent className="p-3.5 flex items-center gap-3">
+                    {/* Status indicator */}
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
+                      isCheckedIn
+                        ? 'bg-primary/15 text-primary'
+                        : 'bg-muted text-muted-foreground'
+                    }`}>
+                      {isCheckedIn ? (
+                        <CheckCircle2 className="w-5 h-5" />
+                      ) : (
+                        <span className="text-sm font-bold">
+                          {(response.respondent_name || '?')[0].toUpperCase()}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <p className={`font-medium text-sm truncate ${isCheckedIn ? 'text-primary' : ''}`}>
+                        {response.respondent_name || 'Sem nome'}
+                      </p>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
+                        {response.checkin_code && (
+                          <Badge variant="outline" className="text-[10px] font-mono px-1.5">
+                            {response.checkin_code}
+                          </Badge>
+                        )}
+                        {response.respondent_email && (
+                          <span className="truncate">{response.respondent_email}</span>
+                        )}
+                      </div>
+                      {isCheckedIn && (
+                        <p className="text-[11px] text-primary/70 mt-0.5">
+                          ✅ Presença confirmada em {format(new Date(response.checked_in_at!), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Action button */}
+                    {isCheckedIn ? (
+                      <Badge className="bg-primary/10 text-primary border-primary/20 shrink-0 text-[11px]">
+                        Presente
+                      </Badge>
+                    ) : (
+                      <Button
+                        size="sm"
+                        disabled={checkinMutation.isPending}
+                        onClick={() => handleCheckin(response)}
+                        className="shrink-0 gap-1.5"
+                      >
+                        <UserCheck className="w-4 h-4" />
+                        <span className="hidden sm:inline">Confirmar presença</span>
+                        <span className="sm:hidden">Confirmar</span>
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
