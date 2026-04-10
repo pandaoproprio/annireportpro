@@ -34,6 +34,24 @@ function formatDate(iso: string): string {
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' });
 }
 
+function escapeXml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Safe base64 encoding for large ArrayBuffers (avoids call stack overflow)
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+    for (let j = 0; j < chunk.length; j++) {
+      binary += String.fromCharCode(chunk[j]);
+    }
+  }
+  return btoa(binary);
+}
+
 function buildResponseRow(response: FormResponse, fields: FormField[]): string {
   const sorted = [...fields].sort((a, b) => a.sort_order - b.sort_order);
   const cells = sorted.map(f => {
@@ -66,18 +84,15 @@ function buildDigestHtml(formTitle: string, responses: FormResponse[], fields: F
   <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc;padding:32px 16px">
     <tr><td align="center">
       <table width="700" cellpadding="0" cellspacing="0" style="max-width:700px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,0.08)">
-        <!-- Header -->
         <tr><td style="padding:28px 32px;background:linear-gradient(135deg,#1e3a6e 0%,#2a7ab5 60%,#2d7a4f 100%)">
           <p style="margin:0 0 8px 0;font-size:10px;font-weight:600;letter-spacing:0.2em;text-transform:uppercase;color:rgba(255,255,255,0.6);font-family:monospace">GIRA FORMS · Resumo Diário</p>
           <h1 style="margin:0;font-size:22px;font-weight:800;color:#ffffff;line-height:1.3">${formTitle}</h1>
         </td></tr>
-        <!-- Brand bar -->
         <tr><td style="padding:12px 32px;border-bottom:3px solid #4a9e3f">
           <span style="font-size:18px;font-weight:800;color:#1e3a6e">GIRA</span>
           <span style="color:#ccc;margin:0 8px">|</span>
           <span style="font-size:13px;font-weight:700;color:#4a9e3f">Formulários</span>
         </td></tr>
-        <!-- Summary -->
         <tr><td style="padding:24px 32px">
           <p style="margin:0 0 16px;font-size:14px;color:#64748b;line-height:1.6">
             Período: <strong>${periodLabel}</strong><br/>
@@ -97,7 +112,6 @@ function buildDigestHtml(formTitle: string, responses: FormResponse[], fields: F
             </div>`
           }
         </td></tr>
-        <!-- Footer -->
         <tr><td style="padding:16px 32px;background:#1e3a6e;text-align:center">
           <p style="margin:0;font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:0.15em;text-transform:uppercase;font-family:monospace">GIRA Forms · Diário de Bordo · CEAP</p>
           <p style="margin:4px 0 0;font-size:10px;color:rgba(255,255,255,0.3)">E-mail automático — não responda.</p>
@@ -107,6 +121,72 @@ function buildDigestHtml(formTitle: string, responses: FormResponse[], fields: F
   </table>
 </body>
 </html>`;
+}
+
+// Generate XLS (XML Spreadsheet) server-side
+function generateXlsBuffer(formTitle: string, fields: FormField[], responses: FormResponse[]): Uint8Array {
+  const dataFields = fields.filter(f => f.type !== 'section_header' && f.type !== 'info_text')
+    .sort((a, b) => a.sort_order - b.sort_order);
+  const headers = ['Data', 'Respondente', 'E-mail', ...dataFields.map(f => f.label)];
+
+  let xml = '<?xml version="1.0"?>\n';
+  xml += '<?mso-application progid="Excel.Sheet"?>\n';
+  xml += '<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet" xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">\n';
+  xml += `<Worksheet ss:Name="Respostas"><Table>\n`;
+
+  xml += '<Row>';
+  headers.forEach(h => { xml += `<Cell><Data ss:Type="String">${escapeXml(h)}</Data></Cell>`; });
+  xml += '</Row>\n';
+
+  responses.forEach(r => {
+    const dateStr = formatDate(r.submitted_at);
+    xml += '<Row>';
+    xml += `<Cell><Data ss:Type="String">${escapeXml(dateStr)}</Data></Cell>`;
+    xml += `<Cell><Data ss:Type="String">${escapeXml(r.respondent_name || '')}</Data></Cell>`;
+    xml += `<Cell><Data ss:Type="String">${escapeXml(r.respondent_email || '')}</Data></Cell>`;
+    dataFields.forEach(f => {
+      const val = r.answers?.[f.id];
+      const fmt = (v: unknown): string => typeof v === 'string' && v.startsWith('__other__:') ? `Outros: ${v.replace('__other__:', '')}` : String(v ?? '');
+      const cellVal = Array.isArray(val) ? val.map(fmt).join(', ') : fmt(val);
+      xml += `<Cell><Data ss:Type="String">${escapeXml(cellVal)}</Data></Cell>`;
+    });
+    xml += '</Row>\n';
+  });
+
+  xml += '</Table></Worksheet></Workbook>';
+  return new TextEncoder().encode(xml);
+}
+
+// Fetch PDF from export-form-pdf function
+async function fetchPdfAttachment(
+  supabaseUrl: string,
+  serviceRoleKey: string,
+  formId: string,
+  mode: string,
+): Promise<ArrayBuffer | null> {
+  try {
+    const url = `${supabaseUrl}/functions/v1/export-form-pdf`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${serviceRoleKey}`,
+        'apikey': serviceRoleKey,
+      },
+      body: JSON.stringify({ formId, mode }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`PDF ${mode} generation failed (${res.status}):`, errText);
+      return null;
+    }
+
+    return await res.arrayBuffer();
+  } catch (e) {
+    console.error(`Failed to generate PDF (${mode}):`, e);
+    return null;
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -127,15 +207,47 @@ Deno.serve(async (req: Request) => {
   const supabase = createClient(supabaseUrl, serviceRoleKey);
 
   try {
-    // Get all active digest configs
-    const { data: configs, error: cfgErr } = await supabase
+    // Parse optional body params
+    let bodyFormId: string | null = null;
+    let overrideRecipients: string[] | null = null;
+    let force = false;
+
+    try {
+      const body = await req.json();
+      bodyFormId = body.formId || null;
+      overrideRecipients = body.overrideRecipients || null;
+      force = body.force === true;
+    } catch { /* no body or invalid json */ }
+
+    // Get active digest configs
+    let configQuery = supabase
       .from('form_digest_config')
       .select('*')
       .eq('is_active', true)
       .eq('frequency', 'daily');
 
+    if (bodyFormId) {
+      configQuery = configQuery.eq('form_id', bodyFormId);
+    }
+
+    const { data: configs, error: cfgErr } = await configQuery;
+
     if (cfgErr) throw cfgErr;
-    if (!configs || configs.length === 0) {
+
+    // If formId specified but no config exists, create a virtual config
+    let configList: DigestConfig[] = (configs || []) as DigestConfig[];
+    if (bodyFormId && configList.length === 0 && overrideRecipients) {
+      configList = [{
+        id: 'virtual',
+        form_id: bodyFormId,
+        recipients: overrideRecipients,
+        frequency: 'daily',
+        is_active: true,
+        last_sent_at: null,
+      }];
+    }
+
+    if (configList.length === 0) {
       return new Response(JSON.stringify({ message: 'No active digests', sent: 0 }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -144,8 +256,9 @@ Deno.serve(async (req: Request) => {
     let totalSent = 0;
     const errors: string[] = [];
 
-    for (const config of configs as DigestConfig[]) {
-      if (!config.recipients || config.recipients.length === 0) continue;
+    for (const config of configList) {
+      const recipients = overrideRecipients || config.recipients;
+      if (!recipients || recipients.length === 0) continue;
 
       // Get form info
       const { data: form } = await supabase
@@ -161,23 +274,24 @@ Deno.serve(async (req: Request) => {
         .from('form_fields')
         .select('id, label, type, sort_order')
         .eq('form_id', config.form_id)
+        .not('type', 'in', '("section_header","info_text")')
         .order('sort_order');
 
-      // Get responses since last sent (or last 24h)
-      const since = config.last_sent_at
-        ? new Date(config.last_sent_at).toISOString()
-        : new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-      const { data: responses } = await supabase
+      // Get responses — if force, get ALL; otherwise since last_sent_at
+      let responseQuery = supabase
         .from('form_responses')
         .select('id, answers, respondent_name, respondent_email, submitted_at')
         .eq('form_id', config.form_id)
-        .gte('submitted_at', since)
         .order('submitted_at', { ascending: true });
+
+      if (!force && config.last_sent_at) {
+        responseQuery = responseQuery.gte('submitted_at', new Date(config.last_sent_at).toISOString());
+      }
+
+      const { data: responses } = await responseQuery;
 
       const now = new Date();
       const responseList = (responses || []) as FormResponse[];
-      // Use first response date as period start (not last_sent_at which may be artificially old)
       const periodStart = responseList.length > 0
         ? new Date(responseList[0].submitted_at)
         : now;
@@ -192,27 +306,40 @@ Deno.serve(async (req: Request) => {
         periodLabel
       );
 
-      // Fetch attachments from storage
-      const storageBase = `${supabaseUrl}/storage/v1/object/public/email-assets/form-digests`;
-      const attachmentFiles = [
-        { name: 'Relatório_IA.pdf', url: `${storageBase}/relatorio-ia-dums.pdf` },
-        { name: 'Respostas.pdf', url: `${storageBase}/respostas-dums.pdf` },
-        { name: 'Respostas.xls', url: `${storageBase}/respostas-dums.xls` },
-      ];
+      // Generate attachments dynamically in parallel
+      console.log(`Generating attachments for form ${config.form_id} (${responseList.length} responses)...`);
 
-      const attachments = [];
-      for (const file of attachmentFiles) {
-        try {
-          const res = await fetch(file.url);
-          if (res.ok) {
-            const buf = await res.arrayBuffer();
-            const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-            attachments.push({ filename: file.name, content: base64 });
-          }
-        } catch (e) {
-          console.error(`Failed to fetch attachment ${file.name}:`, e);
-        }
+      const [tablePdfBuf, aiPdfBuf] = await Promise.all([
+        fetchPdfAttachment(supabaseUrl, serviceRoleKey, config.form_id, 'table'),
+        fetchPdfAttachment(supabaseUrl, serviceRoleKey, config.form_id, 'ai-report'),
+      ]);
+
+      const xlsBuf = generateXlsBuffer(form.title, (fields || []) as FormField[], responseList);
+
+      const attachments: { filename: string; content: string }[] = [];
+
+      if (aiPdfBuf && aiPdfBuf.byteLength > 0) {
+        attachments.push({ filename: 'Relatório_IA.pdf', content: arrayBufferToBase64(aiPdfBuf) });
+        console.log(`✓ AI Report: ${Math.round(aiPdfBuf.byteLength / 1024)}KB`);
+      } else {
+        errors.push(`Form ${config.form_id}: AI Report generation failed`);
+        console.error('✗ AI Report generation failed');
       }
+
+      if (tablePdfBuf && tablePdfBuf.byteLength > 0) {
+        attachments.push({ filename: 'Respostas.pdf', content: arrayBufferToBase64(tablePdfBuf) });
+        console.log(`✓ Table PDF: ${Math.round(tablePdfBuf.byteLength / 1024)}KB`);
+      } else {
+        errors.push(`Form ${config.form_id}: Table PDF generation failed`);
+        console.error('✗ Table PDF generation failed');
+      }
+
+      if (xlsBuf.byteLength > 0) {
+        attachments.push({ filename: 'Respostas.xls', content: arrayBufferToBase64(xlsBuf.buffer as ArrayBuffer) });
+        console.log(`✓ XLS: ${Math.round(xlsBuf.byteLength / 1024)}KB`);
+      }
+
+      console.log(`Sending email to ${recipients.join(', ')} with ${attachments.length} attachment(s)...`);
 
       // Send email via Resend
       const emailRes = await fetch('https://api.resend.com/emails', {
@@ -223,8 +350,8 @@ Deno.serve(async (req: Request) => {
         },
         body: JSON.stringify({
           from: 'GIRA Forms <diario@giraerp.com.br>',
-          to: config.recipients,
-          subject: `📋 Resumo diário — ${form.title} (${responseList.length} resposta${responseList.length !== 1 ? 's' : ''})`,
+          to: recipients,
+          subject: `📋 Resumo — ${form.title} (${responseList.length} resposta${responseList.length !== 1 ? 's' : ''})`,
           html,
           attachments,
         }),
@@ -232,14 +359,19 @@ Deno.serve(async (req: Request) => {
 
       if (emailRes.ok) {
         totalSent++;
-        // Update last_sent_at
-        await supabase
-          .from('form_digest_config')
-          .update({ last_sent_at: now.toISOString(), updated_at: now.toISOString() })
-          .eq('id', config.id);
+        console.log(`✓ Email sent successfully to ${recipients.join(', ')}`);
+        // Update last_sent_at only for real configs
+        if (config.id !== 'virtual') {
+          await supabase
+            .from('form_digest_config')
+            .update({ last_sent_at: now.toISOString(), updated_at: now.toISOString() })
+            .eq('id', config.id);
+        }
       } else {
         const err = await emailRes.json();
-        errors.push(`Form ${config.form_id}: ${err.message || 'Send failed'}`);
+        const msg = `Form ${config.form_id}: ${err.message || 'Send failed'}`;
+        errors.push(msg);
+        console.error('✗ Email send failed:', err);
       }
     }
 
