@@ -312,6 +312,8 @@ export default function PublicFormPage() {
       const checkinCode = genCheckinCode();
       const qrTokenVal = crypto.randomUUID();
 
+      let emailRegistrationNumber: number | null = null;
+
       const { error } = await supabase.from('form_responses').insert({
         id: responseId,
         form_id: formId!,
@@ -330,10 +332,7 @@ export default function PublicFormPage() {
         const phone = phoneFieldId ? String(answers[phoneFieldId] || '').trim() : '';
         const doc = cpfFieldId ? String(answers[cpfFieldId] || '').trim() : '';
 
-        // Use count-based registration number to avoid needing SELECT after insert
-        const nextRegNumber = registrationCount + 1;
-
-        const { error: regError } = await supabase
+        const { data: insertedRegistration, error: regError } = await supabase
           .from('event_registrations')
           .insert({
             id: regId,
@@ -344,11 +343,14 @@ export default function PublicFormPage() {
             document: doc || null,
             status: 'confirmado',
             qr_token: qrToken,
-          } as any);
+          } as any)
+          .select('registration_number')
+          .single();
 
-        if (!regError) {
+        if (!regError && typeof insertedRegistration?.registration_number === 'number') {
+          emailRegistrationNumber = insertedRegistration.registration_number;
           setRegistrationResult({
-            registration_number: nextRegNumber,
+            registration_number: insertedRegistration.registration_number,
             qr_token: qrToken,
             event_title: linkedEvent.title,
             event_date: linkedEvent.event_date,
@@ -357,7 +359,11 @@ export default function PublicFormPage() {
         }
       } else if (showRegNumber) {
         // Standalone registration number (count-based)
-        setStandaloneRegNumber(formResponseCount + 1);
+        const nextStandaloneRegNumber = formResponseCount + 1;
+        emailRegistrationNumber = nextStandaloneRegNumber;
+        setStandaloneRegNumber(nextStandaloneRegNumber);
+      } else {
+        emailRegistrationNumber = formResponseCount + 1;
       }
 
       // ─── Set checkin result for success screen ──────────────
@@ -376,7 +382,7 @@ export default function PublicFormPage() {
                 checkin_code: checkinCode,
                 qr_token: qrTokenVal,
                 form_id: formId,
-                registration_number: standaloneRegNumber ?? (formResponseCount + 1),
+                registration_number: emailRegistrationNumber,
               },
             });
           } catch {
