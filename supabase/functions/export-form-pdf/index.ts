@@ -456,18 +456,26 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-
     const token = authHeader.replace("Bearer ", "");
-    const { data: userData, error: authError } = await supabaseClient.auth.getUser(token);
-    if (authError || !userData?.user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const isServiceRole = token === serviceRoleKey;
+
+    // Use service role client for internal calls, user client for external
+    const supabaseClient = isServiceRole
+      ? createClient(Deno.env.get("SUPABASE_URL")!, serviceRoleKey)
+      : createClient(
+          Deno.env.get("SUPABASE_URL")!,
+          Deno.env.get("SUPABASE_ANON_KEY")!,
+          { global: { headers: { Authorization: authHeader } } }
+        );
+
+    if (!isServiceRole) {
+      const { data: userData, error: authError } = await supabaseClient.auth.getUser(token);
+      if (authError || !userData?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
     }
 
     const { formId, mode = 'table', responseIds } = await req.json();
