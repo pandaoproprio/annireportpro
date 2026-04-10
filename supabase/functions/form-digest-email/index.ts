@@ -165,13 +165,14 @@ async function fetchPdfAttachment(
   mode: string,
 ): Promise<ArrayBuffer | null> {
   try {
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') || serviceRoleKey;
     const url = `${supabaseUrl}/functions/v1/export-form-pdf`;
     const res = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${serviceRoleKey}`,
-        'apikey': serviceRoleKey,
+        'apikey': anonKey,
       },
       body: JSON.stringify({ formId, mode }),
     });
