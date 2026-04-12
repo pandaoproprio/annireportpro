@@ -1030,6 +1030,7 @@ export type Database = {
           id: string
           is_active: boolean
           last_sent_at: string | null
+          notify_mode: string
           recipients: string[]
           updated_at: string
         }
@@ -1041,6 +1042,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_sent_at?: string | null
+          notify_mode?: string
           recipients?: string[]
           updated_at?: string
         }
@@ -1052,6 +1054,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           last_sent_at?: string | null
+          notify_mode?: string
           recipients?: string[]
           updated_at?: string
         }
