@@ -391,7 +391,7 @@ export default function PublicFormPage() {
         }
       }
 
-      // Non-blocking notification
+      // Non-blocking in-app notification
       if (form?.user_id) {
         try {
           await supabase.from('form_notifications').insert({
@@ -405,6 +405,15 @@ export default function PublicFormPage() {
         } catch {
           // Notification is non-critical, don't block submission
         }
+      }
+
+      // Per-submission email notification (non-blocking)
+      try {
+        await supabase.functions.invoke('send-form-submission-notify', {
+          body: { formId: formId!, responseId },
+        });
+      } catch {
+        // Non-critical
       }
     },
     onSuccess: () => setSubmitted(true),
