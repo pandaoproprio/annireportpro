@@ -1555,6 +1555,7 @@ export type Database = {
           must_change_password: boolean
           name: string
           password_changed_at: string | null
+          suspended_at: string | null
           updated_at: string
           user_id: string
         }
@@ -1570,6 +1571,7 @@ export type Database = {
           must_change_password?: boolean
           name: string
           password_changed_at?: string | null
+          suspended_at?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1585,6 +1587,7 @@ export type Database = {
           must_change_password?: boolean
           name?: string
           password_changed_at?: string | null
+          suspended_at?: string | null
           updated_at?: string
           user_id?: string
         }
