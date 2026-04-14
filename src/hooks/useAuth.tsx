@@ -15,6 +15,7 @@ interface Profile {
   first_login_at: string | null;
   last_login_at: string | null;
   password_changed_at: string | null;
+  suspended_at: string | null;
 }
 
 interface AuthContextType {
