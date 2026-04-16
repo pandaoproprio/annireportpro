@@ -26,41 +26,24 @@ if (import.meta.main) {
     }
 
     try {
-      // Validate JWT — only authenticated users can trigger password reset
-      const authHeader = req.headers.get('Authorization');
-      if (!authHeader?.startsWith('Bearer ')) {
-        return new Response(
-          JSON.stringify({ error: 'Não autorizado' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      const supabaseAuth = createClient(
-        Deno.env.get('SUPABASE_URL')!,
-        Deno.env.get('SUPABASE_ANON_KEY')!,
-        { global: { headers: { Authorization: authHeader } } }
-      );
-
-      const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(
-        authHeader.replace('Bearer ', '')
-      );
-      if (claimsError || !claimsData?.claims) {
-        return new Response(
-          JSON.stringify({ error: 'Não autorizado' }),
-          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
       const { email, redirectUrl } = await req.json();
 
-      if (!email || typeof email !== 'string') {
+      if (!email || typeof email !== 'string' || email.length > 255) {
         return new Response(
           JSON.stringify({ error: 'Email é obrigatório' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Validate redirect URL against allowlist
+      // Basic email format validation
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        return new Response(
+          JSON.stringify({ error: 'Formato de email inválido' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Validate redirect URL against allowlist — reject arbitrary domains
       const defaultRedirect = 'https://annireportpro.lovable.app/reset-password';
       const finalRedirect = (redirectUrl && isAllowedRedirect(redirectUrl))
         ? redirectUrl
@@ -71,18 +54,37 @@ if (import.meta.main) {
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
 
+      // Rate limiting: max 3 requests per email per 15 minutes
+      const { count } = await supabase
+        .from('rate_limit_entries')
+        .select('*', { count: 'exact', head: true })
+        .eq('key', `pwd_reset:${email.toLowerCase()}`)
+        .gt('expires_at', new Date().toISOString());
+
+      if ((count ?? 0) >= 3) {
+        // Return success anyway to avoid email enumeration
+        return new Response(
+          JSON.stringify({ success: true, message: 'Email de recuperação enviado' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Record rate limit entry
+      await supabase.from('rate_limit_entries').insert({
+        key: `pwd_reset:${email.toLowerCase()}`,
+        count: 1,
+        expires_at: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      });
+
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: finalRedirect,
       });
 
       if (error) {
         console.error('Password reset error:', error);
-        return new Response(
-          JSON.stringify({ error: 'Não foi possível enviar o email de recuperação. Tente novamente.' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
       }
 
+      // Always return success to prevent email enumeration
       return new Response(
         JSON.stringify({ success: true, message: 'Email de recuperação enviado' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
