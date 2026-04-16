@@ -31,3 +31,5 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.send-event-confirmation]
     verify_jwt = false
+  [functions.asana-sync]
+    verify_jwt = false

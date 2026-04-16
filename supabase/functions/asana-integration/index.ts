@@ -517,6 +517,65 @@ serve(async (req) => {
         });
       }
 
+      // ── List synced projects ──
+      case "list_synced_projects": {
+        const { data } = await supabase
+          .from("asana_synced_projects")
+          .select("*")
+          .order("created_at", { ascending: false });
+        return jsonResponse({ synced_projects: data || [] });
+      }
+
+      // ── Add synced project ──
+      case "add_synced_project": {
+        const { asana_project_gid, asana_project_name, workspace_gid } = payload;
+        if (!asana_project_gid) return jsonResponse({ error: "asana_project_gid required" }, 400);
+        const { data: inserted, error: insErr } = await supabase
+          .from("asana_synced_projects")
+          .upsert({
+            asana_project_gid,
+            asana_project_name: asana_project_name || "",
+            workspace_gid: workspace_gid || config?.workspace_gid || "",
+            created_by: userId,
+            is_active: true,
+            sync_status: "active",
+          }, { onConflict: "asana_project_gid" })
+          .select()
+          .single();
+        if (insErr) throw insErr;
+        return jsonResponse({ success: true, synced_project: inserted });
+      }
+
+      // ── Remove synced project ──
+      case "remove_synced_project": {
+        const { synced_project_id } = payload;
+        if (!synced_project_id) return jsonResponse({ error: "synced_project_id required" }, 400);
+        await supabase.from("asana_synced_projects").delete().eq("id", synced_project_id);
+        return jsonResponse({ success: true });
+      }
+
+      // ── Toggle global integration ──
+      case "toggle_global": {
+        const { enabled } = payload;
+        if (config?.id) {
+          await supabase.from("asana_config").update({ is_globally_enabled: !!enabled }).eq("id", config.id);
+        }
+        return jsonResponse({ success: true, is_globally_enabled: !!enabled });
+      }
+
+      // ── Get sync logs ──
+      case "get_sync_logs": {
+        const { synced_project_id: logProjectId, limit: logLimit = 50, offset: logOffset = 0 } = payload;
+        let query = supabase
+          .from("asana_sync_logs")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .range(logOffset, logOffset + logLimit - 1);
+        if (logProjectId) query = query.eq("synced_project_id", logProjectId);
+        const { data: logs } = await query;
+        return jsonResponse({ logs: logs || [] });
+      }
+
       default:
         return jsonResponse({ error: `Unknown action: ${action}` }, 400);
     }
