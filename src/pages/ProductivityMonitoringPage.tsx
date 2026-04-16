@@ -510,7 +510,14 @@ const ProductivityMonitoringPage: React.FC = () => {
         <TabsContent value="users" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Usuários Monitorados</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                Usuários Monitorados
+                {kpiFilter && (
+                  <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setKpiFilter(null)}>
+                    Filtro: {kpiFilter === 'active' ? 'Ativos' : kpiFilter === 'inactive' ? 'Inativos' : kpiFilter === 'low' ? 'Baixa Produtividade' : 'Violações SLA'} ✕
+                  </Badge>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {latestSnapshots.length === 0 ? (
