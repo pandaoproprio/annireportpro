@@ -1563,6 +1563,63 @@ export type Database = {
         }
         Relationships: []
       }
+      monitoring_config: {
+        Row: {
+          created_at: string
+          id: string
+          inactive_days_threshold: number
+          is_active: boolean
+          max_avg_task_seconds: number
+          min_tasks_per_day: number
+          report_frequency: string
+          sla_by_activity_type: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          inactive_days_threshold?: number
+          is_active?: boolean
+          max_avg_task_seconds?: number
+          min_tasks_per_day?: number
+          report_frequency?: string
+          sla_by_activity_type?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          inactive_days_threshold?: number
+          is_active?: boolean
+          max_avg_task_seconds?: number
+          min_tasks_per_day?: number
+          report_frequency?: string
+          sla_by_activity_type?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      monitoring_emails: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          email: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          email: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          email?: string
+          id?: string
+        }
+        Relationships: []
+      }
       performance_config: {
         Row: {
           created_at: string
@@ -3013,6 +3070,51 @@ export type Database = {
           granted_by?: string | null
           id?: string
           permission?: Database["public"]["Enums"]["app_permission"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_productivity_snapshots: {
+        Row: {
+          activities_count: number
+          avg_task_seconds: number | null
+          created_at: string
+          days_inactive: number
+          id: string
+          sla_pct_on_time: number
+          sla_total: number
+          sla_violations: number
+          snapshot_date: string
+          status: string
+          tasks_per_day: number
+          user_id: string
+        }
+        Insert: {
+          activities_count?: number
+          avg_task_seconds?: number | null
+          created_at?: string
+          days_inactive?: number
+          id?: string
+          sla_pct_on_time?: number
+          sla_total?: number
+          sla_violations?: number
+          snapshot_date?: string
+          status?: string
+          tasks_per_day?: number
+          user_id: string
+        }
+        Update: {
+          activities_count?: number
+          avg_task_seconds?: number | null
+          created_at?: string
+          days_inactive?: number
+          id?: string
+          sla_pct_on_time?: number
+          sla_total?: number
+          sla_violations?: number
+          snapshot_date?: string
+          status?: string
+          tasks_per_day?: number
           user_id?: string
         }
         Relationships: []
