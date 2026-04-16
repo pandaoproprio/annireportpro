@@ -80,6 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
             </Link>
             <button
               className="lg:hidden text-sidebar-foreground p-1 flex-shrink-0"
+              aria-label="Fechar menu de navegação"
               onClick={onClose}
             >
               <X className="w-5 h-5" />
