@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Slider } from '@/components/ui/slider';
 import { StatCard } from '@/components/StatCard';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { toast } from 'sonner';
 import {
   Users, AlertTriangle, Download, Plus, Trash2, Save, Settings2,
