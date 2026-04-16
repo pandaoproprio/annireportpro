@@ -141,6 +141,10 @@ const ProductivityMonitoringPage: React.FC = () => {
             <option value={60}>Últimos 60 dias</option>
             <option value={90}>Últimos 90 dias</option>
           </select>
+          <Button variant="outline" onClick={handleRunNow} disabled={running} className="gap-2">
+            {running ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            Executar Agora
+          </Button>
           <Button variant="outline" onClick={handleExportPdf} className="gap-2">
             <Download className="w-4 h-4" />
             Exportar PDF
