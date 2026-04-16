@@ -93,8 +93,13 @@ Deno.serve(async (req) => {
       const userActs = actByUser.get(uid) || []
       const activitiesCount = userActs.length
 
-      // Days inactive
-      const lastLogin = profile.last_login_at ? new Date(profile.last_login_at) : null
+      // Days inactive — prefer auth.users last_sign_in_at over profiles.last_login_at
+      const authLastSignIn = authUsersMap.get(uid) || null
+      const profileLastLogin = profile.last_login_at ? new Date(profile.last_login_at) : null
+      // Use the most recent of the two
+      const lastLogin = authLastSignIn && profileLastLogin
+        ? (authLastSignIn > profileLastLogin ? authLastSignIn : profileLastLogin)
+        : authLastSignIn || profileLastLogin
       const daysInactive = lastLogin
         ? Math.floor((Date.now() - lastLogin.getTime()) / 86400000)
         : 999
