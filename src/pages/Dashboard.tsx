@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target, BarChart3, Download } from 'lucide-react';
+import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target, BarChart3, Download, Activity, Users, CalendarClock, FileText, AlertTriangle, TrendingUp, ClipboardList } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/page-transition';
 import { StatCardSkeleton, CardSkeleton } from '@/components/ui/content-skeleton';
 import { ActivitiesByMonthChart } from '@/components/dashboard/ActivitiesByMonthChart';
@@ -107,18 +107,26 @@ export const Dashboard: React.FC = () => {
     );
   }
 
+  const publishedActivities = activities.filter(a => !a.isDraft);
+  const draftActivities = activities.filter(a => a.isDraft);
+
   const stats = isSuperAdmin && globalStats
     ? [
-        { label: 'Projetos', value: globalStats.totalProjects, color: 'text-brand-600', href: '/settings' },
-        { label: 'Atividades Totais', value: globalStats.totalActivities, color: 'text-info', href: '/activities' },
-        { label: 'Pessoas Impactadas', value: globalStats.totalAttendees, color: 'text-success', href: '/activities' },
-        { label: 'Metas Ativas', value: globalStats.totalGoals, color: 'text-warning', href: '/settings' },
+        { label: 'Projetos', value: globalStats.totalProjects, color: 'text-primary', href: '/settings', icon: FolderPlus, subtitle: 'cadastrados no sistema' },
+        { label: 'Atividades', value: globalStats.totalActivities, color: 'text-info', href: '/activities', icon: Activity, subtitle: 'publicadas (excl. rascunhos)' },
+        { label: 'Pessoas Impactadas', value: globalStats.totalAttendees, color: 'text-success', href: '/activities', icon: Users, subtitle: 'em atividades publicadas' },
+        { label: 'Metas Ativas', value: globalStats.totalGoals, color: 'text-warning', href: '/settings', icon: Target, subtitle: 'em todos os projetos' },
+        { label: 'Rascunhos', value: globalStats.draftCount, color: 'text-muted-foreground', href: '/activities', icon: ClipboardList, subtitle: 'pendentes de publicação' },
+        { label: 'Relatórios', value: globalStats.totalReports, color: 'text-info', href: '/report', icon: FileText, subtitle: 'gerados no sistema' },
+        { label: 'Riscos Ativos', value: globalStats.totalRisks, color: 'text-destructive', href: '/risk-management', icon: AlertTriangle, subtitle: 'não resolvidos' },
+        { label: 'Taxa de Execução', value: `${globalStats.executionRate}%`, color: 'text-success', icon: TrendingUp, subtitle: 'atividades publicadas vs total' },
       ]
     : [
-        { label: 'Atividades Totais', value: activities.length, color: 'text-info', href: '/activities' },
-        { label: 'Pessoas Impactadas', value: activities.reduce((acc, curr) => acc + (curr.attendeesCount || 0), 0), color: 'text-success', href: '/activities' },
-        { label: 'Metas Ativas', value: project.goals.length, color: 'text-brand-600', href: '/settings' },
-        { label: 'Dias Restantes', value: project.endDate ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '-', color: 'text-warning', href: '/settings' },
+        { label: 'Atividades', value: publishedActivities.length, color: 'text-info', href: '/activities', icon: Activity, subtitle: 'publicadas neste projeto' },
+        { label: 'Pessoas Impactadas', value: publishedActivities.reduce((acc, curr) => acc + (curr.attendeesCount || 0), 0), color: 'text-success', href: '/activities', icon: Users, subtitle: 'em atividades publicadas' },
+        { label: 'Metas Ativas', value: project.goals.length, color: 'text-primary', href: '/settings', icon: Target, subtitle: 'cadastradas no projeto' },
+        { label: 'Dias Restantes', value: project.endDate ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '-', color: 'text-warning', href: '/settings', icon: CalendarClock, subtitle: project.endDate ? `até ${new Date(project.endDate).toLocaleDateString('pt-BR')}` : 'sem prazo definido' },
+        ...(draftActivities.length > 0 ? [{ label: 'Rascunhos', value: draftActivities.length, color: 'text-muted-foreground', href: '/activities', icon: ClipboardList, subtitle: 'pendentes de publicação' }] : []),
       ];
 
   return (
@@ -220,7 +228,7 @@ export const Dashboard: React.FC = () => {
 
 // Extracted panel content to keep Dashboard clean
 interface DashboardPanelContentProps {
-  stats: Array<{ label: string; value: string | number; color: string; href?: string }>;
+  stats: Array<{ label: string; value: string | number; color: string; href?: string; icon?: any; subtitle?: string }>;
   slaSummary: any;
   activities: any[];
   project: any;
@@ -339,7 +347,7 @@ const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} onClick={stat.href ? () => navigate(stat.href!) : undefined} />
+          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} icon={stat.icon} subtitle={stat.subtitle} onClick={stat.href ? () => navigate(stat.href!) : undefined} />
         ))}
       </div>
 
@@ -446,10 +454,10 @@ const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
 
 // ── Super Admin Global Panel ──
 import type { GlobalStats } from '@/hooks/useGlobalStats';
-import { Users, FolderOpen } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
 
 interface SuperAdminPanelContentProps {
-  stats: Array<{ label: string; value: string | number; color: string; href?: string }>;
+  stats: Array<{ label: string; value: string | number; color: string; href?: string; icon?: any; subtitle?: string }>;
   globalStats: GlobalStats;
   projects: any[];
   role: string | null;
@@ -475,7 +483,7 @@ const SuperAdminPanelContent: React.FC<SuperAdminPanelContentProps> = ({
       {/* Global Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} onClick={stat.href ? () => navigate(stat.href!) : undefined} />
+          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} icon={stat.icon} subtitle={stat.subtitle} onClick={stat.href ? () => navigate(stat.href!) : undefined} />
         ))}
       </div>
 
