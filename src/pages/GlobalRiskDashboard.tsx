@@ -47,6 +47,8 @@ interface RiskWithProject {
   auto_task_created: boolean;
   linked_goal_id: string | null;
   created_at: string;
+  resolved_at: string | null;
+  metadata: any;
 }
 
 interface ProjectSummary {
