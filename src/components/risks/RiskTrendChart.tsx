@@ -129,7 +129,7 @@ export const RiskTrendChart: React.FC<Props> = ({ risks }) => {
             </div>
           </div>
 
-          <svg viewBox={`0 0 ${timeline.length * 50} ${chartH + 40}`} className="w-full h-44" preserveAspectRatio="none">
+          <svg viewBox={`0 0 ${timeline.length * 50} ${chartH + 40}`} className="w-full h-44" preserveAspectRatio="xMidYMid meet">
             {/* Grid lines */}
             {[0, 0.25, 0.5, 0.75, 1].map(pct => (
               <line key={pct} x1="0" y1={chartH * (1 - pct)} x2={timeline.length * 50} y2={chartH * (1 - pct)} stroke="hsl(var(--border))" strokeWidth="0.5" opacity="0.3" />

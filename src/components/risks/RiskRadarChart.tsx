@@ -72,7 +72,7 @@ export const RiskRadarChart: React.FC<Props> = ({ risks }) => {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col lg:flex-row gap-4 items-center">
-          <svg viewBox="0 0 280 280" className="w-64 h-64 shrink-0">
+          <svg viewBox="0 0 280 280" className="w-64 h-64 shrink-0" preserveAspectRatio="xMidYMid meet">
             {/* Grid */}
             {gridLevels.map(level => (
               <polygon
