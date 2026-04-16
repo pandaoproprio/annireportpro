@@ -1,4 +1,5 @@
 import React from 'react';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta } from '@/types';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 import { INDENT } from '@/lib/previewConstants';

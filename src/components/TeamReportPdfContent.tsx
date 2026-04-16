@@ -1,4 +1,5 @@
 import React from 'react';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { Project, TeamReport } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';

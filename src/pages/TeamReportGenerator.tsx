@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppData } from '@/contexts/AppDataContext';
 import { useAuth } from '@/hooks/useAuth';
@@ -1267,7 +1268,7 @@ export const TeamReportGenerator: React.FC = () => {
           <div
             className="text-justify prose prose-sm max-w-none whitespace-pre-line [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
             style={{ textIndent: '12.5mm' }}
-            dangerouslySetInnerHTML={{ __html: executionReport || '<p>[Nenhum relato informado]</p>' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(executionReport || '<p>[Nenhum relato informado]</p>') }}
           />
 
           <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
@@ -1284,7 +1285,7 @@ export const TeamReportGenerator: React.FC = () => {
             <div
               className="text-justify prose prose-sm max-w-none whitespace-pre-line [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_p]:my-2"
               style={{ textIndent: '12.5mm' }}
-              dangerouslySetInnerHTML={{ __html: section.content || '<p>[Nenhum conteúdo]</p>' }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(section.content || '<p>[Nenhum conteúdo]</p>') }}
             />
             <div className="absolute bottom-0 left-0 right-0" style={{ padding: '0 20mm 10mm 30mm' }}>
               <PreviewFooter />

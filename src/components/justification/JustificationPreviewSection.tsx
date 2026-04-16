@@ -1,4 +1,5 @@
 import React from 'react';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { ReportSection } from '@/types';
 import { JustificationSectionKey, AttachmentFile } from '@/hooks/useJustificationReportState';
 import { FileText } from 'lucide-react';

@@ -1,4 +1,5 @@
 import React from 'react';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { DocumentBlock, TextBlock as TextBlockType } from '@/types/document';
 
 interface TextBlockProps {
