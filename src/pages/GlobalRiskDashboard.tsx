@@ -485,6 +485,29 @@ const GlobalRiskDashboard: React.FC = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Edit Risk Dialog */}
+        <RiskFormDialog
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) setEditingRisk(null);
+          }}
+          onSubmit={handleUpdateRisk}
+          initialData={editingRisk ? {
+            title: editingRisk.title,
+            description: editingRisk.description,
+            category: editingRisk.category,
+            probability: editingRisk.probability,
+            impact: editingRisk.impact,
+            status: editingRisk.status,
+            mitigation_plan: editingRisk.mitigation_plan || '',
+            contingency_plan: (editingRisk as any).contingency_plan || '',
+            responsible: editingRisk.responsible || '',
+            due_date: editingRisk.due_date || '',
+          } : undefined}
+          isEdit
+        />
       </div>
     </PageTransition>
   );
