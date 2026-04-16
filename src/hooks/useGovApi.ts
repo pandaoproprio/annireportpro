@@ -5,9 +5,12 @@ import { toast } from 'sonner';
 export type GovApiSource =
   | 'transferegov_especiais'
   | 'transferegov_fundo'
+  | 'transferegov_ted'
   | 'cgu'
   | 'ibge'
-  | 'compras';
+  | 'compras'
+  | 'pncp'
+  | 'brasilapi';
 
 interface UseGovApiReturn {
   data: any;
