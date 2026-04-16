@@ -449,7 +449,7 @@ import type { GlobalStats } from '@/hooks/useGlobalStats';
 import { Users, FolderOpen } from 'lucide-react';
 
 interface SuperAdminPanelContentProps {
-  stats: Array<{ label: string; value: string | number; color: string }>;
+  stats: Array<{ label: string; value: string | number; color: string; href?: string }>;
   globalStats: GlobalStats;
   projects: any[];
   role: string | null;
@@ -458,6 +458,7 @@ interface SuperAdminPanelContentProps {
 const SuperAdminPanelContent: React.FC<SuperAdminPanelContentProps> = ({
   stats, globalStats, projects,
 }) => {
+  const navigate = useNavigate();
   const sortedProjects = Object.values(globalStats.activitiesByProject)
     .sort((a, b) => b.count - a.count);
 
@@ -474,7 +475,7 @@ const SuperAdminPanelContent: React.FC<SuperAdminPanelContentProps> = ({
       {/* Global Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} />
+          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} onClick={stat.href ? () => navigate(stat.href!) : undefined} />
         ))}
       </div>
 
