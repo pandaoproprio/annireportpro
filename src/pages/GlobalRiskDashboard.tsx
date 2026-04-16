@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,9 +15,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertTriangle, Calendar, CheckCircle, Edit, Filter, RefreshCw, Shield, ShieldAlert, TrendingUp, User, Loader2 } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle, Edit, ExternalLink, Filter, RefreshCw, Shield, ShieldAlert, TrendingUp, User, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useProjectData } from '@/contexts/ProjectContext';
 
 interface RiskWithProject {
   id: string;
@@ -48,6 +49,8 @@ interface ProjectSummary {
 const GlobalRiskDashboard: React.FC = () => {
   const { user } = useAuth();
   const { isSuperAdmin } = usePermissions();
+  const { switchProject } = useProjectData();
+  const navigate = useNavigate();
   const [risks, setRisks] = useState<RiskWithProject[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -169,6 +172,12 @@ const GlobalRiskDashboard: React.FC = () => {
     setEditingRisk(risk);
     setEditDialogOpen(true);
   };
+
+  const goToProjectRisks = (projectId: string) => {
+    switchProject(projectId);
+    navigate('/risks');
+  };
+
   if (!isSuperAdmin) return (
     <PageTransition>
       <div className="p-6 text-center text-muted-foreground">
@@ -300,7 +309,9 @@ const GlobalRiskDashboard: React.FC = () => {
                       <CardContent className="p-4">
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-3">
                           <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-base mb-2">{proj.name}</h3>
+                            <h3 className="font-semibold text-base mb-2 cursor-pointer hover:text-primary transition-colors flex items-center gap-1" onClick={() => goToProjectRisks(proj.id)}>
+                              {proj.name} <ExternalLink className="w-3.5 h-3.5 opacity-50" />
+                            </h3>
                             <div className="flex items-center gap-2 mb-2">
                               <Progress value={healthScore} className="h-2 flex-1 max-w-xs" />
                               <span className={`text-sm font-medium ${healthScore >= 75 ? 'text-green-600' : healthScore >= 50 ? 'text-orange-500' : 'text-destructive'}`}>
@@ -390,7 +401,7 @@ const GlobalRiskDashboard: React.FC = () => {
                               <Badge variant="secondary">{CATEGORY_LABELS[risk.category] || risk.category}</Badge>
                               {isOverdue && <Badge variant="destructive">Atrasado</Badge>}
                             </div>
-                            <p className="text-xs text-primary/80 font-medium mb-1">📁 {risk.project_name}</p>
+                            <p className="text-xs text-primary/80 font-medium mb-1 cursor-pointer hover:underline" onClick={() => goToProjectRisks(risk.project_id)}>📁 {risk.project_name} <ExternalLink className="w-3 h-3 inline ml-0.5" /></p>
                             {risk.description && (
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{risk.description}</p>
                             )}
