@@ -50,6 +50,8 @@ const ProductivityMonitoringPage: React.FC = () => {
   const [newEmail, setNewEmail] = useState('');
   const [running, setRunning] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [kpiFilter, setKpiFilter] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [editConfig, setEditConfig] = useState<Record<string, any> | null>(null);
   const [asanaBoards, setAsanaBoards] = useState<any[]>([]);
   const [asanaBoardsLoading, setAsanaBoardsLoading] = useState(false);
@@ -322,15 +324,19 @@ const ProductivityMonitoringPage: React.FC = () => {
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-        <StatCard label="Usuários Ativos" value={activeUsers.length} colorClass="text-success" />
-        <StatCard label="Inativos" value={inactiveUsers.length} colorClass="text-destructive" />
-        <StatCard label="Baixa Produtividade" value={lowPerformers.length} colorClass="text-warning" />
-        <StatCard label="Violações SLA" value={slaViolators.length} colorClass="text-destructive" />
+        <StatCard label="Usuários Ativos" value={activeUsers.length} colorClass="text-success"
+          active={kpiFilter === 'active'} onClick={() => { setKpiFilter(kpiFilter === 'active' ? null : 'active'); setActiveTab('users'); }} />
+        <StatCard label="Inativos" value={inactiveUsers.length} colorClass="text-destructive"
+          active={kpiFilter === 'inactive'} onClick={() => { setKpiFilter(kpiFilter === 'inactive' ? null : 'inactive'); setActiveTab('users'); }} />
+        <StatCard label="Baixa Produtividade" value={lowPerformers.length} colorClass="text-warning"
+          active={kpiFilter === 'low'} onClick={() => { setKpiFilter(kpiFilter === 'low' ? null : 'low'); setActiveTab('users'); }} />
+        <StatCard label="Violações SLA" value={slaViolators.length} colorClass="text-destructive"
+          active={kpiFilter === 'sla'} onClick={() => { setKpiFilter(kpiFilter === 'sla' ? null : 'sla'); setActiveTab('users'); }} />
         <StatCard label="Score Médio" value={avgScore.toFixed(0)} colorClass="text-primary" />
         <StatCard label="Retrabalho Total" value={totalRework} colorClass="text-warning" />
       </div>
 
-      <Tabs defaultValue="dashboard">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="dashboard" className="gap-1.5"><TrendingUp className="w-4 h-4" />Dashboard</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" />Usuários</TabsTrigger>
@@ -505,7 +511,14 @@ const ProductivityMonitoringPage: React.FC = () => {
         <TabsContent value="users" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Usuários Monitorados</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2">
+                Usuários Monitorados
+                {kpiFilter && (
+                  <Badge variant="secondary" className="text-xs cursor-pointer" onClick={() => setKpiFilter(null)}>
+                    Filtro: {kpiFilter === 'active' ? 'Ativos' : kpiFilter === 'inactive' ? 'Inativos' : kpiFilter === 'low' ? 'Baixa Produtividade' : 'Violações SLA'} ✕
+                  </Badge>
+                )}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               {latestSnapshots.length === 0 ? (
@@ -532,7 +545,18 @@ const ProductivityMonitoringPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {[...latestSnapshots]
+                      {(() => {
+                        const activeUserIds = new Set(activeUsers.map(u => u.user_id));
+                        const inactiveUserIds = new Set(inactiveUsers.map(u => u.user_id));
+                        const lowUserIds = new Set(lowPerformers.map(u => u.user_id));
+                        const slaUserIds = new Set(slaViolators.map(u => u.user_id));
+                        let filtered = [...latestSnapshots];
+                        if (kpiFilter === 'active') filtered = filtered.filter(s => activeUserIds.has(s.user_id));
+                        if (kpiFilter === 'inactive') filtered = filtered.filter(s => inactiveUserIds.has(s.user_id));
+                        if (kpiFilter === 'low') filtered = filtered.filter(s => lowUserIds.has(s.user_id));
+                        if (kpiFilter === 'sla') filtered = filtered.filter(s => slaUserIds.has(s.user_id));
+                        return filtered;
+                      })()
                         .sort((a, b) => Number(b.score) - Number(a.score))
                         .map(s => (
                           <tr key={s.id} className="border-b hover:bg-muted/50 transition-colors">
