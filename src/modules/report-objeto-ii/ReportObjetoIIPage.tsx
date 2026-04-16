@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Download, Loader2, Eye, Edit, Image, Trash2, Import, Settings2 } from 'lucide-react';
+import { Download, Loader2, Eye, Edit, Image, Trash2, Import, Settings2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import {
@@ -16,43 +16,32 @@ import {
   type ReportObjIISection, type ReportObjIIData,
   type CoverConfig, type HeaderConfig, type FooterConfig, type PhotoWithCaption,
 } from './types';
-import { generateReport, downloadReport } from '@/lib/pdf/generate';
-import { mapObjetoIIToReportData } from '@/lib/pdf/mappers/mapObjetoII';
+import { exportReportObjIIPdf } from './pdfExport';
 import { useReportVisualConfig } from '@/hooks/useReportVisualConfig';
 import type { ReportData } from '@/types';
+import { AiSuggestionButton } from './components/AiSuggestionButton';
+import { FillingGuideButton } from './components/FillingGuideButton';
+import { validatePhoto, PhotoValidationBadge } from './components/PhotoValidation';
+import type { } from './components/PhotoValidation';
+
+// Seções que aceitam sugestão de IA (narrativas)
+const AI_ENABLED_SECTIONS = ['object', 'summary', 'goals', 'other', 'communication', 'satisfaction', 'future'];
 
 function mapReportDataToSections(rd: ReportData, projectObject?: string, projectSummary?: string): ReportObjIISection[] {
   const photoMeta = rd.photoMetadata || {};
-
   const getPhotosWithCaptions = (key: string, urls: string[]): PhotoWithCaption[] => {
     const metas = photoMeta[key] || [];
-    return urls.map((url, i) => ({
-      url,
-      caption: metas[i]?.caption || '',
-    }));
+    return urls.map((url, i) => ({ url, caption: metas[i]?.caption || '' }));
   };
-
   const goalPhotos: PhotoWithCaption[] = rd.goalPhotos
-    ? Object.entries(rd.goalPhotos).flatMap(([goalId, urls]) =>
-        getPhotosWithCaptions(`goal_${goalId}`, urls)
-      )
+    ? Object.entries(rd.goalPhotos).flatMap(([goalId, urls]) => getPhotosWithCaptions(`goal_${goalId}`, urls))
     : [];
-
   const contentMap: Record<string, { content: string; photos: PhotoWithCaption[] }> = {
     object: { content: rd.objectOverride || projectObject || '', photos: [] },
     summary: { content: rd.executiveSummary || projectSummary || '', photos: [] },
-    goals: {
-      content: rd.goalNarratives ? Object.values(rd.goalNarratives).filter(Boolean).join('\n\n') : '',
-      photos: goalPhotos,
-    },
-    other: {
-      content: rd.otherActionsText || '',
-      photos: getPhotosWithCaptions('otherActions', rd.otherActionsPhotos || []),
-    },
-    communication: {
-      content: rd.communicationText || '',
-      photos: getPhotosWithCaptions('communication', rd.communicationPhotos || []),
-    },
+    goals: { content: rd.goalNarratives ? Object.values(rd.goalNarratives).filter(Boolean).join('\n\n') : '', photos: goalPhotos },
+    other: { content: rd.otherActionsText || '', photos: getPhotosWithCaptions('otherActions', rd.otherActionsPhotos || []) },
+    communication: { content: rd.communicationText || '', photos: getPhotosWithCaptions('communication', rd.communicationPhotos || []) },
     satisfaction: { content: rd.satisfactionText || '', photos: [] },
     future: { content: rd.futureActionsText || '', photos: [] },
     expenses: {
@@ -68,13 +57,13 @@ function mapReportDataToSections(rd: ReportData, projectObject?: string, project
       photos: [],
     },
   };
+  return AVAILABLE_SECTIONS.map(s => ({ ...s, enabled: true, content: contentMap[s.key]?.content || '', photos: contentMap[s.key]?.photos || [] }));
+}
 
-  return AVAILABLE_SECTIONS.map(s => ({
-    ...s,
-    enabled: true,
-    content: contentMap[s.key]?.content || '',
-    photos: contentMap[s.key]?.photos || [],
-  }));
+interface PhotoPreview {
+  file: File;
+  url: string;
+  validation: { sizeOk: boolean; orientationOk: boolean; sizeMB: number; width: number; height: number } | null;
 }
 
 const ReportObjetoIIPage: React.FC = () => {
@@ -88,19 +77,18 @@ const ReportObjetoIIPage: React.FC = () => {
   const [cover, setCover] = useState<CoverConfig>({ ...DEFAULT_COVER });
   const [header, setHeader] = useState<HeaderConfig>({ ...DEFAULT_HEADER });
   const [footer, setFooter] = useState<FooterConfig>({ ...DEFAULT_FOOTER });
-
   const [sections, setSections] = useState<ReportObjIISection[]>(
     AVAILABLE_SECTIONS.map(s => ({ ...s, enabled: true, content: '', photos: [] }))
   );
+
+  // Photo preview state
+  const [photoPreviews, setPhotoPreviews] = useState<Record<string, PhotoPreview[]>>({});
 
   const handleImportFromReport = useCallback(() => {
     if (!project) { toast.error('Selecione um projeto primeiro.'); return; }
     const rd = project.reportData;
     if (!rd) { toast.error('Nenhum relatório salvo encontrado para este projeto.'); return; }
-
     setSections(mapReportDataToSections(rd, project.object, project.summary));
-
-    // Import cover data
     setCover(prev => ({
       ...prev,
       title: rd.coverTitle || visualConfig?.coverTitle || prev.title,
@@ -111,15 +99,11 @@ const ReportObjetoIIPage: React.FC = () => {
         ? `${new Date(project.startDate).toLocaleDateString('pt-BR')} a ${new Date(project.endDate).toLocaleDateString('pt-BR')}`
         : '',
     }));
-
-    // Import logos from reportData first, fallback to visualConfig
     setHeader({
       logoLeft: rd.logo || visualConfig?.logo || '',
       logoCenter: rd.logoCenter || visualConfig?.logoCenter || '',
       logoRight: rd.logoSecondary || visualConfig?.logoSecondary || '',
     });
-
-    // Import footer from visualConfig
     if (visualConfig) {
       setFooter({
         enabled: visualConfig.footerInstitutionalEnabled ?? true,
@@ -128,8 +112,6 @@ const ReportObjetoIIPage: React.FC = () => {
         line3: visualConfig.footerLine3Text || '',
       });
     }
-
-    // Import sections visibility from reportData.sections if available
     if (rd.sections && rd.sections.length > 0) {
       setSections(prev => prev.map(s => {
         const match = rd.sections?.find(rs => rs.key === s.key);
@@ -137,28 +119,61 @@ const ReportObjetoIIPage: React.FC = () => {
         return s;
       }));
     }
-
     toast.success('Dados importados do Relatório do Objeto!');
   }, [project, visualConfig]);
 
   const toggleSection = (id: string) => setSections(prev => prev.map(s => s.id === id ? { ...s, enabled: !s.enabled } : s));
   const updateContent = (id: string, content: string) => setSections(prev => prev.map(s => s.id === id ? { ...s, content } : s));
-
   const addPhoto = (id: string, photo: PhotoWithCaption) => setSections(prev => prev.map(s => s.id === id ? { ...s, photos: [...s.photos, photo] } : s));
   const removePhoto = (id: string, index: number) => setSections(prev => prev.map(s => s.id === id ? { ...s, photos: s.photos.filter((_, i) => i !== index) } : s));
   const updatePhotoCaption = (sectionId: string, index: number, caption: string) => {
     setSections(prev => prev.map(s => s.id === sectionId ? { ...s, photos: s.photos.map((p, i) => i === index ? { ...p, caption } : p) } : s));
   };
 
-  const handlePhotoUpload = (sectionId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  // Photo upload com validação e prévia
+  const handlePhotoSelect = async (sectionId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
+
+    const previews: PhotoPreview[] = [];
     for (const file of Array.from(files)) {
-      const reader = new FileReader();
-      reader.onload = () => { if (reader.result) addPhoto(sectionId, { url: reader.result as string, caption: '' }); };
-      reader.readAsDataURL(file);
+      const url = URL.createObjectURL(file);
+      const validation = await validatePhoto(file);
+      previews.push({ file, url, validation });
     }
+
+    setPhotoPreviews(prev => ({
+      ...prev,
+      [sectionId]: [...(prev[sectionId] || []), ...previews],
+    }));
     e.target.value = '';
+  };
+
+  const confirmPhotoUpload = (sectionId: string, previewIndex: number) => {
+    const preview = photoPreviews[sectionId]?.[previewIndex];
+    if (!preview) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result) {
+        addPhoto(sectionId, { url: reader.result as string, caption: '' });
+        setPhotoPreviews(prev => ({
+          ...prev,
+          [sectionId]: (prev[sectionId] || []).filter((_, i) => i !== previewIndex),
+        }));
+        URL.revokeObjectURL(preview.url);
+      }
+    };
+    reader.readAsDataURL(preview.file);
+  };
+
+  const cancelPhotoPreview = (sectionId: string, previewIndex: number) => {
+    const preview = photoPreviews[sectionId]?.[previewIndex];
+    if (preview) URL.revokeObjectURL(preview.url);
+    setPhotoPreviews(prev => ({
+      ...prev,
+      [sectionId]: (prev[sectionId] || []).filter((_, i) => i !== previewIndex),
+    }));
   };
 
   const handleLogoUpload = (field: keyof HeaderConfig, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,10 +193,14 @@ const ReportObjetoIIPage: React.FC = () => {
 
     setIsExporting(true);
     try {
-      const reportState = { sections, titulo: project.name, organizacao: project.organizationName, periodo: '' };
-      const data = mapObjetoIIToReportData(reportState, visualConfig?.logo ?? header.logoCenter ?? undefined);
-      const blob = await generateReport(data, 'objeto-ii');
-      downloadReport(blob, `relatorio-objeto-ii-${Date.now()}`);
+      const exportData: ReportObjIIData = {
+        cover,
+        header,
+        footer,
+        sections,
+        projectName: project.name,
+      };
+      await exportReportObjIIPdf(exportData);
       toast.success('PDF exportado com sucesso!');
     } catch (err) {
       console.error('Export error:', err);
@@ -193,11 +212,8 @@ const ReportObjetoIIPage: React.FC = () => {
 
   const updateCover = (field: keyof CoverConfig, value: string | boolean) => setCover(prev => ({ ...prev, [field]: value }));
 
-  /** Strip HTML for preview plain rendering */
-  const stripHtml = (html: string) => {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div.textContent || div.innerText || '';
+  const handleAiAccept = (sectionId: string, text: string) => {
+    updateContent(sectionId, `<p>${text.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br/>')}</p>`);
   };
 
   return (
@@ -205,7 +221,7 @@ const ReportObjetoIIPage: React.FC = () => {
       {/* Toolbar */}
       <div className="flex flex-wrap justify-between items-center bg-card p-4 shadow-sm rounded-lg sticky top-0 z-10 border-b gap-2">
         <div>
-          <h2 className="text-2xl font-bold text-foreground">Relatório do Objeto II</h2>
+          <h2 className="text-2xl font-bold text-foreground">Relatório do Objeto</h2>
           <p className="text-muted-foreground text-sm">Padrão ABNT · Editor rico · Seções customizáveis</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -281,7 +297,7 @@ const ReportObjetoIIPage: React.FC = () => {
                       <Label className="text-sm">Exibir logotipos na capa</Label>
                     </div>
 
-                    {/* Logo bar (inside cover tab) */}
+                    {/* Logo bar */}
                     <div className="border-t pt-4 mt-4">
                       <Label className="text-sm font-medium mb-3 block">Barra de Logos</Label>
                       <div className="grid grid-cols-3 gap-4">
@@ -340,12 +356,29 @@ const ReportObjetoIIPage: React.FC = () => {
                 </Card>
               </TabsContent>
 
-              {/* ── SECTIONS TAB (Rich Text Editor) ── */}
+              {/* ── SECTIONS TAB ── */}
               <TabsContent value="sections" className="space-y-4">
                 {enabledSections.map(section => (
                   <Card key={section.id}>
-                    <CardHeader className="pb-2"><CardTitle className="text-base">{section.title}</CardTitle></CardHeader>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-base">{section.title}</CardTitle>
+                        {AI_ENABLED_SECTIONS.includes(section.key) && (
+                          <span className="text-xs text-amber-600 flex items-center gap-1">💡 IA disponível</span>
+                        )}
+                      </div>
+                    </CardHeader>
                     <CardContent className="space-y-3">
+                      {/* Sugestão de IA inline */}
+                      {AI_ENABLED_SECTIONS.includes(section.key) && (
+                        <AiSuggestionButton
+                          sectionKey={section.key}
+                          currentContent={section.content}
+                          projectName={project?.name || ''}
+                          onAccept={(text) => handleAiAccept(section.id, text)}
+                        />
+                      )}
+
                       <RichTextEditor
                         value={section.content}
                         onChange={val => updateContent(section.id, val)}
@@ -353,10 +386,36 @@ const ReportObjetoIIPage: React.FC = () => {
                         enableImages
                       />
 
-                      {/* Photo upload with captions */}
+                      {/* Photo upload com validação */}
                       <div>
                         <Label className="text-sm flex items-center gap-1 mb-2"><Image className="w-4 h-4" /> Registros Fotográficos</Label>
-                        <input type="file" accept="image/*" multiple onChange={e => handlePhotoUpload(section.id, e)} className="text-sm" />
+                        <p className="text-xs text-muted-foreground mb-2">Formato paisagem · Máx. 1MB · Mín. 1280×720px</p>
+                        <input type="file" accept="image/*" multiple onChange={e => handlePhotoSelect(section.id, e)} className="text-sm" />
+
+                        {/* Prévias pendentes */}
+                        {(photoPreviews[section.id] || []).length > 0 && (
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3 border border-dashed border-primary/30 rounded-lg p-3">
+                            <p className="col-span-full text-xs font-medium text-primary">Prévia — confirme ou descarte:</p>
+                            {(photoPreviews[section.id] || []).map((preview, idx) => (
+                              <div key={idx} className="space-y-1">
+                                <div className="relative">
+                                  <img src={preview.url} alt="" className="w-full h-24 object-cover rounded border" />
+                                </div>
+                                <PhotoValidationBadge validation={preview.validation} />
+                                <div className="flex gap-1">
+                                  <Button size="sm" variant="default" onClick={() => confirmPhotoUpload(section.id, idx)} className="text-xs h-6 flex-1">
+                                    Confirmar
+                                  </Button>
+                                  <Button size="sm" variant="ghost" onClick={() => cancelPhotoPreview(section.id, idx)} className="text-xs h-6">
+                                    <Trash2 className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Fotos já adicionadas */}
                         {section.photos.length > 0 && (
                           <div className="grid grid-cols-3 gap-3 mt-3">
                             {section.photos.map((photo, idx) => (
@@ -403,14 +462,14 @@ const ReportObjetoIIPage: React.FC = () => {
             <div className="text-center space-y-2 py-8 border-b">
               <h1 className="text-2xl font-bold uppercase">{cover.title}</h1>
               {cover.subtitle && <p className="text-lg">{cover.subtitle}</p>}
-              {cover.organizationName && <p className="text-muted-foreground">{cover.organizationName}</p>}
+              {project?.name && <p className="text-base">{project.name}</p>}
               {cover.fomentoNumber && <p className="text-muted-foreground text-sm">{cover.fomentoNumber}</p>}
-              {cover.period && <p className="text-muted-foreground text-sm">{cover.period}</p>}
+              {cover.organizationName && <p className="text-muted-foreground text-sm">{cover.organizationName}</p>}
             </div>
 
             {enabledSections.map((section, i) => (
               <div key={section.id} className="space-y-2">
-                <h2 className="text-base font-bold uppercase">{`${i + 1}. ${section.title}`}</h2>
+                <h2 className="text-base font-bold uppercase">{section.title}</h2>
                 {section.content ? (
                   <div
                     className="text-sm text-justify leading-relaxed prose prose-sm max-w-none"
@@ -421,10 +480,10 @@ const ReportObjetoIIPage: React.FC = () => {
                   <p className="text-sm text-muted-foreground italic">Sem conteúdo</p>
                 )}
                 {section.photos.length > 0 && (
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     {section.photos.map((photo, idx) => (
                       <div key={idx} className="text-center">
-                        <img src={photo.url} alt="" className="w-full h-32 object-cover rounded" />
+                        <img src={photo.url} alt="" className="w-full h-40 object-cover rounded" />
                         {photo.caption && <p className="text-xs text-muted-foreground italic mt-1">{photo.caption}</p>}
                       </div>
                     ))}
@@ -443,6 +502,9 @@ const ReportObjetoIIPage: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Guia de preenchimento — botão fixo */}
+      <FillingGuideButton />
     </div>
   );
 };
