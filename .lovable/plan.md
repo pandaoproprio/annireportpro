@@ -1,117 +1,103 @@
+# Plano: Evolução Completa do Monitoramento de Produtividade
 
+## Situação Atual
 
-## Plano: Integração Bidirecional Asana ↔ GIRA Relatórios
+O sistema hoje tem uma estrutura básica:
 
-### Situação Atual
+- Tabela `user_productivity_snapshots` com métricas simples (activities_count, days_inactive, tasks_per_day, sla_violations)
+- Edge Function que calcula snapshots baseado apenas em `activities` e login
+- Dashboard com ranking, timeline e tabela de usuários
+- Configuração básica (dias inativos, min tarefas/dia, max tempo tarefa)
 
-O sistema já possui uma integração básica com o Asana:
-- Tabelas `asana_config` e `asana_task_mappings` no banco
-- Edge Function `asana-integration` com ações: criar tarefas, sincronizar status, notificar, importar tarefas, backfill
-- Painel de configuração em Settings (somente super_admin)
-- Configuração salva por workspace/projeto único (um `project_gid` global)
+## O que Será Adicionado
 
-O que **falta** para atender ao pedido:
-- Seleção granular de múltiplos boards/projetos do Asana
-- Sincronização bidirecional automática (webhook + polling)
-- Status de sincronização por board com log de erros
-- UI completa de gerenciamento por board
+### 1. Novas Colunas no Snapshot (migração)
 
----
+Adicionar à `user_productivity_snapshots`:
 
-### Etapa 1 — Schema do banco (migration)
+- `tasks_started` (int) — tarefas iniciadas no período
+- `tasks_finished` (int) — tarefas finalizadas (não-rascunho)
+- `reopen_count` (int) — tarefas reabertas (retrabalho)
+- `overdue_count` (int) — tarefas fora do prazo SLA
+- `concurrent_tasks` (int) — tarefas simultâneas em aberto
+- `delivery_regularity` (numeric) — desvio padrão normalizado de entregas por semana
+- `team_avg_activities` (numeric) — média da equipe para benchmark
+- `percentile_rank` (numeric) — percentil do usuário na equipe
+- `score` (numeric) — score consolidado 0-100
 
-Criar duas novas tabelas e alterar `asana_config`:
+Adicionar à `monitoring_config`:
 
-1. **`asana_synced_projects`** — boards selecionados para sincronização
-   - `id`, `asana_project_gid`, `asana_project_name`, `workspace_gid`, `sync_status` (ativo/pausado/erro), `last_synced_at`, `last_error`, `is_active`, `created_by`, timestamps
-   - RLS: super_admin gerencia, authenticated lê
+- `score_weights` (jsonb) — pesos configuráveis para cada dimensão do score
 
-2. **`asana_sync_logs`** — log de erros e eventos de sincronização
-   - `id`, `synced_project_id` (FK), `direction` (asana_to_gira / gira_to_asana), `event_type`, `entity_type`, `entity_id`, `asana_task_gid`, `status` (success/error), `error_message`, `created_at`
-   - RLS: admin/super_admin lê
+### 2. Edge Function Aprimorada
 
-3. **Alterar `asana_config`**: adicionar `is_globally_enabled boolean DEFAULT true` para ativar/desativar integração global sem perder configurações
+Expandir `daily-productivity-monitor` para calcular:
 
-4. **Alterar `asana_task_mappings`**: adicionar `asana_project_gid text`, `last_remote_update timestamptz` para rastrear origem e resolver conflitos por timestamp
+- **Engajamento**: frequência de login, dias inativo
+- **Volume**: atividades totais, rascunho vs publicadas, entregas/semana
+- **Eficiência**: tempo médio, taxa de atraso (usando `report_workflows` + SLA)
+- **Qualidade**: reopen_count de `report_performance_tracking`, tarefas devolvidas em workflows
+- **Consistência**: desvio padrão de entregas semanais
+- **Benchmark**: média da equipe, percentil individual
+- **Carga**: tarefas simultâneas em rascunho
+- **Score consolidado**: média ponderada das dimensões
 
-### Etapa 2 — Edge Function: `asana-sync` (nova)
+### 3. Alertas Inteligentes
 
-Função dedicada à sincronização bidirecional, separada da edge function existente:
+Expandir a lógica de alertas:
 
-**Ações:**
-- `sync_from_asana` — busca tarefas de um board selecionado, cria/atualiza atividades no GIRA. Mapeia: título→description, responsável→assignee, prazo→date, status→completed, descrição→results
-- `sync_to_asana` — envia atualizações do GIRA (status, comentários) para tarefas mapeadas no Asana
-- `webhook_receive` — endpoint para receber webhooks do Asana (POST de eventos)
-- `register_webhook` — registra webhook no Asana para um projeto selecionado
-- `force_sync` — sincronização manual forçada de um board específico
-- `periodic_sync` — chamada pelo cron, itera todos os boards ativos
+- Queda brusca de produtividade (comparar snapshot atual vs anterior)
+- Atrasos recorrentes (>2 violações SLA consecutivas)
+- Tempo médio acima do normal (>1.5x da média da equipe)
+- Incluir tipo de alerta no email
 
-**Lógica de conflito**: compara `modified_at` do GIRA com `modified_at` do Asana — o mais recente prevalece.
+### 4. Dashboard Redesenhado
 
-**Logs**: toda operação grava em `asana_sync_logs` com board de origem, direção e resultado.
+**Aba Dashboard** — 4 novas seções:
 
-### Etapa 3 — Edge Function existente: `asana-integration`
+- **Cards KPI expandidos**: 6 cards (ativos, inativos, baixa prod., violações SLA, score médio, taxa retrabalho)
+- **Gráfico Radar**: visão multidimensional por usuário (engajamento, volume, eficiência, qualidade, consistência)
+- **Benchmark comparativo**: gráfico de barras agrupadas (indivíduo vs equipe)
+- **Tendência de score**: LineChart com evolução do score ao longo do tempo
 
-Adicionar ações:
-- `list_synced_projects` — retorna boards selecionados com status
-- `add_synced_project` — adiciona board à sincronização
-- `remove_synced_project` — remove board
-- `toggle_global` — ativa/desativa integração global
-- `get_sync_logs` — retorna logs paginados por board
+**Aba Usuários** — tabela expandida:
 
-### Etapa 4 — Cron job para fallback periódico
+- Colunas adicionais: Score, Tarefas Iniciadas/Finalizadas, Retrabalho, Carga, Percentil
+- Filtro por status e ordenação por qualquer coluna
+- Mini-sparkline de tendência por usuário
 
-Agendar `asana-sync` (action: `periodic_sync`) a cada 15 minutos via `pg_cron` + `pg_net`.
+**Nova Aba "Alertas"**:
 
-### Etapa 5 — Hook `useAsana.tsx` — novos métodos
+- Histórico de alertas gerados
+- Tipo, usuário, data, motivo
 
-Adicionar ao hook existente:
-- `useSyncedProjects()` — query dos boards selecionados com status
-- `addSyncedProject`, `removeSyncedProject` — mutations
-- `forceSyncBoard` — sincronização manual
-- `toggleGlobalIntegration` — ativar/desativar global
-- `useSyncLogs(boardId?)` — query dos logs com filtro por board
+**Aba Config** — novos campos:
 
-### Etapa 6 — UI: Novo `AsanaConfigPanel` expandido
+- Pesos do score por dimensão (sliders)
+- Limiar de queda brusca (%)
 
-Substituir o painel atual com seções:
+### 5. PDF Expandido
 
-1. **Cabeçalho** — status da conexão + toggle global (ativar/desativar tudo)
-2. **Lista de boards** — tabela com:
-   - Checkbox de seleção
-   - Nome do board
-   - Badge de status (ativo ✅ / pausado ⏸ / erro ❌)
-   - Último sync
-   - Botão "Sincronizar agora"
-   - Botão remover
-3. **Adicionar board** — botão que lista boards disponíveis do workspace com checkbox
-4. **Funcionalidades existentes** — toggles já existentes (criar tarefas, sync status, etc.)
-5. **Log de sincronização** — tabela paginada com filtro por board, mostrando direção, evento, status, erro, timestamp
+Atualizar `monitoringPdfExport.ts` com:
 
-### Etapa 7 — Integração GIRA → Asana nos hooks existentes
+- Novos KPIs
+- Tabela com score e percentil
+- Seção de alertas inteligentes
 
-Adicionar chamadas automáticas em:
-- `useActivities` — quando status de atividade muda, chamar `sync_to_asana`
-- `useReportWorkflow` — quando status do workflow muda, sincronizar
-- Comentários/progresso — criar comentário na tarefa do Asana correspondente
+## O que NÃO será alterado
 
----
+- Nenhuma alteração em arquivos globais (routeConfig, sidebarConfig, etc.)
+- Lógica existente de login, atividades, ou workflows
+- Tabelas existentes que funcionam corretamente
 
-### Arquivos Modificados/Criados
+## Sequência de Implementação
 
-| Arquivo | Ação |
-|---------|------|
-| `supabase/migrations/new.sql` | Novas tabelas + alterações |
-| `supabase/functions/asana-sync/index.ts` | Nova edge function |
-| `supabase/functions/asana-integration/index.ts` | Novas ações |
-| `src/hooks/useAsana.tsx` | Novos hooks |
-| `src/components/asana/AsanaConfigPanel.tsx` | UI expandida |
-| `src/components/asana/AsanaSyncLogsTable.tsx` | Novo componente |
-| `src/components/asana/AsanaBoardSelector.tsx` | Novo componente |
-
-### Limitações
-
-- Webhooks do Asana exigem que o endpoint seja publicamente acessível e passe pelo handshake de verificação — a edge function suporta isso nativamente
-- O Asana tem rate limit de ~1500 req/min; a sincronização periódica respeitará isso com batches
-- A resolução de conflito por timestamp funciona bem para edições não-simultâneas; edições no mesmo segundo podem perder uma das alterações
-
+1. Migração DB (novas colunas + tabela de alertas)
+2. Edge Function atualizada
+3. Hook `useProductivityMonitoring` expandido
+4. Página `ProductivityMonitoringPage` redesenhada
+5. PDF atualizado
+6. Deploy e teste  
+  
+  
+Tem que vincular também os usuários aos projetos que eles estão alocados e mostrar a função também
