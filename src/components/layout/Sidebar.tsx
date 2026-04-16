@@ -30,7 +30,7 @@ const iconMap: Record<string, React.ElementType> = {
   BarChart3, Users, Crown, UsersRound, ScrollText, Layers,
   FileCode2, PenTool, ClipboardList, CalendarDays, Bot,
   ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign,
-  Zap, ListChecks, Receipt, MessageSquare,
+  Zap, ListChecks, Receipt, MessageSquare, Shield, FileSpreadsheet, FileCheck,
 };
 
 interface SidebarProps {
