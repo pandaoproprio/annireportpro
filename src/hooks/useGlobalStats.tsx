@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from './useAuth';
 
 export interface GlobalStats {
   totalProjects: number;
@@ -12,6 +11,9 @@ export interface GlobalStats {
   activitiesByMonth: Record<string, number>;
   recentActivities: Array<{ id: string; date: string; description: string; projectName: string }>;
   draftCount: number;
+  totalReports: number;
+  totalRisks: number;
+  executionRate: number; // % of activities published (non-draft)
 }
 
 async function fetchGlobalStats(): Promise<GlobalStats> {
@@ -43,17 +45,26 @@ async function fetchGlobalStats(): Promise<GlobalStats> {
     from += pageSize;
   }
 
+  // Fetch report & risk counts in parallel
+  const [reportsRes, risksRes] = await Promise.all([
+    supabase.from('team_reports').select('id', { count: 'exact', head: true }).is('deleted_at', null),
+    supabase.from('project_risks').select('id', { count: 'exact', head: true }).neq('status', 'resolvido'),
+  ]);
+
+  const totalReports = reportsRes.count ?? 0;
+  const totalRisks = risksRes.count ?? 0;
+
   const activitiesByType: Record<string, number> = {};
   const activitiesByProject: Record<string, { name: string; count: number; attendees: number }> = {};
   const activitiesByMonth: Record<string, number> = {};
   let totalAttendees = 0;
   let draftCount = 0;
 
+  const published = allActivities.filter(a => !a.is_draft);
+
   for (const a of allActivities) {
-    // by type
     activitiesByType[a.type] = (activitiesByType[a.type] || 0) + 1;
 
-    // by project
     const pName = projectMap.get(a.project_id) || 'Desconhecido';
     if (!activitiesByProject[a.project_id]) {
       activitiesByProject[a.project_id] = { name: pName, count: 0, attendees: 0 };
@@ -61,17 +72,18 @@ async function fetchGlobalStats(): Promise<GlobalStats> {
     activitiesByProject[a.project_id].count += 1;
     activitiesByProject[a.project_id].attendees += a.attendees_count || 0;
 
-    // by month
-    const monthKey = a.date?.substring(0, 7); // yyyy-MM
+    const monthKey = a.date?.substring(0, 7);
     if (monthKey) {
       activitiesByMonth[monthKey] = (activitiesByMonth[monthKey] || 0) + 1;
     }
 
-    totalAttendees += a.attendees_count || 0;
+    // Count attendees only from published activities
+    if (!a.is_draft) {
+      totalAttendees += a.attendees_count || 0;
+    }
     if (a.is_draft) draftCount++;
   }
 
-  // Total goals across all projects
   const totalGoals = (projects || []).reduce((sum, p) => {
     const goals = Array.isArray(p.goals) ? p.goals : [];
     return sum + goals.length;
@@ -84,9 +96,13 @@ async function fetchGlobalStats(): Promise<GlobalStats> {
     projectName: projectMap.get(a.project_id) || 'Desconhecido',
   }));
 
+  const executionRate = allActivities.length > 0
+    ? Math.round((published.length / allActivities.length) * 100)
+    : 0;
+
   return {
     totalProjects: projects?.length || 0,
-    totalActivities: allActivities.length,
+    totalActivities: published.length, // only published
     totalAttendees,
     totalGoals,
     activitiesByType,
@@ -94,6 +110,9 @@ async function fetchGlobalStats(): Promise<GlobalStats> {
     activitiesByMonth,
     recentActivities,
     draftCount,
+    totalReports,
+    totalRisks,
+    executionRate,
   };
 }
 
