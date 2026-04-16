@@ -326,8 +326,8 @@ const EmendasTab: React.FC = () => {
         </Button>
       </div>
 
-      <Alert variant="default" className="border-amber-500/30 bg-amber-50 dark:bg-amber-950/20">
-        <Info className="h-4 w-4 text-amber-600" />
+      <Alert>
+        <Info className="h-4 w-4" />
         <AlertDescription className="text-xs">
           A API do Portal da Transparência tem restrições no filtro por CNPJ beneficiário —
           os resultados podem incluir o universo do ano. Use a busca por ano específico e
@@ -360,7 +360,7 @@ const EmendasTab: React.FC = () => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Total pago acumulado</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalPago)}</p>
+                <p className="text-2xl font-bold text-primary">{formatCurrency(totalPago)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Ano de referência</p>
@@ -463,8 +463,8 @@ const PncpTab: React.FC = () => {
         </Button>
       </div>
 
-      <Alert variant="default" className="border-amber-500/30 bg-amber-50 dark:bg-amber-950/20">
-        <Info className="h-4 w-4 text-amber-600" />
+      <Alert>
+        <Info className="h-4 w-4" />
         <AlertDescription className="text-xs">
           O PNCP indexa contratos públicos com órgãos federais, estaduais e municipais.
           Aplicamos um segundo filtro local pelo CNPJ {CEAP_CNPJ_FORMATTED} para garantir
@@ -493,7 +493,7 @@ const PncpTab: React.FC = () => {
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Valor global total</p>
-                <p className="text-2xl font-bold text-green-600">{formatCurrency(totalGlobal)}</p>
+                <p className="text-2xl font-bold text-primary">{formatCurrency(totalGlobal)}</p>
               </div>
               <div>
                 <p className="text-xs text-muted-foreground">Órgãos contratantes</p>
