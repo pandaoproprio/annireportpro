@@ -5,6 +5,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
+const ALLOWED_REDIRECT_ORIGINS = [
+  'https://annireportpro.lovable.app',
+  'https://id-preview--a407ccf0-0b77-49f0-a842-b87f8ef15ed4.lovable.app',
+];
+
+function isAllowedRedirect(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return ALLOWED_REDIRECT_ORIGINS.some(origin => parsed.origin === origin);
+  } catch {
+    return false;
+  }
+}
+
 if (import.meta.main) {
   const handler = async (req: Request): Promise<Response> => {
     if (req.method === 'OPTIONS') {
@@ -12,22 +26,50 @@ if (import.meta.main) {
     }
 
     try {
+      // Validate JWT — only authenticated users can trigger password reset
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
+        return new Response(
+          JSON.stringify({ error: 'Não autorizado' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const supabaseAuth = createClient(
+        Deno.env.get('SUPABASE_URL')!,
+        Deno.env.get('SUPABASE_ANON_KEY')!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const { data: claimsData, error: claimsError } = await supabaseAuth.auth.getClaims(
+        authHeader.replace('Bearer ', '')
+      );
+      if (claimsError || !claimsData?.claims) {
+        return new Response(
+          JSON.stringify({ error: 'Não autorizado' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
       const { email, redirectUrl } = await req.json();
 
-      if (!email) {
+      if (!email || typeof email !== 'string') {
         return new Response(
           JSON.stringify({ error: 'Email é obrigatório' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
+      // Validate redirect URL against allowlist
+      const defaultRedirect = 'https://annireportpro.lovable.app/reset-password';
+      const finalRedirect = (redirectUrl && isAllowedRedirect(redirectUrl))
+        ? redirectUrl
+        : defaultRedirect;
+
       const supabase = createClient(
         Deno.env.get('SUPABASE_URL')!,
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
       );
-
-      // Use the frontend-provided redirect URL so the user lands on the app's reset page
-      const finalRedirect = redirectUrl || 'https://annireportpro.lovable.app/reset-password';
 
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: finalRedirect,
@@ -36,7 +78,7 @@ if (import.meta.main) {
       if (error) {
         console.error('Password reset error:', error);
         return new Response(
-          JSON.stringify({ error: error.message }),
+          JSON.stringify({ error: 'Não foi possível enviar o email de recuperação. Tente novamente.' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
