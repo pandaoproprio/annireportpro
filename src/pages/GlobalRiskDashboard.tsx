@@ -650,9 +650,13 @@ const GlobalRiskDashboard: React.FC = () => {
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">Matriz de Riscos — Todos os Projetos</CardTitle>
+                  <p className="text-xs text-muted-foreground">Clique em uma célula para ver os detalhes dos riscos</p>
                 </CardHeader>
                 <CardContent>
-                  <RiskMatrix risks={risks as any} />
+                  <RiskMatrix risks={risks as any} onRiskClick={(risk) => {
+                    const r = risk as any;
+                    if (r.project_id) openEditDialog(r);
+                  }} />
                 </CardContent>
               </Card>
             ) : (
