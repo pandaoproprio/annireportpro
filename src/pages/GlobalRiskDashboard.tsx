@@ -413,8 +413,48 @@ const GlobalRiskDashboard: React.FC = () => {
                                 </span>
                               )}
                             </div>
+                            {risk.mitigation_plan && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">
+                                🛡️ Mitigação: {risk.mitigation_plan.substring(0, 120)}{risk.mitigation_plan.length > 120 ? '...' : ''}
+                              </p>
+                            )}
                           </div>
-                        </div>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button size="sm" variant="outline" className="gap-1" onClick={() => openEditDialog(risk)}>
+                                    <Edit className="w-3 h-3" /> Editar
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Editar risco completo</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            {risk.status !== 'resolvido' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="gap-1 text-xs" onClick={() => handleQuickStatusChange(risk.id, 'mitigando')}>
+                                      <ShieldAlert className="w-3 h-3" /> Mitigar
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Marcar como "Mitigando"</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {risk.status !== 'resolvido' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="gap-1 text-xs text-green-600" onClick={() => handleQuickStatusChange(risk.id, 'resolvido')}>
+                                      <CheckCircle className="w-3 h-3" /> Resolver
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Marcar como "Resolvido"</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                          </div>
                       </CardContent>
                     </Card>
                   );
