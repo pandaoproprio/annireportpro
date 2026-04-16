@@ -15,6 +15,7 @@ interface ResolvedRisk {
   category: string;
   probability: string;
   impact: string;
+  status: string;
   mitigation_plan: string;
   resolved_at: string | null;
   project_name?: string;
