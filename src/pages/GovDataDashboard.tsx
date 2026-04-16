@@ -44,7 +44,7 @@ const TransfereGovSyncTab: React.FC = () => {
     // Query all relevant endpoints in parallel
     await Promise.allSettled([
       planApi.query('transferegov_especiais', 'plano_acao_especial', {
-        cnpj_beneficiario_plano_acao_especial: `eq.${cnpjDigits}`,
+        cnpj_beneficiario_plano_acao: `eq.${cnpjDigits}`,
         limit: '100',
       }),
       executorApi.query('transferegov_especiais', 'executor_especial', {
@@ -52,12 +52,13 @@ const TransfereGovSyncTab: React.FC = () => {
         limit: '100',
       }),
       empenhoApi.query('transferegov_especiais', 'empenho_especial', {
+        cnpj_beneficiario_empenho: `eq.${cnpjDigits}`,
         limit: '50',
-        order: 'data_emissao_empenho_especial.desc',
+        order: 'data_emissao_empenho.desc',
       }),
       pagamentoApi.query('transferegov_especiais', 'historico_pagamento_especial', {
         limit: '50',
-        order: 'data_pagamento_historico_pagamento_especial.desc',
+        order: 'data_hora_historico_op.desc',
       }),
       fundoApi.query('transferegov_fundo', 'programa', {
         limit: '50',
