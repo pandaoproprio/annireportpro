@@ -204,11 +204,14 @@ Deno.serve(async (req) => {
         }
       }
 
+      const hasLoggedIn = Boolean(lastLogin)
+      const hasHistoricalActivity = Boolean(lastActivityDate)
+      const hasNoTrackedHistory = !hasHistoricalActivity
+
       const daysInactive = lastActiveDate
         ? Math.max(0, Math.floor((nowMs - lastActiveDate.getTime()) / 86400000))
         : 999 // never logged in AND never registered activity
 
-      const neverParticipated = !lastLogin && !lastActivityDate
       const hasNoRecentActivity = activitiesCount === 0
 
       // Average task time
@@ -252,8 +255,8 @@ Deno.serve(async (req) => {
         : 0
 
       // ── SCORE CALCULATION ──
-      // KEY RULE: If you never participated, your score is 0.
-      // If you haven't done anything in the period, score reflects only engagement (login).
+      // KEY RULE: Without any tracked history in Diário de Bordo, score is 0.
+      // If there is historical participation but nothing in the recent period, score reflects only engagement.
       // Each dimension is 0-100.
 
       let engScore: number
@@ -262,8 +265,8 @@ Deno.serve(async (req) => {
       let qualScore: number
       let consScore: number
 
-      if (neverParticipated) {
-        // Never logged in, never did anything → everything is 0
+      if (hasNoTrackedHistory) {
+        // Never registered any tracked delivery → everything is 0
         engScore = 0; volScore = 0; effScore = 0; qualScore = 0; consScore = 0
       } else if (hasNoRecentActivity) {
         // Logged in before but no recent activity → engagement based on recency, rest is 0
@@ -297,9 +300,9 @@ Deno.serve(async (req) => {
       // Status
       let status = 'ok'
       const reasons: string[] = []
-      if (neverParticipated) {
+      if (hasNoTrackedHistory) {
         status = 'inactive'
-        reasons.push('Nunca acessou o sistema')
+        reasons.push(hasLoggedIn ? 'Sem histórico de participação no Diário de Bordo' : 'Nunca acessou o sistema')
       } else if (daysInactive > inactiveDays) {
         status = 'inactive'
         reasons.push(`${daysInactive} dias sem atividade`)
@@ -308,7 +311,7 @@ Deno.serve(async (req) => {
         status = status === 'ok' ? 'low_performance' : status
         reasons.push(`Produtividade: ${tasksPerDay.toFixed(1)} tarefas/dia`)
       }
-      if (activitiesCount === 0 && !neverParticipated && daysInactive <= inactiveDays) {
+      if (activitiesCount === 0 && hasHistoricalActivity && daysInactive <= inactiveDays) {
         status = 'low_performance'
         reasons.push('Sem atividades no período')
       }
@@ -370,7 +373,7 @@ Deno.serve(async (req) => {
       }
 
       // Alert: inactivity
-      if (daysInactive > inactiveDays && !neverParticipated) {
+      if (daysInactive > inactiveDays && hasHistoricalActivity) {
         newAlerts.push({
           alert_type: 'inactivity',
           user_id: uid,
