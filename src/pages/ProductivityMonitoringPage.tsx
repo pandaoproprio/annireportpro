@@ -670,6 +670,8 @@ const ProductivityMonitoringPage: React.FC = () => {
                         ))}
                     </tbody>
                   </table>
+                    );
+                  })()}
                 </div>
               )}
             </CardContent>
