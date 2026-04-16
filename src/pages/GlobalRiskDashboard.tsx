@@ -443,10 +443,13 @@ const GlobalRiskDashboard: React.FC = () => {
         )}
 
         <Tabs defaultValue="by-project">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="by-project">Por Projeto</TabsTrigger>
             <TabsTrigger value="all-risks">Todos os Riscos</TabsTrigger>
             <TabsTrigger value="matrix">Matriz Global</TabsTrigger>
+            <TabsTrigger value="analytics">Análise Avançada</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="lessons">Lições Aprendidas</TabsTrigger>
           </TabsList>
 
           {/* ── TAB: Por Projeto ── */}
