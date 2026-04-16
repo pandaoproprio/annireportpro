@@ -29,6 +29,7 @@ import { usePerformanceTracking } from '@/hooks/usePerformanceTracking';
 import { AiExecutiveSummary } from '@/components/dashboard/AiExecutiveSummary';
 import { ProactiveSummaryCard } from '@/components/dashboard/ProactiveSummaryCard';
 import { exportDashboardToPdf } from '@/lib/dashboardPdfExport';
+import { useGlobalStats } from '@/hooks/useGlobalStats';
 import { format, parseISO, startOfMonth, eachMonthOfInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
