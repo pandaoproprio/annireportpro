@@ -212,6 +212,13 @@ const GlobalRiskDashboard: React.FC = () => {
     return true;
   });
 
+  const totalEMV = risks
+    .filter(r => !['resolvido', 'aceito'].includes(r.status))
+    .reduce((sum, r) => sum + calculateEMV(r.probability, r.monetary_impact || 0), 0);
+
+  const escalatedCount = risks.filter(r => r.escalated_to && r.status !== 'resolvido').length;
+  const materializedCount = risks.filter(r => r.status === 'materializado').length;
+
   const globalSummary = {
     total: risks.length,
     critical: risks.filter(r => getRiskLevel(r.probability, r.impact).level === 'Crítico' && r.status !== 'resolvido').length,
@@ -221,6 +228,23 @@ const GlobalRiskDashboard: React.FC = () => {
     overdue: risks.filter(r => r.due_date && r.status !== 'resolvido' && new Date(r.due_date) < new Date()).length,
     projectCount: projects.length,
   };
+
+  // Category distribution
+  const categoryDistribution = risks
+    .filter(r => r.status !== 'resolvido')
+    .reduce((acc, r) => {
+      acc[r.category] = (acc[r.category] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+  const sortedCategories = Object.entries(categoryDistribution).sort((a, b) => b[1] - a[1]);
+
+  // Top critical risks
+  const topRisks = risks
+    .filter(r => r.status !== 'resolvido')
+    .map(r => ({ ...r, riskLevel: getRiskLevel(r.probability, r.impact) }))
+    .sort((a, b) => b.riskLevel.score - a.riskLevel.score)
+    .slice(0, 5);
 
   const getBadgeVariant = (level: string) => {
     if (level === 'Crítico') return 'destructive' as const;
@@ -246,56 +270,151 @@ const GlobalRiskDashboard: React.FC = () => {
           </Button>
         </div>
 
-        {/* Global Summary */}
+        {/* Global Summary Cards */}
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {[...Array(7)].map((_, i) => <Skeleton key={i} className="h-20 rounded-lg" />)}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-            <Card className="border-destructive/30 bg-destructive/5">
-              <CardContent className="p-3 text-center">
-                <p className="text-2xl font-bold text-destructive">{globalSummary.critical}</p>
-                <p className="text-xs text-muted-foreground">Críticos</p>
-              </CardContent>
-            </Card>
-            <Card className="border-orange-500/30 bg-orange-50 dark:bg-orange-500/5">
-              <CardContent className="p-3 text-center">
-                <p className="text-2xl font-bold text-orange-600">{globalSummary.high}</p>
-                <p className="text-xs text-muted-foreground">Altos</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 text-center">
-                <p className="text-2xl font-bold">{globalSummary.active}</p>
-                <p className="text-xs text-muted-foreground">Ativos</p>
-              </CardContent>
-            </Card>
-            <Card className="border-green-500/30 bg-green-50 dark:bg-green-500/5">
-              <CardContent className="p-3 text-center">
-                <p className="text-2xl font-bold text-green-600">{globalSummary.resolved}</p>
-                <p className="text-xs text-muted-foreground">Resolvidos</p>
-              </CardContent>
-            </Card>
-            <Card className="border-destructive/20">
-              <CardContent className="p-3 text-center">
-                <p className="text-2xl font-bold text-destructive">{globalSummary.overdue}</p>
-                <p className="text-xs text-muted-foreground">Atrasados</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 text-center">
-                <p className="text-2xl font-bold">{globalSummary.total}</p>
-                <p className="text-xs text-muted-foreground">Total</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-3 text-center">
-                <p className="text-2xl font-bold text-primary">{globalSummary.projectCount}</p>
-                <p className="text-xs text-muted-foreground">Projetos</p>
-              </CardContent>
-            </Card>
-          </div>
+          <>
+            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+              <Card className="border-destructive/30 bg-destructive/5">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-destructive">{globalSummary.critical}</p>
+                  <p className="text-xs text-muted-foreground">Críticos</p>
+                </CardContent>
+              </Card>
+              <Card className="border-orange-500/30 bg-orange-50 dark:bg-orange-500/5">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-orange-600">{globalSummary.high}</p>
+                  <p className="text-xs text-muted-foreground">Altos</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold">{globalSummary.active}</p>
+                  <p className="text-xs text-muted-foreground">Ativos</p>
+                </CardContent>
+              </Card>
+              <Card className="border-green-500/30 bg-green-50 dark:bg-green-500/5">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-green-600">{globalSummary.resolved}</p>
+                  <p className="text-xs text-muted-foreground">Resolvidos</p>
+                </CardContent>
+              </Card>
+              <Card className="border-destructive/20">
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-destructive">{globalSummary.overdue}</p>
+                  <p className="text-xs text-muted-foreground">Atrasados</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold">{globalSummary.total}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-2xl font-bold text-primary">{globalSummary.projectCount}</p>
+                  <p className="text-xs text-muted-foreground">Projetos</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* EMV + Escalation + Materialized Banner */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Card className="border-primary/20 bg-primary/5">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Exposição Total (EMV)</p>
+                    <p className="text-lg font-bold">R$ {totalEMV.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className={escalatedCount > 0 ? 'border-orange-500/30 bg-orange-50 dark:bg-orange-500/5' : ''}>
+                <CardContent className="p-3 flex items-center gap-3">
+                  <ArrowUpCircle className="w-5 h-5 text-orange-500" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Riscos Escalados</p>
+                    <p className="text-lg font-bold">{escalatedCount}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card className={materializedCount > 0 ? 'border-destructive/30 bg-destructive/5' : ''}>
+                <CardContent className="p-3 flex items-center gap-3">
+                  <AlertTriangle className="w-5 h-5 text-destructive" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Materializados</p>
+                    <p className="text-lg font-bold">{materializedCount}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Category + Top Risks side-by-side */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Category Distribution */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <Layers className="w-4 h-4" /> Distribuição por Categoria
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {sortedCategories.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sem riscos ativos.</p>
+                  ) : sortedCategories.map(([cat, count]) => {
+                    const pct = Math.round((count / globalSummary.active) * 100);
+                    return (
+                      <div key={cat} className="flex items-center gap-2">
+                        <span className="text-xs font-medium w-24 truncate">{CATEGORY_LABELS[cat] || cat}</span>
+                        <Progress value={pct} className="h-2 flex-1" />
+                        <span className="text-xs text-muted-foreground w-12 text-right">{count} ({pct}%)</span>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+
+              {/* Top 5 Risks */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4" /> Top 5 Riscos Mais Críticos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {topRisks.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Sem riscos ativos.</p>
+                  ) : topRisks.map((risk, i) => {
+                    const emv = calculateEMV(risk.probability, risk.monetary_impact || 0);
+                    return (
+                      <div key={risk.id} className="flex items-center gap-2 text-xs border-b pb-1.5 last:border-0">
+                        <span className="font-bold text-muted-foreground w-5">{i + 1}.</span>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium truncate block">{risk.title}</span>
+                          <span className="text-[10px] text-primary/70 cursor-pointer hover:underline" onClick={() => goToProjectRisks(risk.project_id)}>
+                            📁 {risk.project_name}
+                          </span>
+                        </div>
+                        <Badge variant={getBadgeVariant(risk.riskLevel.level)} className="text-[10px]">
+                          {risk.riskLevel.level} ({risk.riskLevel.score})
+                        </Badge>
+                        {emv > 0 && (
+                          <span className="text-[10px] text-muted-foreground whitespace-nowrap">
+                            R$ {emv >= 1000 ? `${(emv / 1000).toFixed(1)}k` : emv.toFixed(0)}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            </div>
+          </>
+        )}
         )}
 
         <Tabs defaultValue="by-project">
