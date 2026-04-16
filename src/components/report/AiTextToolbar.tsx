@@ -134,11 +134,11 @@ export const AiTextToolbar: React.FC<AiTextToolbarProps> = ({
           variant="outline"
           size="sm"
           disabled={isProcessing || disabled}
-          className="gap-1.5 text-xs"
+          className="gap-2 text-sm font-medium whitespace-nowrap border-primary/40 bg-primary/5 text-primary hover:bg-primary/10"
         >
           {isProcessing ? (
             <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
               {currentMode === 'correct' ? 'Corrigindo...' :
                currentMode === 'rewrite' ? 'Reescrevendo...' :
                currentMode === 'expand' ? 'Expandindo...' :
@@ -146,8 +146,8 @@ export const AiTextToolbar: React.FC<AiTextToolbarProps> = ({
             </>
           ) : (
             <>
-              <Sparkles className="w-3.5 h-3.5" />
-              IA
+              <Sparkles className="w-4 h-4" />
+              💡 Sugerir com IA
             </>
           )}
         </Button>
