@@ -31,12 +31,17 @@ Deno.serve(async (req) => {
     const config = configRow
     const inactiveDays = config.inactive_days_threshold || 3
     const minTasksPerDay = Number(config.min_tasks_per_day) || 1
+    const scoreWeights = config.score_weights || { engagement: 20, volume: 20, efficiency: 20, quality: 20, consistency: 20 }
+    const dropThreshold = Number(config.productivity_drop_threshold) || 30
 
     // 2. Get all non-superadmin users
     const { data: allRoles } = await supabase.from('user_roles').select('user_id, role')
-    const superAdminIds = new Set(
-      (allRoles || []).filter(r => r.role === 'super_admin').map(r => r.user_id)
-    )
+    const roleMap = new Map<string, string>()
+    const superAdminIds = new Set<string>()
+    for (const r of allRoles || []) {
+      roleMap.set(r.user_id, r.role)
+      if (r.role === 'super_admin') superAdminIds.add(r.user_id)
+    }
     const userIds = (allRoles || [])
       .filter(r => r.role !== 'super_admin')
       .map(r => r.user_id)
@@ -47,13 +52,13 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 3. Get profiles for name/email
+    // 3. Get profiles
     const { data: profiles } = await supabase
       .from('profiles')
       .select('user_id, name, email, last_login_at')
       .in('user_id', userIds)
 
-    // 3b. Get auth.users last_sign_in_at (more accurate than profiles.last_login_at)
+    // 3b. Auth users last_sign_in_at
     const { data: authUsersData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
     const authUsersMap = new Map<string, Date | null>()
     if (authUsersData?.users) {
@@ -61,30 +66,104 @@ Deno.serve(async (req) => {
         authUsersMap.set(u.id, u.last_sign_in_at ? new Date(u.last_sign_in_at) : null)
       }
     }
-
     const profileMap = new Map((profiles || []).map(p => [p.user_id, p]))
 
-    // 4. Get activities from last 30 days for all users
+    // 4. Get user-project associations
+    const { data: collabs } = await supabase
+      .from('project_collaborators')
+      .select('user_id, project_id')
+      .in('user_id', userIds)
+
+    const { data: projectRows } = await supabase
+      .from('projects')
+      .select('id, name')
+
+    const projectNameMap = new Map((projectRows || []).map(p => [p.id, p.name]))
+    const userProjectsMap = new Map<string, { id: string; name: string }[]>()
+    for (const c of collabs || []) {
+      if (!userProjectsMap.has(c.user_id)) userProjectsMap.set(c.user_id, [])
+      userProjectsMap.get(c.user_id)!.push({
+        id: c.project_id,
+        name: projectNameMap.get(c.project_id) || 'Projeto',
+      })
+    }
+
+    // 5. Get activities from last 30 days
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
     const { data: activities } = await supabase
       .from('activities')
-      .select('id, user_id, date, created_at, updated_at')
+      .select('id, user_id, date, created_at, updated_at, is_draft')
       .is('deleted_at', null)
       .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
       .in('user_id', userIds)
 
-    // Group activities by user
     const actByUser = new Map<string, any[]>()
     for (const a of activities || []) {
       if (!actByUser.has(a.user_id)) actByUser.set(a.user_id, [])
       actByUser.get(a.user_id)!.push(a)
     }
 
-    // 5. Compute snapshots
+    // 6. Get report_performance_tracking for reopen_count
+    const { data: perfTracking } = await supabase
+      .from('report_performance_tracking')
+      .select('user_id, reopen_count')
+      .in('user_id', userIds)
+
+    const reopenByUser = new Map<string, number>()
+    for (const pt of perfTracking || []) {
+      reopenByUser.set(pt.user_id, (reopenByUser.get(pt.user_id) || 0) + (pt.reopen_count || 0))
+    }
+
+    // 7. Get report_workflows for overdue count
+    const { data: workflows } = await supabase
+      .from('report_workflows')
+      .select('user_id, status, deadline_at')
+      .in('user_id', userIds)
+
+    const overdueByUser = new Map<string, number>()
+    const now = Date.now()
+    for (const w of workflows || []) {
+      if (w.deadline_at && new Date(w.deadline_at).getTime() < now && w.status !== 'publicado' && w.status !== 'aprovado') {
+        overdueByUser.set(w.user_id, (overdueByUser.get(w.user_id) || 0) + 1)
+      }
+    }
+
+    // 8. Get previous day snapshots for drop detection
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const { data: prevSnaps } = await supabase
+      .from('user_productivity_snapshots')
+      .select('user_id, score, activities_count')
+      .eq('snapshot_date', yesterday.toISOString().split('T')[0])
+
+    const prevScoreMap = new Map<string, number>()
+    for (const ps of prevSnaps || []) {
+      prevScoreMap.set(ps.user_id, Number(ps.score) || 0)
+    }
+
+    // 9. Compute snapshots
     const snapshots: any[] = []
     const alertUsers: { name: string; email: string; reason: string }[] = []
+    const newAlerts: any[] = []
+
+    // First pass: collect activities counts for benchmark
+    const allCounts: number[] = []
+    const userCountMap = new Map<string, number>()
+    for (const uid of userIds) {
+      const c = (actByUser.get(uid) || []).length
+      allCounts.push(c)
+      userCountMap.set(uid, c)
+    }
+    const teamAvg = allCounts.length > 0 ? allCounts.reduce((a, b) => a + b, 0) / allCounts.length : 0
+    const sortedCounts = [...allCounts].sort((a, b) => a - b)
+
+    function percentile(val: number): number {
+      if (sortedCounts.length === 0) return 50
+      const below = sortedCounts.filter(v => v < val).length
+      return Math.round((below / sortedCounts.length) * 100)
+    }
 
     for (const uid of userIds) {
       const profile = profileMap.get(uid)
@@ -92,14 +171,16 @@ Deno.serve(async (req) => {
 
       const userActs = actByUser.get(uid) || []
       const activitiesCount = userActs.length
+      const tasksStarted = userActs.filter(a => a.is_draft).length
+      const tasksFinished = userActs.filter(a => !a.is_draft).length
 
-      // Days inactive — use auth.users last_sign_in_at (same source as User Management page)
+      // Days inactive
       const lastLogin = authUsersMap.get(uid) || null
       const daysInactive = lastLogin
         ? Math.floor((Date.now() - lastLogin.getTime()) / 86400000)
         : 999
 
-      // Average task time (created_at → updated_at as proxy)
+      // Average task time
       let avgSeconds: number | null = null
       const taskTimes: number[] = []
       for (const a of userActs) {
@@ -112,14 +193,51 @@ Deno.serve(async (req) => {
         avgSeconds = taskTimes.reduce((s, t) => s + t, 0) / taskTimes.length
       }
 
-      // Tasks per day (over 30 day window)
       const tasksPerDay = activitiesCount / 30
 
-      // SLA - simple: count tasks where time > max threshold
+      // SLA
       const maxSla = config.max_avg_task_seconds || 86400
       const slaTotal = taskTimes.length
       const slaViolations = taskTimes.filter(t => t > maxSla).length
       const slaPct = slaTotal > 0 ? ((slaTotal - slaViolations) / slaTotal) * 100 : 100
+
+      // Quality
+      const reopenCount = reopenByUser.get(uid) || 0
+      const overdueCount = overdueByUser.get(uid) || 0
+
+      // Concurrent tasks (drafts)
+      const concurrentTasks = tasksStarted
+
+      // Delivery regularity (std dev of weekly counts over 4 weeks)
+      const weekBuckets = [0, 0, 0, 0]
+      for (const a of userActs) {
+        const daysDiff = Math.floor((Date.now() - new Date(a.date).getTime()) / 86400000)
+        const weekIdx = Math.min(3, Math.floor(daysDiff / 7))
+        weekBuckets[weekIdx]++
+      }
+      const weekMean = weekBuckets.reduce((a, b) => a + b, 0) / 4
+      const weekStdDev = weekMean > 0
+        ? Math.sqrt(weekBuckets.reduce((s, v) => s + (v - weekMean) ** 2, 0) / 4) / weekMean
+        : 0
+      const deliveryRegularity = Math.round((1 - Math.min(weekStdDev, 1)) * 100)
+
+      // Score calculation
+      const engScore = Math.max(0, 100 - daysInactive * 15) // penalize inactivity
+      const volScore = Math.min(100, (tasksPerDay / Math.max(minTasksPerDay, 0.1)) * 100)
+      const effScore = slaTotal > 0 ? slaPct : (activitiesCount > 0 ? 70 : 50)
+      const qualScore = Math.max(0, 100 - reopenCount * 20 - overdueCount * 10)
+      const consScore = deliveryRegularity
+
+      const wTotal = (scoreWeights.engagement || 20) + (scoreWeights.volume || 20) + (scoreWeights.efficiency || 20) + (scoreWeights.quality || 20) + (scoreWeights.consistency || 20)
+      const score = wTotal > 0
+        ? (engScore * (scoreWeights.engagement || 20)
+          + volScore * (scoreWeights.volume || 20)
+          + effScore * (scoreWeights.efficiency || 20)
+          + qualScore * (scoreWeights.quality || 20)
+          + consScore * (scoreWeights.consistency || 20)) / wTotal
+        : 0
+
+      const percentileRank = percentile(activitiesCount)
 
       // Status
       let status = 'ok'
@@ -136,6 +254,9 @@ Deno.serve(async (req) => {
         reasons.push(`${slaViolations} violações de SLA`)
       }
 
+      const userProjects = userProjectsMap.get(uid) || []
+      const userRole = roleMap.get(uid) || 'usuario'
+
       snapshots.push({
         user_id: uid,
         snapshot_date: today,
@@ -147,25 +268,83 @@ Deno.serve(async (req) => {
         sla_total: slaTotal,
         sla_pct_on_time: Number(slaPct.toFixed(2)),
         status,
+        tasks_started: tasksStarted,
+        tasks_finished: tasksFinished,
+        reopen_count: reopenCount,
+        overdue_count: overdueCount,
+        concurrent_tasks: concurrentTasks,
+        delivery_regularity: deliveryRegularity,
+        team_avg_activities: Number(teamAvg.toFixed(2)),
+        percentile_rank: percentileRank,
+        score: Number(score.toFixed(1)),
+        user_projects: userProjects,
+        user_role: userRole,
       })
+
+      // Intelligent alerts
+      const userName = profile.name || profile.email
+
+      // Alert: sudden drop
+      const prevScore = prevScoreMap.get(uid)
+      if (prevScore !== undefined && prevScore > 0 && score < prevScore * (1 - dropThreshold / 100)) {
+        newAlerts.push({
+          alert_type: 'productivity_drop',
+          user_id: uid,
+          user_name: userName,
+          description: `Score caiu de ${prevScore.toFixed(0)} para ${score.toFixed(0)} (queda de ${((1 - score / prevScore) * 100).toFixed(0)}%)`,
+          severity: 'critical',
+        })
+      }
+
+      // Alert: recurring SLA violations
+      if (slaViolations >= 3) {
+        newAlerts.push({
+          alert_type: 'recurring_sla',
+          user_id: uid,
+          user_name: userName,
+          description: `${slaViolations} violações de SLA no período`,
+          severity: 'warning',
+        })
+      }
+
+      // Alert: avg time above team
+      if (avgSeconds && teamAvg > 0) {
+        const teamAvgTime = taskTimes.length > 0 ? avgSeconds : 0
+        // This is a proxy; real team avg time would require more complex calculation
+      }
+
+      if (daysInactive > inactiveDays) {
+        newAlerts.push({
+          alert_type: 'inactivity',
+          user_id: uid,
+          user_name: userName,
+          description: `${daysInactive} dias sem acessar o sistema`,
+          severity: daysInactive > inactiveDays * 2 ? 'critical' : 'warning',
+        })
+      }
 
       if (reasons.length > 0) {
         alertUsers.push({
-          name: profile.name || profile.email,
+          name: userName,
           email: profile.email,
           reason: reasons.join('; '),
         })
       }
     }
 
-    // 6. Upsert snapshots
+    // 10. Upsert snapshots
     if (snapshots.length > 0) {
       await supabase.from('user_productivity_snapshots').upsert(snapshots, {
         onConflict: 'user_id,snapshot_date',
       })
     }
 
-    // 7. Send email alerts if there are issues
+    // 11. Insert alerts
+    if (newAlerts.length > 0) {
+      await supabase.from('monitoring_alerts').insert(newAlerts)
+    }
+
+    // 12. Send email alerts
     if (alertUsers.length > 0) {
       const { data: emailRecipients } = await supabase
         .from('monitoring_emails')
@@ -226,7 +405,8 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({
       message: 'Monitoramento concluído',
       snapshotsCreated: snapshots.length,
-      alertsTriggered: alertUsers.length,
+      alertsTriggered: newAlerts.length,
+      emailAlerts: alertUsers.length,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
