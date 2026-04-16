@@ -109,6 +109,9 @@ const GlobalRiskDashboard: React.FC = () => {
             critical: 0,
             high: 0,
             active: 0,
+            totalEMV: 0,
+            escalated: 0,
+            overdue: 0,
           });
         }
         const s = summaryMap.get(r.project_id)!;
@@ -116,7 +119,12 @@ const GlobalRiskDashboard: React.FC = () => {
         const level = getRiskLevel(r.probability, r.impact).level;
         if (level === 'Crítico' && r.status !== 'resolvido') s.critical++;
         if (level === 'Alto' && r.status !== 'resolvido') s.high++;
-        if (!['resolvido', 'aceito'].includes(r.status)) s.active++;
+        if (!['resolvido', 'aceito'].includes(r.status)) {
+          s.active++;
+          s.totalEMV += calculateEMV(r.probability, r.monetary_impact || 0);
+        }
+        if (r.escalated_to && r.status !== 'resolvido') s.escalated++;
+        if (r.due_date && r.status !== 'resolvido' && new Date(r.due_date) < new Date()) s.overdue++;
       }
       setProjects(Array.from(summaryMap.values()).sort((a, b) => b.critical - a.critical || b.high - a.high));
     } catch (err) {
