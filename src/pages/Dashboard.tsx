@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target, BarChart3, Download, FolderOpen as FolderIcon, Activity, Users, CalendarClock, FileText, AlertTriangle, TrendingUp, ClipboardList } from 'lucide-react';
+import { FolderPlus, PlusCircle, ArrowRight, Loader2, FileEdit, Target, BarChart3, Download, Activity, Users, CalendarClock, FileText, AlertTriangle, TrendingUp, ClipboardList } from 'lucide-react';
 import { PageTransition, FadeIn, StaggerContainer, StaggerItem } from '@/components/ui/page-transition';
 import { StatCardSkeleton, CardSkeleton } from '@/components/ui/content-skeleton';
 import { ActivitiesByMonthChart } from '@/components/dashboard/ActivitiesByMonthChart';
