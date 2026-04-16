@@ -50,6 +50,7 @@ const ProductivityMonitoringPage: React.FC = () => {
   const [newEmail, setNewEmail] = useState('');
   const [running, setRunning] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [kpiFilter, setKpiFilter] = useState<string | null>(null);
   const [editConfig, setEditConfig] = useState<Record<string, any> | null>(null);
   const [asanaBoards, setAsanaBoards] = useState<any[]>([]);
   const [asanaBoardsLoading, setAsanaBoardsLoading] = useState(false);
