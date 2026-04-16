@@ -219,6 +219,7 @@ export type Database = {
           enable_notifications: boolean
           enable_sync_status: boolean
           id: string
+          is_globally_enabled: boolean
           project_gid: string
           updated_at: string
           workspace_gid: string
@@ -231,6 +232,7 @@ export type Database = {
           enable_notifications?: boolean
           enable_sync_status?: boolean
           id?: string
+          is_globally_enabled?: boolean
           project_gid?: string
           updated_at?: string
           workspace_gid?: string
@@ -243,7 +245,100 @@ export type Database = {
           enable_notifications?: boolean
           enable_sync_status?: boolean
           id?: string
+          is_globally_enabled?: boolean
           project_gid?: string
+          updated_at?: string
+          workspace_gid?: string
+        }
+        Relationships: []
+      }
+      asana_sync_logs: {
+        Row: {
+          asana_task_gid: string | null
+          created_at: string
+          direction: string
+          entity_id: string | null
+          entity_type: string
+          error_message: string | null
+          event_type: string
+          id: string
+          metadata: Json | null
+          status: string
+          synced_project_id: string | null
+        }
+        Insert: {
+          asana_task_gid?: string | null
+          created_at?: string
+          direction?: string
+          entity_id?: string | null
+          entity_type?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          synced_project_id?: string | null
+        }
+        Update: {
+          asana_task_gid?: string | null
+          created_at?: string
+          direction?: string
+          entity_id?: string | null
+          entity_type?: string
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          status?: string
+          synced_project_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asana_sync_logs_synced_project_id_fkey"
+            columns: ["synced_project_id"]
+            isOneToOne: false
+            referencedRelation: "asana_synced_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asana_synced_projects: {
+        Row: {
+          asana_project_gid: string
+          asana_project_name: string
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          last_error: string | null
+          last_synced_at: string | null
+          sync_status: string
+          updated_at: string
+          workspace_gid: string
+        }
+        Insert: {
+          asana_project_gid: string
+          asana_project_name?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_synced_at?: string | null
+          sync_status?: string
+          updated_at?: string
+          workspace_gid?: string
+        }
+        Update: {
+          asana_project_gid?: string
+          asana_project_name?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          last_error?: string | null
+          last_synced_at?: string | null
+          sync_status?: string
           updated_at?: string
           workspace_gid?: string
         }
@@ -251,31 +346,37 @@ export type Database = {
       }
       asana_task_mappings: {
         Row: {
+          asana_project_gid: string | null
           asana_task_gid: string
           created_at: string
           entity_id: string
           entity_type: string
           id: string
+          last_remote_update: string | null
           project_id: string
           synced_at: string
           user_id: string
         }
         Insert: {
+          asana_project_gid?: string | null
           asana_task_gid: string
           created_at?: string
           entity_id: string
           entity_type: string
           id?: string
+          last_remote_update?: string | null
           project_id: string
           synced_at?: string
           user_id: string
         }
         Update: {
+          asana_project_gid?: string | null
           asana_task_gid?: string
           created_at?: string
           entity_id?: string
           entity_type?: string
           id?: string
+          last_remote_update?: string | null
           project_id?: string
           synced_at?: string
           user_id?: string
