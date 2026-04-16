@@ -149,6 +149,13 @@ const ProductivityMonitoringPage: React.FC = () => {
         .select('*')
         .order('created_at', { ascending: true });
       setAsanaBoards(data || []);
+      // Reload asana snapshots
+      const { data: snaps } = await supabase
+        .from('monitoring_asana_snapshots')
+        .select('*')
+        .not('mapped_user_id', 'is', null)
+        .order('snapshot_date', { ascending: false });
+      setAsanaSnapshots(snaps || []);
     } catch {
       toast.error('Erro ao sincronizar com Asana');
     }
