@@ -107,18 +107,26 @@ export const Dashboard: React.FC = () => {
     );
   }
 
+  const publishedActivities = activities.filter(a => !a.isDraft);
+  const draftActivities = activities.filter(a => a.isDraft);
+
   const stats = isSuperAdmin && globalStats
     ? [
-        { label: 'Projetos', value: globalStats.totalProjects, color: 'text-brand-600', href: '/settings' },
-        { label: 'Atividades Totais', value: globalStats.totalActivities, color: 'text-info', href: '/activities' },
-        { label: 'Pessoas Impactadas', value: globalStats.totalAttendees, color: 'text-success', href: '/activities' },
-        { label: 'Metas Ativas', value: globalStats.totalGoals, color: 'text-warning', href: '/settings' },
+        { label: 'Projetos', value: globalStats.totalProjects, color: 'text-primary', href: '/settings', icon: FolderPlus, subtitle: 'cadastrados no sistema' },
+        { label: 'Atividades', value: globalStats.totalActivities, color: 'text-info', href: '/activities', icon: Activity, subtitle: 'publicadas (excl. rascunhos)' },
+        { label: 'Pessoas Impactadas', value: globalStats.totalAttendees, color: 'text-success', href: '/activities', icon: Users, subtitle: 'em atividades publicadas' },
+        { label: 'Metas Ativas', value: globalStats.totalGoals, color: 'text-warning', href: '/settings', icon: Target, subtitle: 'em todos os projetos' },
+        { label: 'Rascunhos', value: globalStats.draftCount, color: 'text-muted-foreground', href: '/activities', icon: ClipboardList, subtitle: 'pendentes de publicação' },
+        { label: 'Relatórios', value: globalStats.totalReports, color: 'text-info', href: '/report', icon: FileText, subtitle: 'gerados no sistema' },
+        { label: 'Riscos Ativos', value: globalStats.totalRisks, color: 'text-destructive', href: '/risk-management', icon: AlertTriangle, subtitle: 'não resolvidos' },
+        { label: 'Taxa de Execução', value: `${globalStats.executionRate}%`, color: 'text-success', icon: TrendingUp, subtitle: 'atividades publicadas vs total' },
       ]
     : [
-        { label: 'Atividades Totais', value: activities.length, color: 'text-info', href: '/activities' },
-        { label: 'Pessoas Impactadas', value: activities.reduce((acc, curr) => acc + (curr.attendeesCount || 0), 0), color: 'text-success', href: '/activities' },
-        { label: 'Metas Ativas', value: project.goals.length, color: 'text-brand-600', href: '/settings' },
-        { label: 'Dias Restantes', value: project.endDate ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '-', color: 'text-warning', href: '/settings' },
+        { label: 'Atividades', value: publishedActivities.length, color: 'text-info', href: '/activities', icon: Activity, subtitle: 'publicadas neste projeto' },
+        { label: 'Pessoas Impactadas', value: publishedActivities.reduce((acc, curr) => acc + (curr.attendeesCount || 0), 0), color: 'text-success', href: '/activities', icon: Users, subtitle: 'em atividades publicadas' },
+        { label: 'Metas Ativas', value: project.goals.length, color: 'text-primary', href: '/settings', icon: Target, subtitle: 'cadastradas no projeto' },
+        { label: 'Dias Restantes', value: project.endDate ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '-', color: 'text-warning', href: '/settings', icon: CalendarClock, subtitle: project.endDate ? `até ${new Date(project.endDate).toLocaleDateString('pt-BR')}` : 'sem prazo definido' },
+        ...(draftActivities.length > 0 ? [{ label: 'Rascunhos', value: draftActivities.length, color: 'text-muted-foreground', href: '/activities', icon: ClipboardList, subtitle: 'pendentes de publicação' }] : []),
       ];
 
   return (
