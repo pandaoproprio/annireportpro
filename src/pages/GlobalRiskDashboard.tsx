@@ -6,6 +6,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { getRiskLevel, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS, RiskFormData, calculateEMV } from '@/hooks/useProjectRisks';
 import { RiskMatrix } from '@/components/risks/RiskMatrix';
 import { RiskFormDialog } from '@/components/risks/RiskFormDialog';
+import { MonteCarloSimulation } from '@/components/risks/MonteCarloSimulation';
+import { RiskRadarChart } from '@/components/risks/RiskRadarChart';
+import { RiskTrendChart } from '@/components/risks/RiskTrendChart';
+import { RiskLessonsLearned } from '@/components/risks/RiskLessonsLearned';
+import { RiskMitigationTimeline } from '@/components/risks/RiskMitigationTimeline';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -42,6 +47,8 @@ interface RiskWithProject {
   auto_task_created: boolean;
   linked_goal_id: string | null;
   created_at: string;
+  resolved_at: string | null;
+  metadata: any;
 }
 
 interface ProjectSummary {
@@ -197,6 +204,22 @@ const GlobalRiskDashboard: React.FC = () => {
   const goToProjectRisks = (projectId: string) => {
     switchProject(projectId);
     navigate('/risks');
+  };
+
+  const handleSaveLesson = async (riskId: string, lesson: { what_worked: string; what_failed: string; recommendation: string }) => {
+    try {
+      const risk = risks.find(r => r.id === riskId);
+      const currentMetadata = risk?.metadata || {};
+      const { error } = await supabase
+        .from('project_risks' as any)
+        .update({ metadata: { ...currentMetadata, lessons_learned: lesson } } as any)
+        .eq('id', riskId);
+      if (error) throw error;
+      toast.success('Lição aprendida salva com sucesso');
+      await fetchAllRisks();
+    } catch (err) {
+      toast.error('Erro ao salvar lição aprendida');
+    }
   };
 
   if (!isSuperAdmin) return (
@@ -420,10 +443,13 @@ const GlobalRiskDashboard: React.FC = () => {
         )}
 
         <Tabs defaultValue="by-project">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6">
             <TabsTrigger value="by-project">Por Projeto</TabsTrigger>
             <TabsTrigger value="all-risks">Todos os Riscos</TabsTrigger>
             <TabsTrigger value="matrix">Matriz Global</TabsTrigger>
+            <TabsTrigger value="analytics">Análise Avançada</TabsTrigger>
+            <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            <TabsTrigger value="lessons">Lições Aprendidas</TabsTrigger>
           </TabsList>
 
           {/* ── TAB: Por Projeto ── */}
@@ -670,6 +696,25 @@ const GlobalRiskDashboard: React.FC = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          {/* ── TAB: Análise Avançada ── */}
+          <TabsContent value="analytics" className="space-y-4 mt-4">
+            <MonteCarloSimulation risks={risks} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <RiskRadarChart risks={risks} />
+              <RiskTrendChart risks={risks} />
+            </div>
+          </TabsContent>
+
+          {/* ── TAB: Timeline ── */}
+          <TabsContent value="timeline" className="mt-4">
+            <RiskMitigationTimeline risks={risks} />
+          </TabsContent>
+
+          {/* ── TAB: Lições Aprendidas ── */}
+          <TabsContent value="lessons" className="mt-4">
+            <RiskLessonsLearned risks={risks} onSaveLesson={handleSaveLesson} />
           </TabsContent>
         </Tabs>
 
