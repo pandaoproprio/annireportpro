@@ -101,12 +101,12 @@ const ProductivityMonitoringPage: React.FC = () => {
   // Chart data: ranking by activities
   const rankingData = [...latestSnapshots]
     .sort((a, b) => b.activities_count - a.activities_count)
-    .slice(0, 15)
     .map(s => ({
-      name: (s.user_name || '').split(' ')[0],
+      name: (s.user_name || '').split(' ').slice(0, 2).join(' '),
       atividades: s.activities_count,
       sla: Number(s.sla_pct_on_time),
     }));
+  const rankingChartHeight = Math.max(300, rankingData.length * 32);
 
   // Chart data: activity over time (aggregate by date)
   const byDate = new Map<string, number>();
