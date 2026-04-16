@@ -154,6 +154,9 @@ export function useRiskIntelligence(projectId: string | undefined) {
       mitigation_plan: suggestion.mitigation_plan,
       contingency_plan: suggestion.contingency_plan,
       responsible: '',
+      risk_owner: '',
+      linked_goal_id: '',
+      monetary_impact: 0,
       due_date: '',
     });
     if (ok) {
