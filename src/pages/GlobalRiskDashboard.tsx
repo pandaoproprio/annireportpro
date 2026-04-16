@@ -206,6 +206,22 @@ const GlobalRiskDashboard: React.FC = () => {
     navigate('/risks');
   };
 
+  const handleSaveLesson = async (riskId: string, lesson: { what_worked: string; what_failed: string; recommendation: string }) => {
+    try {
+      const risk = risks.find(r => r.id === riskId);
+      const currentMetadata = risk?.metadata || {};
+      const { error } = await supabase
+        .from('project_risks' as any)
+        .update({ metadata: { ...currentMetadata, lessons_learned: lesson } } as any)
+        .eq('id', riskId);
+      if (error) throw error;
+      toast.success('Lição aprendida salva com sucesso');
+      await fetchAllRisks();
+    } catch (err) {
+      toast.error('Erro ao salvar lição aprendida');
+    }
+  };
+
   if (!isSuperAdmin) return (
     <PageTransition>
       <div className="p-6 text-center text-muted-foreground">
