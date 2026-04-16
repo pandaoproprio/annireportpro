@@ -56,6 +56,7 @@ const ProductivityMonitoringPage: React.FC = () => {
   const [asanaBoards, setAsanaBoards] = useState<any[]>([]);
   const [asanaBoardsLoading, setAsanaBoardsLoading] = useState(false);
   const [newBoardUrl, setNewBoardUrl] = useState('');
+  const [asanaSnapshots, setAsanaSnapshots] = useState<any[]>([]);
   const [addingBoard, setAddingBoard] = useState(false);
   const [syncingAsana, setSyncingAsana] = useState(false);
 
