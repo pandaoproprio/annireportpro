@@ -311,43 +311,43 @@ const GlobalRiskDashboard: React.FC = () => {
         ) : (
           <>
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-              <Card className="border-destructive/30 bg-destructive/5">
+              <Card className={`border-destructive/30 bg-destructive/5 cursor-pointer hover:shadow-md transition-shadow ${filterStatus === 'critico' ? 'ring-2 ring-destructive' : ''}`} onClick={() => setFilterStatus(filterStatus === 'critico' ? 'all' : 'critico')}>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-destructive">{globalSummary.critical}</p>
                   <p className="text-xs text-muted-foreground">Críticos</p>
                 </CardContent>
               </Card>
-              <Card className="border-orange-500/30 bg-orange-50 dark:bg-orange-500/5">
+              <Card className={`border-orange-500/30 bg-orange-50 dark:bg-orange-500/5 cursor-pointer hover:shadow-md transition-shadow ${filterStatus === 'alto' ? 'ring-2 ring-orange-500' : ''}`} onClick={() => setFilterStatus(filterStatus === 'alto' ? 'all' : 'alto')}>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-orange-600">{globalSummary.high}</p>
                   <p className="text-xs text-muted-foreground">Altos</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className={`cursor-pointer hover:shadow-md transition-shadow ${filterStatus === 'ativo' ? 'ring-2 ring-primary' : ''}`} onClick={() => setFilterStatus(filterStatus === 'ativo' ? 'all' : 'ativo')}>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold">{globalSummary.active}</p>
                   <p className="text-xs text-muted-foreground">Ativos</p>
                 </CardContent>
               </Card>
-              <Card className="border-green-500/30 bg-green-50 dark:bg-green-500/5">
+              <Card className={`border-green-500/30 bg-green-50 dark:bg-green-500/5 cursor-pointer hover:shadow-md transition-shadow ${filterStatus === 'resolvido' ? 'ring-2 ring-green-500' : ''}`} onClick={() => setFilterStatus(filterStatus === 'resolvido' ? 'all' : 'resolvido')}>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-green-600">{globalSummary.resolved}</p>
                   <p className="text-xs text-muted-foreground">Resolvidos</p>
                 </CardContent>
               </Card>
-              <Card className="border-destructive/20">
+              <Card className={`border-destructive/20 cursor-pointer hover:shadow-md transition-shadow ${filterStatus === 'atrasado' ? 'ring-2 ring-destructive' : ''}`} onClick={() => setFilterStatus(filterStatus === 'atrasado' ? 'all' : 'atrasado')}>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-destructive">{globalSummary.overdue}</p>
                   <p className="text-xs text-muted-foreground">Atrasados</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterStatus('all')}>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold">{globalSummary.total}</p>
                   <p className="text-xs text-muted-foreground">Total</p>
                 </CardContent>
               </Card>
-              <Card>
+              <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setFilterStatus('all')}>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-primary">{globalSummary.projectCount}</p>
                   <p className="text-xs text-muted-foreground">Projetos</p>
