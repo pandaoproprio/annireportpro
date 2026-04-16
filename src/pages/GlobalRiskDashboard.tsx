@@ -53,8 +53,6 @@ const GlobalRiskDashboard: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
 
-  const isSuperAdmin = hasRole('super_admin');
-
   const fetchAllRisks = useCallback(async () => {
     setIsLoading(true);
     try {
