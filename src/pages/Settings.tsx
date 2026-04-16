@@ -720,6 +720,50 @@ export const Settings: React.FC = () => {
         confirmLabel="Sair"
         onConfirm={handleLogout}
       />
+
+      {/* LGPD Delete Data Confirm Dialog */}
+      <ConfirmDialog
+        open={showDeleteDataConfirm}
+        onOpenChange={(open) => { setShowDeleteDataConfirm(open); if (!open) setDeleteConfirmText(''); }}
+        title="⚠️ Exclusão Definitiva de Dados"
+        description={
+          <div className="space-y-3">
+            <p>Esta ação é <strong>irreversível</strong>. Todos os seus dados pessoais, atividades, relatórios e registros serão permanentemente excluídos e sua conta será desativada.</p>
+            <p className="text-sm text-muted-foreground">Digite <strong>EXCLUIR MEUS DADOS</strong> para confirmar:</p>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="EXCLUIR MEUS DADOS"
+              className="font-mono"
+            />
+          </div>
+        }
+        confirmLabel={isDeletingData ? 'Excluindo...' : 'Excluir Permanentemente'}
+        variant="destructive"
+        onConfirm={async () => {
+          if (deleteConfirmText !== 'EXCLUIR MEUS DADOS') {
+            toast.error('Confirmação incorreta');
+            return;
+          }
+          setIsDeletingData(true);
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Sessão expirada');
+            const resp = await supabase.functions.invoke('lgpd-data-deletion', {
+              body: { confirmation: 'EXCLUIR MEUS DADOS' },
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (resp.error) throw resp.error;
+            toast.success('Dados excluídos conforme LGPD. Sua conta foi removida.');
+            await signOut();
+          } catch (err: any) {
+            toast.error(err.message || 'Erro ao excluir dados');
+          } finally {
+            setIsDeletingData(false);
+            setShowDeleteDataConfirm(false);
+          }
+        }}
+      />
     </div>
   );
 };
