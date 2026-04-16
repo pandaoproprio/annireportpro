@@ -394,9 +394,13 @@ Retorne APENAS o JSON, sem explicações.`;
 
     } else {
       // mode === "generate"
+      const kbKey = sectionType === "goal" ? "goals" : (sectionType || "summary");
+      const knowledgeBlock = getKnowledgeBaseBlock(kbKey);
+
       systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
 
 ${CEAP_INSTITUTIONAL_MEMORY}
+${knowledgeBlock}
 
 ## REGRAS DE GERAÇÃO
 - Não inventar dados — baseie-se exclusivamente nas informações fornecidas
@@ -405,6 +409,7 @@ ${CEAP_INSTITUTIONAL_MEMORY}
 - Cada narrativa deve refletir a identidade institucional do CEAP
 - Preferir concisão com profundidade sobre extensão superficial
 - Incluir análise interpretativa e, quando aplicável, análise preditiva
+- BASEIE-SE nos exemplos de referência para estilo e estrutura, mas NÃO copie literalmente
 - Retornar APENAS o texto, sem explicações adicionais`;
 
       if (sectionType === "goal") {
