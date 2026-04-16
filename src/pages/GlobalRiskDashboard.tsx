@@ -423,6 +423,21 @@ const GlobalRiskDashboard: React.FC = () => {
                                   <TrendingUp className="w-3 h-3" /> Score dinâmico: {risk.dynamic_score}
                                 </span>
                               )}
+                              {(risk as any).monetary_impact > 0 && (
+                                <span className="flex items-center gap-1 font-medium">
+                                  💰 EMV: R$ {calculateEMV(risk.probability, (risk as any).monetary_impact).toLocaleString('pt-BR')}
+                                </span>
+                              )}
+                              {(risk as any).risk_owner && (
+                                <span className="flex items-center gap-1 text-primary">
+                                  👤 Owner: {(risk as any).risk_owner}
+                                </span>
+                              )}
+                              {(risk as any).escalated_to && (
+                                <span className="flex items-center gap-1 text-orange-600">
+                                  ⬆ Escalado: {(risk as any).escalated_to}
+                                </span>
+                              )}
                             </div>
                             {risk.mitigation_plan && (
                               <p className="text-xs text-muted-foreground mt-1 italic">
