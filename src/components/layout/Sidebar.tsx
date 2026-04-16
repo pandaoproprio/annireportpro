@@ -18,7 +18,7 @@ import {
   LogOut, PlusCircle, Folder, BarChart3, X, Users, Crown, UsersRound,
   ScrollText, Layers, FileCode2, PenTool, ClipboardList, CalendarDays,
   Bot, ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign, Zap,
-  ListChecks, Receipt, MessageSquare,
+  ListChecks, Receipt, MessageSquare, Shield, FileSpreadsheet, FileCheck,
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 import { sidebarSections, type SidebarItem as SidebarItemType } from '@/routes/sidebarConfig';
