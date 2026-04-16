@@ -24,6 +24,7 @@ import { AlertTriangle, ArrowUpCircle, BarChart3, Calendar, CheckCircle, DollarS
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useProjectData } from '@/contexts/ProjectContext';
+import { exportRiskReportPdf } from '@/lib/riskPdfExport';
 
 interface RiskWithProject {
   id: string;
