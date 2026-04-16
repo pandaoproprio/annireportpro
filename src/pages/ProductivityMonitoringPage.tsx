@@ -325,13 +325,13 @@ const ProductivityMonitoringPage: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard label="Usuários Ativos" value={activeUsers.length} colorClass="text-success"
-          active={kpiFilter === 'active'} onClick={() => setKpiFilter(kpiFilter === 'active' ? null : 'active')} />
+          active={kpiFilter === 'active'} onClick={() => { setKpiFilter(kpiFilter === 'active' ? null : 'active'); setActiveTab('users'); }} />
         <StatCard label="Inativos" value={inactiveUsers.length} colorClass="text-destructive"
-          active={kpiFilter === 'inactive'} onClick={() => setKpiFilter(kpiFilter === 'inactive' ? null : 'inactive')} />
+          active={kpiFilter === 'inactive'} onClick={() => { setKpiFilter(kpiFilter === 'inactive' ? null : 'inactive'); setActiveTab('users'); }} />
         <StatCard label="Baixa Produtividade" value={lowPerformers.length} colorClass="text-warning"
-          active={kpiFilter === 'low'} onClick={() => setKpiFilter(kpiFilter === 'low' ? null : 'low')} />
+          active={kpiFilter === 'low'} onClick={() => { setKpiFilter(kpiFilter === 'low' ? null : 'low'); setActiveTab('users'); }} />
         <StatCard label="Violações SLA" value={slaViolators.length} colorClass="text-destructive"
-          active={kpiFilter === 'sla'} onClick={() => setKpiFilter(kpiFilter === 'sla' ? null : 'sla')} />
+          active={kpiFilter === 'sla'} onClick={() => { setKpiFilter(kpiFilter === 'sla' ? null : 'sla'); setActiveTab('users'); }} />
         <StatCard label="Score Médio" value={avgScore.toFixed(0)} colorClass="text-primary" />
         <StatCard label="Retrabalho Total" value={totalRework} colorClass="text-warning" />
       </div>
