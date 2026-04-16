@@ -150,6 +150,9 @@ const GlobalRiskDashboard: React.FC = () => {
         mitigation_plan: data.mitigation_plan,
         contingency_plan: data.contingency_plan,
         responsible: data.responsible || null,
+        risk_owner: data.risk_owner || null,
+        linked_goal_id: data.linked_goal_id || null,
+        monetary_impact: data.monetary_impact || 0,
         due_date: data.due_date || null,
         resolved_at: data.status === 'resolvido' ? new Date().toISOString() : null,
       };
