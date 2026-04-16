@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { 
-  Database, LogOut, Edit, Save, Plus, Trash2, X, Loader2, FolderCog, List, ShieldCheck, ShieldOff, ImageIcon 
+  Database, LogOut, Edit, Save, Plus, Trash2, X, Loader2, FolderCog, List, ShieldCheck, ShieldOff, ImageIcon, Download, UserX, Shield, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logAction } from '@/lib/systemLog';
@@ -37,6 +37,10 @@ export const Settings: React.FC = () => {
   const [showMfaDisableConfirm, setShowMfaDisableConfirm] = useState(false);
   const [isDisablingMfa, setIsDisablingMfa] = useState(false);
   const [isOptimizingImages, setIsOptimizingImages] = useState(false);
+  const [isExportingData, setIsExportingData] = useState(false);
+  const [showDeleteDataConfirm, setShowDeleteDataConfirm] = useState(false);
+  const [isDeletingData, setIsDeletingData] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const isAdminRole = role === 'ADMIN' || role === 'SUPER_ADMIN';
 
@@ -627,6 +631,71 @@ export const Settings: React.FC = () => {
       {/* Asana Integration (SuperAdmin only) */}
       {isSuperAdmin && <AsanaConfigPanel />}
 
+      {/* LGPD - Direitos do Titular */}
+      <Card>
+        <CardContent className="pt-6 space-y-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Shield className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold text-lg">LGPD — Direitos do Titular</h3>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018), você pode solicitar a exportação ou exclusão dos seus dados pessoais.
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Export Data */}
+            <Button
+              variant="outline"
+              className="justify-start"
+              disabled={isExportingData}
+              onClick={async () => {
+                setIsExportingData(true);
+                try {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  if (!session) throw new Error('Sessão expirada');
+                  const resp = await supabase.functions.invoke('lgpd-data-export', {
+                    headers: { Authorization: `Bearer ${session.access_token}` },
+                  });
+                  if (resp.error) throw resp.error;
+                  const blob = new Blob([JSON.stringify(resp.data, null, 2)], { type: 'application/json' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `meus-dados-lgpd-${new Date().toISOString().split('T')[0]}.json`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                  toast.success('Dados exportados com sucesso!');
+                } catch (err: any) {
+                  toast.error(err.message || 'Erro ao exportar dados');
+                } finally {
+                  setIsExportingData(false);
+                }
+              }}
+            >
+              {isExportingData ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Exportando...</>
+              ) : (
+                <><Download className="w-4 h-4 mr-2" /> Exportar Meus Dados</>
+              )}
+            </Button>
+
+            {/* Delete Data */}
+            <Button
+              variant="outline"
+              className="justify-start text-destructive border-destructive/30 hover:bg-destructive/10"
+              onClick={() => setShowDeleteDataConfirm(true)}
+            >
+              <UserX className="w-4 h-4 mr-2" /> Solicitar Exclusão de Dados
+            </Button>
+          </div>
+
+          <div className="flex items-start gap-2 p-3 rounded-md bg-muted/50 text-xs text-muted-foreground">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>A exclusão de dados é irreversível. Todas as suas atividades, relatórios, riscos e demais registros serão permanentemente removidos, e sua conta será desativada.</span>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="text-center text-xs text-muted-foreground mt-8">
         <p>Os dados são armazenados de forma segura com Lovable Cloud.</p>
         <p>Seus dados estão sincronizados entre todos os dispositivos.</p>
@@ -650,6 +719,50 @@ export const Settings: React.FC = () => {
         description="Tem certeza que deseja sair da sua conta?"
         confirmLabel="Sair"
         onConfirm={handleLogout}
+      />
+
+      {/* LGPD Delete Data Confirm Dialog */}
+      <ConfirmDialog
+        open={showDeleteDataConfirm}
+        onOpenChange={(open) => { setShowDeleteDataConfirm(open); if (!open) setDeleteConfirmText(''); }}
+        title="⚠️ Exclusão Definitiva de Dados"
+        description={
+          <div className="space-y-3">
+            <p>Esta ação é <strong>irreversível</strong>. Todos os seus dados pessoais, atividades, relatórios e registros serão permanentemente excluídos e sua conta será desativada.</p>
+            <p className="text-sm text-muted-foreground">Digite <strong>EXCLUIR MEUS DADOS</strong> para confirmar:</p>
+            <Input
+              value={deleteConfirmText}
+              onChange={(e) => setDeleteConfirmText(e.target.value)}
+              placeholder="EXCLUIR MEUS DADOS"
+              className="font-mono"
+            />
+          </div>
+        }
+        confirmLabel={isDeletingData ? 'Excluindo...' : 'Excluir Permanentemente'}
+        variant="destructive"
+        onConfirm={async () => {
+          if (deleteConfirmText !== 'EXCLUIR MEUS DADOS') {
+            toast.error('Confirmação incorreta');
+            return;
+          }
+          setIsDeletingData(true);
+          try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) throw new Error('Sessão expirada');
+            const resp = await supabase.functions.invoke('lgpd-data-deletion', {
+              body: { confirmation: 'EXCLUIR MEUS DADOS' },
+              headers: { Authorization: `Bearer ${session.access_token}` },
+            });
+            if (resp.error) throw resp.error;
+            toast.success('Dados excluídos conforme LGPD. Sua conta foi removida.');
+            await signOut();
+          } catch (err: any) {
+            toast.error(err.message || 'Erro ao excluir dados');
+          } finally {
+            setIsDeletingData(false);
+            setShowDeleteDataConfirm(false);
+          }
+        }}
       />
     </div>
   );
