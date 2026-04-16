@@ -455,6 +455,7 @@ const GlobalRiskDashboard: React.FC = () => {
                               </TooltipProvider>
                             )}
                           </div>
+                        </div>
                       </CardContent>
                     </Card>
                   );
