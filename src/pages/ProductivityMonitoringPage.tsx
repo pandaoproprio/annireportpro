@@ -537,7 +537,18 @@ const ProductivityMonitoringPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {[...latestSnapshots]
+                      {(() => {
+                        const activeUserIds = new Set(activeUsers.map(u => u.user_id));
+                        const inactiveUserIds = new Set(inactiveUsers.map(u => u.user_id));
+                        const lowUserIds = new Set(lowPerformers.map(u => u.user_id));
+                        const slaUserIds = new Set(slaViolators.map(u => u.user_id));
+                        let filtered = [...latestSnapshots];
+                        if (kpiFilter === 'active') filtered = filtered.filter(s => activeUserIds.has(s.user_id));
+                        if (kpiFilter === 'inactive') filtered = filtered.filter(s => inactiveUserIds.has(s.user_id));
+                        if (kpiFilter === 'low') filtered = filtered.filter(s => lowUserIds.has(s.user_id));
+                        if (kpiFilter === 'sla') filtered = filtered.filter(s => slaUserIds.has(s.user_id));
+                        return filtered;
+                      })()
                         .sort((a, b) => Number(b.score) - Number(a.score))
                         .map(s => (
                           <tr key={s.id} className="border-b hover:bg-muted/50 transition-colors">
