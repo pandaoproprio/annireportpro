@@ -74,9 +74,14 @@ const ProductivityMonitoringPage: React.FC = () => {
   }, []);
 
   const extractAsanaProjectGid = (input: string): string | null => {
-    // Accept: full URL like https://app.asana.com/0/1234567890/list or just the GID
-    const urlMatch = input.match(/asana\.com\/0\/(\d+)/);
-    if (urlMatch) return urlMatch[1];
+    // Accept multiple Asana URL formats:
+    // https://app.asana.com/0/PROJECT_GID/list
+    // https://app.asana.com/1/PORTFOLIO/project/PROJECT_GID/list/...
+    // or just the GID directly
+    const newUrlMatch = input.match(/asana\.com\/\d+\/\d+\/project\/(\d+)/);
+    if (newUrlMatch) return newUrlMatch[1];
+    const classicUrlMatch = input.match(/asana\.com\/0\/(\d+)/);
+    if (classicUrlMatch) return classicUrlMatch[1];
     if (/^\d+$/.test(input.trim())) return input.trim();
     return null;
   };
