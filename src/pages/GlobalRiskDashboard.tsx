@@ -449,10 +449,28 @@ const GlobalRiskDashboard: React.FC = () => {
                               {proj.name} <ExternalLink className="w-3.5 h-3.5 opacity-50" />
                             </h3>
                             <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-muted-foreground">Saúde:</span>
                               <Progress value={healthScore} className="h-2 flex-1 max-w-xs" />
                               <span className={`text-sm font-medium ${healthScore >= 75 ? 'text-green-600' : healthScore >= 50 ? 'text-orange-500' : 'text-destructive'}`}>
                                 {healthScore}%
                               </span>
+                            </div>
+                            <div className="flex flex-wrap gap-3 text-xs text-muted-foreground mt-1">
+                              {proj.totalEMV > 0 && (
+                                <span className="flex items-center gap-1 font-medium">
+                                  <DollarSign className="w-3 h-3 text-primary" /> EMV: R$ {proj.totalEMV.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                              )}
+                              {proj.escalated > 0 && (
+                                <span className="flex items-center gap-1 text-orange-600">
+                                  <ArrowUpCircle className="w-3 h-3" /> {proj.escalated} escalado(s)
+                                </span>
+                              )}
+                              {proj.overdue > 0 && (
+                                <span className="flex items-center gap-1 text-destructive">
+                                  <Calendar className="w-3 h-3" /> {proj.overdue} atrasado(s)
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="flex gap-2 flex-wrap shrink-0">
