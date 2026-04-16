@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     const today = new Date().toISOString().split('T')[0]
+    const nowMs = Date.now()
 
     // 1. Load config
     const { data: configRow } = await supabase
@@ -58,7 +59,7 @@ Deno.serve(async (req) => {
       .select('user_id, name, email, last_login_at')
       .in('user_id', userIds)
 
-    // 3b. Auth users last_sign_in_at
+    // 3b. Auth users last_sign_in_at (source of truth for login dates)
     const { data: authUsersData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
     const authUsersMap = new Map<string, Date | null>()
     if (authUsersData?.users) {
@@ -88,19 +89,34 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 5. Get activities from last 30 days
+    // 5. Get ALL activities (not just last 30 days) to find latest activity per user
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-    const { data: activities } = await supabase
+    const { data: recentActivities } = await supabase
       .from('activities')
       .select('id, user_id, date, created_at, updated_at, is_draft')
       .is('deleted_at', null)
       .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
       .in('user_id', userIds)
 
+    // Get latest activity date per user (all time) for cross-referencing
+    const { data: latestActRows } = await supabase
+      .from('activities')
+      .select('user_id, date')
+      .is('deleted_at', null)
+      .in('user_id', userIds)
+      .order('date', { ascending: false })
+
+    const lastActivityMap = new Map<string, string>()
+    for (const a of latestActRows || []) {
+      if (!lastActivityMap.has(a.user_id)) {
+        lastActivityMap.set(a.user_id, a.date)
+      }
+    }
+
     const actByUser = new Map<string, any[]>()
-    for (const a of activities || []) {
+    for (const a of recentActivities || []) {
       if (!actByUser.has(a.user_id)) actByUser.set(a.user_id, [])
       actByUser.get(a.user_id)!.push(a)
     }
@@ -123,9 +139,8 @@ Deno.serve(async (req) => {
       .in('user_id', userIds)
 
     const overdueByUser = new Map<string, number>()
-    const now = Date.now()
     for (const w of workflows || []) {
-      if (w.deadline_at && new Date(w.deadline_at).getTime() < now && w.status !== 'publicado' && w.status !== 'aprovado') {
+      if (w.deadline_at && new Date(w.deadline_at).getTime() < nowMs && w.status !== 'publicado' && w.status !== 'aprovado') {
         overdueByUser.set(w.user_id, (overdueByUser.get(w.user_id) || 0) + 1)
       }
     }
@@ -148,7 +163,7 @@ Deno.serve(async (req) => {
     const alertUsers: { name: string; email: string; reason: string }[] = []
     const newAlerts: any[] = []
 
-    // First pass: collect activities counts for benchmark
+    // First pass: collect activities counts for benchmark (only users with activity)
     const allCounts: number[] = []
     const userCountMap = new Map<string, number>()
     for (const uid of userIds) {
@@ -156,11 +171,12 @@ Deno.serve(async (req) => {
       allCounts.push(c)
       userCountMap.set(uid, c)
     }
-    const teamAvg = allCounts.length > 0 ? allCounts.reduce((a, b) => a + b, 0) / allCounts.length : 0
+    const activeCounts = allCounts.filter(c => c > 0)
+    const teamAvg = activeCounts.length > 0 ? activeCounts.reduce((a, b) => a + b, 0) / activeCounts.length : 0
     const sortedCounts = [...allCounts].sort((a, b) => a - b)
 
     function percentile(val: number): number {
-      if (sortedCounts.length === 0) return 50
+      if (sortedCounts.length === 0) return 0
       const below = sortedCounts.filter(v => v < val).length
       return Math.round((below / sortedCounts.length) * 100)
     }
@@ -174,11 +190,26 @@ Deno.serve(async (req) => {
       const tasksStarted = userActs.filter(a => a.is_draft).length
       const tasksFinished = userActs.filter(a => !a.is_draft).length
 
-      // Days inactive
+      // Days inactive — cross-reference auth login AND last activity in diary
       const lastLogin = authUsersMap.get(uid) || null
-      const daysInactive = lastLogin
-        ? Math.floor((Date.now() - lastLogin.getTime()) / 86400000)
-        : 999
+      const lastActivityDate = lastActivityMap.get(uid)
+
+      // Use the MOST RECENT between last login and last activity
+      let lastActiveDate: Date | null = null
+      if (lastLogin) lastActiveDate = lastLogin
+      if (lastActivityDate) {
+        const actDate = new Date(lastActivityDate)
+        if (!lastActiveDate || actDate > lastActiveDate) {
+          lastActiveDate = actDate
+        }
+      }
+
+      const daysInactive = lastActiveDate
+        ? Math.max(0, Math.floor((nowMs - lastActiveDate.getTime()) / 86400000))
+        : 999 // never logged in AND never registered activity
+
+      const neverParticipated = !lastLogin && !lastActivityDate
+      const hasNoRecentActivity = activitiesCount === 0
 
       // Average task time
       let avgSeconds: number | null = null
@@ -211,7 +242,7 @@ Deno.serve(async (req) => {
       // Delivery regularity (std dev of weekly counts over 4 weeks)
       const weekBuckets = [0, 0, 0, 0]
       for (const a of userActs) {
-        const daysDiff = Math.floor((Date.now() - new Date(a.date).getTime()) / 86400000)
+        const daysDiff = Math.floor((nowMs - new Date(a.date).getTime()) / 86400000)
         const weekIdx = Math.min(3, Math.floor(daysDiff / 7))
         weekBuckets[weekIdx]++
       }
@@ -219,14 +250,38 @@ Deno.serve(async (req) => {
       const weekStdDev = weekMean > 0
         ? Math.sqrt(weekBuckets.reduce((s, v) => s + (v - weekMean) ** 2, 0) / 4) / weekMean
         : 0
-      const deliveryRegularity = Math.round((1 - Math.min(weekStdDev, 1)) * 100)
 
-      // Score calculation
-      const engScore = Math.max(0, 100 - daysInactive * 15) // penalize inactivity
-      const volScore = Math.min(100, (tasksPerDay / Math.max(minTasksPerDay, 0.1)) * 100)
-      const effScore = slaTotal > 0 ? slaPct : (activitiesCount > 0 ? 70 : 50)
-      const qualScore = Math.max(0, 100 - reopenCount * 20 - overdueCount * 10)
-      const consScore = deliveryRegularity
+      // ── SCORE CALCULATION ──
+      // KEY RULE: If you never participated, your score is 0.
+      // If you haven't done anything in the period, score reflects only engagement (login).
+      // Each dimension is 0-100.
+
+      let engScore: number
+      let volScore: number
+      let effScore: number
+      let qualScore: number
+      let consScore: number
+
+      if (neverParticipated) {
+        // Never logged in, never did anything → everything is 0
+        engScore = 0; volScore = 0; effScore = 0; qualScore = 0; consScore = 0
+      } else if (hasNoRecentActivity) {
+        // Logged in before but no recent activity → engagement based on recency, rest is 0
+        engScore = Math.max(0, Math.min(100, 100 - daysInactive * 5))
+        volScore = 0
+        effScore = 0
+        qualScore = 0 // no activity = can't prove quality
+        consScore = 0 // no activity = no consistency
+      } else {
+        // Has activity → full calculation
+        engScore = Math.max(0, Math.min(100, 100 - daysInactive * 5))
+        volScore = Math.min(100, (tasksPerDay / Math.max(minTasksPerDay, 0.1)) * 100)
+        effScore = slaTotal > 0 ? slaPct : 70 // default decent if no SLA data but has activities
+        qualScore = Math.max(0, 100 - reopenCount * 20 - overdueCount * 10)
+        consScore = Math.round((1 - Math.min(weekStdDev, 1)) * 100)
+      }
+
+      const deliveryRegularity = hasNoRecentActivity ? 0 : Math.round((1 - Math.min(weekStdDev, 1)) * 100)
 
       const wTotal = (scoreWeights.engagement || 20) + (scoreWeights.volume || 20) + (scoreWeights.efficiency || 20) + (scoreWeights.quality || 20) + (scoreWeights.consistency || 20)
       const score = wTotal > 0
@@ -242,13 +297,20 @@ Deno.serve(async (req) => {
       // Status
       let status = 'ok'
       const reasons: string[] = []
-      if (daysInactive > inactiveDays) {
+      if (neverParticipated) {
         status = 'inactive'
-        reasons.push(`${daysInactive} dias sem login`)
+        reasons.push('Nunca acessou o sistema')
+      } else if (daysInactive > inactiveDays) {
+        status = 'inactive'
+        reasons.push(`${daysInactive} dias sem atividade`)
       }
       if (tasksPerDay < minTasksPerDay && activitiesCount > 0) {
         status = status === 'ok' ? 'low_performance' : status
         reasons.push(`Produtividade: ${tasksPerDay.toFixed(1)} tarefas/dia`)
+      }
+      if (activitiesCount === 0 && !neverParticipated && daysInactive <= inactiveDays) {
+        status = 'low_performance'
+        reasons.push('Sem atividades no período')
       }
       if (slaViolations > 0) {
         reasons.push(`${slaViolations} violações de SLA`)
@@ -286,7 +348,7 @@ Deno.serve(async (req) => {
 
       // Alert: sudden drop
       const prevScore = prevScoreMap.get(uid)
-      if (prevScore !== undefined && prevScore > 0 && score < prevScore * (1 - dropThreshold / 100)) {
+      if (prevScore !== undefined && prevScore > 10 && score < prevScore * (1 - dropThreshold / 100)) {
         newAlerts.push({
           alert_type: 'productivity_drop',
           user_id: uid,
@@ -307,19 +369,14 @@ Deno.serve(async (req) => {
         })
       }
 
-      // Alert: avg time above team
-      if (avgSeconds && teamAvg > 0) {
-        const teamAvgTime = taskTimes.length > 0 ? avgSeconds : 0
-        // This is a proxy; real team avg time would require more complex calculation
-      }
-
-      if (daysInactive > inactiveDays) {
+      // Alert: inactivity
+      if (daysInactive > inactiveDays && !neverParticipated) {
         newAlerts.push({
           alert_type: 'inactivity',
           user_id: uid,
           user_name: userName,
-          description: `${daysInactive} dias sem acessar o sistema`,
-          severity: daysInactive > inactiveDays * 2 ? 'critical' : 'warning',
+          description: `${daysInactive} dias sem atividade no sistema`,
+          severity: daysInactive > inactiveDays * 3 ? 'critical' : 'warning',
         })
       }
 
