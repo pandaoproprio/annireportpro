@@ -291,10 +291,16 @@ const GlobalRiskDashboard: React.FC = () => {
             </h1>
             <p className="text-sm text-muted-foreground mt-1">Visão consolidada de todos os projetos</p>
           </div>
-          <Button onClick={fetchAllRisks} variant="outline" className="gap-2" disabled={isLoading}>
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-            Atualizar
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => exportRiskReportPdf(risks)} variant="outline" className="gap-2" disabled={risks.length === 0}>
+              <BarChart3 className="w-4 h-4" />
+              Exportar PDF
+            </Button>
+            <Button onClick={fetchAllRisks} variant="outline" className="gap-2" disabled={isLoading}>
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+              Atualizar
+            </Button>
+          </div>
         </div>
 
         {/* Global Summary Cards */}
