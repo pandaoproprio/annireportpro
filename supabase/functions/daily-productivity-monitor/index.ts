@@ -215,6 +215,28 @@ Deno.serve(async (req) => {
       trackUsage(a.user_id, a.created_at, 'audit')
     }
 
+    // 5k. Asana task mappings (synced productivity from Asana)
+    const { data: asanaRows } = await supabase
+      .from('asana_task_mappings')
+      .select('user_id, synced_at')
+      .in('user_id', userIds)
+      .order('synced_at', { ascending: false })
+    for (const a of asanaRows || []) {
+      trackUsage(a.user_id, a.synced_at, 'asana')
+    }
+
+    // Count recent Asana tasks per user (last N days, matching the period)
+    const { data: recentAsanaTasks } = await supabase
+      .from('asana_task_mappings')
+      .select('user_id, synced_at')
+      .in('user_id', userIds)
+      .gte('synced_at', thirtyDaysAgo.toISOString())
+
+    const asanaCountByUser = new Map<string, number>()
+    for (const a of recentAsanaTasks || []) {
+      asanaCountByUser.set(a.user_id, (asanaCountByUser.get(a.user_id) || 0) + 1)
+    }
+
     const actByUser = new Map<string, any[]>()
     for (const a of recentActivities || []) {
       if (!actByUser.has(a.user_id)) actByUser.set(a.user_id, [])
@@ -286,9 +308,10 @@ Deno.serve(async (req) => {
       if (!profile) continue
 
       const userActs = actByUser.get(uid) || []
-      const activitiesCount = userActs.length
+      const asanaTaskCount = asanaCountByUser.get(uid) || 0
+      const activitiesCount = userActs.length + asanaTaskCount // Diário + Asana combined
       const tasksStarted = userActs.filter(a => a.is_draft).length
-      const tasksFinished = userActs.filter(a => !a.is_draft).length
+      const tasksFinished = userActs.filter(a => !a.is_draft).length + asanaTaskCount
 
       // Days inactive — cross-reference auth login AND last system-wide usage
       const lastLogin = authUsersMap.get(uid) || null
@@ -356,7 +379,7 @@ Deno.serve(async (req) => {
 
       // ── SCORE CALCULATION ──
       // KEY RULE: Without any tracked history in Diário de Bordo, score is 0.
-      // If there is historical participation but nothing in the recent period, score reflects only engagement.
+      // If there is historical participation but nothing in the recent period (Diário + Asana), score reflects only engagement.
       // Each dimension is 0-100.
 
       let engScore: number
