@@ -1563,6 +1563,53 @@ export type Database = {
         }
         Relationships: []
       }
+      monitoring_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          description: string
+          id: string
+          is_resolved: boolean
+          resolved_at: string | null
+          severity: string
+          snapshot_id: string | null
+          user_id: string
+          user_name: string
+        }
+        Insert: {
+          alert_type: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_resolved?: boolean
+          resolved_at?: string | null
+          severity?: string
+          snapshot_id?: string | null
+          user_id: string
+          user_name?: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_resolved?: boolean
+          resolved_at?: string | null
+          severity?: string
+          snapshot_id?: string | null
+          user_id?: string
+          user_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_alerts_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "user_productivity_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monitoring_config: {
         Row: {
           created_at: string
@@ -1571,7 +1618,9 @@ export type Database = {
           is_active: boolean
           max_avg_task_seconds: number
           min_tasks_per_day: number
+          productivity_drop_threshold: number
           report_frequency: string
+          score_weights: Json
           sla_by_activity_type: Json
           updated_at: string
         }
@@ -1582,7 +1631,9 @@ export type Database = {
           is_active?: boolean
           max_avg_task_seconds?: number
           min_tasks_per_day?: number
+          productivity_drop_threshold?: number
           report_frequency?: string
+          score_weights?: Json
           sla_by_activity_type?: Json
           updated_at?: string
         }
@@ -1593,7 +1644,9 @@ export type Database = {
           is_active?: boolean
           max_avg_task_seconds?: number
           min_tasks_per_day?: number
+          productivity_drop_threshold?: number
           report_frequency?: string
+          score_weights?: Json
           sla_by_activity_type?: Json
           updated_at?: string
         }
@@ -3078,44 +3131,77 @@ export type Database = {
         Row: {
           activities_count: number
           avg_task_seconds: number | null
+          concurrent_tasks: number
           created_at: string
           days_inactive: number
+          delivery_regularity: number
           id: string
+          overdue_count: number
+          percentile_rank: number
+          reopen_count: number
+          score: number
           sla_pct_on_time: number
           sla_total: number
           sla_violations: number
           snapshot_date: string
           status: string
+          tasks_finished: number
           tasks_per_day: number
+          tasks_started: number
+          team_avg_activities: number
           user_id: string
+          user_projects: Json
+          user_role: string
         }
         Insert: {
           activities_count?: number
           avg_task_seconds?: number | null
+          concurrent_tasks?: number
           created_at?: string
           days_inactive?: number
+          delivery_regularity?: number
           id?: string
+          overdue_count?: number
+          percentile_rank?: number
+          reopen_count?: number
+          score?: number
           sla_pct_on_time?: number
           sla_total?: number
           sla_violations?: number
           snapshot_date?: string
           status?: string
+          tasks_finished?: number
           tasks_per_day?: number
+          tasks_started?: number
+          team_avg_activities?: number
           user_id: string
+          user_projects?: Json
+          user_role?: string
         }
         Update: {
           activities_count?: number
           avg_task_seconds?: number | null
+          concurrent_tasks?: number
           created_at?: string
           days_inactive?: number
+          delivery_regularity?: number
           id?: string
+          overdue_count?: number
+          percentile_rank?: number
+          reopen_count?: number
+          score?: number
           sla_pct_on_time?: number
           sla_total?: number
           sla_violations?: number
           snapshot_date?: string
           status?: string
+          tasks_finished?: number
           tasks_per_day?: number
+          tasks_started?: number
+          team_avg_activities?: number
           user_id?: string
+          user_projects?: Json
+          user_role?: string
         }
         Relationships: []
       }
