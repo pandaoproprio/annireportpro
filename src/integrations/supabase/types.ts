@@ -1892,8 +1892,10 @@ export type Database = {
           created_at: string
           description: string
           due_date: string | null
+          dynamic_score: number | null
           id: string
           impact: Database["public"]["Enums"]["risk_impact"]
+          last_recalculated_at: string | null
           metadata: Json | null
           mitigation_plan: string
           probability: Database["public"]["Enums"]["risk_probability"]
@@ -1911,8 +1913,10 @@ export type Database = {
           created_at?: string
           description?: string
           due_date?: string | null
+          dynamic_score?: number | null
           id?: string
           impact?: Database["public"]["Enums"]["risk_impact"]
+          last_recalculated_at?: string | null
           metadata?: Json | null
           mitigation_plan?: string
           probability?: Database["public"]["Enums"]["risk_probability"]
@@ -1930,8 +1934,10 @@ export type Database = {
           created_at?: string
           description?: string
           due_date?: string | null
+          dynamic_score?: number | null
           id?: string
           impact?: Database["public"]["Enums"]["risk_impact"]
+          last_recalculated_at?: string | null
           metadata?: Json | null
           mitigation_plan?: string
           probability?: Database["public"]["Enums"]["risk_probability"]
@@ -2409,6 +2415,179 @@ export type Database = {
             columns: ["sprint_id"]
             isOneToOne: false
             referencedRelation: "sprints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_alerts: {
+        Row: {
+          alert_type: string
+          created_at: string
+          description: string
+          id: string
+          is_read: boolean
+          notified_user_id: string
+          project_id: string
+          risk_id: string | null
+          severity: string
+          title: string
+        }
+        Insert: {
+          alert_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_read?: boolean
+          notified_user_id: string
+          project_id: string
+          risk_id?: string | null
+          severity?: string
+          title: string
+        }
+        Update: {
+          alert_type?: string
+          created_at?: string
+          description?: string
+          id?: string
+          is_read?: boolean
+          notified_user_id?: string
+          project_id?: string
+          risk_id?: string | null
+          severity?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_alerts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_alerts_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "project_risks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_score_history: {
+        Row: {
+          change_reason: string
+          changed_by: string
+          created_at: string
+          id: string
+          new_impact: string | null
+          new_probability: string | null
+          new_score: number
+          old_impact: string | null
+          old_probability: string | null
+          old_score: number
+          risk_id: string
+        }
+        Insert: {
+          change_reason?: string
+          changed_by?: string
+          created_at?: string
+          id?: string
+          new_impact?: string | null
+          new_probability?: string | null
+          new_score?: number
+          old_impact?: string | null
+          old_probability?: string | null
+          old_score?: number
+          risk_id: string
+        }
+        Update: {
+          change_reason?: string
+          changed_by?: string
+          created_at?: string
+          id?: string
+          new_impact?: string | null
+          new_probability?: string | null
+          new_score?: number
+          old_impact?: string | null
+          old_probability?: string | null
+          old_score?: number
+          risk_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_score_history_risk_id_fkey"
+            columns: ["risk_id"]
+            isOneToOne: false
+            referencedRelation: "project_risks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      risk_suggestions: {
+        Row: {
+          accepted_risk_id: string | null
+          category: string
+          contingency_plan: string
+          created_at: string
+          description: string
+          id: string
+          impact: string
+          mitigation_plan: string
+          probability: string
+          project_id: string
+          source: string
+          source_data: Json | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_risk_id?: string | null
+          category?: string
+          contingency_plan?: string
+          created_at?: string
+          description?: string
+          id?: string
+          impact?: string
+          mitigation_plan?: string
+          probability?: string
+          project_id: string
+          source?: string
+          source_data?: Json | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_risk_id?: string | null
+          category?: string
+          contingency_plan?: string
+          created_at?: string
+          description?: string
+          id?: string
+          impact?: string
+          mitigation_plan?: string
+          probability?: string
+          project_id?: string
+          source?: string
+          source_data?: Json | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "risk_suggestions_accepted_risk_id_fkey"
+            columns: ["accepted_risk_id"]
+            isOneToOne: false
+            referencedRelation: "project_risks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "risk_suggestions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
