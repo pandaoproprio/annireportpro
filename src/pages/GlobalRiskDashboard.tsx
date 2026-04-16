@@ -401,7 +401,7 @@ const GlobalRiskDashboard: React.FC = () => {
                               <Badge variant="secondary">{CATEGORY_LABELS[risk.category] || risk.category}</Badge>
                               {isOverdue && <Badge variant="destructive">Atrasado</Badge>}
                             </div>
-                            <p className="text-xs text-primary/80 font-medium mb-1">📁 {risk.project_name}</p>
+                            <p className="text-xs text-primary/80 font-medium mb-1 cursor-pointer hover:underline" onClick={() => goToProjectRisks(risk.project_id)}>📁 {risk.project_name} <ExternalLink className="w-3 h-3 inline ml-0.5" /></p>
                             {risk.description && (
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{risk.description}</p>
                             )}
