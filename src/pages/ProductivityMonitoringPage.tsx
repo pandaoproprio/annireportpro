@@ -539,6 +539,21 @@ const ProductivityMonitoringPage: React.FC = () => {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
+                  {/* Compute Asana aggregates per user */}
+                  {(() => {
+                    const asanaByUser = new Map<string, { completed: number; created: number; onTime: number; overdue: number; subtasks: number; comments: number }>();
+                    for (const snap of asanaSnapshots) {
+                      if (!snap.mapped_user_id) continue;
+                      const prev = asanaByUser.get(snap.mapped_user_id) || { completed: 0, created: 0, onTime: 0, overdue: 0, subtasks: 0, comments: 0 };
+                      prev.completed += snap.tasks_completed || 0;
+                      prev.created += snap.tasks_created || 0;
+                      prev.onTime += snap.tasks_on_time || 0;
+                      prev.overdue += snap.tasks_overdue || 0;
+                      prev.subtasks += snap.subtasks_completed || 0;
+                      prev.comments += snap.comments_count || 0;
+                      asanaByUser.set(snap.mapped_user_id, prev);
+                    }
+                    return (
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-left">
@@ -547,6 +562,7 @@ const ProductivityMonitoringPage: React.FC = () => {
                         <th className="py-2 px-2 font-medium text-muted-foreground">Projetos</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Score</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Atividades</th>
+                        <th className="py-2 px-2 font-medium text-muted-foreground text-center">Asana</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Iniciadas</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Finalizadas</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Retrabalho</th>
