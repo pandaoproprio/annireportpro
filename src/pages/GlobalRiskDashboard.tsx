@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
-import { getRiskLevel, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS, RiskFormData } from '@/hooks/useProjectRisks';
+import { getRiskLevel, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS, RiskFormData, calculateEMV } from '@/hooks/useProjectRisks';
 import { RiskMatrix } from '@/components/risks/RiskMatrix';
 import { RiskFormDialog } from '@/components/risks/RiskFormDialog';
 import { PageTransition } from '@/components/ui/page-transition';
