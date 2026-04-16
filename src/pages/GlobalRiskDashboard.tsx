@@ -686,8 +686,11 @@ const GlobalRiskDashboard: React.FC = () => {
             impact: editingRisk.impact,
             status: editingRisk.status,
             mitigation_plan: editingRisk.mitigation_plan || '',
-            contingency_plan: (editingRisk as any).contingency_plan || '',
+            contingency_plan: editingRisk.contingency_plan || '',
             responsible: editingRisk.responsible || '',
+            risk_owner: editingRisk.risk_owner || '',
+            linked_goal_id: editingRisk.linked_goal_id || '',
+            monetary_impact: editingRisk.monetary_impact || 0,
             due_date: editingRisk.due_date || '',
           } : undefined}
           isEdit
