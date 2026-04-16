@@ -392,6 +392,7 @@ Deno.serve(async (req) => {
       // KEY RULE: Without any tracked history in Diário de Bordo, score is 0.
       // If there is historical participation but nothing in the recent period (Diário + Asana), score reflects only engagement.
       // Each dimension is 0-100.
+      // Asana metrics feed into: volume (completed+subtasks), efficiency (on-time %), quality (overdue penalty), consistency (activity signals).
 
       let engScore: number
       let volScore: number
@@ -399,26 +400,46 @@ Deno.serve(async (req) => {
       let qualScore: number
       let consScore: number
 
-      if (hasNoTrackedHistory) {
-        // Never logged in AND never used any module → everything is 0
+      if (hasNoTrackedHistory && asanaDeliveries === 0) {
+        // Never logged in AND never used any module AND no Asana work → everything is 0
         engScore = 0; volScore = 0; effScore = 0; qualScore = 0; consScore = 0
-      } else if (hasNoRecentActivity) {
-        // Has login or system usage but no recent Diário de Bordo entries → engagement only
+      } else if (hasNoRecentActivity && asanaDeliveries === 0) {
+        // Has login or system usage but no recent Diário + no Asana → engagement only
         engScore = Math.max(0, Math.min(100, 100 - daysInactive * 5))
         volScore = 0
         effScore = 0
-        qualScore = 0 // no activity = can't prove quality
-        consScore = 0 // no activity = no consistency
+        qualScore = 0
+        consScore = 0
       } else {
-        // Has activity → full calculation
+        // Has activity (Diário and/or Asana) → full calculation
         engScore = Math.max(0, Math.min(100, 100 - daysInactive * 5))
         volScore = Math.min(100, (tasksPerDay / Math.max(minTasksPerDay, 0.1)) * 100)
-        effScore = slaTotal > 0 ? slaPct : 70 // default decent if no SLA data but has activities
-        qualScore = Math.max(0, 100 - reopenCount * 20 - overdueCount * 10)
-        consScore = Math.round((1 - Math.min(weekStdDev, 1)) * 100)
+
+        // Efficiency: blend internal SLA with Asana on-time rate
+        const internalEffPct = slaTotal > 0 ? slaPct : null
+        const asanaEffTotal = asanaData.onTime + asanaData.overdue
+        const asanaEffPct = asanaEffTotal > 0 ? (asanaData.onTime / asanaEffTotal) * 100 : null
+        if (internalEffPct !== null && asanaEffPct !== null) {
+          effScore = (internalEffPct + asanaEffPct) / 2
+        } else if (asanaEffPct !== null) {
+          effScore = asanaEffPct
+        } else if (internalEffPct !== null) {
+          effScore = internalEffPct
+        } else {
+          effScore = activitiesCount > 0 ? 70 : 50 // default decent if has some activity
+        }
+
+        // Quality: penalize reopens and overdue (both internal and Asana)
+        const totalOverdue = overdueCount + asanaData.overdue
+        qualScore = Math.max(0, 100 - reopenCount * 20 - totalOverdue * 10)
+
+        // Consistency: boost with Asana activity signals (comments, created tasks)
+        const baseConsistency = Math.round((1 - Math.min(weekStdDev, 1)) * 100)
+        const asanaActivityBonus = Math.min(20, (asanaData.comments + asanaData.created) * 2)
+        consScore = Math.min(100, baseConsistency + (asanaDeliveries > 0 ? asanaActivityBonus : 0))
       }
 
-      const deliveryRegularity = hasNoRecentActivity ? 0 : Math.round((1 - Math.min(weekStdDev, 1)) * 100)
+      const deliveryRegularity = (hasNoRecentActivity && asanaDeliveries === 0) ? 0 : Math.round((1 - Math.min(weekStdDev, 1)) * 100)
 
       const wTotal = (scoreWeights.engagement || 20) + (scoreWeights.volume || 20) + (scoreWeights.efficiency || 20) + (scoreWeights.quality || 20) + (scoreWeights.consistency || 20)
       const score = wTotal > 0
