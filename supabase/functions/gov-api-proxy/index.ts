@@ -5,12 +5,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const GOV_APIS: Record<string, { baseUrl: string; needsAuth?: boolean }> = {
+const GOV_APIS: Record<string, { baseUrl: string; needsAuth?: boolean; usePostgrest?: boolean }> = {
   transferegov_especiais: {
     baseUrl: 'https://api.transferegov.gestao.gov.br/transferenciasespeciais',
+    usePostgrest: true,
   },
   transferegov_fundo: {
     baseUrl: 'https://api.transferegov.gestao.gov.br/fundoafundo',
+    usePostgrest: true,
+  },
+  transferegov_ted: {
+    baseUrl: 'https://api.transferegov.gestao.gov.br/ted',
+    usePostgrest: true,
   },
   cgu: {
     baseUrl: 'https://api.portaldatransparencia.gov.br/api-de-dados',
@@ -46,10 +52,8 @@ if (import.meta.main) {
         { global: { headers: { Authorization: authHeader } } }
       );
 
-      const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(
-        authHeader.replace('Bearer ', '')
-      );
-      if (claimsError || !claimsData?.claims) {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
         return new Response(JSON.stringify({ error: 'Não autorizado' }), {
           status: 401,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -67,11 +71,18 @@ if (import.meta.main) {
 
       const api = GOV_APIS[source];
       const path = endpoint ? `/${endpoint.replace(/^\//, '')}` : '';
-      const queryString = params
-        ? '?' + new URLSearchParams(params).toString()
-        : '';
 
-      const url = `${api.baseUrl}${path}${queryString}`;
+      let url: string;
+      if (api.usePostgrest && params) {
+        // PostgREST-style: params go as query params with operators
+        const qs = new URLSearchParams(params).toString();
+        url = `${api.baseUrl}${path}${qs ? '?' + qs : ''}`;
+      } else {
+        const queryString = params
+          ? '?' + new URLSearchParams(params).toString()
+          : '';
+        url = `${api.baseUrl}${path}${queryString}`;
+      }
 
       const fetchHeaders: Record<string, string> = {
         'Accept': 'application/json',
