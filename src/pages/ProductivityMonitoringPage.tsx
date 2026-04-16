@@ -144,13 +144,45 @@ const ProductivityMonitoringPage: React.FC = () => {
     ? latestSnapshots.find(s => s.user_id === selectedUser)
     : latestSnapshots[0];
 
-  const radarData = radarUser ? [
-    { dim: 'Engajamento', value: Math.max(0, 100 - radarUser.days_inactive * 15) },
-    { dim: 'Volume', value: Math.min(100, (radarUser.tasks_per_day / Math.max(config?.min_tasks_per_day || 1, 0.1)) * 100) },
-    { dim: 'Eficiência', value: Number(radarUser.sla_pct_on_time || 50) },
-    { dim: 'Qualidade', value: Math.max(0, 100 - (radarUser.reopen_count || 0) * 20 - (radarUser.overdue_count || 0) * 10) },
-    { dim: 'Consistência', value: Number(radarUser.delivery_regularity || 0) },
-  ] : [];
+  const radarData = (() => {
+    if (!radarUser) return [];
+
+    const hasRecentActivity = radarUser.activities_count > 0;
+    const noTrackedHistory = !hasRecentActivity
+      && !radarUser.tasks_started
+      && !radarUser.tasks_finished
+      && Number(radarUser.score || 0) === 0;
+
+    if (noTrackedHistory) {
+      return [
+        { dim: 'Engajamento', value: 0 },
+        { dim: 'Volume', value: 0 },
+        { dim: 'Eficiência', value: 0 },
+        { dim: 'Qualidade', value: 0 },
+        { dim: 'Consistência', value: 0 },
+      ];
+    }
+
+    const engagement = Math.max(0, Math.min(100, 100 - radarUser.days_inactive * 5));
+    const volume = hasRecentActivity
+      ? Math.min(100, (radarUser.tasks_per_day / Math.max(config?.min_tasks_per_day || 1, 0.1)) * 100)
+      : 0;
+    const efficiency = hasRecentActivity
+      ? (radarUser.sla_total > 0 ? Number(radarUser.sla_pct_on_time || 0) : 70)
+      : 0;
+    const quality = hasRecentActivity
+      ? Math.max(0, 100 - (radarUser.reopen_count || 0) * 20 - (radarUser.overdue_count || 0) * 10)
+      : 0;
+    const consistency = hasRecentActivity ? Number(radarUser.delivery_regularity || 0) : 0;
+
+    return [
+      { dim: 'Engajamento', value: engagement },
+      { dim: 'Volume', value: volume },
+      { dim: 'Eficiência', value: efficiency },
+      { dim: 'Qualidade', value: quality },
+      { dim: 'Consistência', value: consistency },
+    ];
+  })();
 
   // Benchmark data
   const benchmarkData = [...latestSnapshots]
