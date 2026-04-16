@@ -1491,6 +1491,42 @@ export type Database = {
           },
         ]
       }
+      lgpd_requests: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          download_url: string | null
+          id: string
+          notes: string | null
+          request_type: Database["public"]["Enums"]["lgpd_request_type"]
+          status: Database["public"]["Enums"]["lgpd_request_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          download_url?: string | null
+          id?: string
+          notes?: string | null
+          request_type: Database["public"]["Enums"]["lgpd_request_type"]
+          status?: Database["public"]["Enums"]["lgpd_request_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          download_url?: string | null
+          id?: string
+          notes?: string | null
+          request_type?: Database["public"]["Enums"]["lgpd_request_type"]
+          status?: Database["public"]["Enums"]["lgpd_request_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       login_reminders: {
         Row: {
           email_message_id: string | null
@@ -2085,6 +2121,33 @@ export type Database = {
           team?: Json
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      rate_limit_entries: {
+        Row: {
+          count: number
+          created_at: string
+          expires_at: string
+          id: string
+          key: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          key: string
+          window_start?: string
+        }
+        Update: {
+          count?: number
+          created_at?: string
+          expires_at?: string
+          id?: string
+          key?: string
+          window_start?: string
         }
         Relationships: []
       }
@@ -3115,6 +3178,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       get_role_level: { Args: { _user_id: string }; Returns: number }
       has_permission: {
         Args: {
@@ -3229,6 +3293,8 @@ export type Database = {
         | "capacitacao"
         | "equipamentos"
         | "outros"
+      lgpd_request_status: "pending" | "processing" | "completed" | "failed"
+      lgpd_request_type: "export" | "deletion"
       risk_category:
         | "financeiro"
         | "operacional"
@@ -3460,6 +3526,8 @@ export const Constants = {
         "equipamentos",
         "outros",
       ],
+      lgpd_request_status: ["pending", "processing", "completed", "failed"],
+      lgpd_request_type: ["export", "deletion"],
       risk_category: [
         "financeiro",
         "operacional",
