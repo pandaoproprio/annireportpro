@@ -19,6 +19,7 @@ import {
   ScrollText, Layers, FileCode2, PenTool, ClipboardList, CalendarDays,
   Bot, ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign, Zap,
   ListChecks, Receipt, MessageSquare, Shield, FileSpreadsheet, FileCheck,
+  Activity,
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 import { sidebarSections, type SidebarItem as SidebarItemType } from '@/routes/sidebarConfig';
@@ -31,6 +32,7 @@ const iconMap: Record<string, React.ElementType> = {
   FileCode2, PenTool, ClipboardList, CalendarDays, Bot,
   ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign,
   Zap, ListChecks, Receipt, MessageSquare, Shield, FileSpreadsheet, FileCheck,
+  Activity,
 };
 
 interface SidebarProps {
@@ -58,7 +60,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
   const renderIcon = (iconName: string) => {
     const IconComponent = iconMap[iconName];
     if (!IconComponent) return null;
-    return <IconComponent className="w-5 h-5" />;
+    return <IconComponent className="w-5 h-5" aria-hidden="true" />;
   };
 
   return (
@@ -66,6 +68,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
       className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-sidebar transform transition-transform duration-300 ease-in-out ${
         open ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
       }`}
+      role="navigation"
+      aria-label="Menu principal"
     >
       <div className="flex flex-col h-full">
         {/* Logo */}
@@ -76,6 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onPro
             </Link>
             <button
               className="lg:hidden text-sidebar-foreground p-1 flex-shrink-0"
+              aria-label="Fechar menu de navegação"
               onClick={onClose}
             >
               <X className="w-5 h-5" />
