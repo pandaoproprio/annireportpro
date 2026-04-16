@@ -108,8 +108,8 @@ export const TeamReportPdfContent: React.FC<TeamReportPdfContentProps> = ({ proj
             lineHeight: '1.5',
             whiteSpace: 'pre-line',
           }}
-          dangerouslySetInnerHTML={{ 
-            __html: report.executionReport || '<p>[Nenhum relato informado]</p>' 
+           dangerouslySetInnerHTML={{ 
+            __html: sanitizeHtml(report.executionReport || '<p>[Nenhum relato informado]</p>') 
           }}
         />
       </div>

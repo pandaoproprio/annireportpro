@@ -62,7 +62,7 @@ const RichContent: React.FC<{ html: string; className?: string; style?: React.CS
     // Default: render as HTML
     const wrapper = document.createElement('div');
     wrapper.appendChild(node.cloneNode(true));
-    parts.push(<div key={`html-${idx}`} dangerouslySetInnerHTML={{ __html: wrapper.innerHTML }} />);
+    parts.push(<div key={`html-${idx}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(wrapper.innerHTML) }} />);
   };
 
   temp.childNodes.forEach((node, idx) => processNode(node, idx));

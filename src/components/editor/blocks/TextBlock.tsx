@@ -36,7 +36,7 @@ export const TextBlockComponent: React.FC<TextBlockProps> = ({ block, isActive, 
         contentEditable
         suppressContentEditableWarning
         onBlur={handleInput}
-        dangerouslySetInnerHTML={{ __html: block.content || '<p>Digite aqui...</p>' }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(block.content || '<p>Digite aqui...</p>') }}
         className="outline-none min-h-[1.5em]"
       />
     </div>
