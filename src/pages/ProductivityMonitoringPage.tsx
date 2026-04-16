@@ -620,6 +620,21 @@ const ProductivityMonitoringPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="py-2 px-2 text-center">{s.activities_count}</td>
+                            <td className="py-2 px-2 text-center">
+                              {(() => {
+                                const a = asanaByUser.get(s.user_id);
+                                if (!a || (a.completed === 0 && a.created === 0)) return <span className="text-muted-foreground">—</span>;
+                                return (
+                                  <div className="text-xs space-y-0.5">
+                                    <div title="Concluídas">✅ {a.completed}</div>
+                                    <div title="Criadas">📝 {a.created}</div>
+                                    {a.onTime > 0 && <div title="No prazo" className="text-success">⏱ {a.onTime}</div>}
+                                    {a.overdue > 0 && <div title="Atrasadas" className="text-destructive">⚠ {a.overdue}</div>}
+                                    {a.comments > 0 && <div title="Comentários">💬 {a.comments}</div>}
+                                  </div>
+                                );
+                              })()}
+                            </td>
                             <td className="py-2 px-2 text-center">{s.tasks_started || 0}</td>
                             <td className="py-2 px-2 text-center">{s.tasks_finished || 0}</td>
                             <td className="py-2 px-2 text-center">
