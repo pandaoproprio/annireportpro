@@ -28,6 +28,12 @@ const GOV_APIS: Record<string, { baseUrl: string; needsAuth?: boolean; usePostgr
   compras: {
     baseUrl: 'https://api.compras.dados.gov.br',
   },
+  pncp: {
+    baseUrl: 'https://pncp.gov.br/api/consulta/v1',
+  },
+  brasilapi: {
+    baseUrl: 'https://brasilapi.com.br/api',
+  },
 };
 
 if (import.meta.main) {
@@ -74,7 +80,6 @@ if (import.meta.main) {
 
       let url: string;
       if (api.usePostgrest && params) {
-        // PostgREST-style: params go as query params with operators
         const qs = new URLSearchParams(params).toString();
         url = `${api.baseUrl}${path}${qs ? '?' + qs : ''}`;
       } else {
@@ -86,9 +91,9 @@ if (import.meta.main) {
 
       const fetchHeaders: Record<string, string> = {
         'Accept': 'application/json',
+        'User-Agent': 'CEAP-Reports/1.0',
       };
 
-      // CGU API requires API key
       if (api.needsAuth) {
         const cguKey = Deno.env.get('CGU_API_KEY');
         if (!cguKey) {
