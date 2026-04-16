@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { AlertTriangle, Shield, TrendingUp } from 'lucide-react';
+import { AlertTriangle, Bell, Shield, TrendingUp } from 'lucide-react';
 
 interface RiskSummaryCardsProps {
   summary: {
@@ -12,13 +12,14 @@ interface RiskSummaryCardsProps {
     resolved: number;
     materialized: number;
   };
+  unreadAlerts?: number;
 }
 
-export const RiskSummaryCards: React.FC<RiskSummaryCardsProps> = ({ summary }) => {
-  if (summary.total === 0) return null;
+export const RiskSummaryCards: React.FC<RiskSummaryCardsProps> = ({ summary, unreadAlerts = 0 }) => {
+  if (summary.total === 0 && unreadAlerts === 0) return null;
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
       <Card className="border-destructive/30 bg-destructive/5">
         <CardContent className="p-4 flex items-center gap-3">
           <AlertTriangle className="w-8 h-8 text-destructive" />
@@ -55,6 +56,17 @@ export const RiskSummaryCards: React.FC<RiskSummaryCardsProps> = ({ summary }) =
           </div>
         </CardContent>
       </Card>
+      {unreadAlerts > 0 && (
+        <Card className="border-orange-500/30 bg-orange-50 dark:bg-orange-500/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <Bell className="w-8 h-8 text-orange-500" />
+            <div>
+              <p className="text-2xl font-bold text-orange-600">{unreadAlerts}</p>
+              <p className="text-xs text-muted-foreground">Alertas</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 };

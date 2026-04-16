@@ -3,11 +3,13 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjectData } from '@/contexts/ProjectContext';
 import { useProjectRisks, getRiskLevel, ProjectRisk, RiskFormData, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS } from '@/hooks/useProjectRisks';
+import { useRiskIntelligence } from '@/hooks/useRiskIntelligence';
 import { RiskFormDialog } from '@/components/risks/RiskFormDialog';
 import { RiskSummaryCards } from '@/components/risks/RiskSummaryCards';
 import { RiskMatrix } from '@/components/risks/RiskMatrix';
 import { RiskAiPanel } from '@/components/risks/RiskAiPanel';
 import { RiskCalendar } from '@/components/risks/RiskCalendar';
+import { RiskPredictiveDashboard } from '@/components/risks/RiskPredictiveDashboard';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,13 +18,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Edit, Trash2, ShieldAlert, Calendar, User, Filter, Brain, CalendarDays } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, ShieldAlert, Calendar, User, Filter, Brain, CalendarDays, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 
 const RiskManagement: React.FC = () => {
   const { user } = useAuth();
   const { activeProject: project } = useProjectData();
   const { risks, isLoading, createRisk, updateRisk, deleteRisk, summary } = useProjectRisks(project?.id);
+  const intelligence = useRiskIntelligence(project?.id);
 
   const [formOpen, setFormOpen] = useState(false);
   const [editingRisk, setEditingRisk] = useState<ProjectRisk | null>(null);
@@ -72,7 +75,6 @@ const RiskManagement: React.FC = () => {
     return 'secondary' as const;
   };
 
-  // Count overdue risks for badge
   const overdueCount = risks.filter(r => r.due_date && r.status !== 'resolvido' && new Date(r.due_date) < new Date()).length;
 
   return (
@@ -91,12 +93,20 @@ const RiskManagement: React.FC = () => {
           </Button>
         </div>
 
-        <RiskSummaryCards summary={summary} />
+        <RiskSummaryCards summary={summary} unreadAlerts={intelligence.unreadAlerts} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="risks" className="gap-2">
               <ShieldAlert className="w-4 h-4" /> Riscos
+            </TabsTrigger>
+            <TabsTrigger value="intelligence" className="gap-2 relative">
+              <Activity className="w-4 h-4" /> Inteligência
+              {(intelligence.unreadAlerts > 0 || intelligence.suggestions.length > 0) && (
+                <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {intelligence.unreadAlerts + intelligence.suggestions.length}
+                </Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="ai" className="gap-2">
               <Brain className="w-4 h-4" /> Análise IA
@@ -113,7 +123,6 @@ const RiskManagement: React.FC = () => {
 
           {/* ── TAB: Riscos ── */}
           <TabsContent value="risks" className="space-y-4 mt-4">
-            {/* Matrix */}
             {risks.length > 0 && (
               <Card>
                 <CardHeader className="pb-3">
@@ -125,7 +134,6 @@ const RiskManagement: React.FC = () => {
               </Card>
             )}
 
-            {/* Filters */}
             <div className="flex flex-wrap gap-3 items-center">
               <Filter className="w-4 h-4 text-muted-foreground" />
               <Select value={filterStatus} onValueChange={setFilterStatus}>
@@ -149,7 +157,6 @@ const RiskManagement: React.FC = () => {
               <span className="text-sm text-muted-foreground ml-auto">{filtered.length} risco(s)</span>
             </div>
 
-            {/* List */}
             {isLoading ? (
               <div className="space-y-3">
                 {[1, 2, 3].map(i => <Skeleton key={i} className="h-24 w-full rounded-lg" />)}
@@ -211,6 +218,25 @@ const RiskManagement: React.FC = () => {
                 })}
               </div>
             )}
+          </TabsContent>
+
+          {/* ── TAB: Inteligência ── */}
+          <TabsContent value="intelligence" className="mt-4">
+            <RiskPredictiveDashboard
+              suggestions={intelligence.suggestions}
+              alerts={intelligence.alerts}
+              healthData={intelligence.healthData}
+              isScanning={intelligence.isScanning}
+              isRecalculating={intelligence.isRecalculating}
+              unreadAlerts={intelligence.unreadAlerts}
+              onRunAutoDetect={intelligence.runAutoDetect}
+              onRecalculateScores={intelligence.recalculateScores}
+              onAcceptSuggestion={intelligence.acceptSuggestion}
+              onDismissSuggestion={intelligence.dismissSuggestion}
+              onMarkAlertRead={intelligence.markAlertRead}
+              onMarkAllAlertsRead={intelligence.markAllAlertsRead}
+              onCreateRisk={createRisk}
+            />
           </TabsContent>
 
           {/* ── TAB: Análise IA ── */}
