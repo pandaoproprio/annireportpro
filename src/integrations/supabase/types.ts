@@ -1610,6 +1610,101 @@ export type Database = {
           },
         ]
       }
+      monitoring_asana_boards: {
+        Row: {
+          asana_project_gid: string
+          asana_project_name: string
+          asana_workspace_gid: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          asana_project_gid: string
+          asana_project_name?: string
+          asana_workspace_gid?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          asana_project_gid?: string
+          asana_project_name?: string
+          asana_workspace_gid?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      monitoring_asana_snapshots: {
+        Row: {
+          asana_user_email: string | null
+          asana_user_gid: string
+          asana_user_name: string
+          board_id: string
+          comments_count: number
+          created_at: string
+          id: string
+          mapped_user_id: string | null
+          snapshot_date: string
+          subtasks_completed: number
+          tasks_completed: number
+          tasks_created: number
+          tasks_on_time: number
+          tasks_overdue: number
+        }
+        Insert: {
+          asana_user_email?: string | null
+          asana_user_gid: string
+          asana_user_name?: string
+          board_id: string
+          comments_count?: number
+          created_at?: string
+          id?: string
+          mapped_user_id?: string | null
+          snapshot_date?: string
+          subtasks_completed?: number
+          tasks_completed?: number
+          tasks_created?: number
+          tasks_on_time?: number
+          tasks_overdue?: number
+        }
+        Update: {
+          asana_user_email?: string | null
+          asana_user_gid?: string
+          asana_user_name?: string
+          board_id?: string
+          comments_count?: number
+          created_at?: string
+          id?: string
+          mapped_user_id?: string | null
+          snapshot_date?: string
+          subtasks_completed?: number
+          tasks_completed?: number
+          tasks_created?: number
+          tasks_on_time?: number
+          tasks_overdue?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_asana_snapshots_board_id_fkey"
+            columns: ["board_id"]
+            isOneToOne: false
+            referencedRelation: "monitoring_asana_boards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monitoring_config: {
         Row: {
           created_at: string
