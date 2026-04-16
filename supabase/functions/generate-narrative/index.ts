@@ -283,9 +283,22 @@ Retorne o texto expandido sem explicações adicionais.`;
       //   "automatic" — fully autonomous, no diary required
       const generationMode = body.generationMode || "assisted";
 
+      // Build a combined knowledge base block for the full report
+      const allKbSections = ["object", "summary", "goals", "other", "communication", "satisfaction", "future"];
+      const fullKbBlock = allKbSections.map(key => {
+        const kb = SECTION_KNOWLEDGE_BASE[key];
+        if (!kb || kb.examples.length === 0) return "";
+        return `### Seção "${key.toUpperCase()}" — ${kb.guidance}\nExemplo: ${kb.examples[0]}`;
+      }).filter(Boolean).join("\n\n");
+
       systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
 
 ${CEAP_INSTITUTIONAL_MEMORY}
+
+## EXEMPLOS DE REFERÊNCIA POR SEÇÃO (textos reais de relatórios do CEAP)
+Use esses exemplos como referência de estilo, estrutura e tom. NÃO copie literalmente — adapte ao contexto específico do projeto.
+
+${fullKbBlock}
 
 ## REGRAS DE GERAÇÃO — RELATÓRIO COMPLETO
 - Gere narrativas para TODAS as seções do relatório em uma única resposta
@@ -298,6 +311,7 @@ ${CEAP_INSTITUTIONAL_MEMORY}
 - Não usar markdown, bullet points ou formatação especial
 - Escrever em parágrafos corridos com densidade narrativa
 - Preferir concisão com profundidade sobre extensão superficial
+- BASEIE-SE nos exemplos de referência para estilo e estrutura
 ${generationMode === "automatic" ? `
 ## MODO AUTÔNOMO
 - Você NÃO receberá atividades do Diário de Bordo. Isso é NORMAL.
