@@ -47,11 +47,20 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 3. Get profiles for last_login_at
+    // 3. Get profiles for name/email
     const { data: profiles } = await supabase
       .from('profiles')
       .select('user_id, name, email, last_login_at')
       .in('user_id', userIds)
+
+    // 3b. Get auth.users last_sign_in_at (more accurate than profiles.last_login_at)
+    const { data: authUsersData } = await supabase.auth.admin.listUsers({ perPage: 1000 })
+    const authUsersMap = new Map<string, Date | null>()
+    if (authUsersData?.users) {
+      for (const u of authUsersData.users) {
+        authUsersMap.set(u.id, u.last_sign_in_at ? new Date(u.last_sign_in_at) : null)
+      }
+    }
 
     const profileMap = new Map((profiles || []).map(p => [p.user_id, p]))
 
