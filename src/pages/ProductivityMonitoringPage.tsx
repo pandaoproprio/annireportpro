@@ -101,12 +101,12 @@ const ProductivityMonitoringPage: React.FC = () => {
   // Chart data: ranking by activities
   const rankingData = [...latestSnapshots]
     .sort((a, b) => b.activities_count - a.activities_count)
-    .slice(0, 15)
     .map(s => ({
-      name: (s.user_name || '').split(' ')[0],
+      name: (s.user_name || '').split(' ').slice(0, 2).join(' '),
       atividades: s.activities_count,
       sla: Number(s.sla_pct_on_time),
     }));
+  const rankingChartHeight = Math.max(300, rankingData.length * 32);
 
   // Chart data: activity over time (aggregate by date)
   const byDate = new Map<string, number>();
@@ -179,7 +179,7 @@ const ProductivityMonitoringPage: React.FC = () => {
                 {rankingData.length === 0 ? (
                   <p className="text-muted-foreground text-sm text-center py-8">Nenhum dado disponível. Execute o monitoramento para gerar métricas.</p>
                 ) : (
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={rankingChartHeight}>
                     <BarChart data={rankingData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" />
