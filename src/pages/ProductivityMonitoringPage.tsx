@@ -17,7 +17,7 @@ import { toast } from 'sonner';
 import {
   Users, AlertTriangle, Download, Plus, Trash2, Save, Settings2,
   TrendingUp, Clock, Play, Loader2, Bell, CheckCircle2, Target,
-  RotateCcw, Award,
+  RotateCcw, Award, Link2, RefreshCw,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line,
@@ -51,6 +51,90 @@ const ProductivityMonitoringPage: React.FC = () => {
   const [running, setRunning] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [editConfig, setEditConfig] = useState<Record<string, any> | null>(null);
+  const [asanaBoards, setAsanaBoards] = useState<any[]>([]);
+  const [asanaBoardsLoading, setAsanaBoardsLoading] = useState(false);
+  const [newBoardUrl, setNewBoardUrl] = useState('');
+  const [addingBoard, setAddingBoard] = useState(false);
+  const [syncingAsana, setSyncingAsana] = useState(false);
+
+  // Load Asana boards
+  React.useEffect(() => {
+    const loadBoards = async () => {
+      setAsanaBoardsLoading(true);
+      try {
+        const { data } = await supabase
+          .from('monitoring_asana_boards')
+          .select('*')
+          .order('created_at', { ascending: true });
+        setAsanaBoards(data || []);
+      } catch { /* ignore */ }
+      setAsanaBoardsLoading(false);
+    };
+    loadBoards();
+  }, []);
+
+  const extractAsanaProjectGid = (input: string): string | null => {
+    // Accept: full URL like https://app.asana.com/0/1234567890/list or just the GID
+    const urlMatch = input.match(/asana\.com\/0\/(\d+)/);
+    if (urlMatch) return urlMatch[1];
+    if (/^\d+$/.test(input.trim())) return input.trim();
+    return null;
+  };
+
+  const handleAddBoard = async () => {
+    const gid = extractAsanaProjectGid(newBoardUrl);
+    if (!gid) {
+      toast.error('Cole um link do Asana ou o ID do projeto (ex: https://app.asana.com/0/1234567890/list)');
+      return;
+    }
+    if (asanaBoards.some(b => b.asana_project_gid === gid)) {
+      toast.error('Este board já está cadastrado');
+      return;
+    }
+    setAddingBoard(true);
+    try {
+      const { data, error } = await supabase
+        .from('monitoring_asana_boards')
+        .insert({ asana_project_gid: gid, asana_project_name: `Projeto ${gid}` } as any)
+        .select()
+        .single();
+      if (error) throw error;
+      setAsanaBoards(prev => [...prev, data]);
+      setNewBoardUrl('');
+      toast.success('Board adicionado! Execute a sincronização para carregar os dados.');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao adicionar board');
+    }
+    setAddingBoard(false);
+  };
+
+  const handleRemoveBoard = async (id: string) => {
+    try {
+      await supabase.from('monitoring_asana_boards').delete().eq('id', id);
+      setAsanaBoards(prev => prev.filter(b => b.id !== id));
+      toast.success('Board removido');
+    } catch {
+      toast.error('Erro ao remover board');
+    }
+  };
+
+  const handleSyncAsana = async () => {
+    setSyncingAsana(true);
+    try {
+      const { error } = await supabase.functions.invoke('sync-asana-productivity');
+      if (error) throw error;
+      toast.success('Sincronização Asana concluída! Recarregando...');
+      // Reload boards to get updated names
+      const { data } = await supabase
+        .from('monitoring_asana_boards')
+        .select('*')
+        .order('created_at', { ascending: true });
+      setAsanaBoards(data || []);
+    } catch {
+      toast.error('Erro ao sincronizar com Asana');
+    }
+    setSyncingAsana(false);
+  };
 
   const handleRunNow = async () => {
     setRunning(true);
@@ -756,6 +840,75 @@ const ProductivityMonitoringPage: React.FC = () => {
                     </li>
                   ))}
                 </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Asana Boards */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-primary" />
+                Boards do Asana para Monitoramento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Adicione os links dos projetos/boards do Asana. O sistema buscará as métricas de cada membro automaticamente.
+              </p>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="https://app.asana.com/0/1234567890/list ou ID do projeto"
+                  value={newBoardUrl}
+                  onChange={e => setNewBoardUrl(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddBoard()}
+                  className="flex-1"
+                />
+                <Button onClick={handleAddBoard} disabled={addingBoard} className="gap-1.5 shrink-0">
+                  <Plus className="w-4 h-4" />
+                  Adicionar
+                </Button>
+              </div>
+
+              {asanaBoardsLoading ? (
+                <Skeleton className="h-20" />
+              ) : asanaBoards.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Nenhum board do Asana configurado.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {asanaBoards.map(b => (
+                    <li key={b.id} className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-2">
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">
+                          {b.asana_project_name || `Projeto ${b.asana_project_gid}`}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          GID: {b.asana_project_gid}
+                          {b.last_synced_at && (
+                            <> • Último sync: {new Date(b.last_synced_at).toLocaleDateString('pt-BR', {
+                              day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+                            })}</>
+                          )}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveBoard(b.id)}
+                        className="text-destructive hover:text-destructive shrink-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {asanaBoards.length > 0 && (
+                <Button onClick={handleSyncAsana} disabled={syncingAsana} variant="outline" className="gap-2">
+                  {syncingAsana ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  Sincronizar Agora
+                </Button>
               )}
             </CardContent>
           </Card>
