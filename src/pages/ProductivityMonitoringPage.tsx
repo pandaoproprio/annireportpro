@@ -800,9 +800,7 @@ const ProductivityMonitoringPage: React.FC = () => {
 
           {/* Emails */}
           <Card>
-
-          {/* Asana Boards */}
-          <Card>
+            <CardHeader>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Link2 className="w-5 h-5 text-primary" />
@@ -870,9 +868,13 @@ const ProductivityMonitoringPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Emails */}
+          {/* Asana Boards */}
           <Card>
             <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Link2 className="w-5 h-5 text-primary" />
+                Boards do Asana para Monitoramento
+              </CardTitle>
               <CardTitle className="text-base flex items-center gap-2">
                 <Users className="w-5 h-5 text-primary" />
                 Emails de Monitoramento
