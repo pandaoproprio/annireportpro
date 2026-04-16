@@ -228,7 +228,7 @@ export const Dashboard: React.FC = () => {
 
 // Extracted panel content to keep Dashboard clean
 interface DashboardPanelContentProps {
-  stats: Array<{ label: string; value: string | number; color: string; href?: string }>;
+  stats: Array<{ label: string; value: string | number; color: string; href?: string; icon?: any; subtitle?: string }>;
   slaSummary: any;
   activities: any[];
   project: any;
