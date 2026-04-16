@@ -1,4 +1,5 @@
 import React from 'react';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta } from '@/types';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 import { INDENT } from '@/lib/previewConstants';
@@ -62,7 +63,7 @@ const RichContent: React.FC<{ html: string; className?: string; style?: React.CS
     // Default: render as HTML
     const wrapper = document.createElement('div');
     wrapper.appendChild(node.cloneNode(true));
-    parts.push(<div key={`html-${idx}`} dangerouslySetInnerHTML={{ __html: wrapper.innerHTML }} />);
+    parts.push(<div key={`html-${idx}`} dangerouslySetInnerHTML={{ __html: sanitizeHtml(wrapper.innerHTML) }} />);
   };
 
   temp.childNodes.forEach((node, idx) => processNode(node, idx));

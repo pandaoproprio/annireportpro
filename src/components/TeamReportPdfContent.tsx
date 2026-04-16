@@ -1,4 +1,5 @@
 import React from 'react';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { Project, TeamReport } from '@/types';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -108,8 +109,8 @@ export const TeamReportPdfContent: React.FC<TeamReportPdfContentProps> = ({ proj
             lineHeight: '1.5',
             whiteSpace: 'pre-line',
           }}
-          dangerouslySetInnerHTML={{ 
-            __html: report.executionReport || '<p>[Nenhum relato informado]</p>' 
+           dangerouslySetInnerHTML={{ 
+            __html: sanitizeHtml(report.executionReport || '<p>[Nenhum relato informado]</p>') 
           }}
         />
       </div>

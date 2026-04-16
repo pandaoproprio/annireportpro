@@ -1,4 +1,5 @@
 import React from 'react';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { DocumentPage, DocumentBlock, LayoutConfig, HeaderFooterConfig } from '@/types/document';
 import { BlockRenderer } from './BlockRenderer';
 import {
@@ -92,7 +93,7 @@ export const DocumentCanvas: React.FC<DocumentCanvasProps> = ({
           ) : (
             <div
               className="text-xs text-muted-foreground"
-              dangerouslySetInnerHTML={{ __html: header.content || '<em>Cabeçalho</em>' }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(header.content || '<em>Cabeçalho</em>') }}
             />
           )}
         </div>
@@ -147,7 +148,7 @@ export const DocumentCanvas: React.FC<DocumentCanvasProps> = ({
         >
           <div
             className="text-xs text-muted-foreground"
-            dangerouslySetInnerHTML={{ __html: footer.content || '<em>Rodapé</em>' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(footer.content || '<em>Rodapé</em>') }}
           />
         </div>
       )}
