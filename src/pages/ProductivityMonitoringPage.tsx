@@ -801,6 +801,51 @@ const ProductivityMonitoringPage: React.FC = () => {
           {/* Emails */}
           <Card>
             <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="w-5 h-5 text-primary" />
+                Emails de Monitoramento
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  placeholder="email@exemplo.com"
+                  value={newEmail}
+                  onChange={e => setNewEmail(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleAddEmail()}
+                  className="max-w-sm"
+                />
+                <Button onClick={handleAddEmail} disabled={addEmail.isPending} className="gap-1.5">
+                  <Plus className="w-4 h-4" />
+                  Adicionar
+                </Button>
+              </div>
+              {emailsLoading ? (
+                <Skeleton className="h-20" />
+              ) : emails.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Nenhum email cadastrado.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {emails.map(em => (
+                    <li key={em.id} className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-2">
+                      <span className="text-sm">{em.email}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeEmail.mutate(em.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Asana Boards */}
+          <Card>
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Link2 className="w-5 h-5 text-primary" />
@@ -864,56 +909,6 @@ const ProductivityMonitoringPage: React.FC = () => {
                   {syncingAsana ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
                   Sincronizar Agora
                 </Button>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Asana Boards */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Link2 className="w-5 h-5 text-primary" />
-                Boards do Asana para Monitoramento
-              </CardTitle>
-              <CardTitle className="text-base flex items-center gap-2">
-                <Users className="w-5 h-5 text-primary" />
-                Emails de Monitoramento
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  placeholder="email@exemplo.com"
-                  value={newEmail}
-                  onChange={e => setNewEmail(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleAddEmail()}
-                  className="max-w-sm"
-                />
-                <Button onClick={handleAddEmail} disabled={addEmail.isPending} className="gap-1.5">
-                  <Plus className="w-4 h-4" />
-                  Adicionar
-                </Button>
-              </div>
-              {emailsLoading ? (
-                <Skeleton className="h-20" />
-              ) : emails.length === 0 ? (
-                <p className="text-muted-foreground text-sm">Nenhum email cadastrado.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {emails.map(em => (
-                    <li key={em.id} className="flex items-center justify-between bg-muted/50 rounded-lg px-4 py-2">
-                      <span className="text-sm">{em.email}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeEmail.mutate(em.id)}
-                        className="text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
               )}
             </CardContent>
           </Card>
