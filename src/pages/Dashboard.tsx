@@ -457,7 +457,7 @@ import type { GlobalStats } from '@/hooks/useGlobalStats';
 import { FolderOpen } from 'lucide-react';
 
 interface SuperAdminPanelContentProps {
-  stats: Array<{ label: string; value: string | number; color: string; href?: string }>;
+  stats: Array<{ label: string; value: string | number; color: string; href?: string; icon?: any; subtitle?: string }>;
   globalStats: GlobalStats;
   projects: any[];
   role: string | null;
@@ -483,7 +483,7 @@ const SuperAdminPanelContent: React.FC<SuperAdminPanelContentProps> = ({
       {/* Global Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} onClick={stat.href ? () => navigate(stat.href!) : undefined} />
+          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} icon={stat.icon} subtitle={stat.subtitle} onClick={stat.href ? () => navigate(stat.href!) : undefined} />
         ))}
       </div>
 
