@@ -442,3 +442,153 @@ const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
     </div>
   );
 };
+
+// ── Super Admin Global Panel ──
+import type { GlobalStats } from '@/hooks/useGlobalStats';
+import { Users, FolderOpen } from 'lucide-react';
+
+interface SuperAdminPanelContentProps {
+  stats: Array<{ label: string; value: string | number; color: string }>;
+  globalStats: GlobalStats;
+  projects: any[];
+  role: string | null;
+}
+
+const SuperAdminPanelContent: React.FC<SuperAdminPanelContentProps> = ({
+  stats, globalStats, projects,
+}) => {
+  const sortedProjects = Object.values(globalStats.activitiesByProject)
+    .sort((a, b) => b.count - a.count);
+
+  // Build chart data for types
+  const typeEntries = Object.entries(globalStats.activitiesByType).sort((a, b) => b[1] - a[1]);
+
+  // Build monthly sorted
+  const monthEntries = Object.entries(globalStats.activitiesByMonth)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-12);
+
+  return (
+    <div className="space-y-6 mt-4">
+      {/* Global Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, i) => (
+          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} />
+        ))}
+      </div>
+
+      {/* Projects Ranking */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FolderOpen className="w-5 h-5 text-primary" />
+            Atividades por Projeto
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {sortedProjects.length === 0 ? (
+            <p className="text-muted-foreground text-sm text-center py-4">Nenhum dado disponível</p>
+          ) : (
+            <div className="space-y-3">
+              {sortedProjects.map((p, i) => {
+                const maxCount = sortedProjects[0]?.count || 1;
+                return (
+                  <div key={i}>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="truncate mr-2 font-medium">{p.name}</span>
+                      <span className="text-muted-foreground whitespace-nowrap">
+                        {p.count} ativ. · {p.attendees.toLocaleString('pt-BR')} pessoas
+                      </span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2.5">
+                      <div
+                        className="bg-primary h-2.5 rounded-full transition-all duration-700"
+                        style={{ width: `${Math.max(4, (p.count / maxCount) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Activities by Type */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Distribuição por Tipo</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {typeEntries.map(([type, count]) => (
+                <div key={type} className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{type}</span>
+                  <span className="font-semibold text-foreground">{count}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Recent Activities (global) */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Atividades Recentes (Global)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {globalStats.recentActivities.length === 0 ? (
+              <p className="text-muted-foreground text-sm text-center py-4">Nenhuma atividade registrada.</p>
+            ) : (
+              <ul className="space-y-3">
+                {globalStats.recentActivities.map((act) => (
+                  <li key={act.id} className="text-sm border-l-2 border-brand-300 pl-3 py-1">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="text-muted-foreground text-xs">{new Date(act.date).toLocaleDateString('pt-BR')}</span>
+                      <span className="text-xs px-1.5 py-0.5 bg-muted rounded text-muted-foreground">{act.projectName}</span>
+                    </div>
+                    <span className="text-foreground">{act.description.substring(0, 80)}...</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Monthly Trend */}
+      {monthEntries.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Evolução Mensal (Global)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-1 h-32">
+              {monthEntries.map(([month, count]) => {
+                const maxM = Math.max(...monthEntries.map(([, c]) => c), 1);
+                const label = month.substring(5) + '/' + month.substring(2, 4);
+                return (
+                  <div key={month} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-xs text-muted-foreground font-medium">{count}</span>
+                    <div
+                      className="w-full bg-primary/80 rounded-t transition-all duration-500"
+                      style={{ height: `${Math.max(4, (count / maxM) * 100)}%` }}
+                    />
+                    <span className="text-[10px] text-muted-foreground">{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Summary info */}
+      <div className="text-sm text-muted-foreground text-center py-2">
+        <Users className="w-4 h-4 inline mr-1" />
+        {globalStats.totalProjects} projetos · {globalStats.totalActivities} atividades · {globalStats.totalAttendees.toLocaleString('pt-BR')} pessoas impactadas · {globalStats.draftCount} rascunhos
+      </div>
+    </div>
+  );
+};
