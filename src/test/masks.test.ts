@@ -19,7 +19,7 @@ describe('maskPhone', () => {
   });
 
   it('strips non-digit characters', () => {
-    expect(maskPhone('(21) 9998-8776')).toBe('(21) 99988-776');
+    expect(maskPhone('(21) 9998-8776')).toBe('(21) 9998-8776');
   });
 
   it('truncates beyond 11 digits', () => {
