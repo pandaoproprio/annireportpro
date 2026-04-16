@@ -3,8 +3,9 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
-import { getRiskLevel, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS } from '@/hooks/useProjectRisks';
+import { getRiskLevel, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS, RiskFormData } from '@/hooks/useProjectRisks';
 import { RiskMatrix } from '@/components/risks/RiskMatrix';
+import { RiskFormDialog } from '@/components/risks/RiskFormDialog';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +14,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { AlertTriangle, Calendar, Filter, RefreshCw, Shield, ShieldAlert, TrendingUp, User, Loader2 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { AlertTriangle, Calendar, CheckCircle, Edit, Filter, RefreshCw, Shield, ShieldAlert, TrendingUp, User, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -52,6 +54,8 @@ const GlobalRiskDashboard: React.FC = () => {
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [editingRisk, setEditingRisk] = useState<RiskWithProject | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const fetchAllRisks = useCallback(async () => {
     setIsLoading(true);
@@ -112,7 +116,59 @@ const GlobalRiskDashboard: React.FC = () => {
 
   useEffect(() => { fetchAllRisks(); }, [fetchAllRisks]);
 
-  if (!user) return <Navigate to="/login" replace />;
+  const handleUpdateRisk = async (data: RiskFormData): Promise<boolean | undefined> => {
+    if (!editingRisk) return false;
+    try {
+      const updatePayload: any = {
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        probability: data.probability,
+        impact: data.impact,
+        status: data.status,
+        mitigation_plan: data.mitigation_plan,
+        contingency_plan: data.contingency_plan,
+        responsible: data.responsible || null,
+        due_date: data.due_date || null,
+        resolved_at: data.status === 'resolvido' ? new Date().toISOString() : null,
+      };
+      const { error } = await supabase
+        .from('project_risks' as any)
+        .update(updatePayload)
+        .eq('id', editingRisk.id);
+      if (error) throw error;
+      toast.success('Risco atualizado com sucesso');
+      await fetchAllRisks();
+      return true;
+    } catch (err: any) {
+      console.error('Error updating risk:', err);
+      toast.error('Erro ao atualizar risco');
+      return false;
+    }
+  };
+
+  const handleQuickStatusChange = async (riskId: string, newStatus: string) => {
+    try {
+      const updatePayload: any = {
+        status: newStatus,
+        resolved_at: newStatus === 'resolvido' ? new Date().toISOString() : null,
+      };
+      const { error } = await supabase
+        .from('project_risks' as any)
+        .update(updatePayload)
+        .eq('id', riskId);
+      if (error) throw error;
+      toast.success(`Status alterado para "${STATUS_LABELS[newStatus]}"`);
+      await fetchAllRisks();
+    } catch (err: any) {
+      toast.error('Erro ao alterar status');
+    }
+  };
+
+  const openEditDialog = (risk: RiskWithProject) => {
+    setEditingRisk(risk);
+    setEditDialogOpen(true);
+  };
   if (!isSuperAdmin) return (
     <PageTransition>
       <div className="p-6 text-center text-muted-foreground">
@@ -357,6 +413,47 @@ const GlobalRiskDashboard: React.FC = () => {
                                 </span>
                               )}
                             </div>
+                            {risk.mitigation_plan && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">
+                                🛡️ Mitigação: {risk.mitigation_plan.substring(0, 120)}{risk.mitigation_plan.length > 120 ? '...' : ''}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button size="sm" variant="outline" className="gap-1" onClick={() => openEditDialog(risk)}>
+                                    <Edit className="w-3 h-3" /> Editar
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Editar risco completo</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            {risk.status !== 'resolvido' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="gap-1 text-xs" onClick={() => handleQuickStatusChange(risk.id, 'mitigando')}>
+                                      <ShieldAlert className="w-3 h-3" /> Mitigar
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Marcar como "Mitigando"</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {risk.status !== 'resolvido' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button size="sm" variant="ghost" className="gap-1 text-xs text-green-600" onClick={() => handleQuickStatusChange(risk.id, 'resolvido')}>
+                                      <CheckCircle className="w-3 h-3" /> Resolver
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Marcar como "Resolvido"</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
                           </div>
                         </div>
                       </CardContent>
@@ -388,6 +485,29 @@ const GlobalRiskDashboard: React.FC = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        {/* Edit Risk Dialog */}
+        <RiskFormDialog
+          open={editDialogOpen}
+          onOpenChange={(open) => {
+            setEditDialogOpen(open);
+            if (!open) setEditingRisk(null);
+          }}
+          onSubmit={handleUpdateRisk}
+          initialData={editingRisk ? {
+            title: editingRisk.title,
+            description: editingRisk.description,
+            category: editingRisk.category,
+            probability: editingRisk.probability,
+            impact: editingRisk.impact,
+            status: editingRisk.status,
+            mitigation_plan: editingRisk.mitigation_plan || '',
+            contingency_plan: (editingRisk as any).contingency_plan || '',
+            responsible: editingRisk.responsible || '',
+            due_date: editingRisk.due_date || '',
+          } : undefined}
+          isEdit
+        />
       </div>
     </PageTransition>
   );
