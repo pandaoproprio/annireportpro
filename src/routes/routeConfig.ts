@@ -34,6 +34,7 @@ const ValuationReport = lazy(() => import('@/pages/ValuationReport'));
 const InvoicesPage = lazy(() => import('@/pages/InvoicesPage'));
 const MessagingPage = lazy(() => import('@/pages/MessagingPage'));
 const ObservabilityDashboard = lazy(() => import('@/pages/ObservabilityDashboard'));
+const ProductivityMonitoringPage = lazy(() => import('@/pages/ProductivityMonitoringPage'));
 
 export interface RouteEntry {
   path: string;
@@ -80,4 +81,5 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/invoices', element: InvoicesPage },
   { path: '/messaging', element: MessagingPage },
   { path: '/observability', element: ObservabilityDashboard, permission: 'system_logs' },
+  { path: '/monitoring', element: ProductivityMonitoringPage },
 ];

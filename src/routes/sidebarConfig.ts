@@ -105,6 +105,7 @@ export const sidebarSections: SidebarSection[] = [
       { to: '/logs', label: 'Logs do Sistema', iconName: 'ScrollText', permission: 'system_logs' },
       { to: '/automato', label: 'Automato', iconName: 'Bot', adminOnly: true },
       { to: '/observability', label: 'Observabilidade', iconName: 'Activity', adminOnly: true },
+      { to: '/monitoring', label: 'Monitoramento', iconName: 'Gauge', adminOnly: true },
     ],
   },
 ];
