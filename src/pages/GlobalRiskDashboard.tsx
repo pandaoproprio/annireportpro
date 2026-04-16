@@ -415,7 +415,6 @@ const GlobalRiskDashboard: React.FC = () => {
             </div>
           </>
         )}
-        )}
 
         <Tabs defaultValue="by-project">
           <TabsList className="grid w-full grid-cols-3">
