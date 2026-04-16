@@ -51,6 +51,7 @@ const ProductivityMonitoringPage: React.FC = () => {
   const [running, setRunning] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [kpiFilter, setKpiFilter] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [editConfig, setEditConfig] = useState<Record<string, any> | null>(null);
   const [asanaBoards, setAsanaBoards] = useState<any[]>([]);
   const [asanaBoardsLoading, setAsanaBoardsLoading] = useState(false);
@@ -335,7 +336,7 @@ const ProductivityMonitoringPage: React.FC = () => {
         <StatCard label="Retrabalho Total" value={totalRework} colorClass="text-warning" />
       </div>
 
-      <Tabs defaultValue="dashboard">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="flex-wrap">
           <TabsTrigger value="dashboard" className="gap-1.5"><TrendingUp className="w-4 h-4" />Dashboard</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" />Usuários</TabsTrigger>
