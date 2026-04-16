@@ -15,9 +15,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { AlertTriangle, Calendar, CheckCircle, Edit, Filter, RefreshCw, Shield, ShieldAlert, TrendingUp, User, Loader2 } from 'lucide-react';
+import { AlertTriangle, Calendar, CheckCircle, Edit, ExternalLink, Filter, RefreshCw, Shield, ShieldAlert, TrendingUp, User, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { useProjectData } from '@/contexts/ProjectContext';
 
 interface RiskWithProject {
   id: string;
