@@ -45,7 +45,7 @@ interface ProjectSummary {
 
 const GlobalRiskDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { hasRole } = usePermissions();
+  const { isSuperAdmin } = usePermissions();
   const [risks, setRisks] = useState<RiskWithProject[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
