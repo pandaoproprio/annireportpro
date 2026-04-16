@@ -234,7 +234,20 @@ const GlobalRiskDashboard: React.FC = () => {
 
   const filtered = risks.filter(r => {
     if (filterProject !== 'all' && r.project_id !== filterProject) return false;
-    if (filterStatus !== 'all' && r.status !== filterStatus) return false;
+    if (filterStatus !== 'all') {
+      const level = getRiskLevel(r.probability, r.impact).level;
+      if (filterStatus === 'critico') {
+        if (level !== 'Crítico' || r.status === 'resolvido') return false;
+      } else if (filterStatus === 'alto') {
+        if (level !== 'Alto' || r.status === 'resolvido') return false;
+      } else if (filterStatus === 'ativo') {
+        if (['resolvido', 'aceito'].includes(r.status)) return false;
+      } else if (filterStatus === 'atrasado') {
+        if (!r.due_date || r.status === 'resolvido' || new Date(r.due_date) >= new Date()) return false;
+      } else if (r.status !== filterStatus) {
+        return false;
+      }
+    }
     if (filterCategory !== 'all' && r.category !== filterCategory) return false;
     return true;
   });
