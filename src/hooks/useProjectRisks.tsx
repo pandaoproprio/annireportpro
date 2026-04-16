@@ -198,7 +198,7 @@ export function useProjectRisks(projectId: string | undefined) {
       description: `[RISCO MATERIALIZADO] ${risk.title}\n\n${risk.contingency_plan || risk.mitigation_plan || risk.description}`,
       date: new Date().toISOString().split('T')[0],
       location: 'Gestão de Riscos',
-      type: 'reuniao' as const,
+      type: 'Reunião de Equipe' as const,
       challenges: `Risco materializado: ${risk.title}`,
       results: '',
       is_draft: true,
