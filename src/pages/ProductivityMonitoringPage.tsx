@@ -9,17 +9,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Badge } from '@/components/ui/badge';
+import { Slider } from '@/components/ui/slider';
 import { StatCard } from '@/components/StatCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import {
-  Users, UserX, AlertTriangle, ShieldCheck, Download, Plus, Trash2, Save, Settings2,
-  TrendingUp, Clock, Play, Loader2,
+  Users, AlertTriangle, Download, Plus, Trash2, Save, Settings2,
+  TrendingUp, Clock, Play, Loader2, Bell, CheckCircle2, Target,
+  RotateCcw, Award,
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line,
-  CartesianGrid, Legend,
+  CartesianGrid, Legend, RadarChart, PolarGrid, PolarAngleAxis,
+  PolarRadiusAxis, Radar,
 } from 'recharts';
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super Admin',
+  admin: 'Admin',
+  analista: 'Analista',
+  coordenador: 'Coordenador(a)',
+  oficineiro: 'Oficineiro(a)',
+  voluntario: 'Voluntário(a)',
+  usuario: 'Usuário',
+};
 
 const ProductivityMonitoringPage: React.FC = () => {
   const { role } = useAuth();
@@ -29,15 +43,14 @@ const ProductivityMonitoringPage: React.FC = () => {
     emails, emailsLoading, addEmail, removeEmail,
     snapshots, snapshotsLoading,
     latestSnapshots, activeUsers, inactiveUsers, lowPerformers, slaViolators,
+    avgScore, totalRework,
+    alerts, alertsLoading, resolveAlert,
   } = useProductivityMonitoring(days);
 
   const [newEmail, setNewEmail] = useState('');
   const [running, setRunning] = useState(false);
-  const [editConfig, setEditConfig] = useState<{
-    inactive_days_threshold: number;
-    min_tasks_per_day: number;
-    max_avg_task_seconds: number;
-  } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<string | null>(null);
+  const [editConfig, setEditConfig] = useState<Record<string, any> | null>(null);
 
   const handleRunNow = async () => {
     setRunning(true);
@@ -45,7 +58,6 @@ const ProductivityMonitoringPage: React.FC = () => {
       const { error } = await supabase.functions.invoke('daily-productivity-monitor');
       if (error) throw error;
       toast.success('Monitoramento executado com sucesso!');
-      // Refresh data
       window.location.reload();
     } catch {
       toast.error('Erro ao executar monitoramento');
@@ -91,6 +103,9 @@ const ProductivityMonitoringPage: React.FC = () => {
         inactiveCount: inactiveUsers.length,
         lowPerformersCount: lowPerformers.length,
         slaViolatorsCount: slaViolators.length,
+        avgScore,
+        totalRework,
+        alerts,
       });
       toast.success('PDF exportado!');
     } catch {
@@ -98,38 +113,70 @@ const ProductivityMonitoringPage: React.FC = () => {
     }
   };
 
-  // Chart data: ranking by activities
+  // Ranking data
   const rankingData = [...latestSnapshots]
-    .sort((a, b) => b.activities_count - a.activities_count)
+    .sort((a, b) => Number(b.score) - Number(a.score))
     .map(s => ({
       name: (s.user_name || '').split(' ').slice(0, 2).join(' '),
+      score: Number(s.score || 0),
       atividades: s.activities_count,
-      sla: Number(s.sla_pct_on_time),
     }));
   const rankingChartHeight = Math.max(300, rankingData.length * 32);
 
-  // Chart data: activity over time (aggregate by date)
-  const byDate = new Map<string, number>();
+  // Score trend over time
+  const byDate = new Map<string, { total: number; count: number }>();
   for (const s of snapshots) {
-    byDate.set(s.snapshot_date, (byDate.get(s.snapshot_date) || 0) + s.activities_count);
+    const d = s.snapshot_date;
+    const existing = byDate.get(d) || { total: 0, count: 0 };
+    existing.total += Number(s.score || 0);
+    existing.count++;
+    byDate.set(d, existing);
   }
-  const timelineData = Array.from(byDate.entries())
+  const scoreTrendData = Array.from(byDate.entries())
     .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, count]) => ({
+    .map(([date, { total, count }]) => ({
       date: new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-      atividades: count,
+      'Score Médio': Number((total / count).toFixed(1)),
+    }));
+
+  // Radar data for selected user
+  const radarUser = selectedUser
+    ? latestSnapshots.find(s => s.user_id === selectedUser)
+    : latestSnapshots[0];
+
+  const radarData = radarUser ? [
+    { dim: 'Engajamento', value: Math.max(0, 100 - radarUser.days_inactive * 15) },
+    { dim: 'Volume', value: Math.min(100, (radarUser.tasks_per_day / Math.max(config?.min_tasks_per_day || 1, 0.1)) * 100) },
+    { dim: 'Eficiência', value: Number(radarUser.sla_pct_on_time || 50) },
+    { dim: 'Qualidade', value: Math.max(0, 100 - (radarUser.reopen_count || 0) * 20 - (radarUser.overdue_count || 0) * 10) },
+    { dim: 'Consistência', value: Number(radarUser.delivery_regularity || 0) },
+  ] : [];
+
+  // Benchmark data
+  const benchmarkData = [...latestSnapshots]
+    .sort((a, b) => Number(b.score) - Number(a.score))
+    .slice(0, 15)
+    .map(s => ({
+      name: (s.user_name || '').split(' ').slice(0, 2).join(' '),
+      'Individual': s.activities_count,
+      'Média Equipe': Number(s.team_avg_activities || 0),
     }));
 
   const currentConfig = editConfig || config;
+  const currentWeights = (editConfig?.score_weights || config?.score_weights || {
+    engagement: 20, volume: 20, efficiency: 20, quality: 20, consistency: 20,
+  }) as Record<string, number>;
+
+  const unresolvedAlerts = alerts.filter(a => !a.is_resolved);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Monitoramento de Produtividade</h1>
           <p className="text-sm text-muted-foreground">Visão geral de desempenho dos usuários — SuperAdmin</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <select
             value={days}
             onChange={e => setDays(Number(e.target.value))}
@@ -153,63 +200,135 @@ const ProductivityMonitoringPage: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <StatCard label="Usuários Ativos" value={activeUsers.length} colorClass="text-success" />
         <StatCard label="Inativos" value={inactiveUsers.length} colorClass="text-destructive" />
         <StatCard label="Baixa Produtividade" value={lowPerformers.length} colorClass="text-warning" />
         <StatCard label="Violações SLA" value={slaViolators.length} colorClass="text-destructive" />
+        <StatCard label="Score Médio" value={avgScore.toFixed(0)} colorClass="text-primary" />
+        <StatCard label="Retrabalho Total" value={totalRework} colorClass="text-warning" />
       </div>
 
       <Tabs defaultValue="dashboard">
-        <TabsList>
+        <TabsList className="flex-wrap">
           <TabsTrigger value="dashboard" className="gap-1.5"><TrendingUp className="w-4 h-4" />Dashboard</TabsTrigger>
           <TabsTrigger value="users" className="gap-1.5"><Users className="w-4 h-4" />Usuários</TabsTrigger>
+          <TabsTrigger value="alerts" className="gap-1.5 relative">
+            <Bell className="w-4 h-4" />Alertas
+            {unresolvedAlerts.length > 0 && (
+              <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1 text-[10px]">{unresolvedAlerts.length}</Badge>
+            )}
+          </TabsTrigger>
           <TabsTrigger value="config" className="gap-1.5"><Settings2 className="w-4 h-4" />Configurações</TabsTrigger>
         </TabsList>
 
         {/* ── DASHBOARD TAB ── */}
         <TabsContent value="dashboard" className="space-y-6 mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Ranking */}
+            {/* Score Ranking */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Ranking de Produtividade</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Award className="w-5 h-5 text-primary" />
+                  Ranking por Score
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {rankingData.length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-8">Nenhum dado disponível. Execute o monitoramento para gerar métricas.</p>
+                  <p className="text-muted-foreground text-sm text-center py-8">Nenhum dado disponível.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={rankingChartHeight}>
                     <BarChart data={rankingData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis type="number" />
-                      <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 12 }} />
+                      <XAxis type="number" domain={[0, 100]} />
+                      <YAxis type="category" dataKey="name" width={90} tick={{ fontSize: 11 }} />
                       <Tooltip />
-                      <Bar dataKey="atividades" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+                      <Bar dataKey="score" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Score" />
                     </BarChart>
                   </ResponsiveContainer>
                 )}
               </CardContent>
             </Card>
 
-            {/* Timeline */}
+            {/* Radar Chart */}
             <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Atividades ao Longo do Tempo</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Target className="w-5 h-5 text-primary" />
+                  Visão Multidimensional
+                </CardTitle>
+                <select
+                  className="border rounded px-2 py-1 text-xs bg-background text-foreground"
+                  value={selectedUser || ''}
+                  onChange={e => setSelectedUser(e.target.value || null)}
+                >
+                  {latestSnapshots.map(s => (
+                    <option key={s.user_id} value={s.user_id}>{s.user_name}</option>
+                  ))}
+                </select>
               </CardHeader>
               <CardContent>
-                {timelineData.length === 0 ? (
-                  <p className="text-muted-foreground text-sm text-center py-8">Nenhum dado disponível.</p>
+                {radarData.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">Sem dados.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={timelineData}>
+                    <RadarChart data={radarData}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="dim" tick={{ fontSize: 11 }} />
+                      <PolarRadiusAxis domain={[0, 100]} tick={{ fontSize: 10 }} />
+                      <Radar dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary))" fillOpacity={0.3} name={radarUser?.user_name || ''} />
+                      <Tooltip />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Score Trend */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Tendência de Score</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {scoreTrendData.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">Sem dados.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={scoreTrendData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+                      <YAxis domain={[0, 100]} />
+                      <Tooltip />
+                      <Legend />
+                      <Line type="monotone" dataKey="Score Médio" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Benchmark */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                  Benchmark: Indivíduo vs Equipe
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {benchmarkData.length === 0 ? (
+                  <p className="text-muted-foreground text-sm text-center py-8">Sem dados.</p>
+                ) : (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={benchmarkData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" height={60} />
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Line type="monotone" dataKey="atividades" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                    </LineChart>
+                      <Bar dataKey="Individual" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="Média Equipe" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                    </BarChart>
                   </ResponsiveContainer>
                 )}
               </CardContent>
@@ -278,42 +397,156 @@ const ProductivityMonitoringPage: React.FC = () => {
                     <thead>
                       <tr className="border-b text-left">
                         <th className="py-2 px-2 font-medium text-muted-foreground">Usuário</th>
-                        <th className="py-2 px-2 font-medium text-muted-foreground">Email</th>
+                        <th className="py-2 px-2 font-medium text-muted-foreground">Função</th>
+                        <th className="py-2 px-2 font-medium text-muted-foreground">Projetos</th>
+                        <th className="py-2 px-2 font-medium text-muted-foreground text-center">Score</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Atividades</th>
+                        <th className="py-2 px-2 font-medium text-muted-foreground text-center">Iniciadas</th>
+                        <th className="py-2 px-2 font-medium text-muted-foreground text-center">Finalizadas</th>
+                        <th className="py-2 px-2 font-medium text-muted-foreground text-center">Retrabalho</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Dias Inativo</th>
-                        <th className="py-2 px-2 font-medium text-muted-foreground text-center">Tarefas/Dia</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">SLA %</th>
+                        <th className="py-2 px-2 font-medium text-muted-foreground text-center">Percentil</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {latestSnapshots
-                        .sort((a, b) => b.activities_count - a.activities_count)
+                      {[...latestSnapshots]
+                        .sort((a, b) => Number(b.score) - Number(a.score))
                         .map(s => (
                           <tr key={s.id} className="border-b hover:bg-muted/50 transition-colors">
-                            <td className="py-2 px-2 font-medium">{s.user_name}</td>
-                            <td className="py-2 px-2 text-muted-foreground">{s.user_email}</td>
+                            <td className="py-2 px-2">
+                              <div className="font-medium">{s.user_name}</div>
+                              <div className="text-xs text-muted-foreground">{s.user_email}</div>
+                            </td>
+                            <td className="py-2 px-2">
+                              <Badge variant="outline" className="text-xs">
+                                {ROLE_LABELS[s.user_role] || s.user_role}
+                              </Badge>
+                            </td>
+                            <td className="py-2 px-2 max-w-[200px]">
+                              {(s.user_projects || []).length === 0 ? (
+                                <span className="text-muted-foreground text-xs">—</span>
+                              ) : (
+                                <div className="flex flex-wrap gap-1">
+                                  {(s.user_projects || []).map((p: any, i: number) => (
+                                    <Badge key={i} variant="secondary" className="text-[10px] px-1.5 py-0">
+                                      {(p.name || '').substring(0, 20)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-2 px-2 text-center">
+                              <span className={`font-bold ${
+                                Number(s.score) >= 70 ? 'text-success' :
+                                Number(s.score) >= 40 ? 'text-warning' :
+                                'text-destructive'
+                              }`}>
+                                {Number(s.score || 0).toFixed(0)}
+                              </span>
+                            </td>
                             <td className="py-2 px-2 text-center">{s.activities_count}</td>
+                            <td className="py-2 px-2 text-center">{s.tasks_started || 0}</td>
+                            <td className="py-2 px-2 text-center">{s.tasks_finished || 0}</td>
+                            <td className="py-2 px-2 text-center">
+                              {(s.reopen_count || 0) > 0 ? (
+                                <span className="text-warning font-medium">{s.reopen_count}</span>
+                              ) : (
+                                <span className="text-muted-foreground">0</span>
+                              )}
+                            </td>
                             <td className="py-2 px-2 text-center">
                               <span className={s.days_inactive > (config?.inactive_days_threshold ?? 3) ? 'text-destructive font-semibold' : ''}>
                                 {s.days_inactive}
                               </span>
                             </td>
-                            <td className="py-2 px-2 text-center">{Number(s.tasks_per_day).toFixed(1)}</td>
                             <td className="py-2 px-2 text-center">{Number(s.sla_pct_on_time).toFixed(0)}%</td>
                             <td className="py-2 px-2 text-center">
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                                s.status === 'ok' ? 'bg-green-100 text-green-800' :
-                                s.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                                'bg-yellow-100 text-yellow-800'
+                              <span className="text-xs">{Number(s.percentile_rank || 0).toFixed(0)}%</span>
+                            </td>
+                            <td className="py-2 px-2 text-center">
+                              <Badge variant={
+                                s.status === 'ok' ? 'default' :
+                                s.status === 'inactive' ? 'destructive' :
+                                'secondary'
+                              } className={`text-xs ${
+                                s.status === 'ok' ? 'bg-green-100 text-green-800 hover:bg-green-100' :
+                                s.status === 'inactive' ? '' :
+                                'bg-yellow-100 text-yellow-800 hover:bg-yellow-100'
                               }`}>
                                 {s.status === 'ok' ? 'OK' : s.status === 'inactive' ? 'Inativo' : 'Baixo'}
-                              </span>
+                              </Badge>
                             </td>
                           </tr>
                         ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── ALERTS TAB ── */}
+        <TabsContent value="alerts" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Bell className="w-5 h-5 text-primary" />
+                Alertas Inteligentes
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {alertsLoading ? (
+                <Skeleton className="h-40" />
+              ) : alerts.length === 0 ? (
+                <p className="text-muted-foreground text-sm text-center py-8">Nenhum alerta registrado no período.</p>
+              ) : (
+                <div className="space-y-3">
+                  {alerts.map(alert => (
+                    <div
+                      key={alert.id}
+                      className={`flex items-start justify-between gap-4 p-3 rounded-lg border ${
+                        alert.is_resolved ? 'bg-muted/30 opacity-60' : 'bg-background'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-0.5 w-2 h-2 rounded-full shrink-0 ${
+                          alert.severity === 'critical' ? 'bg-destructive' : 'bg-yellow-500'
+                        }`} />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm">{alert.user_name}</span>
+                            <Badge variant="outline" className="text-[10px]">
+                              {alert.alert_type === 'productivity_drop' ? 'Queda de Produtividade' :
+                               alert.alert_type === 'recurring_sla' ? 'SLA Recorrente' :
+                               alert.alert_type === 'inactivity' ? 'Inatividade' :
+                               alert.alert_type}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-0.5">{alert.description}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(alert.created_at).toLocaleDateString('pt-BR', {
+                              day: '2-digit', month: '2-digit', year: 'numeric',
+                              hour: '2-digit', minute: '2-digit',
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      {!alert.is_resolved && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => resolveAlert.mutate(alert.id)}
+                          className="shrink-0"
+                          title="Marcar como resolvido"
+                        >
+                          <CheckCircle2 className="w-4 h-4 text-success" />
+                        </Button>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </CardContent>
@@ -338,6 +571,7 @@ const ProductivityMonitoringPage: React.FC = () => {
                     type="number"
                     value={currentConfig?.inactive_days_threshold ?? 3}
                     onChange={e => setEditConfig(prev => ({
+                      ...prev,
                       inactive_days_threshold: Number(e.target.value),
                       min_tasks_per_day: prev?.min_tasks_per_day ?? config?.min_tasks_per_day ?? 1,
                       max_avg_task_seconds: prev?.max_avg_task_seconds ?? config?.max_avg_task_seconds ?? 86400,
@@ -351,6 +585,7 @@ const ProductivityMonitoringPage: React.FC = () => {
                     step="0.1"
                     value={currentConfig?.min_tasks_per_day ?? 1}
                     onChange={e => setEditConfig(prev => ({
+                      ...prev,
                       inactive_days_threshold: prev?.inactive_days_threshold ?? config?.inactive_days_threshold ?? 3,
                       min_tasks_per_day: Number(e.target.value),
                       max_avg_task_seconds: prev?.max_avg_task_seconds ?? config?.max_avg_task_seconds ?? 86400,
@@ -363,6 +598,7 @@ const ProductivityMonitoringPage: React.FC = () => {
                     type="number"
                     value={currentConfig?.max_avg_task_seconds ?? 86400}
                     onChange={e => setEditConfig(prev => ({
+                      ...prev,
                       inactive_days_threshold: prev?.inactive_days_threshold ?? config?.inactive_days_threshold ?? 3,
                       min_tasks_per_day: prev?.min_tasks_per_day ?? config?.min_tasks_per_day ?? 1,
                       max_avg_task_seconds: Number(e.target.value),
@@ -370,10 +606,77 @@ const ProductivityMonitoringPage: React.FC = () => {
                   />
                 </div>
               </div>
+              <div>
+                <Label>Limiar de queda brusca (%)</Label>
+                <Input
+                  type="number"
+                  className="max-w-[200px]"
+                  value={currentConfig?.productivity_drop_threshold ?? 30}
+                  onChange={e => setEditConfig(prev => ({
+                    ...prev,
+                    inactive_days_threshold: prev?.inactive_days_threshold ?? config?.inactive_days_threshold ?? 3,
+                    min_tasks_per_day: prev?.min_tasks_per_day ?? config?.min_tasks_per_day ?? 1,
+                    max_avg_task_seconds: prev?.max_avg_task_seconds ?? config?.max_avg_task_seconds ?? 86400,
+                    productivity_drop_threshold: Number(e.target.value),
+                  }))}
+                />
+              </div>
               {editConfig && (
                 <Button onClick={handleSaveConfig} className="gap-2" disabled={updateConfig.isPending}>
                   <Save className="w-4 h-4" />
                   Salvar Configurações
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Score Weights */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Target className="w-5 h-5 text-primary" />
+                Pesos do Score
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {(['engagement', 'volume', 'efficiency', 'quality', 'consistency'] as const).map(dim => {
+                const labels: Record<string, string> = {
+                  engagement: 'Engajamento',
+                  volume: 'Volume',
+                  efficiency: 'Eficiência',
+                  quality: 'Qualidade',
+                  consistency: 'Consistência',
+                };
+                const val = currentWeights[dim] ?? 20;
+                return (
+                  <div key={dim} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span>{labels[dim]}</span>
+                      <span className="font-medium">{val}</span>
+                    </div>
+                    <Slider
+                      value={[val]}
+                      min={0}
+                      max={100}
+                      step={5}
+                      onValueChange={([v]) => {
+                        const newWeights = { ...currentWeights, [dim]: v };
+                        setEditConfig(prev => ({
+                          ...prev,
+                          inactive_days_threshold: prev?.inactive_days_threshold ?? config?.inactive_days_threshold ?? 3,
+                          min_tasks_per_day: prev?.min_tasks_per_day ?? config?.min_tasks_per_day ?? 1,
+                          max_avg_task_seconds: prev?.max_avg_task_seconds ?? config?.max_avg_task_seconds ?? 86400,
+                          score_weights: newWeights,
+                        }));
+                      }}
+                    />
+                  </div>
+                );
+              })}
+              {editConfig && (
+                <Button onClick={handleSaveConfig} className="gap-2 mt-2" disabled={updateConfig.isPending}>
+                  <Save className="w-4 h-4" />
+                  Salvar Pesos
                 </Button>
               )}
             </CardContent>

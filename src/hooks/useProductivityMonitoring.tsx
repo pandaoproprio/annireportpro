@@ -10,11 +10,25 @@ export interface MonitoringConfig {
   report_frequency: string;
   is_active: boolean;
   sla_by_activity_type: Record<string, number>;
+  score_weights: Record<string, number>;
+  productivity_drop_threshold: number;
 }
 
 export interface MonitoringEmail {
   id: string;
   email: string;
+  created_at: string;
+}
+
+export interface MonitoringAlert {
+  id: string;
+  alert_type: string;
+  user_id: string;
+  user_name: string;
+  description: string;
+  severity: string;
+  is_resolved: boolean;
+  resolved_at: string | null;
   created_at: string;
 }
 
@@ -31,10 +45,21 @@ export interface ProductivitySnapshot {
   sla_pct_on_time: number;
   status: string;
   created_at: string;
+  // new columns
+  tasks_started: number;
+  tasks_finished: number;
+  reopen_count: number;
+  overdue_count: number;
+  concurrent_tasks: number;
+  delivery_regularity: number;
+  team_avg_activities: number;
+  percentile_rank: number;
+  score: number;
+  user_projects: { id: string; name: string }[];
+  user_role: string;
   // joined
   user_name?: string;
   user_email?: string;
-  user_role?: string;
 }
 
 async function fetchConfig(): Promise<MonitoringConfig | null> {
@@ -78,22 +103,30 @@ async function fetchSnapshots(days: number): Promise<ProductivitySnapshot[]> {
     .select('user_id, name, email')
     .in('user_id', userIds);
 
-  const { data: roles } = await supabase
-    .from('user_roles')
-    .select('user_id, role')
-    .in('user_id', userIds);
-
   const profileMap = new Map((profiles || []).map(p => [p.user_id, p]));
-  const roleMap = new Map((roles || []).map(r => [r.user_id, r.role]));
 
   return rows
     .map(r => ({
       ...r,
       user_name: profileMap.get(r.user_id)?.name || 'Desconhecido',
       user_email: profileMap.get(r.user_id)?.email || '',
-      user_role: roleMap.get(r.user_id) || 'usuario',
+      user_projects: Array.isArray(r.user_projects) ? r.user_projects : [],
     }))
     .filter(r => r.user_role !== 'super_admin');
+}
+
+async function fetchAlerts(days: number): Promise<MonitoringAlert[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const { data, error } = await supabase
+    .from('monitoring_alerts')
+    .select('*')
+    .gte('created_at', since.toISOString())
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return (data || []) as unknown as MonitoringAlert[];
 }
 
 export function useProductivityMonitoring(days = 30) {
@@ -112,6 +145,11 @@ export function useProductivityMonitoring(days = 30) {
   const snapshotsQuery = useQuery({
     queryKey: ['monitoring-snapshots', days],
     queryFn: () => fetchSnapshots(days),
+  });
+
+  const alertsQuery = useQuery({
+    queryKey: ['monitoring-alerts', days],
+    queryFn: () => fetchAlerts(days),
   });
 
   const updateConfig = useMutation({
@@ -160,6 +198,21 @@ export function useProductivityMonitoring(days = 30) {
     onError: () => toast.error('Erro ao remover email'),
   });
 
+  const resolveAlert = useMutation({
+    mutationFn: async (alertId: string) => {
+      const { error } = await supabase
+        .from('monitoring_alerts')
+        .update({ is_resolved: true, resolved_at: new Date().toISOString() } as any)
+        .eq('id', alertId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['monitoring-alerts'] });
+      toast.success('Alerta resolvido');
+    },
+    onError: () => toast.error('Erro ao resolver alerta'),
+  });
+
   // Compute aggregated metrics
   const latestSnapshots = (() => {
     const snaps = snapshotsQuery.data || [];
@@ -178,6 +231,11 @@ export function useProductivityMonitoring(days = 30) {
   const lowPerformers = latestSnapshots.filter(s => s.status === 'low_performance');
   const slaViolators = latestSnapshots.filter(s => s.sla_violations > 0);
 
+  const avgScore = latestSnapshots.length > 0
+    ? latestSnapshots.reduce((s, u) => s + Number(u.score || 0), 0) / latestSnapshots.length
+    : 0;
+  const totalRework = latestSnapshots.reduce((s, u) => s + (u.reopen_count || 0), 0);
+
   return {
     config: configQuery.data,
     configLoading: configQuery.isLoading,
@@ -193,5 +251,10 @@ export function useProductivityMonitoring(days = 30) {
     inactiveUsers,
     lowPerformers,
     slaViolators,
+    avgScore,
+    totalRework,
+    alerts: alertsQuery.data || [],
+    alertsLoading: alertsQuery.isLoading,
+    resolveAlert,
   };
 }
