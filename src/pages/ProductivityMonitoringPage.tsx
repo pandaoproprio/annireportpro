@@ -632,14 +632,27 @@ const ProductivityMonitoringPage: React.FC = () => {
                               {(() => {
                                 const a = asanaByUser.get(s.user_id);
                                 if (!a || (a.completed === 0 && a.created === 0)) return <span className="text-muted-foreground">—</span>;
+                                const total = a.completed + a.created;
                                 return (
-                                  <div className="text-xs space-y-0.5">
-                                    <div title="Concluídas">✅ {a.completed}</div>
-                                    <div title="Criadas">📝 {a.created}</div>
-                                    {a.onTime > 0 && <div title="No prazo" className="text-success">⏱ {a.onTime}</div>}
-                                    {a.overdue > 0 && <div title="Atrasadas" className="text-destructive">⚠ {a.overdue}</div>}
-                                    {a.comments > 0 && <div title="Comentários">💬 {a.comments}</div>}
-                                  </div>
+                                  <Popover>
+                                    <PopoverTrigger asChild>
+                                      <button className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-muted hover:bg-accent transition-colors text-xs font-medium cursor-pointer">
+                                        <Target className="w-3 h-3 text-primary" />
+                                        {total}
+                                      </button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-56 p-3" side="left">
+                                      <p className="font-semibold text-sm mb-2">Métricas Asana</p>
+                                      <div className="space-y-1.5 text-xs">
+                                        <div className="flex justify-between"><span>✅ Concluídas</span><span className="font-medium">{a.completed}</span></div>
+                                        <div className="flex justify-between"><span>📝 Criadas</span><span className="font-medium">{a.created}</span></div>
+                                        <div className="flex justify-between"><span className="text-success">⏱ No prazo</span><span className="font-medium">{a.onTime}</span></div>
+                                        <div className="flex justify-between"><span className="text-destructive">⚠ Atrasadas</span><span className="font-medium">{a.overdue}</span></div>
+                                        <div className="flex justify-between"><span>🧩 Subtarefas</span><span className="font-medium">{a.subtasks}</span></div>
+                                        <div className="flex justify-between"><span>💬 Comentários</span><span className="font-medium">{a.comments}</span></div>
+                                      </div>
+                                    </PopoverContent>
+                                  </Popover>
                                 );
                               })()}
                             </td>
