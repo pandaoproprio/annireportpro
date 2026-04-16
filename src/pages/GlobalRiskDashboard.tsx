@@ -51,6 +51,7 @@ const GlobalRiskDashboard: React.FC = () => {
   const { isSuperAdmin } = usePermissions();
   const { switchProject } = useProjectData();
   const navigate = useNavigate();
+  const [risks, setRisks] = useState<RiskWithProject[]>([]);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filterProject, setFilterProject] = useState<string>('all');
