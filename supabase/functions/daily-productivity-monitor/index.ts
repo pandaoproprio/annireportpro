@@ -215,26 +215,36 @@ Deno.serve(async (req) => {
       trackUsage(a.user_id, a.created_at, 'audit')
     }
 
-    // 5k. Asana task mappings (synced productivity from Asana)
-    const { data: asanaRows } = await supabase
+    // 5k. Asana productivity snapshots (from monitoring_asana_snapshots)
+    const { data: asanaSnaps } = await supabase
+      .from('monitoring_asana_snapshots')
+      .select('mapped_user_id, snapshot_date, tasks_completed, tasks_created, tasks_on_time, tasks_overdue, subtasks_completed, comments_count')
+      .not('mapped_user_id', 'is', null)
+      .gte('snapshot_date', thirtyDaysAgo.toISOString().split('T')[0])
+
+    const asanaCountByUser = new Map<string, { completed: number; created: number; onTime: number; overdue: number; subtasks: number; comments: number }>()
+    for (const s of asanaSnaps || []) {
+      if (!s.mapped_user_id) continue
+      const uid = s.mapped_user_id
+      trackUsage(uid, s.snapshot_date, 'asana')
+      const prev = asanaCountByUser.get(uid) || { completed: 0, created: 0, onTime: 0, overdue: 0, subtasks: 0, comments: 0 }
+      prev.completed += s.tasks_completed || 0
+      prev.created += s.tasks_created || 0
+      prev.onTime += s.tasks_on_time || 0
+      prev.overdue += s.tasks_overdue || 0
+      prev.subtasks += s.subtasks_completed || 0
+      prev.comments += s.comments_count || 0
+      asanaCountByUser.set(uid, prev)
+    }
+
+    // Also track old asana_task_mappings for system usage
+    const { data: asanaOldRows } = await supabase
       .from('asana_task_mappings')
       .select('user_id, synced_at')
       .in('user_id', userIds)
       .order('synced_at', { ascending: false })
-    for (const a of asanaRows || []) {
+    for (const a of asanaOldRows || []) {
       trackUsage(a.user_id, a.synced_at, 'asana')
-    }
-
-    // Count recent Asana tasks per user (last N days, matching the period)
-    const { data: recentAsanaTasks } = await supabase
-      .from('asana_task_mappings')
-      .select('user_id, synced_at')
-      .in('user_id', userIds)
-      .gte('synced_at', thirtyDaysAgo.toISOString())
-
-    const asanaCountByUser = new Map<string, number>()
-    for (const a of recentAsanaTasks || []) {
-      asanaCountByUser.set(a.user_id, (asanaCountByUser.get(a.user_id) || 0) + 1)
     }
 
     const actByUser = new Map<string, any[]>()
@@ -308,10 +318,11 @@ Deno.serve(async (req) => {
       if (!profile) continue
 
       const userActs = actByUser.get(uid) || []
-      const asanaTaskCount = asanaCountByUser.get(uid) || 0
-      const activitiesCount = userActs.length + asanaTaskCount // Diário + Asana combined
+      const asanaData = asanaCountByUser.get(uid) || { completed: 0, created: 0, onTime: 0, overdue: 0, subtasks: 0, comments: 0 }
+      const asanaDeliveries = asanaData.completed + asanaData.subtasks
+      const activitiesCount = userActs.length + asanaDeliveries // Diário + Asana combined
       const tasksStarted = userActs.filter(a => a.is_draft).length
-      const tasksFinished = userActs.filter(a => !a.is_draft).length + asanaTaskCount
+      const tasksFinished = userActs.filter(a => !a.is_draft).length + asanaDeliveries
 
       // Days inactive — cross-reference auth login AND last system-wide usage
       const lastLogin = authUsersMap.get(uid) || null
