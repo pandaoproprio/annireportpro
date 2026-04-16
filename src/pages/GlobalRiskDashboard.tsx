@@ -54,6 +54,8 @@ const GlobalRiskDashboard: React.FC = () => {
   const [filterProject, setFilterProject] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
+  const [editingRisk, setEditingRisk] = useState<RiskWithProject | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const fetchAllRisks = useCallback(async () => {
     setIsLoading(true);
