@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useProjectData } from '@/contexts/ProjectContext';
@@ -109,16 +109,16 @@ export const Dashboard: React.FC = () => {
 
   const stats = isSuperAdmin && globalStats
     ? [
-        { label: 'Projetos', value: globalStats.totalProjects, color: 'text-brand-600' },
-        { label: 'Atividades Totais', value: globalStats.totalActivities, color: 'text-info' },
-        { label: 'Pessoas Impactadas', value: globalStats.totalAttendees, color: 'text-success' },
-        { label: 'Metas Ativas', value: globalStats.totalGoals, color: 'text-warning' },
+        { label: 'Projetos', value: globalStats.totalProjects, color: 'text-brand-600', href: '/settings' },
+        { label: 'Atividades Totais', value: globalStats.totalActivities, color: 'text-info', href: '/activities' },
+        { label: 'Pessoas Impactadas', value: globalStats.totalAttendees, color: 'text-success', href: '/activities' },
+        { label: 'Metas Ativas', value: globalStats.totalGoals, color: 'text-warning', href: '/settings' },
       ]
     : [
-        { label: 'Atividades Totais', value: activities.length, color: 'text-info' },
-        { label: 'Pessoas Impactadas', value: activities.reduce((acc, curr) => acc + (curr.attendeesCount || 0), 0), color: 'text-success' },
-        { label: 'Metas Ativas', value: project.goals.length, color: 'text-brand-600' },
-        { label: 'Dias Restantes', value: project.endDate ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '-', color: 'text-warning' },
+        { label: 'Atividades Totais', value: activities.length, color: 'text-info', href: '/activities' },
+        { label: 'Pessoas Impactadas', value: activities.reduce((acc, curr) => acc + (curr.attendeesCount || 0), 0), color: 'text-success', href: '/activities' },
+        { label: 'Metas Ativas', value: project.goals.length, color: 'text-brand-600', href: '/settings' },
+        { label: 'Dias Restantes', value: project.endDate ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '-', color: 'text-warning', href: '/settings' },
       ];
 
   return (
@@ -220,7 +220,7 @@ export const Dashboard: React.FC = () => {
 
 // Extracted panel content to keep Dashboard clean
 interface DashboardPanelContentProps {
-  stats: Array<{ label: string; value: string | number; color: string }>;
+  stats: Array<{ label: string; value: string | number; color: string; href?: string }>;
   slaSummary: any;
   activities: any[];
   project: any;
@@ -232,6 +232,7 @@ interface DashboardPanelContentProps {
 const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
   stats, slaSummary, activities, project, activitiesLoading, role, showAiSummary,
 }) => {
+  const navigate = useNavigate();
   const [aiNarrative, setAiNarrative] = useState<string | null>(null);
   const activitiesByType = activities.reduce<Record<string, number>>((acc, a) => {
     acc[a.type] = (acc[a.type] || 0) + 1;
@@ -338,7 +339,7 @@ const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} />
+          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} onClick={stat.href ? () => navigate(stat.href!) : undefined} />
         ))}
       </div>
 
@@ -448,7 +449,7 @@ import type { GlobalStats } from '@/hooks/useGlobalStats';
 import { Users, FolderOpen } from 'lucide-react';
 
 interface SuperAdminPanelContentProps {
-  stats: Array<{ label: string; value: string | number; color: string }>;
+  stats: Array<{ label: string; value: string | number; color: string; href?: string }>;
   globalStats: GlobalStats;
   projects: any[];
   role: string | null;
@@ -457,6 +458,7 @@ interface SuperAdminPanelContentProps {
 const SuperAdminPanelContent: React.FC<SuperAdminPanelContentProps> = ({
   stats, globalStats, projects,
 }) => {
+  const navigate = useNavigate();
   const sortedProjects = Object.values(globalStats.activitiesByProject)
     .sort((a, b) => b.count - a.count);
 
@@ -473,7 +475,7 @@ const SuperAdminPanelContent: React.FC<SuperAdminPanelContentProps> = ({
       {/* Global Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} />
+          <StatCard key={i} label={stat.label} value={stat.value} colorClass={stat.color} onClick={stat.href ? () => navigate(stat.href!) : undefined} />
         ))}
       </div>
 
