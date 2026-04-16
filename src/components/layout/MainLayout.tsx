@@ -55,11 +55,21 @@ export const MainLayout: React.FC = () => {
 
   return (
     <div className="h-[100dvh] flex bg-background overflow-hidden">
+      {/* Skip to main content — WCAG 2.4.1 */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:text-sm focus:font-medium focus:outline-none focus:ring-2 focus:ring-ring"
+      >
+        Pular para o conteúdo principal
+      </a>
+
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden animate-fadeIn"
           onClick={() => setSidebarOpen(false)}
+          role="presentation"
+          aria-hidden="true"
         />
       )}
 
@@ -71,14 +81,16 @@ export const MainLayout: React.FC = () => {
       />
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <main id="main-content" className="flex-1 flex flex-col min-w-0 overflow-hidden" role="main" aria-label="Conteúdo principal">
         {/* Mobile Header */}
-        <header className="lg:hidden bg-card border-b border-border p-4 flex items-center justify-between sticky top-0 z-20">
+        <header className="lg:hidden bg-card border-b border-border p-4 flex items-center justify-between sticky top-0 z-20" role="banner">
           <button
             onClick={() => setSidebarOpen(true)}
             className="text-foreground p-2 rounded-lg hover:bg-muted"
+            aria-label="Abrir menu de navegação"
+            aria-expanded={sidebarOpen}
           >
-            <Menu className="w-6 h-6" />
+            <Menu className="w-6 h-6" aria-hidden="true" />
           </button>
           <img src={logoGira} alt="GIRA Relatórios" className="h-8" />
           <NotificationBell />
