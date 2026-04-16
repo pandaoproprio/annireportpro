@@ -11,6 +11,7 @@ interface AsanaConfig {
   enable_sync_status: boolean;
   enable_notifications: boolean;
   enable_import_tasks: boolean;
+  is_globally_enabled: boolean;
   created_by: string;
 }
 
@@ -22,6 +23,32 @@ interface AsanaWorkspace {
 interface AsanaProject {
   gid: string;
   name: string;
+}
+
+interface AsanaSyncedProject {
+  id: string;
+  asana_project_gid: string;
+  asana_project_name: string;
+  workspace_gid: string;
+  sync_status: string;
+  last_synced_at: string | null;
+  last_error: string | null;
+  is_active: boolean;
+  created_by: string;
+  created_at: string;
+}
+
+interface AsanaSyncLog {
+  id: string;
+  synced_project_id: string | null;
+  direction: string;
+  event_type: string;
+  entity_type: string;
+  entity_id: string | null;
+  asana_task_gid: string | null;
+  status: string;
+  error_message: string | null;
+  created_at: string;
 }
 
 async function callAsana(action: string, payload: Record<string, unknown> = {}) {
@@ -42,6 +69,27 @@ async function callAsana(action: string, payload: Record<string, unknown> = {}) 
 
   const data = await resp.json();
   if (!resp.ok) throw new Error(data.error || 'Erro na integração Asana');
+  return data;
+}
+
+async function callAsanaSync(action: string, payload: Record<string, unknown> = {}) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error('Não autenticado');
+
+  const resp = await fetch(
+    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/asana-sync`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ action, ...payload }),
+    }
+  );
+
+  const data = await resp.json();
+  if (!resp.ok) throw new Error(data.error || 'Erro na sincronização Asana');
   return data;
 }
 
@@ -75,7 +123,16 @@ export function useAsanaConfig() {
     queryClient.invalidateQueries({ queryKey: ['asana-config'] });
   }, [config, queryClient]);
 
-  return { config, isLoading, saveConfig };
+  const toggleGlobal = useMutation({
+    mutationFn: (enabled: boolean) => callAsana('toggle_global', { enabled }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['asana-config'] });
+      toast.success('Integração global atualizada');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return { config, isLoading, saveConfig, toggleGlobal };
 }
 
 export function useAsanaActions() {
@@ -153,4 +210,61 @@ export function useAsanaActions() {
     importTasks,
     backfillTeamReports,
   };
+}
+
+export function useSyncedProjects() {
+  const queryClient = useQueryClient();
+
+  const { data: syncedProjects = [], isLoading } = useQuery({
+    queryKey: ['asana-synced-projects'],
+    queryFn: async () => {
+      const data = await callAsana('list_synced_projects');
+      return (data.synced_projects || []) as AsanaSyncedProject[];
+    },
+  });
+
+  const addProject = useMutation({
+    mutationFn: (params: { asana_project_gid: string; asana_project_name: string; workspace_gid: string }) =>
+      callAsana('add_synced_project', params),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['asana-synced-projects'] });
+      toast.success('Board adicionado à sincronização');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const removeProject = useMutation({
+    mutationFn: (syncedProjectId: string) =>
+      callAsana('remove_synced_project', { synced_project_id: syncedProjectId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['asana-synced-projects'] });
+      toast.success('Board removido da sincronização');
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const forceSync = useMutation({
+    mutationFn: (syncedProjectId: string) =>
+      callAsanaSync('force_sync', { synced_project_id: syncedProjectId }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['asana-synced-projects'] });
+      toast.success(`Sincronização concluída: ${data.imported || 0} importadas, ${data.updated || 0} atualizadas`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return { syncedProjects, isLoading, addProject, removeProject, forceSync };
+}
+
+export function useSyncLogs(syncedProjectId?: string) {
+  return useQuery({
+    queryKey: ['asana-sync-logs', syncedProjectId],
+    queryFn: async () => {
+      const data = await callAsana('get_sync_logs', {
+        synced_project_id: syncedProjectId || undefined,
+        limit: 100,
+      });
+      return (data.logs || []) as AsanaSyncLog[];
+    },
+  });
 }
