@@ -56,6 +56,7 @@ const ProductivityMonitoringPage: React.FC = () => {
   const [asanaBoards, setAsanaBoards] = useState<any[]>([]);
   const [asanaBoardsLoading, setAsanaBoardsLoading] = useState(false);
   const [newBoardUrl, setNewBoardUrl] = useState('');
+  const [asanaSnapshots, setAsanaSnapshots] = useState<any[]>([]);
   const [addingBoard, setAddingBoard] = useState(false);
   const [syncingAsana, setSyncingAsana] = useState(false);
 
@@ -72,7 +73,18 @@ const ProductivityMonitoringPage: React.FC = () => {
       } catch { /* ignore */ }
       setAsanaBoardsLoading(false);
     };
+    const loadAsanaSnapshots = async () => {
+      try {
+        const { data } = await supabase
+          .from('monitoring_asana_snapshots')
+          .select('*')
+          .not('mapped_user_id', 'is', null)
+          .order('snapshot_date', { ascending: false });
+        setAsanaSnapshots(data || []);
+      } catch { /* ignore */ }
+    };
     loadBoards();
+    loadAsanaSnapshots();
   }, []);
 
   const extractAsanaProjectGid = (input: string): string | null => {
@@ -137,6 +149,13 @@ const ProductivityMonitoringPage: React.FC = () => {
         .select('*')
         .order('created_at', { ascending: true });
       setAsanaBoards(data || []);
+      // Reload asana snapshots
+      const { data: snaps } = await supabase
+        .from('monitoring_asana_snapshots')
+        .select('*')
+        .not('mapped_user_id', 'is', null)
+        .order('snapshot_date', { ascending: false });
+      setAsanaSnapshots(snaps || []);
     } catch {
       toast.error('Erro ao sincronizar com Asana');
     }
@@ -527,6 +546,21 @@ const ProductivityMonitoringPage: React.FC = () => {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
+                  {/* Compute Asana aggregates per user */}
+                  {(() => {
+                    const asanaByUser = new Map<string, { completed: number; created: number; onTime: number; overdue: number; subtasks: number; comments: number }>();
+                    for (const snap of asanaSnapshots) {
+                      if (!snap.mapped_user_id) continue;
+                      const prev = asanaByUser.get(snap.mapped_user_id) || { completed: 0, created: 0, onTime: 0, overdue: 0, subtasks: 0, comments: 0 };
+                      prev.completed += snap.tasks_completed || 0;
+                      prev.created += snap.tasks_created || 0;
+                      prev.onTime += snap.tasks_on_time || 0;
+                      prev.overdue += snap.tasks_overdue || 0;
+                      prev.subtasks += snap.subtasks_completed || 0;
+                      prev.comments += snap.comments_count || 0;
+                      asanaByUser.set(snap.mapped_user_id, prev);
+                    }
+                    return (
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-left">
@@ -535,6 +569,7 @@ const ProductivityMonitoringPage: React.FC = () => {
                         <th className="py-2 px-2 font-medium text-muted-foreground">Projetos</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Score</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Atividades</th>
+                        <th className="py-2 px-2 font-medium text-muted-foreground text-center">Asana</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Iniciadas</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Finalizadas</th>
                         <th className="py-2 px-2 font-medium text-muted-foreground text-center">Retrabalho</th>
@@ -592,6 +627,21 @@ const ProductivityMonitoringPage: React.FC = () => {
                               </span>
                             </td>
                             <td className="py-2 px-2 text-center">{s.activities_count}</td>
+                            <td className="py-2 px-2 text-center">
+                              {(() => {
+                                const a = asanaByUser.get(s.user_id);
+                                if (!a || (a.completed === 0 && a.created === 0)) return <span className="text-muted-foreground">—</span>;
+                                return (
+                                  <div className="text-xs space-y-0.5">
+                                    <div title="Concluídas">✅ {a.completed}</div>
+                                    <div title="Criadas">📝 {a.created}</div>
+                                    {a.onTime > 0 && <div title="No prazo" className="text-success">⏱ {a.onTime}</div>}
+                                    {a.overdue > 0 && <div title="Atrasadas" className="text-destructive">⚠ {a.overdue}</div>}
+                                    {a.comments > 0 && <div title="Comentários">💬 {a.comments}</div>}
+                                  </div>
+                                );
+                              })()}
+                            </td>
                             <td className="py-2 px-2 text-center">{s.tasks_started || 0}</td>
                             <td className="py-2 px-2 text-center">{s.tasks_finished || 0}</td>
                             <td className="py-2 px-2 text-center">
@@ -627,6 +677,8 @@ const ProductivityMonitoringPage: React.FC = () => {
                         ))}
                     </tbody>
                   </table>
+                    );
+                  })()}
                 </div>
               )}
             </CardContent>
