@@ -32,11 +32,27 @@ const ProductivityMonitoringPage: React.FC = () => {
   } = useProductivityMonitoring(days);
 
   const [newEmail, setNewEmail] = useState('');
+  const [running, setRunning] = useState(false);
   const [editConfig, setEditConfig] = useState<{
     inactive_days_threshold: number;
     min_tasks_per_day: number;
     max_avg_task_seconds: number;
   } | null>(null);
+
+  const handleRunNow = async () => {
+    setRunning(true);
+    try {
+      const { error } = await supabase.functions.invoke('daily-productivity-monitor');
+      if (error) throw error;
+      toast.success('Monitoramento executado com sucesso!');
+      // Refresh data
+      window.location.reload();
+    } catch {
+      toast.error('Erro ao executar monitoramento');
+    } finally {
+      setRunning(false);
+    }
+  };
 
   if (role !== 'SUPER_ADMIN') return <Navigate to="/" replace />;
 
