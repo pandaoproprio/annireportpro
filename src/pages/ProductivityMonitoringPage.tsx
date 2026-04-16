@@ -179,7 +179,7 @@ const ProductivityMonitoringPage: React.FC = () => {
                 {rankingData.length === 0 ? (
                   <p className="text-muted-foreground text-sm text-center py-8">Nenhum dado disponível. Execute o monitoramento para gerar métricas.</p>
                 ) : (
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={rankingChartHeight}>
                     <BarChart data={rankingData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis type="number" />
