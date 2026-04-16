@@ -73,7 +73,18 @@ const ProductivityMonitoringPage: React.FC = () => {
       } catch { /* ignore */ }
       setAsanaBoardsLoading(false);
     };
+    const loadAsanaSnapshots = async () => {
+      try {
+        const { data } = await supabase
+          .from('monitoring_asana_snapshots')
+          .select('*')
+          .not('mapped_user_id', 'is', null)
+          .order('snapshot_date', { ascending: false });
+        setAsanaSnapshots(data || []);
+      } catch { /* ignore */ }
+    };
     loadBoards();
+    loadAsanaSnapshots();
   }, []);
 
   const extractAsanaProjectGid = (input: string): string | null => {
