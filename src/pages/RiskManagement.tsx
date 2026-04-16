@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjectData } from '@/contexts/ProjectContext';
-import { useProjectRisks, getRiskLevel, ProjectRisk, RiskFormData, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS } from '@/hooks/useProjectRisks';
+import { useProjectRisks, getRiskLevel, ProjectRisk, RiskFormData, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS, calculateEMV } from '@/hooks/useProjectRisks';
 import { useRiskIntelligence } from '@/hooks/useRiskIntelligence';
 import { RiskFormDialog } from '@/components/risks/RiskFormDialog';
 import { RiskSummaryCards } from '@/components/risks/RiskSummaryCards';
@@ -18,13 +18,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PlusCircle, Edit, Trash2, ShieldAlert, Calendar, User, Filter, Brain, CalendarDays, Activity } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { PlusCircle, Edit, Trash2, ShieldAlert, Calendar, User, Filter, Brain, CalendarDays, Activity, ArrowUpCircle, ListPlus, DollarSign, Target } from 'lucide-react';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const RiskManagement: React.FC = () => {
   const { user } = useAuth();
   const { activeProject: project } = useProjectData();
-  const { risks, isLoading, createRisk, updateRisk, deleteRisk, summary } = useProjectRisks(project?.id);
+  const { risks, isLoading, createRisk, updateRisk, deleteRisk, escalateRisk, createTaskFromRisk, summary } = useProjectRisks(project?.id);
   const intelligence = useRiskIntelligence(project?.id);
 
   const [formOpen, setFormOpen] = useState(false);
@@ -33,6 +38,9 @@ const RiskManagement: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [activeTab, setActiveTab] = useState('risks');
+  const [escalateDialogOpen, setEscalateDialogOpen] = useState(false);
+  const [escalateRiskId, setEscalateRiskId] = useState<string | null>(null);
+  const [escalateTo, setEscalateTo] = useState('');
 
   if (!user) return <Navigate to="/login" replace />;
   if (!project) return (
@@ -69,6 +77,18 @@ const RiskManagement: React.FC = () => {
     return createRisk(data);
   };
 
+  const handleEscalate = async () => {
+    if (!escalateRiskId || !escalateTo.trim()) return;
+    await escalateRisk(escalateRiskId, escalateTo.trim());
+    setEscalateDialogOpen(false);
+    setEscalateRiskId(null);
+    setEscalateTo('');
+  };
+
+  const handleCreateTask = async (risk: ProjectRisk) => {
+    await createTaskFromRisk(risk);
+  };
+
   const getBadgeVariant = (level: string) => {
     if (level === 'Crítico') return 'destructive' as const;
     if (level === 'Alto') return 'default' as const;
@@ -76,6 +96,7 @@ const RiskManagement: React.FC = () => {
   };
 
   const overdueCount = risks.filter(r => r.due_date && r.status !== 'resolvido' && new Date(r.due_date) < new Date()).length;
+  const goals = project.goals || [];
 
   return (
     <PageTransition>
@@ -94,6 +115,26 @@ const RiskManagement: React.FC = () => {
         </div>
 
         <RiskSummaryCards summary={summary} unreadAlerts={intelligence.unreadAlerts} />
+
+        {/* EMV Summary Banner */}
+        {summary.totalEMV > 0 && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-3 flex items-center gap-3 flex-wrap">
+              <DollarSign className="w-5 h-5 text-primary" />
+              <span className="text-sm font-medium">Exposição Total (EMV):</span>
+              <Badge variant={summary.totalEMV > 50000 ? 'destructive' : 'default'} className="text-sm">
+                R$ {summary.totalEMV.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              </Badge>
+              {summary.escalated > 0 && (
+                <>
+                  <span className="text-sm text-muted-foreground ml-4">|</span>
+                  <ArrowUpCircle className="w-4 h-4 text-orange-500" />
+                  <span className="text-sm">{summary.escalated} risco(s) escalado(s)</span>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-4">
@@ -173,6 +214,8 @@ const RiskManagement: React.FC = () => {
                 {filtered.map(risk => {
                   const rl = getRiskLevel(risk.probability, risk.impact);
                   const isOverdue = risk.due_date && new Date(risk.due_date) < new Date() && risk.status !== 'resolvido';
+                  const emv = calculateEMV(risk.probability, risk.monetary_impact || 0);
+                  const linkedGoal = goals.find(g => g.id === risk.linked_goal_id);
                   return (
                     <Card key={risk.id} className={`hover:shadow-md transition-shadow ${isOverdue ? 'border-destructive/40' : ''}`}>
                       <CardContent className="p-4">
@@ -184,6 +227,12 @@ const RiskManagement: React.FC = () => {
                               <Badge variant="outline">{STATUS_LABELS[risk.status] || risk.status}</Badge>
                               <Badge variant="secondary">{CATEGORY_LABELS[risk.category] || risk.category}</Badge>
                               {isOverdue && <Badge variant="destructive">Atrasado</Badge>}
+                              {risk.escalated_to && (
+                                <Badge variant="default" className="bg-orange-500 text-white">⬆ Escalado</Badge>
+                              )}
+                              {risk.auto_task_created && (
+                                <Badge variant="secondary">📋 Task criada</Badge>
+                              )}
                             </div>
                             {risk.description && (
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{risk.description}</p>
@@ -191,9 +240,19 @@ const RiskManagement: React.FC = () => {
                             <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                               <span>Prob: {PROBABILITY_LABELS[risk.probability]}</span>
                               <span>Impacto: {IMPACT_LABELS[risk.impact]}</span>
+                              {emv > 0 && (
+                                <span className="flex items-center gap-1 font-medium">
+                                  <DollarSign className="w-3 h-3" /> EMV: R$ {emv.toLocaleString('pt-BR')}
+                                </span>
+                              )}
                               {risk.responsible && (
                                 <span className="flex items-center gap-1">
                                   <User className="w-3 h-3" /> {risk.responsible}
+                                </span>
+                              )}
+                              {risk.risk_owner && (
+                                <span className="flex items-center gap-1 text-primary">
+                                  👤 Owner: {risk.risk_owner}
                                 </span>
                               )}
                               {risk.due_date && (
@@ -201,15 +260,63 @@ const RiskManagement: React.FC = () => {
                                   <Calendar className="w-3 h-3" /> {format(new Date(risk.due_date), 'dd/MM/yyyy')}
                                 </span>
                               )}
+                              {linkedGoal && (
+                                <span className="flex items-center gap-1 text-primary">
+                                  <Target className="w-3 h-3" /> {linkedGoal.title}
+                                </span>
+                              )}
+                              {risk.escalated_to && (
+                                <span className="flex items-center gap-1 text-orange-600">
+                                  <ArrowUpCircle className="w-3 h-3" /> Escalado para: {risk.escalated_to}
+                                </span>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-start gap-1 shrink-0">
-                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(risk)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(risk.id)}>
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(risk)}>
+                                    <Edit className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Editar</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                            {!risk.escalated_to && rl.score >= 15 && risk.status !== 'resolvido' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-500" onClick={() => { setEscalateRiskId(risk.id); setEscalateDialogOpen(true); }}>
+                                      <ArrowUpCircle className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Escalar para PMO/Sponsor</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            {risk.status === 'materializado' && !risk.auto_task_created && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => handleCreateTask(risk)}>
+                                      <ListPlus className="w-4 h-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Criar tarefa no Kanban</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteId(risk.id)}>
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Excluir</TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                           </div>
                         </div>
                       </CardContent>
@@ -260,6 +367,7 @@ const RiskManagement: React.FC = () => {
           open={formOpen}
           onOpenChange={o => { setFormOpen(o); if (!o) setEditingRisk(null); }}
           onSubmit={handleSubmit}
+          goals={goals}
           initialData={editingRisk ? {
             title: editingRisk.title,
             description: editingRisk.description,
@@ -270,6 +378,9 @@ const RiskManagement: React.FC = () => {
             mitigation_plan: editingRisk.mitigation_plan,
             contingency_plan: editingRisk.contingency_plan,
             responsible: editingRisk.responsible || '',
+            risk_owner: editingRisk.risk_owner || '',
+            linked_goal_id: editingRisk.linked_goal_id || '',
+            monetary_impact: editingRisk.monetary_impact || 0,
             due_date: editingRisk.due_date || '',
           } : undefined}
           isEdit={!!editingRisk}
@@ -282,6 +393,37 @@ const RiskManagement: React.FC = () => {
           description="Tem certeza que deseja excluir este risco? Esta ação não pode ser desfeita."
           onConfirm={async () => { if (deleteId) await deleteRisk(deleteId); setDeleteId(null); }}
         />
+
+        {/* Escalation Dialog */}
+        <Dialog open={escalateDialogOpen} onOpenChange={o => { setEscalateDialogOpen(o); if (!o) { setEscalateRiskId(null); setEscalateTo(''); } }}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ArrowUpCircle className="w-5 h-5 text-orange-500" />
+                Escalar Risco
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Riscos críticos devem ser escalados ao PMO ou Sponsor do projeto para decisão estratégica.
+              </p>
+              <div>
+                <Label>Escalar para (PMO/Sponsor)</Label>
+                <Input
+                  value={escalateTo}
+                  onChange={e => setEscalateTo(e.target.value)}
+                  placeholder="Ex: Maria Silva (PMO), João Diretor (Sponsor)"
+                />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEscalateDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleEscalate} disabled={!escalateTo.trim()} className="gap-2 bg-orange-500 hover:bg-orange-600">
+                  <ArrowUpCircle className="w-4 h-4" /> Confirmar Escalação
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </PageTransition>
   );

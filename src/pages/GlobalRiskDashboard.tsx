@@ -3,7 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
-import { getRiskLevel, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS, RiskFormData } from '@/hooks/useProjectRisks';
+import { getRiskLevel, PROBABILITY_LABELS, IMPACT_LABELS, STATUS_LABELS, CATEGORY_LABELS, RiskFormData, calculateEMV } from '@/hooks/useProjectRisks';
 import { RiskMatrix } from '@/components/risks/RiskMatrix';
 import { RiskFormDialog } from '@/components/risks/RiskFormDialog';
 import { PageTransition } from '@/components/ui/page-transition';
@@ -421,6 +421,21 @@ const GlobalRiskDashboard: React.FC = () => {
                               {risk.dynamic_score != null && (
                                 <span className="flex items-center gap-1">
                                   <TrendingUp className="w-3 h-3" /> Score dinâmico: {risk.dynamic_score}
+                                </span>
+                              )}
+                              {(risk as any).monetary_impact > 0 && (
+                                <span className="flex items-center gap-1 font-medium">
+                                  💰 EMV: R$ {calculateEMV(risk.probability, (risk as any).monetary_impact).toLocaleString('pt-BR')}
+                                </span>
+                              )}
+                              {(risk as any).risk_owner && (
+                                <span className="flex items-center gap-1 text-primary">
+                                  👤 Owner: {(risk as any).risk_owner}
+                                </span>
+                              )}
+                              {(risk as any).escalated_to && (
+                                <span className="flex items-center gap-1 text-orange-600">
+                                  ⬆ Escalado: {(risk as any).escalated_to}
                                 </span>
                               )}
                             </div>

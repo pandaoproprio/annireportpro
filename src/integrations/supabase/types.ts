@@ -1887,63 +1887,81 @@ export type Database = {
       }
       project_risks: {
         Row: {
+          auto_task_created: boolean | null
           category: Database["public"]["Enums"]["risk_category"]
           contingency_plan: string
           created_at: string
           description: string
           due_date: string | null
           dynamic_score: number | null
+          escalated_at: string | null
+          escalated_to: string | null
           id: string
           impact: Database["public"]["Enums"]["risk_impact"]
           last_recalculated_at: string | null
+          linked_goal_id: string | null
           metadata: Json | null
           mitigation_plan: string
+          monetary_impact: number | null
           probability: Database["public"]["Enums"]["risk_probability"]
           project_id: string
           resolved_at: string | null
           responsible: string | null
+          risk_owner: string | null
           status: Database["public"]["Enums"]["risk_status"]
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          auto_task_created?: boolean | null
           category?: Database["public"]["Enums"]["risk_category"]
           contingency_plan?: string
           created_at?: string
           description?: string
           due_date?: string | null
           dynamic_score?: number | null
+          escalated_at?: string | null
+          escalated_to?: string | null
           id?: string
           impact?: Database["public"]["Enums"]["risk_impact"]
           last_recalculated_at?: string | null
+          linked_goal_id?: string | null
           metadata?: Json | null
           mitigation_plan?: string
+          monetary_impact?: number | null
           probability?: Database["public"]["Enums"]["risk_probability"]
           project_id: string
           resolved_at?: string | null
           responsible?: string | null
+          risk_owner?: string | null
           status?: Database["public"]["Enums"]["risk_status"]
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          auto_task_created?: boolean | null
           category?: Database["public"]["Enums"]["risk_category"]
           contingency_plan?: string
           created_at?: string
           description?: string
           due_date?: string | null
           dynamic_score?: number | null
+          escalated_at?: string | null
+          escalated_to?: string | null
           id?: string
           impact?: Database["public"]["Enums"]["risk_impact"]
           last_recalculated_at?: string | null
+          linked_goal_id?: string | null
           metadata?: Json | null
           mitigation_plan?: string
+          monetary_impact?: number | null
           probability?: Database["public"]["Enums"]["risk_probability"]
           project_id?: string
           resolved_at?: string | null
           responsible?: string | null
+          risk_owner?: string | null
           status?: Database["public"]["Enums"]["risk_status"]
           title?: string
           updated_at?: string
