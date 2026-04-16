@@ -172,6 +172,12 @@ const GlobalRiskDashboard: React.FC = () => {
     setEditingRisk(risk);
     setEditDialogOpen(true);
   };
+
+  const goToProjectRisks = (projectId: string) => {
+    switchProject(projectId);
+    navigate('/risks');
+  };
+
   if (!isSuperAdmin) return (
     <PageTransition>
       <div className="p-6 text-center text-muted-foreground">
