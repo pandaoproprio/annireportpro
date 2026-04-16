@@ -57,10 +57,12 @@ export const Dashboard: React.FC = () => {
   const { activities, isLoadingActivities: activitiesLoading } = useActivityData();
   const canCreateProject = role === 'SUPER_ADMIN' || role === 'ADMIN';
   const isAdminUser = role === 'SUPER_ADMIN' || role === 'ADMIN';
+  const isSuperAdmin = role === 'SUPER_ADMIN';
   const { getSummary, getOverdueTrackings, refreshStatuses } = useSlaTracking(project?.id);
   const slaSummary = getSummary();
   const overdueItems = getOverdueTrackings();
   const { wipCount, wipLimit, wipDrafts } = usePerformanceTracking(project?.id);
+  const { data: globalStats, isLoading: globalLoading } = useGlobalStats(isSuperAdmin);
 
   // Refresh SLA statuses on mount
   React.useEffect(() => {
@@ -72,7 +74,7 @@ export const Dashboard: React.FC = () => {
     return <Navigate to="/activities" replace />;
   }
 
-  if (projectsLoading) {
+  if (projectsLoading || (isSuperAdmin && globalLoading)) {
     return <DashboardSkeleton />;
   }
   
@@ -105,12 +107,19 @@ export const Dashboard: React.FC = () => {
     );
   }
 
-  const stats = [
-    { label: 'Atividades Totais', value: activities.length, color: 'text-info' },
-    { label: 'Pessoas Impactadas', value: activities.reduce((acc, curr) => acc + (curr.attendeesCount || 0), 0), color: 'text-success' },
-    { label: 'Metas Ativas', value: project.goals.length, color: 'text-brand-600' },
-    { label: 'Dias Restantes', value: project.endDate ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '-', color: 'text-warning' },
-  ];
+  const stats = isSuperAdmin && globalStats
+    ? [
+        { label: 'Projetos', value: globalStats.totalProjects, color: 'text-brand-600' },
+        { label: 'Atividades Totais', value: globalStats.totalActivities, color: 'text-info' },
+        { label: 'Pessoas Impactadas', value: globalStats.totalAttendees, color: 'text-success' },
+        { label: 'Metas Ativas', value: globalStats.totalGoals, color: 'text-warning' },
+      ]
+    : [
+        { label: 'Atividades Totais', value: activities.length, color: 'text-info' },
+        { label: 'Pessoas Impactadas', value: activities.reduce((acc, curr) => acc + (curr.attendeesCount || 0), 0), color: 'text-success' },
+        { label: 'Metas Ativas', value: project.goals.length, color: 'text-brand-600' },
+        { label: 'Dias Restantes', value: project.endDate ? Math.max(0, Math.ceil((new Date(project.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))) : '-', color: 'text-warning' },
+      ];
 
   return (
     <PageTransition className="space-y-6">
@@ -129,7 +138,9 @@ export const Dashboard: React.FC = () => {
           Olá, {profile?.name?.split(' ')[0] || 'Usuário'}!
         </h1>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-sm text-muted-foreground">Painel de Controle Total</span>
+          <span className="text-sm text-muted-foreground">
+            {isSuperAdmin ? 'Visão Global — Todos os Projetos' : 'Painel de Controle Total'}
+          </span>
           <span className="inline-block px-2.5 py-0.5 text-xs font-semibold bg-muted text-foreground rounded-full border border-border">
             {role === 'SUPER_ADMIN' ? 'Super Admin' : role === 'ADMIN' ? 'Admin' : role === 'ANALISTA' ? 'Analista' : 'Usuário'}
           </span>
@@ -150,15 +161,24 @@ export const Dashboard: React.FC = () => {
             </TabsTrigger>
           </TabsList>
           <TabsContent value="painel">
-            <DashboardPanelContent
-              stats={stats}
-              slaSummary={slaSummary}
-              activities={activities}
-              project={project}
-              activitiesLoading={activitiesLoading}
-              role={role}
-              showAiSummary={true}
-            />
+            {isSuperAdmin && globalStats ? (
+              <SuperAdminPanelContent
+                stats={stats}
+                globalStats={globalStats}
+                projects={projects}
+                role={role}
+              />
+            ) : (
+              <DashboardPanelContent
+                stats={stats}
+                slaSummary={slaSummary}
+                activities={activities}
+                project={project}
+                activitiesLoading={activitiesLoading}
+                role={role}
+                showAiSummary={true}
+              />
+            )}
           </TabsContent>
           <TabsContent value="analytics">
             <div className="space-y-6 mt-4">
@@ -167,7 +187,7 @@ export const Dashboard: React.FC = () => {
                   activities={activities}
                   projectEndDate={project.endDate}
                   projectStartDate={project.startDate}
-                  projectName={project.name}
+                  projectName={isSuperAdmin ? 'Todos os Projetos' : project.name}
                 />
               )}
               <ActivityHeatmap activities={activities} />
