@@ -105,6 +105,9 @@ export const RiskAiPanel: React.FC<RiskAiPanelProps> = ({
       mitigation_plan: risk.mitigation_plan,
       contingency_plan: risk.contingency_plan,
       responsible: '',
+      risk_owner: '',
+      linked_goal_id: '',
+      monetary_impact: 0,
       due_date: '',
     });
     if (ok) toast.success(`Risco "${risk.title}" adicionado ao registro`);

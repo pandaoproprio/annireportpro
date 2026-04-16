@@ -192,17 +192,17 @@ export function useProjectRisks(projectId: string | undefined) {
   /** Create an activity from a materialized risk */
   const createTaskFromRisk = async (risk: ProjectRisk) => {
     if (!projectId || !user) return false;
-    const { error } = await supabase.from('activities').insert({
+    const { error } = await supabase.from('activities').insert([{
       project_id: projectId,
       user_id: user.id,
       description: `[RISCO MATERIALIZADO] ${risk.title}\n\n${risk.contingency_plan || risk.mitigation_plan || risk.description}`,
       date: new Date().toISOString().split('T')[0],
       location: 'Gestão de Riscos',
-      type: 'reuniao',
+      type: 'reuniao' as const,
       challenges: `Risco materializado: ${risk.title}`,
       results: '',
       is_draft: true,
-    });
+    }]);
     if (error) { toast.error('Erro ao criar tarefa do risco'); console.error(error); return false; }
 
     // Mark the risk as having a task created
