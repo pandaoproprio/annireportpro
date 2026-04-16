@@ -31,9 +31,16 @@ interface RiskWithProject {
   impact: string;
   status: string;
   responsible: string | null;
+  risk_owner: string | null;
   due_date: string | null;
   dynamic_score: number | null;
   mitigation_plan: string;
+  contingency_plan: string;
+  monetary_impact: number;
+  escalated_to: string | null;
+  escalated_at: string | null;
+  auto_task_created: boolean;
+  linked_goal_id: string | null;
   created_at: string;
 }
 
@@ -44,6 +51,9 @@ interface ProjectSummary {
   critical: number;
   high: number;
   active: number;
+  totalEMV: number;
+  escalated: number;
+  overdue: number;
 }
 
 const GlobalRiskDashboard: React.FC = () => {
