@@ -446,7 +446,7 @@ const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
 
 // ── Super Admin Global Panel ──
 import type { GlobalStats } from '@/hooks/useGlobalStats';
-import { Users, FolderOpen } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
 
 interface SuperAdminPanelContentProps {
   stats: Array<{ label: string; value: string | number; color: string; href?: string }>;
