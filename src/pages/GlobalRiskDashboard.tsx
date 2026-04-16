@@ -116,7 +116,59 @@ const GlobalRiskDashboard: React.FC = () => {
 
   useEffect(() => { fetchAllRisks(); }, [fetchAllRisks]);
 
-  if (!user) return <Navigate to="/login" replace />;
+  const handleUpdateRisk = async (data: RiskFormData): Promise<boolean | undefined> => {
+    if (!editingRisk) return false;
+    try {
+      const updatePayload: any = {
+        title: data.title,
+        description: data.description,
+        category: data.category,
+        probability: data.probability,
+        impact: data.impact,
+        status: data.status,
+        mitigation_plan: data.mitigation_plan,
+        contingency_plan: data.contingency_plan,
+        responsible: data.responsible || null,
+        due_date: data.due_date || null,
+        resolved_at: data.status === 'resolvido' ? new Date().toISOString() : null,
+      };
+      const { error } = await supabase
+        .from('project_risks' as any)
+        .update(updatePayload)
+        .eq('id', editingRisk.id);
+      if (error) throw error;
+      toast.success('Risco atualizado com sucesso');
+      await fetchAllRisks();
+      return true;
+    } catch (err: any) {
+      console.error('Error updating risk:', err);
+      toast.error('Erro ao atualizar risco');
+      return false;
+    }
+  };
+
+  const handleQuickStatusChange = async (riskId: string, newStatus: string) => {
+    try {
+      const updatePayload: any = {
+        status: newStatus,
+        resolved_at: newStatus === 'resolvido' ? new Date().toISOString() : null,
+      };
+      const { error } = await supabase
+        .from('project_risks' as any)
+        .update(updatePayload)
+        .eq('id', riskId);
+      if (error) throw error;
+      toast.success(`Status alterado para "${STATUS_LABELS[newStatus]}"`);
+      await fetchAllRisks();
+    } catch (err: any) {
+      toast.error('Erro ao alterar status');
+    }
+  };
+
+  const openEditDialog = (risk: RiskWithProject) => {
+    setEditingRisk(risk);
+    setEditDialogOpen(true);
+  };
   if (!isSuperAdmin) return (
     <PageTransition>
       <div className="p-6 text-center text-muted-foreground">
