@@ -34,6 +34,72 @@ O CEAP — Centro de Articulação de Populações Marginalizadas — é uma org
 - Evitar tom excessivamente técnico ou distanciado da realidade territorial
 - Preferir concisão com densidade narrativa: cada frase deve carregar significado`;
 
+// ── BASE DE CONHECIMENTO — extraída de relatórios reais do CEAP ──
+// Exemplos de texto real por seção, usados como referência para a IA gerar narrativas fiéis ao padrão institucional.
+const SECTION_KNOWLEDGE_BASE: Record<string, { guidance: string; examples: string[] }> = {
+  object: {
+    guidance: "Descreva de forma objetiva e concisa o objeto do termo de fomento, mencionando as atividades previstas, o público-alvo e a localização.",
+    examples: [
+      "Realizar oficinas de música, produção cultural e de formação artística na cidade do Rio de Janeiro, voltado para a promoção da Cultura Popular.",
+      "Realização de cursos em música, dança e Intervenções sobre cultura afro-brasileira, visando à conscientização e o empoderamento de 40 jovens negros e negras residentes na Cidade do Rio de Janeiro, com foco em territórios periféricos e favelas, promovendo a preservação da cultura afro-brasileira.",
+      "Promoção da cultura e a história da região da Pequena África, na Zona Portuária do Rio de Janeiro por meio de campanhas de conscientização e de combate ao racismo e à intolerância religiosa, incluindo atividades educativas e de engajamento comunitário.",
+    ],
+  },
+  summary: {
+    guidance: "Resuma as ações realizadas no período, destacando: estruturação da equipe, parcerias firmadas, principais atividades executadas, desafios enfrentados e resultados alcançados. Use linguagem formal e institucional.",
+    examples: [
+      "No ano de 2023, a Casa da Mulher Sambista consolidou sua presença como espaço de aprendizado, empoderamento e inclusão, oferecendo mais de 800 vagas em uma variedade de cursos voltados para a cultura do samba. Sob a coordenação da idealizadora do Movimento das Mulheres Sambistas, Patrícia Rodrigues, e a coordenação pedagógica de Marina Iris, o projeto contou com a participação de professoras renomadas, destacadas no cenário da cultura popular, com foco específico no samba.",
+      "O projeto Orunmilá Conexão Urbana iniciou sua execução com foco na mobilização comunitária, organização institucional e estruturação da equipe técnica responsável pelas atividades formativas. A iniciativa tem como objetivo promover a formação artística e cultural de jovens negros e negras residentes em territórios periféricos e favelas da cidade do Rio de Janeiro, utilizando a música, a dança e conteúdos sobre cultura afro-brasileira como ferramentas de empoderamento, inclusão social e fortalecimento da identidade cultural.",
+      "O Projeto Ubuntu Carioca, executado pelo Centro de Articulação de Populações Marginalizadas – CEAP, no âmbito do Termo de Fomento nº 964677/2024, em parceria com o Ministério dos Direitos Humanos e da Cidadania (MDHC), tem como objetivo promover a valorização da cultura e da história da região da Pequena África, na Zona Portuária do Rio de Janeiro, por meio de campanhas de conscientização e combate ao racismo e à intolerância religiosa, articuladas a atividades educativas, pesquisa territorial e ações de mobilização social.",
+    ],
+  },
+  goals: {
+    guidance: "Demonstre o alcance de cada meta prevista no Plano de Trabalho. Para cada meta, descreva as ações realizadas, datas, locais e resultados concretos.",
+    examples: [
+      "No início do projeto, em janeiro, a equipe dedicou-se a estabelecer as bases sólidas necessárias para o sucesso do projeto. Contratamos professores, produtores e outros membros essenciais para a equipe e realizamos visitas técnicas. Desde o primeiro momento, priorizamos o alinhamento das metodologias e procedimentos através de reuniões pedagógicas, garantindo uma abordagem consistente e eficaz.",
+      "Realizamos oficinas de harmonia com turmas de cavaco e violão tanto no centro quanto na Tijuca. Nosso objetivo foi proporcionar aos participantes uma experiência enriquecedora de aprendizado musical, explorando os fundamentos da harmonia e promovendo o desenvolvimento de habilidades técnicas e criativas.",
+      "As ações desenvolvidas até o momento encontram-se em conformidade com as metas pactuadas no Plano de Trabalho do projeto. No que se refere à Meta 1 – Estruturação e Organização, foi realizada a contratação da equipe técnica principal entre os meses de setembro e dezembro de 2025.",
+    ],
+  },
+  other: {
+    guidance: "Descreva outras ações relevantes não previstas originalmente no Plano de Trabalho, como eventos extras, parcerias adicionais ou atividades complementares.",
+    examples: [
+      "Como resultado direto das oficinas oferecidas, foram formadas duas rodas de samba exclusivamente compostas por mulheres, a Roda Tristeza e a Abyás do Samba, ambas ativas e vibrantes. Além disso, um bloco de carnaval foi criado, contando com mais de 100 instrumentistas.",
+    ],
+  },
+  communication: {
+    guidance: "Relate as ações de divulgação realizadas: publicações em redes sociais, matérias de imprensa, materiais gráficos produzidos, campanhas digitais.",
+    examples: [
+      "No campo das campanhas, o projeto estruturou três campanhas públicas de conscientização, com produção contínua de conteúdos digitais e materiais audiovisuais, divulgados nas redes sociais e no site oficial do CEAP. Destaca-se, em curso, a série \"Articulando Saberes\", composta por episódios audiovisuais que ampliam o debate sobre memória afro-brasileira, cultura negra e resistência no território.",
+    ],
+  },
+  satisfaction: {
+    guidance: "Apresente dados de pesquisas de satisfação aplicadas aos participantes, com indicadores quantitativos e qualitativos.",
+    examples: [
+      "Após o término da primeira edição, realizamos uma pesquisa de satisfação com parte das participantes, recebendo o retorno de 190 mulheres.",
+    ],
+  },
+  future: {
+    guidance: "Descreva as ações planejadas para o próximo período de execução, com cronograma estimado e expectativas de resultado.",
+    examples: [
+      "O projeto segue em andamento com a continuidade das aulas, intervenções culturais e atividades de acompanhamento dos participantes, além da organização das próximas ações formativas e culturais que compõem o desenvolvimento integral do projeto.",
+      "A equipe técnica do projeto, em conjunto com a equipe de gestão do CEAP, iniciou um processo de planejamento estratégico, com o objetivo de sistematizar as ações já realizadas, mensurar o impacto social das atividades desenvolvidas até o momento e organizar a apresentação das próximas etapas do projeto.",
+    ],
+  },
+};
+
+/** Build a knowledge base reference block for a given section type */
+function getKnowledgeBaseBlock(sectionKey: string): string {
+  const kb = SECTION_KNOWLEDGE_BASE[sectionKey];
+  if (!kb || kb.examples.length === 0) return "";
+  return `\n## EXEMPLOS DE REFERÊNCIA (textos reais de relatórios do CEAP para esta seção)
+ORIENTAÇÃO: ${kb.guidance}
+
+${kb.examples.map((ex, i) => `--- Exemplo ${i + 1} ---\n${ex}`).join("\n\n")}
+
+IMPORTANTE: Use esses exemplos como referência de estilo, estrutura e tom. NÃO copie literalmente — adapte ao contexto específico do projeto.`;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -217,9 +283,22 @@ Retorne o texto expandido sem explicações adicionais.`;
       //   "automatic" — fully autonomous, no diary required
       const generationMode = body.generationMode || "assisted";
 
+      // Build a combined knowledge base block for the full report
+      const allKbSections = ["object", "summary", "goals", "other", "communication", "satisfaction", "future"];
+      const fullKbBlock = allKbSections.map(key => {
+        const kb = SECTION_KNOWLEDGE_BASE[key];
+        if (!kb || kb.examples.length === 0) return "";
+        return `### Seção "${key.toUpperCase()}" — ${kb.guidance}\nExemplo: ${kb.examples[0]}`;
+      }).filter(Boolean).join("\n\n");
+
       systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
 
 ${CEAP_INSTITUTIONAL_MEMORY}
+
+## EXEMPLOS DE REFERÊNCIA POR SEÇÃO (textos reais de relatórios do CEAP)
+Use esses exemplos como referência de estilo, estrutura e tom. NÃO copie literalmente — adapte ao contexto específico do projeto.
+
+${fullKbBlock}
 
 ## REGRAS DE GERAÇÃO — RELATÓRIO COMPLETO
 - Gere narrativas para TODAS as seções do relatório em uma única resposta
@@ -232,6 +311,7 @@ ${CEAP_INSTITUTIONAL_MEMORY}
 - Não usar markdown, bullet points ou formatação especial
 - Escrever em parágrafos corridos com densidade narrativa
 - Preferir concisão com profundidade sobre extensão superficial
+- BASEIE-SE nos exemplos de referência para estilo e estrutura
 ${generationMode === "automatic" ? `
 ## MODO AUTÔNOMO
 - Você NÃO receberá atividades do Diário de Bordo. Isso é NORMAL.
@@ -328,9 +408,13 @@ Retorne APENAS o JSON, sem explicações.`;
 
     } else {
       // mode === "generate"
+      const kbKey = sectionType === "goal" ? "goals" : (sectionType || "summary");
+      const knowledgeBlock = getKnowledgeBaseBlock(kbKey);
+
       systemPrompt = `Você é o redator institucional do CEAP (Centro de Articulação de Populações Marginalizadas).
 
 ${CEAP_INSTITUTIONAL_MEMORY}
+${knowledgeBlock}
 
 ## REGRAS DE GERAÇÃO
 - Não inventar dados — baseie-se exclusivamente nas informações fornecidas
@@ -339,6 +423,7 @@ ${CEAP_INSTITUTIONAL_MEMORY}
 - Cada narrativa deve refletir a identidade institucional do CEAP
 - Preferir concisão com profundidade sobre extensão superficial
 - Incluir análise interpretativa e, quando aplicável, análise preditiva
+- BASEIE-SE nos exemplos de referência para estilo e estrutura, mas NÃO copie literalmente
 - Retornar APENAS o texto, sem explicações adicionais`;
 
       if (sectionType === "goal") {
