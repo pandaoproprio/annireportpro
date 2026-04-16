@@ -697,6 +697,25 @@ const GlobalRiskDashboard: React.FC = () => {
               </Card>
             )}
           </TabsContent>
+
+          {/* ── TAB: Análise Avançada ── */}
+          <TabsContent value="analytics" className="space-y-4 mt-4">
+            <MonteCarloSimulation risks={risks} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <RiskRadarChart risks={risks} />
+              <RiskTrendChart risks={risks} />
+            </div>
+          </TabsContent>
+
+          {/* ── TAB: Timeline ── */}
+          <TabsContent value="timeline" className="mt-4">
+            <RiskMitigationTimeline risks={risks} />
+          </TabsContent>
+
+          {/* ── TAB: Lições Aprendidas ── */}
+          <TabsContent value="lessons" className="mt-4">
+            <RiskLessonsLearned risks={risks} onSaveLesson={handleSaveLesson} />
+          </TabsContent>
         </Tabs>
 
         {/* Edit Risk Dialog */}
