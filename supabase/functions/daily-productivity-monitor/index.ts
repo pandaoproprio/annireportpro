@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
       })
     }
 
-    // 5. Get ALL activities (not just last 30 days) to find latest activity per user
+    // 5. Get system-wide usage across ALL modules (not just Diário de Bordo)
     const thirtyDaysAgo = new Date()
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
@@ -100,7 +100,20 @@ Deno.serve(async (req) => {
       .gte('date', thirtyDaysAgo.toISOString().split('T')[0])
       .in('user_id', userIds)
 
-    // Get latest activity date per user (all time) for cross-referencing
+    // Get latest interaction date per user across ALL system modules
+    const lastSystemUsageMap = new Map<string, Date>()
+    const systemModulesUsed = new Map<string, Set<string>>()
+
+    function trackUsage(userId: string, dateStr: string, module: string) {
+      const d = new Date(dateStr)
+      if (isNaN(d.getTime())) return
+      const prev = lastSystemUsageMap.get(userId)
+      if (!prev || d > prev) lastSystemUsageMap.set(userId, d)
+      if (!systemModulesUsed.has(userId)) systemModulesUsed.set(userId, new Set())
+      systemModulesUsed.get(userId)!.add(module)
+    }
+
+    // 5a. Diário de Bordo (activities)
     const { data: latestActRows } = await supabase
       .from('activities')
       .select('user_id, date')
@@ -108,11 +121,98 @@ Deno.serve(async (req) => {
       .in('user_id', userIds)
       .order('date', { ascending: false })
 
-    const lastActivityMap = new Map<string, string>()
     for (const a of latestActRows || []) {
-      if (!lastActivityMap.has(a.user_id)) {
-        lastActivityMap.set(a.user_id, a.date)
-      }
+      trackUsage(a.user_id, a.date, 'diario')
+    }
+
+    // 5b. Relatórios de equipe
+    const { data: teamReportRows } = await supabase
+      .from('team_reports')
+      .select('user_id, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false })
+    for (const r of teamReportRows || []) {
+      trackUsage(r.user_id, r.created_at, 'relatorios')
+    }
+
+    // 5c. Workflows
+    const { data: wfRows } = await supabase
+      .from('report_workflows')
+      .select('user_id, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false })
+    for (const w of wfRows || []) {
+      trackUsage(w.user_id, w.created_at, 'workflows')
+    }
+
+    // 5d. Formulários criados
+    const { data: formRows } = await supabase
+      .from('forms')
+      .select('user_id, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false })
+    for (const f of formRows || []) {
+      trackUsage(f.user_id, f.created_at, 'formularios')
+    }
+
+    // 5e. Eventos criados
+    const { data: eventRows } = await supabase
+      .from('events')
+      .select('user_id, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false })
+    for (const e of eventRows || []) {
+      trackUsage(e.user_id, e.created_at, 'eventos')
+    }
+
+    // 5f. Chat messages
+    const { data: chatRows } = await supabase
+      .from('chat_messages')
+      .select('user_id, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false })
+    for (const c of chatRows || []) {
+      trackUsage(c.user_id, c.created_at, 'chat')
+    }
+
+    // 5g. Documentos criados
+    const { data: docRows } = await supabase
+      .from('documents')
+      .select('created_by, created_at')
+      .in('created_by', userIds)
+      .order('created_at', { ascending: false })
+    for (const d of docRows || []) {
+      trackUsage(d.created_by, d.created_at, 'documentos')
+    }
+
+    // 5h. Notas fiscais
+    const { data: invoiceRows } = await supabase
+      .from('invoices')
+      .select('user_id, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false })
+    for (const i of invoiceRows || []) {
+      trackUsage(i.user_id, i.created_at, 'notas_fiscais')
+    }
+
+    // 5i. Narrativas de atividade
+    const { data: narrRows } = await supabase
+      .from('activity_narratives')
+      .select('user_id, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false })
+    for (const n of narrRows || []) {
+      trackUsage(n.user_id, n.created_at, 'narrativas')
+    }
+
+    // 5j. Audit logs (represents any tracked system action)
+    const { data: auditRows } = await supabase
+      .from('audit_logs')
+      .select('user_id, created_at')
+      .in('user_id', userIds)
+      .order('created_at', { ascending: false })
+    for (const a of auditRows || []) {
+      trackUsage(a.user_id, a.created_at, 'audit')
     }
 
     const actByUser = new Map<string, any[]>()
@@ -190,23 +290,23 @@ Deno.serve(async (req) => {
       const tasksStarted = userActs.filter(a => a.is_draft).length
       const tasksFinished = userActs.filter(a => !a.is_draft).length
 
-      // Days inactive — cross-reference auth login AND last activity in diary
+      // Days inactive — cross-reference auth login AND last system-wide usage
       const lastLogin = authUsersMap.get(uid) || null
-      const lastActivityDate = lastActivityMap.get(uid)
+      const lastSystemUsage = lastSystemUsageMap.get(uid) || null
+      const userModules = systemModulesUsed.get(uid) || new Set()
 
-      // Use the MOST RECENT between last login and last activity
+      // Use the MOST RECENT between last login and last system usage
       let lastActiveDate: Date | null = null
       if (lastLogin) lastActiveDate = lastLogin
-      if (lastActivityDate) {
-        const actDate = new Date(lastActivityDate)
-        if (!lastActiveDate || actDate > lastActiveDate) {
-          lastActiveDate = actDate
+      if (lastSystemUsage) {
+        if (!lastActiveDate || lastSystemUsage > lastActiveDate) {
+          lastActiveDate = lastSystemUsage
         }
       }
 
       const hasLoggedIn = Boolean(lastLogin)
-      const hasHistoricalActivity = Boolean(lastActivityDate)
-      const hasNoTrackedHistory = !hasHistoricalActivity
+      const hasSystemUsage = userModules.size > 0
+      const hasNoTrackedHistory = !hasSystemUsage && !hasLoggedIn
 
       const daysInactive = lastActiveDate
         ? Math.max(0, Math.floor((nowMs - lastActiveDate.getTime()) / 86400000))
@@ -266,10 +366,10 @@ Deno.serve(async (req) => {
       let consScore: number
 
       if (hasNoTrackedHistory) {
-        // Never registered any tracked delivery → everything is 0
+        // Never logged in AND never used any module → everything is 0
         engScore = 0; volScore = 0; effScore = 0; qualScore = 0; consScore = 0
       } else if (hasNoRecentActivity) {
-        // Logged in before but no recent activity → engagement based on recency, rest is 0
+        // Has login or system usage but no recent Diário de Bordo entries → engagement only
         engScore = Math.max(0, Math.min(100, 100 - daysInactive * 5))
         volScore = 0
         effScore = 0
@@ -302,7 +402,7 @@ Deno.serve(async (req) => {
       const reasons: string[] = []
       if (hasNoTrackedHistory) {
         status = 'inactive'
-        reasons.push(hasLoggedIn ? 'Sem histórico de participação no Diário de Bordo' : 'Nunca acessou o sistema')
+        reasons.push('Nunca acessou o sistema')
       } else if (daysInactive > inactiveDays) {
         status = 'inactive'
         reasons.push(`${daysInactive} dias sem atividade`)
@@ -311,9 +411,9 @@ Deno.serve(async (req) => {
         status = status === 'ok' ? 'low_performance' : status
         reasons.push(`Produtividade: ${tasksPerDay.toFixed(1)} tarefas/dia`)
       }
-      if (activitiesCount === 0 && hasHistoricalActivity && daysInactive <= inactiveDays) {
+      if (activitiesCount === 0 && hasSystemUsage && daysInactive <= inactiveDays) {
         status = 'low_performance'
-        reasons.push('Sem atividades no período')
+        reasons.push('Sem atividades no Diário no período (usou: ' + [...userModules].join(', ') + ')')
       }
       if (slaViolations > 0) {
         reasons.push(`${slaViolations} violações de SLA`)
@@ -373,7 +473,7 @@ Deno.serve(async (req) => {
       }
 
       // Alert: inactivity
-      if (daysInactive > inactiveDays && hasHistoricalActivity) {
+      if (daysInactive > inactiveDays && hasSystemUsage) {
         newAlerts.push({
           alert_type: 'inactivity',
           user_id: uid,
