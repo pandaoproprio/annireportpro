@@ -23,6 +23,7 @@ const EventsListPage = lazy(() => import('@/modules/gira-eventos/EventsListPage'
 const EventDetailPage = lazy(() => import('@/modules/gira-eventos/EventDetailPage'));
 const AutomatoDashboard = lazy(() => import('@/pages/AutomatoDashboard'));
 const RiskManagement = lazy(() => import('@/pages/RiskManagement'));
+const GlobalRiskDashboard = lazy(() => import('@/pages/GlobalRiskDashboard'));
 const BudgetDashboard = lazy(() => import('@/pages/BudgetDashboard'));
 const BudgetAdjustmentPage = lazy(() => import('@/pages/BudgetAdjustmentPage'));
 const SprintDashboard = lazy(() => import('@/pages/SprintDashboard'));
@@ -67,6 +68,7 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/eventos/:id', element: EventDetailPage, permission: 'events_view' },
   { path: '/automato', element: AutomatoDashboard, permission: 'system_logs' },
   { path: '/risks', element: RiskManagement },
+  { path: '/risks-global', element: GlobalRiskDashboard },
   { path: '/budget', element: BudgetDashboard },
   { path: '/budget-adjustment', element: BudgetAdjustmentPage },
   { path: '/sprints', element: SprintDashboard },

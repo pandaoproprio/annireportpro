@@ -87,6 +87,7 @@ export const sidebarSections: SidebarSection[] = [
     adminOnly: true,
     items: [
       { to: '/risks', label: 'Gestão de Riscos', iconName: 'ShieldAlert' },
+      { to: '/risks-global', label: 'Riscos Global', iconName: 'Shield', adminOnly: true },
       { to: '/budget', label: 'Custos Consolidados', iconName: 'DollarSign' },
       { to: '/budget-adjustment', label: 'Ajuste de PT/RA', iconName: 'FileSpreadsheet' },
       { to: '/sprints', label: 'Sprints & Velocity', iconName: 'Zap' },
