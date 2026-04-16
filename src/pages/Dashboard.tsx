@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useProjectData } from '@/contexts/ProjectContext';
@@ -220,7 +220,7 @@ export const Dashboard: React.FC = () => {
 
 // Extracted panel content to keep Dashboard clean
 interface DashboardPanelContentProps {
-  stats: Array<{ label: string; value: string | number; color: string }>;
+  stats: Array<{ label: string; value: string | number; color: string; href?: string }>;
   slaSummary: any;
   activities: any[];
   project: any;
@@ -232,6 +232,7 @@ interface DashboardPanelContentProps {
 const DashboardPanelContent: React.FC<DashboardPanelContentProps> = ({
   stats, slaSummary, activities, project, activitiesLoading, role, showAiSummary,
 }) => {
+  const navigate = useNavigate();
   const [aiNarrative, setAiNarrative] = useState<string | null>(null);
   const activitiesByType = activities.reduce<Record<string, number>>((acc, a) => {
     acc[a.type] = (acc[a.type] || 0) + 1;
