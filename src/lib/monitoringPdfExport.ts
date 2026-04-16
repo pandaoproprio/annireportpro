@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import type { ProductivitySnapshot, MonitoringConfig } from '@/hooks/useProductivityMonitoring';
+import type { ProductivitySnapshot, MonitoringConfig, MonitoringAlert } from '@/hooks/useProductivityMonitoring';
 
 const PAGE_W = 210;
 const PAGE_H = 297;
@@ -15,13 +15,22 @@ interface PdfCtx { pdf: jsPDF; y: number; }
 function newPage(ctx: PdfCtx) { ctx.pdf.addPage(); ctx.y = MT; }
 function ensureSpace(ctx: PdfCtx, h: number) { if (ctx.y + h > MAX_Y) newPage(ctx); }
 
-interface MonitoringPdfData {
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: 'Super Admin', admin: 'Admin', analista: 'Analista',
+  coordenador: 'Coordenador(a)', oficineiro: 'Oficineiro(a)',
+  voluntario: 'Voluntário(a)', usuario: 'Usuário',
+};
+
+export interface MonitoringPdfData {
   snapshots: ProductivitySnapshot[];
   config: MonitoringConfig | null;
   activeCount: number;
   inactiveCount: number;
   lowPerformersCount: number;
   slaViolatorsCount: number;
+  avgScore: number;
+  totalRework: number;
+  alerts: MonitoringAlert[];
 }
 
 export function exportMonitoringToPdf(data: MonitoringPdfData) {
@@ -46,29 +55,34 @@ export function exportMonitoringToPdf(data: MonitoringPdfData) {
   pdf.text(`Gerado em: ${today}`, PAGE_W / 2, ctx.y, { align: 'center' });
   ctx.y += 15;
 
-  // KPIs
+  // KPIs (6 cards)
   const kpis = [
     { label: 'Usuários Ativos', value: String(data.activeCount) },
     { label: 'Inativos', value: String(data.inactiveCount) },
     { label: 'Baixa Produtividade', value: String(data.lowPerformersCount) },
     { label: 'Violações SLA', value: String(data.slaViolatorsCount) },
+    { label: 'Score Médio', value: data.avgScore.toFixed(0) },
+    { label: 'Retrabalho', value: String(data.totalRework) },
   ];
 
-  const boxW = (CW - 12) / 4;
+  const boxW = (CW - 10) / 3;
   kpis.forEach((kpi, i) => {
-    const x = ML + i * (boxW + 4);
+    const row = Math.floor(i / 3);
+    const col = i % 3;
+    const x = ML + col * (boxW + 5);
+    const yOff = ctx.y + row * 22;
     pdf.setFillColor(239, 246, 255);
-    pdf.roundedRect(x, ctx.y, boxW, 18, 2, 2, 'F');
+    pdf.roundedRect(x, yOff, boxW, 18, 2, 2, 'F');
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(8);
     pdf.setTextColor(107, 114, 128);
-    pdf.text(kpi.label, x + boxW / 2, ctx.y + 6, { align: 'center' });
+    pdf.text(kpi.label, x + boxW / 2, yOff + 6, { align: 'center' });
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(14);
     pdf.setTextColor(30, 64, 175);
-    pdf.text(kpi.value, x + boxW / 2, ctx.y + 14, { align: 'center' });
+    pdf.text(kpi.value, x + boxW / 2, yOff + 14, { align: 'center' });
   });
-  ctx.y += 25;
+  ctx.y += 50;
 
   // Table
   ensureSpace(ctx, 10);
@@ -78,8 +92,8 @@ export function exportMonitoringToPdf(data: MonitoringPdfData) {
   pdf.text('Detalhamento por Usuário', ML, ctx.y);
   ctx.y += 8;
 
-  const cols = ['Usuário', 'Atividades', 'Média (h)', 'Inativos', 'SLA %', 'Status'];
-  const colW = [45, 22, 22, 22, 22, 27];
+  const cols = ['Usuário', 'Função', 'Score', 'Ativ.', 'Inativo', 'SLA %', 'Retrab.', 'Perc.', 'Status'];
+  const colW = [38, 22, 14, 14, 16, 14, 14, 14, 18];
 
   // Header
   ensureSpace(ctx, 8);
@@ -87,15 +101,16 @@ export function exportMonitoringToPdf(data: MonitoringPdfData) {
   pdf.rect(ML, ctx.y - 4, CW, 7, 'F');
   pdf.setTextColor(255, 255, 255);
   pdf.setFont('helvetica', 'bold');
-  pdf.setFontSize(8);
+  pdf.setFontSize(7);
   let x = ML + 2;
   cols.forEach((c, i) => { pdf.text(c, x, ctx.y); x += colW[i]; });
   ctx.y += 7;
 
   // Rows
   pdf.setFont('helvetica', 'normal');
-  pdf.setFontSize(8);
-  data.snapshots.forEach((s, idx) => {
+  pdf.setFontSize(7);
+  const sorted = [...data.snapshots].sort((a, b) => Number(b.score) - Number(a.score));
+  sorted.forEach((s, idx) => {
     ensureSpace(ctx, 7);
     if (idx % 2 === 0) {
       pdf.setFillColor(248, 250, 252);
@@ -103,13 +118,51 @@ export function exportMonitoringToPdf(data: MonitoringPdfData) {
     }
     pdf.setTextColor(55, 65, 81);
     x = ML + 2;
-    const name = (s.user_name || '').substring(0, 20);
-    const avgH = s.avg_task_seconds != null ? (s.avg_task_seconds / 3600).toFixed(1) : '-';
+    const name = (s.user_name || '').substring(0, 18);
+    const roleLabel = (ROLE_LABELS[s.user_role] || s.user_role || '').substring(0, 12);
+    const scoreVal = Number(s.score || 0).toFixed(0);
     const statusLabel = s.status === 'ok' ? 'OK' : s.status === 'inactive' ? 'Inativo' : 'Baixo';
-    const row = [name, String(s.activities_count), avgH, String(s.days_inactive), `${s.sla_pct_on_time}%`, statusLabel];
+    const row = [
+      name, roleLabel, scoreVal, String(s.activities_count),
+      String(s.days_inactive), `${Number(s.sla_pct_on_time).toFixed(0)}%`,
+      String(s.reopen_count || 0), `${Number(s.percentile_rank || 0).toFixed(0)}%`, statusLabel,
+    ];
     row.forEach((val, i) => { pdf.text(val, x, ctx.y); x += colW[i]; });
+
+    // Projects line
+    const projects = (s.user_projects || []).map((p: any) => p.name).join(', ');
+    if (projects) {
+      ctx.y += 4;
+      ensureSpace(ctx, 4);
+      pdf.setFontSize(6);
+      pdf.setTextColor(107, 114, 128);
+      pdf.text(`Projetos: ${projects.substring(0, 80)}`, ML + 4, ctx.y);
+      pdf.setFontSize(7);
+    }
     ctx.y += 6.5;
   });
+
+  // Alerts Section
+  const unresolvedAlerts = data.alerts.filter(a => !a.is_resolved);
+  if (unresolvedAlerts.length > 0) {
+    ensureSpace(ctx, 20);
+    ctx.y += 5;
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(13);
+    pdf.setTextColor(17, 24, 39);
+    pdf.text('Alertas Inteligentes', ML, ctx.y);
+    ctx.y += 8;
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(8);
+    for (const alert of unresolvedAlerts.slice(0, 20)) {
+      ensureSpace(ctx, 8);
+      const severity = alert.severity === 'critical' ? '🔴' : '🟡';
+      pdf.setTextColor(55, 65, 81);
+      pdf.text(`${severity} ${alert.user_name} — ${alert.description}`, ML + 2, ctx.y);
+      ctx.y += 5;
+    }
+  }
 
   // Footer
   const totalPages = (pdf as any).internal.getNumberOfPages();
