@@ -79,18 +79,18 @@ REGRAS:
     <div className="space-y-2">
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="sm"
         onClick={handleGenerate}
         disabled={loading}
-        className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 gap-1.5 text-xs"
+        className="border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 gap-2 text-sm font-medium shadow-sm"
       >
         {loading ? (
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          <Loader2 className="w-4 h-4 animate-spin" />
         ) : (
-          <Lightbulb className="w-3.5 h-3.5" />
+          <Lightbulb className="w-4 h-4" />
         )}
-        {loading ? 'Gerando sugestão...' : 'Sugerir com IA'}
+        {loading ? 'Gerando sugestão...' : '💡 Sugerir com IA'}
       </Button>
 
       {suggestion && (
