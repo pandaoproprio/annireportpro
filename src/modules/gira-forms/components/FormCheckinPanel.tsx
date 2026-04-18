@@ -188,9 +188,29 @@ export default function FormCheckinPanel() {
       return;
     }
     try {
+      // Prefer rear camera on mobile devices
+      let deviceId: string | undefined;
+      try {
+        // Request permission first to get labeled devices
+        const tmpStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+        });
+        // Stop the temp stream — zxing will reopen with the chosen device
+        tmpStream.getTracks().forEach(t => t.stop());
+
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(d => d.kind === 'videoinput');
+        // Try to find a rear/back camera by label heuristics
+        const rear = videoDevices.find(d => /back|rear|environment|traseira|trás/i.test(d.label));
+        deviceId = rear?.deviceId ?? videoDevices[videoDevices.length - 1]?.deviceId;
+      } catch (permErr) {
+        // If facingMode failed, fall back to default device selection
+        console.warn('[Scanner] Could not pre-select rear camera:', permErr);
+      }
+
       const reader = new BrowserMultiFormatReader();
       const controls = await reader.decodeFromVideoDevice(
-        undefined, // pick default camera; constraint below prefers back camera
+        deviceId,
         videoRef.current,
         (result, err, ctrl) => {
           if (result) {
@@ -202,12 +222,15 @@ export default function FormCheckinPanel() {
       readerControlsRef.current = controls;
     } catch (err: any) {
       const msg = String(err?.message || err || '');
+      console.error('[Scanner] Camera error:', err);
       if (/Permission|NotAllowed/i.test(msg)) {
         toast.error('Permissão de câmera negada. Habilite nas configurações do navegador.');
       } else if (/NotFound|Requested device not found/i.test(msg)) {
         toast.error('Nenhuma câmera encontrada neste dispositivo.');
+      } else if (/Secure|https/i.test(msg)) {
+        toast.error('A câmera só funciona em conexões HTTPS.');
       } else {
-        toast.error('Não foi possível acessar a câmera.');
+        toast.error('Não foi possível acessar a câmera. Tente recarregar a página.');
       }
       setScannerActive(false);
     }
