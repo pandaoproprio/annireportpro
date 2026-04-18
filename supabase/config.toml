@@ -37,3 +37,9 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.validate-checkin-geofence]
     verify_jwt = false
+  [functions.submit-public-checkin]
+    verify_jwt = false
+  [functions.list-form-checkins]
+    verify_jwt = false
+  [functions.manual-form-checkin]
+    verify_jwt = false
