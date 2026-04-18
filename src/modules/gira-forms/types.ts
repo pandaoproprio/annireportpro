@@ -75,6 +75,7 @@ export interface FormDesignSettings {
   showRegistrationNumber?: boolean;
   singlePage?: boolean;
   enableCheckin?: boolean;
+  preCheckinEnabled?: boolean;
 }
 
 export type FormStatus = 'ativo' | 'inativo' | 'pausado' | 'encerrado';

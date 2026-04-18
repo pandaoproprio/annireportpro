@@ -905,16 +905,17 @@ export default function PublicFormPage() {
                     </p>
                   </>
                 )}
-                {!checkinResult && <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>}
               </>
             ) : (
-              <>
-                <h2 className="text-2xl font-bold">Resposta enviada!</h2>
-                <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
-              </>
+              <h2 className="text-2xl font-bold">Resposta enviada!</h2>
             )}
 
-            {form && (form as any).pre_checkin_enabled && submittedInfo && (
+            {/* Always render successMessage so it appears in every flow */}
+            <p className="text-sm whitespace-pre-line text-left" style={{ color: 'var(--form-muted)' }}>
+              {successMsg}
+            </p>
+
+            {form && (design.preCheckinEnabled || (form as any).pre_checkin_enabled) && submittedInfo && (
               <div className="space-y-3 pt-2">
                 {((form as any).geofence_lat != null && (form as any).geofence_lng != null) && (
                   <div className="rounded-lg border p-3 text-left" style={{ background: 'var(--form-bg)' }}>

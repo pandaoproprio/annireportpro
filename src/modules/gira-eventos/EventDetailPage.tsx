@@ -94,6 +94,8 @@ const EventDetailPage: React.FC = () => {
           event_title: event.title,
           event_date: event.event_date,
           event_location: event.location,
+          geofence_lat: (event as any).geofence_lat ?? null,
+          geofence_lng: (event as any).geofence_lng ?? null,
           registrations: regsWithEmail.map(r => ({
             id: r.id,
             name: r.name,

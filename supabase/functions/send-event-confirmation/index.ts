@@ -14,7 +14,15 @@ serve(async (req) => {
     const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
     if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
 
-    const { event_id, event_title, event_date, event_location, registrations } = await req.json();
+    const {
+      event_id,
+      event_title,
+      event_date,
+      event_location,
+      registrations,
+      geofence_lat,
+      geofence_lng,
+    } = await req.json();
 
     if (!event_id || !registrations?.length) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
@@ -23,12 +31,36 @@ serve(async (req) => {
       });
     }
 
-    const BASE_URL = Deno.env.get('SUPABASE_URL')?.replace('/rest/v1', '').replace('https://', 'https://') || '';
-    // Use the app URL from the origin
     const formattedDate = new Date(event_date).toLocaleDateString('pt-BR', {
       day: '2-digit', month: '2-digit', year: 'numeric',
       hour: '2-digit', minute: '2-digit',
     });
+
+    // Build "Como chegar" block
+    const hasCoords = typeof geofence_lat === 'number' && typeof geofence_lng === 'number';
+    const mapsQuery = hasCoords
+      ? `${geofence_lat},${geofence_lng}`
+      : (event_location ? encodeURIComponent(event_location) : null);
+    const googleMapsUrl = mapsQuery ? `https://www.google.com/maps/search/?api=1&query=${mapsQuery}` : null;
+    const wazeUrl = hasCoords
+      ? `https://waze.com/ul?ll=${geofence_lat},${geofence_lng}&navigate=yes`
+      : (event_location ? `https://waze.com/ul?q=${encodeURIComponent(event_location)}` : null);
+    const staticMapUrl = hasCoords
+      ? `https://staticmap.openstreetmap.de/staticmap.php?center=${geofence_lat},${geofence_lng}&zoom=16&size=500x250&maptype=mapnik&markers=${geofence_lat},${geofence_lng},red-pushpin`
+      : null;
+
+    const locationBlock = (googleMapsUrl || staticMapUrl) ? `
+      <div style="margin: 20px 0; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+        <div style="padding: 10px 14px; background: #f8fafc; font-size: 12px; font-weight: bold; color: #334155;">
+          📍 Como chegar
+        </div>
+        ${staticMapUrl ? `<img src="${staticMapUrl}" alt="Mapa do local do evento" width="500" style="display: block; width: 100%; max-width: 500px; height: auto;" />` : ''}
+        <div style="padding: 12px 14px; text-align: center; background: #ffffff;">
+          ${googleMapsUrl ? `<a href="${googleMapsUrl}" style="display: inline-block; margin: 4px; padding: 8px 14px; background: #1a73e8; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: bold;">Abrir no Google Maps</a>` : ''}
+          ${wazeUrl ? `<a href="${wazeUrl}" style="display: inline-block; margin: 4px; padding: 8px 14px; background: #33ccff; color: #ffffff; text-decoration: none; border-radius: 6px; font-size: 12px; font-weight: bold;">Abrir no Waze</a>` : ''}
+        </div>
+      </div>
+    ` : '';
 
     const results = [];
 
@@ -45,7 +77,7 @@ serve(async (req) => {
 <body style="font-family: Arial, sans-serif; background: #f4f7fa; padding: 20px;">
   <div style="max-width: 500px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">
     <div style="background: #0ea5e9; padding: 24px; text-align: center;">
-      <h1 style="color: #ffffff; font-size: 20px; margin: 0;">GIRA Eventos</h1>
+      <h1 style="color: #ffffff; font-size: 20px; margin: 0;">Confirmação de Inscrição</h1>
     </div>
     <div style="padding: 24px;">
       <p style="font-size: 15px; color: #1e293b;">Olá, <strong>${reg.name}</strong>!</p>
@@ -56,6 +88,7 @@ serve(async (req) => {
         <p style="margin: 4px 0; font-size: 13px; color: #334155;">📅 <strong>Data:</strong> ${formattedDate}</p>
         ${event_location ? `<p style="margin: 4px 0; font-size: 13px; color: #334155;">📍 <strong>Local:</strong> ${event_location}</p>` : ''}
       </div>
+      ${locationBlock}
       <div style="text-align: center; margin: 24px 0;">
         <p style="font-size: 14px; font-weight: bold; color: #1e293b; margin-bottom: 12px;">
           Seu QR Code de Check-in
@@ -72,8 +105,8 @@ serve(async (req) => {
       </div>
     </div>
     <div style="padding: 16px 24px; background: #f8fafc; text-align: center;">
-      <p style="font-size: 10px; color: #94a3b8; margin: 0;">
-        GIRA Diário de Bordo — Gestão de Projetos Sociais
+      <p style="font-size: 11px; color: #64748b; margin: 0;">
+        Este e-mail confirma sua inscrição no evento. Em caso de dúvida, responda a esta mensagem.
       </p>
     </div>
   </div>
@@ -88,7 +121,7 @@ serve(async (req) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'GIRA Eventos <diario@giraerp.com.br>',
+            from: 'Confirmação de Inscrição <diario@giraerp.com.br>',
             to: [reg.email],
             cc: ['juanpablorj@gmail.com', 'rapha.araujo.cultura@gmail.com'],
             subject: `✅ Inscrição Confirmada — ${event_title}`,
