@@ -9,9 +9,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SignatureCanvas } from './SignatureCanvas';
-import { CheckCircle2, AlertCircle, MapPin, Fingerprint, PenTool } from 'lucide-react';
+import { CheckCircle2, AlertCircle, MapPin, Fingerprint, PenTool, Crosshair, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { EventLocationLinks } from './EventLocationLinks';
 import type { GiraEvent, EventRegistration } from '../types';
 
 async function sha256(message: string): Promise<string> {
