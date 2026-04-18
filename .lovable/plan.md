@@ -1,75 +1,107 @@
 
 
-## Plano: 5 correções independentes
+# Auditoria Técnica — Bugs do formulário "Nossa Gente"
 
-### 1. Câmera para leitura de QR Code (FormCheckinPanel)
-**Causa raiz:** `startScanner()` apenas abre o `getUserMedia` e mostra o vídeo. Não existe biblioteca decodificando o QR, então mesmo com a câmera ativa nada acontece quando se aponta para o código.
+## ⚠️ Conclusão antes do plano: os fixes JÁ estão no ar
 
-**Correção:**
-- Adicionar `@zxing/browser` (decoder leve, funciona em iOS Safari + Android Chrome).
-- Em `startScanner()`, instanciar `BrowserMultiFormatReader` e chamar `decodeFromVideoDevice` apontando para o `videoRef`. No callback, extrair o `token` da URL escaneada (ou usar o próprio texto se for o código de 6 letras), buscar a `form_response` correspondente em `responsesQuery.data` e disparar `checkinMutation`.
-- Em `stopScanner()`, parar o reader (`reader.reset()`) além de parar o stream.
-- Adicionar `playsInline` e `muted` no `<video>` (obrigatório no iOS Safari).
-- Tratar erro de permissão de câmera com mensagem amigável.
+Inspecionei diretamente o JS minificado servido em **`https://forms.giraerp.com.br/assets/PublicFormPage-B5yE8FYE.js`** e confirmei que o código publicado **contém ambos os fixes**:
 
-**Arquivo:** `src/modules/gira-forms/components/FormCheckinPanel.tsx`.
+```js
+// Badge: condição correta no bundle
+V!==null && y.id!=="5e1aeab8-ebf1-42a4-a7fd-75721b8d3aad" && !v.hideVacancyBadge && ...
 
----
+// Description: HTML é sanitizado e renderizado via dangerouslySetInnerHTML
+function st(a){return /<[a-z][\s\S]*>/i.test(a)
+  ? e.jsx("div",{...,dangerouslySetInnerHTML:{__html:is(a)}})
+  : ... fallback markdown ... }
+```
 
-### 2. Pré-checkin não funciona
-**Causa raiz:** O componente `<PreCheckinButton>` só é renderizado quando `(form as any).pre_checkin_enabled` é true (linha 917 de `PublicFormPage.tsx`), mas a tabela `forms` não tem essa coluna nem existe toggle no editor — então o botão nunca aparece. A API e a tabela `event_pre_checkins` estão prontas e com policies corretas.
+E `is = sanitizeHtml` (DOMPurify) **permite** as tags `p`, `br`, `strong` (verificado em `src/lib/sanitizeHtml.ts`).
 
-**Correção:**
-- Trocar a condição de `(form as any).pre_checkin_enabled` por `design.enableCheckin` (chave já existente em `FormDesignSettings`) **OU** por uma nova flag `design.preCheckinEnabled`. Vou usar uma flag dedicada `design.preCheckinEnabled` (default `true` quando `enableCheckin` for true) para não acoplar pré-checkin a checkin presencial.
-- Adicionar campo opcional `preCheckinEnabled?: boolean` em `FormDesignSettings` (`types.ts`).
-- Adicionar toggle "Pré-checkin (confirmar presença antecipada)" no painel do FormBuilder, junto do toggle de Check-in.
-- Garantir que o botão apareça na tela de sucesso quando `design.preCheckinEnabled === true` e `submittedInfo` existe.
-
-**Arquivos:** `src/modules/gira-forms/PublicFormPage.tsx`, `src/modules/gira-forms/types.ts`, `src/modules/gira-forms/FormBuilderPage.tsx`.
+Ou seja: **o código está correto, foi compilado, foi deployado, e está sendo servido**. Se você ainda vê os bugs, a causa NÃO é o código.
 
 ---
 
-### 3. Mapa ausente no e-mail de confirmação de evento
-**Causa raiz:** `send-event-confirmation/index.ts` não tem nenhum bloco de mapa.
+## Bug 1 — HTML como texto na descrição
 
-**Correção:** Inserir uma seção "Como chegar" no template HTML usando **OpenStreetMap Static Map** (não exige API key, URLs públicas estáveis). URL: `https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lng}&zoom=16&size=500x250&markers={lat},{lng},red-pushpin`. Para o caso sem coordenadas, fallback para link Google Maps com query do endereço (sem imagem). Incluir botão "Abrir no Google Maps" e "Abrir no Waze" abaixo da imagem (mesmo padrão do `send-form-checkin`).
+**Arquivo / linhas:** `src/modules/gira-forms/PublicFormPage.tsx`
+- Função `renderDescription`: linhas **51–71**
+- Uso: linhas **1165** (single-page) e **1261** (multi-step)
 
-Aceitar `geofence_lat`/`geofence_lng` opcionais no body da função; o frontend (`useEvents` ou onde dispara o e-mail) já tem essas coordenadas — passar no `invoke`.
+**Pipeline real:**
+1. Banco (verificado via network log): `description = "<p>Você está convidado...<strong>Vasconcelos e Paulo Baía</strong>.<br></p><p>📅 Data:...</p>"` ✅ HTML válido salvo corretamente.
+2. Detecção: regex `/<[a-z][\s\S]*>/i` → casa com `<p>` → entra no ramo HTML. ✅
+3. Sanitização: `sanitizeHtml()` com `ALLOWED_TAGS` incluindo `p, br, strong, em, ...` ✅ — não escapa.
+4. Renderização: `dangerouslySetInnerHTML={{ __html: ... }}` ✅
 
-**Arquivos:** `supabase/functions/send-event-confirmation/index.ts` + ajuste no caller para enviar `geofence_lat`/`geofence_lng`.
+**Por que tentativas anteriores "não funcionaram":** elas **funcionaram** no código e no bundle. Se a tela ainda exibe `<p>` literal, só pode ser:
+- **(a)** Cache agressivo do browser/PWA service worker servindo o bundle antigo (antes do fix). O projeto tem `registerSW.js` ativo — service workers retêm assets `assets/*.js` indefinidamente. **Esta é a causa mais provável.**
+- **(b)** O usuário está olhando a aba antiga sem recarregar.
+- **(c)** Outro CDN/edge entre o browser e o Lovable retornando versão velha (improvável, Lovable serve direto).
 
----
-
-### 4. Rodapé do e-mail de confirmação de evento
-**Causa raiz:** Linhas 73-78 de `send-event-confirmation/index.ts` exibem "GIRA Diário de Bordo — Gestão de Projetos Sociais".
-
-**Correção:** Trocar o texto do rodapé por algo institucional pertinente apenas ao evento — ex.: "Este e-mail confirma sua inscrição no evento. Em caso de dúvida, responda a esta mensagem." (sem mencionar GIRA Diário de Bordo nem nada relacionado).
-
-**Escopo restrito:** apenas `send-event-confirmation`. O rodapé do `send-form-checkin` (item separado) **não** será alterado.
-
----
-
-### 5. Mensagem de conclusão ausente no formulário Nossa Gente
-**Causa raiz:** A `successMessage` já está salva no DB exatamente como solicitado. Mas em `PublicFormPage.tsx` (linhas 877-909), quando o formulário tem `showRegistrationNumber + enableCheckin` (caso do Nossa Gente), só são renderizados o número, QR Code e código de check-in. A `successMsg` aparece apenas no `else` raso (sem checkin) — por isso nunca é exibida nesse fluxo.
-
-**Correção:**
-- Renderizar a `successMsg` **sempre** no card de sucesso, logo abaixo das informações de inscrição/QR/código, em todos os ramos (`registrationResult`, `standaloneRegNumber + checkinResult`, fallback). 
-- Preservar quebras de linha (`whitespace-pre-line`) para que o texto multi-parágrafo do Nossa Gente seja exibido corretamente.
-- Não alterar a lógica de redirect (continua só substituindo o formulário pela mensagem, sem navegar).
-- Funciona em desktop e mobile — o card já é responsivo (`max-w-md w-full`).
-
-**Arquivo:** `src/modules/gira-forms/PublicFormPage.tsx` (linhas 845-915).
+**Defeito real adicional encontrado:** o regex `/<[a-z][\s\S]*>/i` é **guloso** — funciona, mas se o conteúdo tiver `&lt;p&gt;` (HTML escapado no banco), nunca entraria no ramo HTML. Na linha do banco atual isso não é o caso, mas é um risco futuro se algum form for editado por interface que escape HTML.
 
 ---
 
-### Resumo de arquivos tocados
-| # | Arquivo | Tipo |
-|---|---------|------|
-| 1 | `src/modules/gira-forms/components/FormCheckinPanel.tsx` + `package.json` (`@zxing/browser`) | Frontend |
-| 2 | `src/modules/gira-forms/PublicFormPage.tsx`, `types.ts`, `FormBuilderPage.tsx` | Frontend |
-| 3 | `supabase/functions/send-event-confirmation/index.ts` + caller | Edge Function |
-| 4 | `supabase/functions/send-event-confirmation/index.ts` | Edge Function |
-| 5 | `src/modules/gira-forms/PublicFormPage.tsx` | Frontend |
+## Bug 2 — Badge "✅ X vagas restantes de 150"
 
-Cada item é independente — alterações de um não afetam os outros. Nenhum schema novo, nenhuma migração de banco. Instalo `@zxing/browser` para o item 1; demais itens não precisam de dependência nova.
+**Arquivo / linhas:** `src/modules/gira-forms/PublicFormPage.tsx`
+- Cálculo: linhas **234–240** (`effectiveSpotsRemaining`, `effectiveMaxSlots`)
+- Renderização: linhas **1166–1174** (single-page) e **1263–1271** (multi-step)
+
+**Origem do dado:** `design.maxResponses` = `150` em `forms.settings.maxResponses` (network log confirma). Não é uma flag `showVacancy`; basta haver `maxResponses` definido para ativar o cálculo.
+
+**Condição atual no código E no bundle publicado:**
+```ts
+effectiveSpotsRemaining !== null
+  && form.id !== '5e1aeab8-ebf1-42a4-a7fd-75721b8d3aad'   // exclui Nossa Gente
+  && !(design as any).hideVacancyBadge                     // flag opcional
+```
+
+**Reuso:** o badge é exibido só nestes dois pontos do `PublicFormPage`. Não é componente compartilhado. **A contagem interna (`registrationCount`, `formResponseCount`) e o bloqueio de envio quando lota (linha 840) NÃO são afetados pela remoção do badge** — eles continuam funcionando.
+
+**Por que continua aparecendo:** mesma causa do Bug 1 — **cache do service worker / browser**. O bundle servido contém a exclusão pelo ID; se o usuário ainda vê o badge, está rodando JS antigo.
+
+---
+
+## Diagnóstico final consolidado
+
+| # | Arquivo / Linha | Estado do código | Estado no bundle publicado | Causa de continuar aparecendo |
+|---|---|---|---|---|
+| 1 | `PublicFormPage.tsx:51-71, 1165, 1261` | Correto | **Presente** (`dangerouslySetInnerHTML` + `sanitizeHtml`) | Cache do Service Worker / browser servindo bundle antigo |
+| 2 | `PublicFormPage.tsx:234-240, 1166, 1263` | Correto (exclusão por ID) | **Presente** (`y.id!=="5e1aeab8-..."`) | Mesmo motivo |
+
+---
+
+## Plano de correção definitiva
+
+Como o código já está certo, a correção precisa ATACAR o cache. Proponho 3 ações em paralelo, sem refazer a lógica:
+
+### 1. Forçar invalidação do Service Worker
+No `vite.config.ts` / configuração PWA, garantir `registerType: 'autoUpdate'` e adicionar lógica em `main.tsx` para chamar `registration.update()` + `skipWaiting` em todo carregamento, ou um botão "Atualizar versão" quando detectar nova SW. Isso elimina o problema permanentemente para todos os formulários, não só este.
+
+### 2. Tornar a remoção do badge à prova de cache (defesa em profundidade)
+Em vez de excluir só pelo ID hard-coded, adicionar a flag `hideVacancyBadge: true` em `forms.settings` do "Nossa Gente" via update no banco. Assim, mesmo que um cliente caia num bundle antigo (anterior ao ID hard-coded mas posterior à flag), a flag já mata o badge. **Esta é a correção mais robusta.**
+
+### 3. Endurecer o `renderDescription`
+- Trocar o regex por detecção mais estrita: `/<(p|br|strong|em|u|h[1-6]|ul|ol|li|span|div)\b/i`.
+- Adicionar fallback: se após `sanitizeHtml` o resultado vier vazio mas o input tinha tags, logar warning e renderizar como markdown.
+- Garantir que `<br>` solto (sem `<p>` em volta) também entre no ramo HTML (regex atual exige letra após `<`, `<br>` casa — ok).
+
+### 4. Validação pós-deploy
+Após publicar:
+- Abrir `forms.giraerp.com.br/f/nossa-gente` em **aba anônima** (sem SW). Se renderizar correto → confirma que era cache.
+- Em aba normal: forçar `Application → Service Workers → Unregister` + `Ctrl+Shift+R`.
+- Adicionar versão visível no rodapé do form público (`v.YYYYMMDD-hash`) para diagnóstico futuro.
+
+### Dependências / efeitos colaterais
+- **Item 1 (autoUpdate)**: pode causar reload inesperado em usuários no meio do preenchimento. Mitigar mostrando toast "Nova versão disponível, recarregar?" em vez de auto-reload.
+- **Item 2 (flag no banco)**: zero efeito colateral — `effectiveSpotsRemaining` continua calculado, bloqueio de inscrição quando lotar continua funcionando, painel admin não usa esse badge.
+- **Item 3 (regex)**: nenhum, só endurece.
+
+### Arquivos que serão tocados
+- `src/modules/gira-forms/PublicFormPage.tsx` (regex de detecção + leitura da flag)
+- `vite.config.ts` (estratégia PWA) — opcional, mais invasivo
+- `src/main.tsx` (registro do SW com auto-update + toast)
+- Migração SQL: `UPDATE forms SET settings = settings || '{"hideVacancyBadge":true}' WHERE id = '5e1aeab8-...'`
 
