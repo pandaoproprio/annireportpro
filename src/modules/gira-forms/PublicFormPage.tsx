@@ -46,6 +46,17 @@ function maskCep(value: string): string {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
+// ─── Bold markdown renderer (apenas **texto**) ──────────────
+function renderBoldMarkdown(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
+}
+
 // ─── Smart label detection ──────────────────────────────────
 function isBirthDateField(label: string): boolean {
   return /nascimento|birth/i.test(label);
