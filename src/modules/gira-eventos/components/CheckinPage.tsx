@@ -41,17 +41,59 @@ const CheckinPage: React.FC = () => {
   const [documentNumber, setDocumentNumber] = useState('');
   const [acceptDeclaration, setAcceptDeclaration] = useState(false);
 
-  // Geolocation
-  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  // Geolocation + validation
+  const [geo, setGeo] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [validation, setValidation] = useState<{ allowed: boolean; distance_meters?: number; message: string } | null>(null);
+  const [validating, setValidating] = useState(false);
 
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {}
-      );
+  const requestGeolocation = () => {
+    if (!navigator.geolocation) {
+      setGeoError('Seu dispositivo não permite geolocalização. Solicite checkin manual ao organizador.');
+      return;
     }
-  }, []);
+    setGeoLoading(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+        setGeoLoading(false);
+      },
+      (err) => {
+        setGeoLoading(false);
+        setGeoError(err.code === 1
+          ? 'Permissão de localização negada. Habilite nas configurações do navegador para fazer checkin.'
+          : 'Não foi possível obter sua localização. Verifique o GPS e tente novamente.');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  };
+
+  useEffect(() => { requestGeolocation(); }, []);
+
+  // Validate against geofence whenever we have geo + event
+  useEffect(() => {
+    if (!geo || !event) return;
+    const lat = (event as any).geofence_lat;
+    const lng = (event as any).geofence_lng;
+    if (lat == null || lng == null) {
+      // geofence not configured: allow but flag
+      setValidation({ allowed: true, message: 'Local sem geofence configurado.' });
+      return;
+    }
+    setValidating(true);
+    supabase.functions.invoke('validate-checkin-geofence', {
+      body: { event_id: event.id, lat: geo.lat, lng: geo.lng },
+    }).then(({ data, error: invokeError }) => {
+      setValidating(false);
+      if (invokeError || !data) {
+        setValidation({ allowed: false, message: 'Falha ao validar localização. Tente novamente.' });
+        return;
+      }
+      setValidation(data as any);
+    });
+  }, [geo, event]);
 
   useEffect(() => {
     async function load() {
