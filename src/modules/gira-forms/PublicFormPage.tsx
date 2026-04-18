@@ -20,6 +20,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { maskPhone, maskCpfCnpj, maskCpf, maskCnpj } from '@/lib/masks';
 import type { Form, FormField, FormDesignSettings, FieldCondition, FieldConditionGroup } from './types';
+import { PreCheckinButton } from '@/modules/gira-eventos/components/PreCheckinButton';
+import { EventLocationLinks } from '@/modules/gira-eventos/components/EventLocationLinks';
 
 // ─── CEP API ────────────────────────────────────────────────
 interface CepData {
@@ -101,6 +103,7 @@ export default function PublicFormPage() {
   const [registrationResult, setRegistrationResult] = useState<{ registration_number: number; qr_token: string; event_title: string; event_date: string; event_location: string } | null>(null);
   const [standaloneRegNumber, setStandaloneRegNumber] = useState<number | null>(null);
   const [checkinResult, setCheckinResult] = useState<{ checkin_code: string; qr_token: string } | null>(null);
+  const [submittedInfo, setSubmittedInfo] = useState<{ responseId: string; name: string; identifier: string } | null>(null);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
   const [lgpdConsent, setLgpdConsent] = useState(false);
   const [lgpdError, setLgpdError] = useState(false);
@@ -324,6 +327,13 @@ export default function PublicFormPage() {
         answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
       } as any);
       if (error) throw error;
+
+      // Track submitted info for pre-checkin offer on success screen
+      setSubmittedInfo({
+        responseId,
+        name: respondentName || 'Participante',
+        identifier: (respondentCpf || respondentEmail || respondentName || responseId).toLowerCase(),
+      });
 
       // ─── Auto-register in linked event ──────────────────────
       if (linkedEvent?.id) {
@@ -902,6 +912,27 @@ export default function PublicFormPage() {
                 <h2 className="text-2xl font-bold">Resposta enviada!</h2>
                 <p style={{ color: 'var(--form-muted)' }}>{successMsg}</p>
               </>
+            )}
+
+            {form && (form as any).pre_checkin_enabled && submittedInfo && (
+              <div className="space-y-3 pt-2">
+                {((form as any).geofence_lat != null && (form as any).geofence_lng != null) && (
+                  <div className="rounded-lg border p-3 text-left" style={{ background: 'var(--form-bg)' }}>
+                    <p className="text-xs font-semibold mb-2" style={{ color: 'var(--form-muted)' }}>📍 Como chegar ao local</p>
+                    <EventLocationLinks
+                      lat={(form as any).geofence_lat}
+                      lng={(form as any).geofence_lng}
+                      address={(form as any).event_address ?? null}
+                    />
+                  </div>
+                )}
+                <PreCheckinButton
+                  formId={formId!}
+                  responseId={submittedInfo.responseId}
+                  userIdentifier={submittedInfo.identifier}
+                  fullName={submittedInfo.name}
+                />
+              </div>
             )}
 
             <motion.div initial={false} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>

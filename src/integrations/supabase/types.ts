@@ -938,12 +938,15 @@ export type Database = {
         Row: {
           checkin_at: string
           checkin_method: string
+          distance_meters: number | null
           document_number: string | null
           event_id: string
           full_name: string
           geolocation: Json | null
           id: string
           ip_address: string | null
+          is_manual: boolean
+          manual_by: string | null
           metadata: Json | null
           registration_id: string
           signature_data: string | null
@@ -954,12 +957,15 @@ export type Database = {
         Insert: {
           checkin_at?: string
           checkin_method?: string
+          distance_meters?: number | null
           document_number?: string | null
           event_id: string
           full_name: string
           geolocation?: Json | null
           id?: string
           ip_address?: string | null
+          is_manual?: boolean
+          manual_by?: string | null
           metadata?: Json | null
           registration_id: string
           signature_data?: string | null
@@ -970,12 +976,15 @@ export type Database = {
         Update: {
           checkin_at?: string
           checkin_method?: string
+          distance_meters?: number | null
           document_number?: string | null
           event_id?: string
           full_name?: string
           geolocation?: Json | null
           id?: string
           ip_address?: string | null
+          is_manual?: boolean
+          manual_by?: string | null
           metadata?: Json | null
           registration_id?: string
           signature_data?: string | null
@@ -996,6 +1005,80 @@ export type Database = {
             columns: ["registration_id"]
             isOneToOne: true
             referencedRelation: "event_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      event_pre_checkins: {
+        Row: {
+          channel: string
+          confirmed_at: string
+          event_id: string | null
+          form_id: string | null
+          full_name: string
+          id: string
+          ip_address: string | null
+          metadata: Json
+          registration_id: string | null
+          response_id: string | null
+          user_agent: string | null
+          user_identifier: string
+        }
+        Insert: {
+          channel?: string
+          confirmed_at?: string
+          event_id?: string | null
+          form_id?: string | null
+          full_name: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          registration_id?: string | null
+          response_id?: string | null
+          user_agent?: string | null
+          user_identifier: string
+        }
+        Update: {
+          channel?: string
+          confirmed_at?: string
+          event_id?: string | null
+          form_id?: string | null
+          full_name?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json
+          registration_id?: string | null
+          response_id?: string | null
+          user_agent?: string | null
+          user_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_pre_checkins_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_pre_checkins_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_pre_checkins_registration_id_fkey"
+            columns: ["registration_id"]
+            isOneToOne: false
+            referencedRelation: "event_registrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "event_pre_checkins_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "form_responses"
             referencedColumns: ["id"]
           },
         ]
@@ -1058,10 +1141,14 @@ export type Database = {
           description: string
           event_date: string
           event_end_date: string | null
+          geofence_lat: number | null
+          geofence_lng: number | null
+          geofence_radius_meters: number
           id: string
           linked_form_id: string | null
           location: string
           max_participants: number | null
+          pre_checkin_enabled: boolean
           project_id: string | null
           settings: Json
           status: string
@@ -1076,10 +1163,14 @@ export type Database = {
           description?: string
           event_date: string
           event_end_date?: string | null
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_meters?: number
           id?: string
           linked_form_id?: string | null
           location?: string
           max_participants?: number | null
+          pre_checkin_enabled?: boolean
           project_id?: string | null
           settings?: Json
           status?: string
@@ -1094,10 +1185,14 @@ export type Database = {
           description?: string
           event_date?: string
           event_end_date?: string | null
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_meters?: number
           id?: string
           linked_form_id?: string | null
           location?: string
           max_participants?: number | null
+          pre_checkin_enabled?: boolean
           project_id?: string | null
           settings?: Json
           status?: string
@@ -1326,7 +1421,14 @@ export type Database = {
           closes_at: string | null
           created_at: string
           description: string
+          event_address: string | null
+          event_ends_at: string | null
+          event_starts_at: string | null
+          geofence_lat: number | null
+          geofence_lng: number | null
+          geofence_radius_meters: number
           id: string
+          pre_checkin_enabled: boolean
           project_id: string | null
           public_slug: string | null
           settings: Json
@@ -1340,7 +1442,14 @@ export type Database = {
           closes_at?: string | null
           created_at?: string
           description?: string
+          event_address?: string | null
+          event_ends_at?: string | null
+          event_starts_at?: string | null
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_meters?: number
           id?: string
+          pre_checkin_enabled?: boolean
           project_id?: string | null
           public_slug?: string | null
           settings?: Json
@@ -1354,7 +1463,14 @@ export type Database = {
           closes_at?: string | null
           created_at?: string
           description?: string
+          event_address?: string | null
+          event_ends_at?: string | null
+          event_starts_at?: string | null
+          geofence_lat?: number | null
+          geofence_lng?: number | null
+          geofence_radius_meters?: number
           id?: string
+          pre_checkin_enabled?: boolean
           project_id?: string | null
           public_slug?: string | null
           settings?: Json
@@ -3461,6 +3577,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_distance_meters: {
+        Args: { lat1: number; lat2: number; lng1: number; lng2: number }
+        Returns: number
+      }
       cleanup_expired_rate_limits: { Args: never; Returns: undefined }
       get_role_level: { Args: { _user_id: string }; Returns: number }
       has_permission: {

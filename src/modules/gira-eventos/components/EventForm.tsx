@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EVENT_CATEGORIES } from '../types';
 import type { GiraEvent } from '../types';
 import { EventCoverUpload } from './EventCoverUpload';
+import { GeofenceConfigPanel } from './GeofenceConfigPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { ClipboardList } from 'lucide-react';
 
@@ -41,6 +42,10 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
   const projectId = watch('project_id');
   const linkedFormId = watch('linked_form_id');
   const [coverUrl, setCoverUrl] = useState<string | null>(defaultValues?.cover_image_url ?? null);
+  const [geoLat, setGeoLat] = useState<number | null>(defaultValues?.geofence_lat ?? null);
+  const [geoLng, setGeoLng] = useState<number | null>(defaultValues?.geofence_lng ?? null);
+  const [geoRadius, setGeoRadius] = useState<number>(defaultValues?.geofence_radius_meters ?? 200);
+  const [preCheckinEnabled, setPreCheckinEnabled] = useState<boolean>(defaultValues?.pre_checkin_enabled ?? true);
 
   // Fetch available forms
   const formsQuery = useQuery({
@@ -57,7 +62,15 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
   });
 
   const onFormSubmit = (data: any) => {
-    onSubmit({ ...data, cover_image_url: coverUrl, linked_form_id: data.linked_form_id || null });
+    onSubmit({
+      ...data,
+      cover_image_url: coverUrl,
+      linked_form_id: data.linked_form_id || null,
+      geofence_lat: geoLat,
+      geofence_lng: geoLng,
+      geofence_radius_meters: geoRadius,
+      pre_checkin_enabled: preCheckinEnabled,
+    });
   };
 
   return (
@@ -160,6 +173,19 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
           </Select>
         </div>
       )}
+
+      <GeofenceConfigPanel
+        lat={geoLat}
+        lng={geoLng}
+        radiusMeters={geoRadius}
+        preCheckinEnabled={preCheckinEnabled}
+        onChange={({ lat, lng, radius, preCheckinEnabled: pce }) => {
+          setGeoLat(lat);
+          setGeoLng(lng);
+          setGeoRadius(radius);
+          setPreCheckinEnabled(pce);
+        }}
+      />
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>

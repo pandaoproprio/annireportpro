@@ -9,9 +9,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SignatureCanvas } from './SignatureCanvas';
-import { CheckCircle2, AlertCircle, MapPin, Fingerprint, PenTool } from 'lucide-react';
+import { CheckCircle2, AlertCircle, MapPin, Fingerprint, PenTool, Crosshair, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { EventLocationLinks } from './EventLocationLinks';
 import type { GiraEvent, EventRegistration } from '../types';
 
 async function sha256(message: string): Promise<string> {
@@ -40,17 +41,59 @@ const CheckinPage: React.FC = () => {
   const [documentNumber, setDocumentNumber] = useState('');
   const [acceptDeclaration, setAcceptDeclaration] = useState(false);
 
-  // Geolocation
-  const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null);
+  // Geolocation + validation
+  const [geo, setGeo] = useState<{ lat: number; lng: number; accuracy: number } | null>(null);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [geoLoading, setGeoLoading] = useState(false);
+  const [validation, setValidation] = useState<{ allowed: boolean; distance_meters?: number; message: string } | null>(null);
+  const [validating, setValidating] = useState(false);
 
-  useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {}
-      );
+  const requestGeolocation = () => {
+    if (!navigator.geolocation) {
+      setGeoError('Seu dispositivo não permite geolocalização. Solicite checkin manual ao organizador.');
+      return;
     }
-  }, []);
+    setGeoLoading(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy });
+        setGeoLoading(false);
+      },
+      (err) => {
+        setGeoLoading(false);
+        setGeoError(err.code === 1
+          ? 'Permissão de localização negada. Habilite nas configurações do navegador para fazer checkin.'
+          : 'Não foi possível obter sua localização. Verifique o GPS e tente novamente.');
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
+    );
+  };
+
+  useEffect(() => { requestGeolocation(); }, []);
+
+  // Validate against geofence whenever we have geo + event
+  useEffect(() => {
+    if (!geo || !event) return;
+    const lat = (event as any).geofence_lat;
+    const lng = (event as any).geofence_lng;
+    if (lat == null || lng == null) {
+      // geofence not configured: allow but flag
+      setValidation({ allowed: true, message: 'Local sem geofence configurado.' });
+      return;
+    }
+    setValidating(true);
+    supabase.functions.invoke('validate-checkin-geofence', {
+      body: { event_id: event.id, lat: geo.lat, lng: geo.lng },
+    }).then(({ data, error: invokeError }) => {
+      setValidating(false);
+      if (invokeError || !data) {
+        setValidation({ allowed: false, message: 'Falha ao validar localização. Tente novamente.' });
+        return;
+      }
+      setValidation(data as any);
+    });
+  }, [geo, event]);
 
   useEffect(() => {
     async function load() {
@@ -97,6 +140,14 @@ const CheckinPage: React.FC = () => {
   const handleCheckin = async () => {
     if (!registration || !event) return;
 
+    if (!geo) {
+      setError('Localização não disponível. Permita o acesso ao GPS.');
+      return;
+    }
+    if (validation && !validation.allowed) {
+      setError(validation.message);
+      return;
+    }
     if (signatureType === 'drawing' && !signatureData) {
       setError('Por favor, assine no campo acima.');
       return;
@@ -110,7 +161,6 @@ const CheckinPage: React.FC = () => {
     setError(null);
 
     try {
-      // Build signature hash
       const sigContent = signatureType === 'drawing'
         ? signatureData!
         : `ACEITE_DIGITAL|${fullName}|${documentNumber}|${new Date().toISOString()}`;
@@ -127,10 +177,13 @@ const CheckinPage: React.FC = () => {
         document_number: documentNumber.trim() || null,
         ip_address: null,
         user_agent: navigator.userAgent,
-        geolocation: geo ? { lat: geo.lat, lng: geo.lng } : null,
+        geolocation: { lat: geo.lat, lng: geo.lng, accuracy: geo.accuracy },
+        distance_meters: validation?.distance_meters ?? null,
+        is_manual: false,
         metadata: {
           timestamp_iso: new Date().toISOString(),
           screen_resolution: `${screen.width}x${screen.height}`,
+          radius_validated: !!validation?.allowed,
         },
       };
 
@@ -228,11 +281,18 @@ const CheckinPage: React.FC = () => {
             <img src={event.cover_image_url} alt="" className="w-full h-full object-cover" />
           </div>
         )}
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 space-y-2">
           <CardTitle className="text-lg">Check-in: {event?.title}</CardTitle>
           <p className="text-sm text-muted-foreground">
             {event && format(new Date(event.event_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
           </p>
+          {event && (
+            <EventLocationLinks
+              lat={(event as any).geofence_lat ?? null}
+              lng={(event as any).geofence_lng ?? null}
+              address={event.location}
+            />
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -251,6 +311,44 @@ const CheckinPage: React.FC = () => {
               value={documentNumber}
               onChange={(e) => setDocumentNumber(e.target.value)}
             />
+          </div>
+
+          {/* Geolocation Status */}
+          <div className={`rounded-lg border p-3 space-y-2 ${
+            validation == null
+              ? 'bg-muted'
+              : validation.allowed
+                ? 'bg-[hsl(var(--accent))]/40 border-primary/30'
+                : 'bg-destructive/5 border-destructive/30'
+          }`}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Validação de localização
+              </h3>
+              {(geoLoading || validating) && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            </div>
+            {geoError ? (
+              <>
+                <p className="text-xs text-destructive">{geoError}</p>
+                <Button type="button" size="sm" variant="outline" onClick={requestGeolocation} className="gap-1.5">
+                  <Crosshair className="w-3.5 h-3.5" /> Tentar novamente
+                </Button>
+              </>
+            ) : !geo ? (
+              <p className="text-xs text-muted-foreground">Aguardando localização do dispositivo...</p>
+            ) : validation == null ? (
+              <p className="text-xs text-muted-foreground">Validando distância até o local do evento...</p>
+            ) : validation.allowed ? (
+              <p className="text-xs text-foreground">{validation.message}</p>
+            ) : (
+              <>
+                <p className="text-xs text-destructive font-medium">{validation.message}</p>
+                <Button type="button" size="sm" variant="outline" onClick={requestGeolocation} className="gap-1.5">
+                  <Crosshair className="w-3.5 h-3.5" /> Atualizar localização
+                </Button>
+              </>
+            )}
           </div>
 
           {/* Signature Section */}
@@ -303,7 +401,13 @@ const CheckinPage: React.FC = () => {
           <Button
             onClick={handleCheckin}
             className="w-full"
-            disabled={submitting || (!signatureData && signatureType === 'drawing') || (signatureType === 'digital_accept' && !acceptDeclaration)}
+            disabled={
+              submitting
+              || !geo
+              || (validation != null && !validation.allowed)
+              || (!signatureData && signatureType === 'drawing')
+              || (signatureType === 'digital_accept' && !acceptDeclaration)
+            }
           >
             {submitting ? 'Registrando...' : 'Confirmar Presença'}
           </Button>
