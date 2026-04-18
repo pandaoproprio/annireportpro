@@ -35,3 +35,5 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.analyze-project-risks]
     verify_jwt = false
+  [functions.validate-checkin-geofence]
+    verify_jwt = false
