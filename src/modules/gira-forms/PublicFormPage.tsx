@@ -328,6 +328,13 @@ export default function PublicFormPage() {
       } as any);
       if (error) throw error;
 
+      // Track submitted info for pre-checkin offer on success screen
+      setSubmittedInfo({
+        responseId,
+        name: respondentName || 'Participante',
+        identifier: (respondentCpf || respondentEmail || respondentName || responseId).toLowerCase(),
+      });
+
       // ─── Auto-register in linked event ──────────────────────
       if (linkedEvent?.id) {
         const regId = crypto.randomUUID();
