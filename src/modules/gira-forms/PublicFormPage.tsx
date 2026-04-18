@@ -1524,12 +1524,18 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       return <Input value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="Sua resposta" maxLength={500} />;
     case 'long_text': {
       const enableAudio = !!(field.settings?.enableAudio);
+      const htmlValue = (value as string) || '';
+      const plainLen = htmlValue.replace(/<[^>]*>/g, '').length;
       return (
         <div className="space-y-2">
           <div className="relative">
-            <Textarea value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder={enableAudio ? 'Digite sua resposta aqui. Se preferir, use o botão "Usar microfone" abaixo.' : 'Sua resposta'} rows={4} maxLength={5000} />
+            <RichTextEditor
+              value={htmlValue}
+              onChange={(html) => onChange(html)}
+              placeholder={enableAudio ? 'Digite sua resposta aqui. Se preferir, use o botão "Usar microfone" abaixo.' : 'Sua resposta'}
+            />
             <span className="absolute bottom-2 right-2 text-[10px]" style={{ color: 'var(--form-muted)' }}>
-              {((value as string) || '').length}/5000
+              {plainLen}/5000
             </span>
           </div>
           {enableAudio && (
