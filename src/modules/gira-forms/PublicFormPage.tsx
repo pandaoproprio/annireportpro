@@ -48,8 +48,19 @@ function maskCep(value: string): string {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
-// ─── Bold markdown renderer (apenas **texto**) ──────────────
-function renderBoldMarkdown(text: string): React.ReactNode {
+// ─── Description renderer (HTML rico OU markdown legado **texto**) ──
+function renderDescription(text: string): React.ReactNode {
+  // Se conter qualquer tag HTML, sanitiza e renderiza como HTML
+  if (/<[a-z][\s\S]*>/i.test(text)) {
+    return (
+      <div
+        className="prose prose-sm max-w-none [&_p]:my-1 [&_strong]:font-bold"
+        style={{ color: 'inherit' }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }}
+      />
+    );
+  }
+  // Fallback markdown simples: **texto** -> <strong>texto</strong>
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
