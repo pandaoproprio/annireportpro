@@ -289,12 +289,10 @@ export default function FormBuilderPage() {
             <div className="space-y-4">
               <Card>
                 <CardContent className="p-4 space-y-3">
-                  <Textarea
+                  <RichTextEditor
                     value={description}
-                    onChange={e => setDescription(e.target.value)}
+                    onChange={setDescription}
                     placeholder="Descrição do formulário..."
-                    rows={2}
-                    className="resize-none"
                   />
                   <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>
