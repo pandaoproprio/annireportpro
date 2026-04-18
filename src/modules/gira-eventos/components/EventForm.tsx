@@ -42,6 +42,10 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
   const projectId = watch('project_id');
   const linkedFormId = watch('linked_form_id');
   const [coverUrl, setCoverUrl] = useState<string | null>(defaultValues?.cover_image_url ?? null);
+  const [geoLat, setGeoLat] = useState<number | null>(defaultValues?.geofence_lat ?? null);
+  const [geoLng, setGeoLng] = useState<number | null>(defaultValues?.geofence_lng ?? null);
+  const [geoRadius, setGeoRadius] = useState<number>(defaultValues?.geofence_radius_meters ?? 200);
+  const [preCheckinEnabled, setPreCheckinEnabled] = useState<boolean>(defaultValues?.pre_checkin_enabled ?? true);
 
   // Fetch available forms
   const formsQuery = useQuery({
