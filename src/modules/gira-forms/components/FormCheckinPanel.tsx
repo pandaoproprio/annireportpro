@@ -169,10 +169,13 @@ export default function FormCheckinPanel() {
     }
   };
 
+  const { preCheckins } = useEventPreCheckins({ formId: authenticated ? formId : null });
+
   const responses = responsesQuery.data ?? [];
   const total = responses.length;
   const checkedIn = responses.filter(r => r.checked_in_at).length;
   const pending = total - checkedIn;
+  const preCheckinCount = preCheckins.length;
   const percentage = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
 
   const filtered = searchTerm.trim()
