@@ -15,6 +15,20 @@ export function isFormsOnlyHost(): boolean {
     if (params.get('forms') === '1') return true;
     if (host.startsWith('forms.')) return true;
     if (host === 'forms.giraerp.com.br') return true;
+
+    // Rotas públicas de formulários DEVEM rodar em modo leve (sem Auth/AppData
+    // pesados) em qualquer host — incluindo relatorios.giraerp.com.br — para
+    // evitar travamentos em mobile/Android com rede instável.
+    const path = window.location.pathname;
+    if (
+      path.startsWith('/f/') ||
+      path.startsWith('/c/') || path === '/c' ||
+      path.startsWith('/checkin/') ||
+      path.startsWith('/form-checkin/') ||
+      path.startsWith('/certificado/')
+    ) {
+      return true;
+    }
     return false;
   } catch {
     return false;
