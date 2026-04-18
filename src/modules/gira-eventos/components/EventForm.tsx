@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { EVENT_CATEGORIES } from '../types';
 import type { GiraEvent } from '../types';
 import { EventCoverUpload } from './EventCoverUpload';
+import { GeofenceConfigPanel } from './GeofenceConfigPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { ClipboardList } from 'lucide-react';
 
