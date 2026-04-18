@@ -1,126 +1,75 @@
-## Análise
 
-O usuário quer um sistema de **Pré-Checkin + Checkin por Geolocalização** aplicado ao formulário "Convite | Nossa Gente" (`/f/nossa-gente`). O escopo menciona "Agenda e Compromissos", mas o link aponta para um formulário público GIRA Forms — entendo que o "compromisso" aqui é o evento vinculado a este formulário (ou o próprio formulário com data/local).
 
-Já existe infraestrutura relevante no projeto:
+## Plano: 5 correções independentes
 
-- `event_checkins` (tabela) com hash SHA-256, geolocalização, signature_data
-- `event_registrations` (tabela) com qr_token e checkin_code
-- `CheckinPage.tsx` no módulo gira-eventos (já faz checkin com geo opcional, mas **sem validação de raio**)
-- `useEventCheckins.ts` com realtime subscription
-- `FormCheckinPanel.tsx` no módulo gira-forms
+### 1. Câmera para leitura de QR Code (FormCheckinPanel)
+**Causa raiz:** `startScanner()` apenas abre o `getUserMedia` e mostra o vídeo. Não existe biblioteca decodificando o QR, então mesmo com a câmera ativa nada acontece quando se aponta para o código.
 
-**O que falta:**
+**Correção:**
+- Adicionar `@zxing/browser` (decoder leve, funciona em iOS Safari + Android Chrome).
+- Em `startScanner()`, instanciar `BrowserMultiFormatReader` e chamar `decodeFromVideoDevice` apontando para o `videoRef`. No callback, extrair o `token` da URL escaneada (ou usar o próprio texto se for o código de 6 letras), buscar a `form_response` correspondente em `responsesQuery.data` e disparar `checkinMutation`.
+- Em `stopScanner()`, parar o reader (`reader.reset()`) além de parar o stream.
+- Adicionar `playsInline` e `muted` no `<video>` (obrigatório no iOS Safari).
+- Tratar erro de permissão de câmera com mensagem amigável.
 
-1. Pré-checkin (intenção de comparecer, antes do evento)
-2. Validação de raio geográfico no checkin efetivo
-3. Configuração de raio + coordenadas por evento/formulário
-4. Estado consolidado do participante (convidado / pré-checkin / presente / ausente)
-5. Painel em tempo real para o organizador com contadores e checkin manual
+**Arquivo:** `src/modules/gira-forms/components/FormCheckinPanel.tsx`.
 
-## Plano
+---
 
-### 1. Banco de dados (migration)
+### 2. Pré-checkin não funciona
+**Causa raiz:** O componente `<PreCheckinButton>` só é renderizado quando `(form as any).pre_checkin_enabled` é true (linha 917 de `PublicFormPage.tsx`), mas a tabela `forms` não tem essa coluna nem existe toggle no editor — então o botão nunca aparece. A API e a tabela `event_pre_checkins` estão prontas e com policies corretas.
 
-**Nova tabela `event_pre_checkins`:**
+**Correção:**
+- Trocar a condição de `(form as any).pre_checkin_enabled` por `design.enableCheckin` (chave já existente em `FormDesignSettings`) **OU** por uma nova flag `design.preCheckinEnabled`. Vou usar uma flag dedicada `design.preCheckinEnabled` (default `true` quando `enableCheckin` for true) para não acoplar pré-checkin a checkin presencial.
+- Adicionar campo opcional `preCheckinEnabled?: boolean` em `FormDesignSettings` (`types.ts`).
+- Adicionar toggle "Pré-checkin (confirmar presença antecipada)" no painel do FormBuilder, junto do toggle de Check-in.
+- Garantir que o botão apareça na tela de sucesso quando `design.preCheckinEnabled === true` e `submittedInfo` existe.
 
-- `id`, `event_id` (nullable), `form_id` (nullable, para suportar formulários sem evento), `registration_id` ou `response_id`, `user_identifier` (email/cpf), `confirmed_at`, `channel` (web/email/whatsapp), `ip_address`, `user_agent`, `metadata jsonb`
-- Único por (form_id/event_id, user_identifier)
-- RLS: insert público, select para owner do form/evento
+**Arquivos:** `src/modules/gira-forms/PublicFormPage.tsx`, `src/modules/gira-forms/types.ts`, `src/modules/gira-forms/FormBuilderPage.tsx`.
 
-**Adicionar colunas em `events` (e `forms` para o caso do Nossa Gente):**
+---
 
-- `geofence_lat numeric`, `geofence_lng numeric`, `geofence_radius_meters integer DEFAULT 200`
-- `pre_checkin_enabled boolean DEFAULT true`
+### 3. Mapa ausente no e-mail de confirmação de evento
+**Causa raiz:** `send-event-confirmation/index.ts` não tem nenhum bloco de mapa.
 
-**Adicionar colunas em `event_checkins`:**
+**Correção:** Inserir uma seção "Como chegar" no template HTML usando **OpenStreetMap Static Map** (não exige API key, URLs públicas estáveis). URL: `https://staticmap.openstreetmap.de/staticmap.php?center={lat},{lng}&zoom=16&size=500x250&markers={lat},{lng},red-pushpin`. Para o caso sem coordenadas, fallback para link Google Maps com query do endereço (sem imagem). Incluir botão "Abrir no Google Maps" e "Abrir no Waze" abaixo da imagem (mesmo padrão do `send-form-checkin`).
 
-- `distance_meters numeric` (distância calculada no momento)
-- `is_manual boolean DEFAULT false`
-- `manual_by uuid` (organizador que fez o checkin manual)
+Aceitar `geofence_lat`/`geofence_lng` opcionais no body da função; o frontend (`useEvents` ou onde dispara o e-mail) já tem essas coordenadas — passar no `invoke`.
 
-**Função `calculate_distance_meters(lat1, lng1, lat2, lng2)**` — fórmula de Haversine em SQL.
+**Arquivos:** `supabase/functions/send-event-confirmation/index.ts` + ajuste no caller para enviar `geofence_lat`/`geofence_lng`.
 
-**Realtime:** habilitar `event_pre_checkins` na publicação.
+---
 
-### 2. Backend / lógica de validação
+### 4. Rodapé do e-mail de confirmação de evento
+**Causa raiz:** Linhas 73-78 de `send-event-confirmation/index.ts` exibem "GIRA Diário de Bordo — Gestão de Projetos Sociais".
 
-Novo edge function `validate-checkin-geofence` (verify_jwt = false):
+**Correção:** Trocar o texto do rodapé por algo institucional pertinente apenas ao evento — ex.: "Este e-mail confirma sua inscrição no evento. Em caso de dúvida, responda a esta mensagem." (sem mencionar GIRA Diário de Bordo nem nada relacionado).
 
-- Recebe: event_id/form_id, registration_id, lat, lng do dispositivo
-- Busca coordenadas do evento e raio
-- Calcula distância (Haversine)
-- Se dentro do raio → retorna `allowed: true, distance_meters`
-- Se fora → retorna `allowed: false, distance_meters, message`
+**Escopo restrito:** apenas `send-event-confirmation`. O rodapé do `send-form-checkin` (item separado) **não** será alterado.
 
-Validação também acontece no client (rápida) **e** revalidada no insert via trigger ou no edge function antes do insert (para impedir bypass).
+---
 
-### 3. UI — Participante (público)
+### 5. Mensagem de conclusão ausente no formulário Nossa Gente
+**Causa raiz:** A `successMessage` já está salva no DB exatamente como solicitado. Mas em `PublicFormPage.tsx` (linhas 877-909), quando o formulário tem `showRegistrationNumber + enableCheckin` (caso do Nossa Gente), só são renderizados o número, QR Code e código de check-in. A `successMsg` aparece apenas no `else` raso (sem checkin) — por isso nunca é exibida nesse fluxo.
 
-**Nova página `/f/:slug/pre-checkin**` (e/ou botão no formulário Nossa Gente após envio):
+**Correção:**
+- Renderizar a `successMsg` **sempre** no card de sucesso, logo abaixo das informações de inscrição/QR/código, em todos os ramos (`registrationResult`, `standaloneRegNumber + checkinResult`, fallback). 
+- Preservar quebras de linha (`whitespace-pre-line`) para que o texto multi-parágrafo do Nossa Gente seja exibido corretamente.
+- Não alterar a lógica de redirect (continua só substituindo o formulário pela mensagem, sem navegar).
+- Funciona em desktop e mobile — o card já é responsivo (`max-w-md w-full`).
 
-- Após submeter o formulário Nossa Gente, mostra opção "Confirmar presença antecipada (pré-checkin)"
-- Registra na `event_pre_checkins`
+**Arquivo:** `src/modules/gira-forms/PublicFormPage.tsx` (linhas 845-915).
 
-**Atualizar `CheckinPage.tsx**` (ou criar `GeofencedCheckinPage.tsx` para forms):
+---
 
-- Solicita geolocalização (obrigatória, não opcional)
-- Chama `validate-checkin-geofence`
-- Se fora do raio: exibe distância em metros + mensagem ("Você está a ~450m do local. Aproxime-se para fazer check-in.")
-- Se dentro: prossegue com assinatura + insert em `event_checkins` com `distance_meters`
+### Resumo de arquivos tocados
+| # | Arquivo | Tipo |
+|---|---------|------|
+| 1 | `src/modules/gira-forms/components/FormCheckinPanel.tsx` + `package.json` (`@zxing/browser`) | Frontend |
+| 2 | `src/modules/gira-forms/PublicFormPage.tsx`, `types.ts`, `FormBuilderPage.tsx` | Frontend |
+| 3 | `supabase/functions/send-event-confirmation/index.ts` + caller | Edge Function |
+| 4 | `supabase/functions/send-event-confirmation/index.ts` | Edge Function |
+| 5 | `src/modules/gira-forms/PublicFormPage.tsx` | Frontend |
 
-### 4. UI — Organizador
+Cada item é independente — alterações de um não afetam os outros. Nenhum schema novo, nenhuma migração de banco. Instalo `@zxing/browser` para o item 1; demais itens não precisam de dependência nova.
 
-**Configuração no editor do formulário/evento (`FormBuilderPage` aba "Configurações" ou `EventForm`):**
-
-- Campos: Latitude, Longitude, Raio em metros (default 200), toggle pré-checkin habilitado
-- Botão "Usar minha localização atual" para preencher coordenadas
-
-**Atualizar `FormCheckinPanel.tsx` (painel do organizador):**
-
-- 3 contadores no topo: Convidados / Pré-checkins / Presentes
-- Tabela com lista de participantes mostrando estado: `Convidado` | `Pré-checkin` | `Presente` | `Ausente`
-- Estado "Ausente" calculado: evento encerrado + sem checkin
-- Coluna distância para cada checkin
-- Botão "Checkin manual" por linha (insere com `is_manual=true, manual_by=auth.uid()`)
-- Realtime: subscribe em `event_pre_checkins` e `event_checkins`
-
-### 5. Hooks
-
-- `useEventPreCheckins(eventId|formId)` — query + realtime + mutation create
-- Atualizar `useEventCheckins` para incluir `distance_meters` e `is_manual`
-- Novo helper `useParticipantStates(eventId|formId)` que cruza registrations + pre_checkins + checkins e devolve estado consolidado
-
-### 6. Escopo
-
-- Mudanças concentradas em: `gira-eventos/` (módulo principal de checkin) e ajuste mínimo no `FormCheckinPanel` do `gira-forms` para o formulário Nossa Gente
-- Nenhum outro módulo (diary, reports, budget, etc.) será tocado
-
-### Arquivos a criar/modificar
-
-**Novos:**
-
-- migration SQL (nova tabela + colunas + função haversine)
-- `supabase/functions/validate-checkin-geofence/index.ts`
-- `src/modules/gira-eventos/hooks/useEventPreCheckins.ts`
-- `src/modules/gira-eventos/hooks/useParticipantStates.ts`
-- `src/modules/gira-eventos/components/PreCheckinButton.tsx`
-- `src/modules/gira-eventos/components/GeofenceConfigPanel.tsx`
-- `src/modules/gira-eventos/components/OrganizerLiveDashboard.tsx`
-
-**Modificar:**
-
-- `src/modules/gira-eventos/components/CheckinPage.tsx` — geolocalização obrigatória + validação de raio
-- `src/modules/gira-eventos/components/EventForm.tsx` — adicionar painel de geofence
-- `src/modules/gira-forms/components/FormCheckinPanel.tsx` — contadores + estados + checkin manual
-- `src/modules/gira-eventos/types.ts` — novos tipos
-- `src/modules/gira-forms/PublicFormPage.tsx` — oferecer pré-checkin após envio do Nossa Gente
-
-### Pontos a confirmar
-
-1. Para o formulário **Nossa Gente** especificamente: ele tem data/local fixos? Vou ler o registro do form para extrair; se não tiver, o organizador precisará configurar coordenadas + data antes de ativar checkin.
-2. Identidade do participante no pré-checkin: usar **email** (do form) ou exigir login? Proposta: usar email + checkin_code gerado no envio do form (já existe a função `generate_checkin_code`).  
-  
-  
-Tem ser enviada também a localização do evento com o google maps, waze etc
-3. &nbsp;
