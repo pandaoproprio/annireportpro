@@ -281,11 +281,18 @@ const CheckinPage: React.FC = () => {
             <img src={event.cover_image_url} alt="" className="w-full h-full object-cover" />
           </div>
         )}
-        <CardHeader className="pb-3">
+        <CardHeader className="pb-3 space-y-2">
           <CardTitle className="text-lg">Check-in: {event?.title}</CardTitle>
           <p className="text-sm text-muted-foreground">
             {event && format(new Date(event.event_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
           </p>
+          {event && (
+            <EventLocationLinks
+              lat={(event as any).geofence_lat ?? null}
+              lng={(event as any).geofence_lng ?? null}
+              address={event.location}
+            />
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
