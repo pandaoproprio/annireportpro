@@ -62,7 +62,15 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
   });
 
   const onFormSubmit = (data: any) => {
-    onSubmit({ ...data, cover_image_url: coverUrl, linked_form_id: data.linked_form_id || null });
+    onSubmit({
+      ...data,
+      cover_image_url: coverUrl,
+      linked_form_id: data.linked_form_id || null,
+      geofence_lat: geoLat,
+      geofence_lng: geoLng,
+      geofence_radius_meters: geoRadius,
+      pre_checkin_enabled: preCheckinEnabled,
+    });
   };
 
   return (
