@@ -46,6 +46,17 @@ function maskCep(value: string): string {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
+// ─── Bold markdown renderer (apenas **texto**) ──────────────
+function renderBoldMarkdown(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return <React.Fragment key={i}>{part}</React.Fragment>;
+  });
+}
+
 // ─── Smart label detection ──────────────────────────────────
 function isBirthDateField(label: string): boolean {
   return /nascimento|birth/i.test(label);
@@ -1138,7 +1149,7 @@ export default function PublicFormPage() {
                     <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Formulários</span>
                   </div>
                   <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
-                  {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
+                  {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{renderBoldMarkdown(form.description)}</p>}
                   {effectiveSpotsRemaining !== null && (
                     <div className="mt-2 flex items-center gap-2">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full" style={{
@@ -1234,7 +1245,7 @@ export default function PublicFormPage() {
                 <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Formulários</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
-              {currentStep === 0 && form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{form.description}</p>}
+              {currentStep === 0 && form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{renderBoldMarkdown(form.description)}</p>}
               {/* Vacancy badge */}
               {effectiveSpotsRemaining !== null && (
                 <div className="mt-2 flex items-center gap-2">
