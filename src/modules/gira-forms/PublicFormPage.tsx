@@ -914,6 +914,27 @@ export default function PublicFormPage() {
               </>
             )}
 
+            {form && (form as any).pre_checkin_enabled && submittedInfo && (
+              <div className="space-y-3 pt-2">
+                {((form as any).geofence_lat != null && (form as any).geofence_lng != null) && (
+                  <div className="rounded-lg border p-3 text-left" style={{ background: 'var(--form-bg)' }}>
+                    <p className="text-xs font-semibold mb-2" style={{ color: 'var(--form-muted)' }}>📍 Como chegar ao local</p>
+                    <EventLocationLinks
+                      lat={(form as any).geofence_lat}
+                      lng={(form as any).geofence_lng}
+                      address={(form as any).event_address ?? null}
+                    />
+                  </div>
+                )}
+                <PreCheckinButton
+                  formId={formId!}
+                  responseId={submittedInfo.responseId}
+                  userIdentifier={submittedInfo.identifier}
+                  fullName={submittedInfo.name}
+                />
+              </div>
+            )}
+
             <motion.div initial={false} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}>
               <button
                 onClick={() => { setSubmitted(false); setAnswers({}); setLgpdConsent(false); setCurrentStep(0); setRegistrationResult(null); setStandaloneRegNumber(null); setCheckinResult(null); }}
