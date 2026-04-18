@@ -1,103 +1,126 @@
-# Plano: Evolução Completa do Monitoramento de Produtividade
+## Análise
 
-## Situação Atual
+O usuário quer um sistema de **Pré-Checkin + Checkin por Geolocalização** aplicado ao formulário "Convite | Nossa Gente" (`/f/nossa-gente`). O escopo menciona "Agenda e Compromissos", mas o link aponta para um formulário público GIRA Forms — entendo que o "compromisso" aqui é o evento vinculado a este formulário (ou o próprio formulário com data/local).
 
-O sistema hoje tem uma estrutura básica:
+Já existe infraestrutura relevante no projeto:
 
-- Tabela `user_productivity_snapshots` com métricas simples (activities_count, days_inactive, tasks_per_day, sla_violations)
-- Edge Function que calcula snapshots baseado apenas em `activities` e login
-- Dashboard com ranking, timeline e tabela de usuários
-- Configuração básica (dias inativos, min tarefas/dia, max tempo tarefa)
+- `event_checkins` (tabela) com hash SHA-256, geolocalização, signature_data
+- `event_registrations` (tabela) com qr_token e checkin_code
+- `CheckinPage.tsx` no módulo gira-eventos (já faz checkin com geo opcional, mas **sem validação de raio**)
+- `useEventCheckins.ts` com realtime subscription
+- `FormCheckinPanel.tsx` no módulo gira-forms
 
-## O que Será Adicionado
+**O que falta:**
 
-### 1. Novas Colunas no Snapshot (migração)
+1. Pré-checkin (intenção de comparecer, antes do evento)
+2. Validação de raio geográfico no checkin efetivo
+3. Configuração de raio + coordenadas por evento/formulário
+4. Estado consolidado do participante (convidado / pré-checkin / presente / ausente)
+5. Painel em tempo real para o organizador com contadores e checkin manual
 
-Adicionar à `user_productivity_snapshots`:
+## Plano
 
-- `tasks_started` (int) — tarefas iniciadas no período
-- `tasks_finished` (int) — tarefas finalizadas (não-rascunho)
-- `reopen_count` (int) — tarefas reabertas (retrabalho)
-- `overdue_count` (int) — tarefas fora do prazo SLA
-- `concurrent_tasks` (int) — tarefas simultâneas em aberto
-- `delivery_regularity` (numeric) — desvio padrão normalizado de entregas por semana
-- `team_avg_activities` (numeric) — média da equipe para benchmark
-- `percentile_rank` (numeric) — percentil do usuário na equipe
-- `score` (numeric) — score consolidado 0-100
+### 1. Banco de dados (migration)
 
-Adicionar à `monitoring_config`:
+**Nova tabela `event_pre_checkins`:**
 
-- `score_weights` (jsonb) — pesos configuráveis para cada dimensão do score
+- `id`, `event_id` (nullable), `form_id` (nullable, para suportar formulários sem evento), `registration_id` ou `response_id`, `user_identifier` (email/cpf), `confirmed_at`, `channel` (web/email/whatsapp), `ip_address`, `user_agent`, `metadata jsonb`
+- Único por (form_id/event_id, user_identifier)
+- RLS: insert público, select para owner do form/evento
 
-### 2. Edge Function Aprimorada
+**Adicionar colunas em `events` (e `forms` para o caso do Nossa Gente):**
 
-Expandir `daily-productivity-monitor` para calcular:
+- `geofence_lat numeric`, `geofence_lng numeric`, `geofence_radius_meters integer DEFAULT 200`
+- `pre_checkin_enabled boolean DEFAULT true`
 
-- **Engajamento**: frequência de login, dias inativo
-- **Volume**: atividades totais, rascunho vs publicadas, entregas/semana
-- **Eficiência**: tempo médio, taxa de atraso (usando `report_workflows` + SLA)
-- **Qualidade**: reopen_count de `report_performance_tracking`, tarefas devolvidas em workflows
-- **Consistência**: desvio padrão de entregas semanais
-- **Benchmark**: média da equipe, percentil individual
-- **Carga**: tarefas simultâneas em rascunho
-- **Score consolidado**: média ponderada das dimensões
+**Adicionar colunas em `event_checkins`:**
 
-### 3. Alertas Inteligentes
+- `distance_meters numeric` (distância calculada no momento)
+- `is_manual boolean DEFAULT false`
+- `manual_by uuid` (organizador que fez o checkin manual)
 
-Expandir a lógica de alertas:
+**Função `calculate_distance_meters(lat1, lng1, lat2, lng2)**` — fórmula de Haversine em SQL.
 
-- Queda brusca de produtividade (comparar snapshot atual vs anterior)
-- Atrasos recorrentes (>2 violações SLA consecutivas)
-- Tempo médio acima do normal (>1.5x da média da equipe)
-- Incluir tipo de alerta no email
+**Realtime:** habilitar `event_pre_checkins` na publicação.
 
-### 4. Dashboard Redesenhado
+### 2. Backend / lógica de validação
 
-**Aba Dashboard** — 4 novas seções:
+Novo edge function `validate-checkin-geofence` (verify_jwt = false):
 
-- **Cards KPI expandidos**: 6 cards (ativos, inativos, baixa prod., violações SLA, score médio, taxa retrabalho)
-- **Gráfico Radar**: visão multidimensional por usuário (engajamento, volume, eficiência, qualidade, consistência)
-- **Benchmark comparativo**: gráfico de barras agrupadas (indivíduo vs equipe)
-- **Tendência de score**: LineChart com evolução do score ao longo do tempo
+- Recebe: event_id/form_id, registration_id, lat, lng do dispositivo
+- Busca coordenadas do evento e raio
+- Calcula distância (Haversine)
+- Se dentro do raio → retorna `allowed: true, distance_meters`
+- Se fora → retorna `allowed: false, distance_meters, message`
 
-**Aba Usuários** — tabela expandida:
+Validação também acontece no client (rápida) **e** revalidada no insert via trigger ou no edge function antes do insert (para impedir bypass).
 
-- Colunas adicionais: Score, Tarefas Iniciadas/Finalizadas, Retrabalho, Carga, Percentil
-- Filtro por status e ordenação por qualquer coluna
-- Mini-sparkline de tendência por usuário
+### 3. UI — Participante (público)
 
-**Nova Aba "Alertas"**:
+**Nova página `/f/:slug/pre-checkin**` (e/ou botão no formulário Nossa Gente após envio):
 
-- Histórico de alertas gerados
-- Tipo, usuário, data, motivo
+- Após submeter o formulário Nossa Gente, mostra opção "Confirmar presença antecipada (pré-checkin)"
+- Registra na `event_pre_checkins`
 
-**Aba Config** — novos campos:
+**Atualizar `CheckinPage.tsx**` (ou criar `GeofencedCheckinPage.tsx` para forms):
 
-- Pesos do score por dimensão (sliders)
-- Limiar de queda brusca (%)
+- Solicita geolocalização (obrigatória, não opcional)
+- Chama `validate-checkin-geofence`
+- Se fora do raio: exibe distância em metros + mensagem ("Você está a ~450m do local. Aproxime-se para fazer check-in.")
+- Se dentro: prossegue com assinatura + insert em `event_checkins` com `distance_meters`
 
-### 5. PDF Expandido
+### 4. UI — Organizador
 
-Atualizar `monitoringPdfExport.ts` com:
+**Configuração no editor do formulário/evento (`FormBuilderPage` aba "Configurações" ou `EventForm`):**
 
-- Novos KPIs
-- Tabela com score e percentil
-- Seção de alertas inteligentes
+- Campos: Latitude, Longitude, Raio em metros (default 200), toggle pré-checkin habilitado
+- Botão "Usar minha localização atual" para preencher coordenadas
 
-## O que NÃO será alterado
+**Atualizar `FormCheckinPanel.tsx` (painel do organizador):**
 
-- Nenhuma alteração em arquivos globais (routeConfig, sidebarConfig, etc.)
-- Lógica existente de login, atividades, ou workflows
-- Tabelas existentes que funcionam corretamente
+- 3 contadores no topo: Convidados / Pré-checkins / Presentes
+- Tabela com lista de participantes mostrando estado: `Convidado` | `Pré-checkin` | `Presente` | `Ausente`
+- Estado "Ausente" calculado: evento encerrado + sem checkin
+- Coluna distância para cada checkin
+- Botão "Checkin manual" por linha (insere com `is_manual=true, manual_by=auth.uid()`)
+- Realtime: subscribe em `event_pre_checkins` e `event_checkins`
 
-## Sequência de Implementação
+### 5. Hooks
 
-1. Migração DB (novas colunas + tabela de alertas)
-2. Edge Function atualizada
-3. Hook `useProductivityMonitoring` expandido
-4. Página `ProductivityMonitoringPage` redesenhada
-5. PDF atualizado
-6. Deploy e teste  
+- `useEventPreCheckins(eventId|formId)` — query + realtime + mutation create
+- Atualizar `useEventCheckins` para incluir `distance_meters` e `is_manual`
+- Novo helper `useParticipantStates(eventId|formId)` que cruza registrations + pre_checkins + checkins e devolve estado consolidado
+
+### 6. Escopo
+
+- Mudanças concentradas em: `gira-eventos/` (módulo principal de checkin) e ajuste mínimo no `FormCheckinPanel` do `gira-forms` para o formulário Nossa Gente
+- Nenhum outro módulo (diary, reports, budget, etc.) será tocado
+
+### Arquivos a criar/modificar
+
+**Novos:**
+
+- migration SQL (nova tabela + colunas + função haversine)
+- `supabase/functions/validate-checkin-geofence/index.ts`
+- `src/modules/gira-eventos/hooks/useEventPreCheckins.ts`
+- `src/modules/gira-eventos/hooks/useParticipantStates.ts`
+- `src/modules/gira-eventos/components/PreCheckinButton.tsx`
+- `src/modules/gira-eventos/components/GeofenceConfigPanel.tsx`
+- `src/modules/gira-eventos/components/OrganizerLiveDashboard.tsx`
+
+**Modificar:**
+
+- `src/modules/gira-eventos/components/CheckinPage.tsx` — geolocalização obrigatória + validação de raio
+- `src/modules/gira-eventos/components/EventForm.tsx` — adicionar painel de geofence
+- `src/modules/gira-forms/components/FormCheckinPanel.tsx` — contadores + estados + checkin manual
+- `src/modules/gira-eventos/types.ts` — novos tipos
+- `src/modules/gira-forms/PublicFormPage.tsx` — oferecer pré-checkin após envio do Nossa Gente
+
+### Pontos a confirmar
+
+1. Para o formulário **Nossa Gente** especificamente: ele tem data/local fixos? Vou ler o registro do form para extrair; se não tiver, o organizador precisará configurar coordenadas + data antes de ativar checkin.
+2. Identidade do participante no pré-checkin: usar **email** (do form) ou exigir login? Proposta: usar email + checkin_code gerado no envio do form (já existe a função `generate_checkin_code`).  
   
   
-Tem que vincular também os usuários aos projetos que eles estão alocados e mostrar a função também
+Tem ser enviada também a localização do evento com o google maps, waze etc
+3. &nbsp;
