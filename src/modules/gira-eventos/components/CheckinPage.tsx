@@ -140,6 +140,14 @@ const CheckinPage: React.FC = () => {
   const handleCheckin = async () => {
     if (!registration || !event) return;
 
+    if (!geo) {
+      setError('Localização não disponível. Permita o acesso ao GPS.');
+      return;
+    }
+    if (validation && !validation.allowed) {
+      setError(validation.message);
+      return;
+    }
     if (signatureType === 'drawing' && !signatureData) {
       setError('Por favor, assine no campo acima.');
       return;
@@ -153,7 +161,6 @@ const CheckinPage: React.FC = () => {
     setError(null);
 
     try {
-      // Build signature hash
       const sigContent = signatureType === 'drawing'
         ? signatureData!
         : `ACEITE_DIGITAL|${fullName}|${documentNumber}|${new Date().toISOString()}`;
@@ -170,10 +177,13 @@ const CheckinPage: React.FC = () => {
         document_number: documentNumber.trim() || null,
         ip_address: null,
         user_agent: navigator.userAgent,
-        geolocation: geo ? { lat: geo.lat, lng: geo.lng } : null,
+        geolocation: { lat: geo.lat, lng: geo.lng, accuracy: geo.accuracy },
+        distance_meters: validation?.distance_meters ?? null,
+        is_manual: false,
         metadata: {
           timestamp_iso: new Date().toISOString(),
           screen_resolution: `${screen.width}x${screen.height}`,
+          radius_validated: !!validation?.allowed,
         },
       };
 
