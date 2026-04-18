@@ -37,12 +37,8 @@ export default function FormCheckinPanel() {
   const qrToken = searchParams.get('token');
   const queryClient = useQueryClient();
 
-  const [authenticated, setAuthenticated] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [loginError, setLoginError] = useState('');
   const [showHelp, setShowHelp] = useState(false);
   const [lastCheckedIn, setLastCheckedIn] = useState<{ name: string; time: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -50,43 +46,28 @@ export default function FormCheckinPanel() {
   const readerControlsRef = useRef<IScannerControls | null>(null);
   const lastScannedRef = useRef<{ value: string; at: number } | null>(null);
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) setAuthenticated(true);
-    });
-  }, []);
-
-  const formQuery = useQuery({
-    queryKey: ['checkin-form', formId],
+  // Public access via edge functions (service role). The form_id in the URL
+  // acts as the access credential for organizers — no login required.
+  const dataQuery = useQuery({
+    queryKey: ['public-checkin-data', formId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('forms')
-        .select('*')
-        .eq('id', formId!)
-        .single();
+      const { data, error } = await supabase.functions.invoke('list-form-checkins', {
+        body: { form_id: formId },
+      });
       if (error) throw error;
-      return data as unknown as Form;
+      const result = data as { ok: boolean; form?: Form; responses?: FormResponseRow[]; error?: string };
+      if (!result.ok) throw new Error(result.error || 'Falha ao carregar dados.');
+      return { form: result.form as Form, responses: (result.responses ?? []) as FormResponseRow[] };
     },
-    enabled: !!formId && authenticated,
-  });
-
-  const responsesQuery = useQuery({
-    queryKey: ['checkin-responses', formId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('form_responses')
-        .select('*')
-        .eq('form_id', formId!)
-        .order('submitted_at', { ascending: false });
-      if (error) throw error;
-      return data as unknown as FormResponseRow[];
-    },
-    enabled: !!formId && authenticated,
+    enabled: !!formId,
     refetchInterval: 5000,
   });
 
+  const formQuery = { data: dataQuery.data?.form, isLoading: dataQuery.isLoading };
+  const responsesQuery = { data: dataQuery.data?.responses };
+
   useEffect(() => {
-    if (!formId || !authenticated) return;
+    if (!formId) return;
     const channel = supabase
       .channel(`form-checkins-${formId}`)
       .on('postgres_changes', {
@@ -95,36 +76,39 @@ export default function FormCheckinPanel() {
         table: 'form_responses',
         filter: `form_id=eq.${formId}`,
       }, () => {
-        queryClient.invalidateQueries({ queryKey: ['checkin-responses', formId] });
+        queryClient.invalidateQueries({ queryKey: ['public-checkin-data', formId] });
       })
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [formId, authenticated, queryClient]);
+  }, [formId, queryClient]);
 
   const checkinMutation = useMutation({
     mutationFn: async ({ responseId, name }: { responseId: string; name: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from('form_responses')
-        .update({
-          checked_in_at: new Date().toISOString(),
-          checked_in_by: user?.id || null,
-        } as any)
-        .eq('id', responseId);
+      const { data, error } = await supabase.functions.invoke('manual-form-checkin', {
+        body: { response_id: responseId },
+      });
       if (error) throw error;
+      const result = data as { ok: boolean; alreadyCheckedIn?: boolean; respondent_name?: string; error?: string };
+      if (result.alreadyCheckedIn) {
+        toast.info(`${result.respondent_name || name} já fez check-in.`);
+        return null;
+      }
+      if (!result.ok) throw new Error(result.error || 'Falha ao registrar check-in.');
       return name;
     },
     onSuccess: (name) => {
-      queryClient.invalidateQueries({ queryKey: ['checkin-responses', formId] });
-      setLastCheckedIn({ name, time: format(new Date(), "HH:mm", { locale: ptBR }) });
-      setTimeout(() => setLastCheckedIn(null), 6000);
+      queryClient.invalidateQueries({ queryKey: ['public-checkin-data', formId] });
+      if (name) {
+        setLastCheckedIn({ name, time: format(new Date(), "HH:mm", { locale: ptBR }) });
+        setTimeout(() => setLastCheckedIn(null), 6000);
+      }
     },
-    onError: () => toast.error('Erro ao registrar check-in'),
+    onError: (err: Error) => toast.error(err.message || 'Erro ao registrar check-in'),
   });
 
   useEffect(() => {
-    if (!qrToken || !authenticated || !responsesQuery.data) return;
+    if (!qrToken || !responsesQuery.data) return;
     const match = responsesQuery.data.find(r => r.qr_token === qrToken);
     if (match) {
       if (match.checked_in_at) {
@@ -134,7 +118,7 @@ export default function FormCheckinPanel() {
       }
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [qrToken, authenticated, responsesQuery.data]);
+  }, [qrToken, responsesQuery.data]);
 
   const handleScannedText = useCallback((text: string) => {
     if (!text) return;
