@@ -6,25 +6,30 @@ import { BrowserRouter } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { AppDataProvider } from "@/contexts/AppDataContext";
 import { AppRoutes } from "@/routes/AppRoutes";
+import { FormsOnlyRoutes } from "@/routes/FormsOnlyRoutes";
 import { OfflineBadge } from "@/components/OfflineBadge";
+import { isFormsOnlyHost } from "@/lib/hostMode";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <AuthProvider>
-        <AppDataProvider>
-          <Toaster />
-          <Sonner />
-          <OfflineBadge />
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </AppDataProvider>
-      </AuthProvider>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App = () => {
+  const formsOnly = isFormsOnlyHost();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <AppDataProvider>
+            <Toaster />
+            <Sonner />
+            <OfflineBadge />
+            <BrowserRouter>
+              {formsOnly ? <FormsOnlyRoutes /> : <AppRoutes />}
+            </BrowserRouter>
+          </AppDataProvider>
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
