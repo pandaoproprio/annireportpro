@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
+import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +47,8 @@ export default function FormCheckinPanel() {
   const [lastCheckedIn, setLastCheckedIn] = useState<{ name: string; time: string } | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const readerControlsRef = useRef<IScannerControls | null>(null);
+  const lastScannedRef = useRef<{ value: string; at: number } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -133,26 +136,99 @@ export default function FormCheckinPanel() {
     }
   }, [qrToken, authenticated, responsesQuery.data]);
 
-  const startScanner = useCallback(async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
-      }
-      setScannerActive(true);
-    } catch {
-      toast.error('Não foi possível acessar a câmera.');
+  const handleScannedText = useCallback((text: string) => {
+    if (!text) return;
+    // Debounce: ignore same code within 3s
+    const now = Date.now();
+    if (lastScannedRef.current && lastScannedRef.current.value === text && now - lastScannedRef.current.at < 3000) {
+      return;
     }
-  }, []);
+    lastScannedRef.current = { value: text, at: now };
+
+    const responses = responsesQuery.data ?? [];
+    let match: FormResponseRow | undefined;
+
+    // Try URL with token param
+    try {
+      const url = new URL(text);
+      const token = url.searchParams.get('token');
+      if (token) match = responses.find(r => r.qr_token === token);
+    } catch {
+      // not a URL
+    }
+    // Try raw token (UUID)
+    if (!match) match = responses.find(r => r.qr_token === text);
+    // Try 6-letter check-in code
+    if (!match) {
+      const code = text.trim().toUpperCase();
+      if (/^[A-Z0-9]{6}$/.test(code)) {
+        match = responses.find(r => (r.checkin_code || '').toUpperCase() === code);
+      }
+    }
+
+    if (!match) {
+      toast.error('QR Code não corresponde a nenhuma inscrição deste evento.');
+      return;
+    }
+
+    if (match.checked_in_at) {
+      toast.info(`${match.respondent_name || 'Participante'} já fez check-in.`);
+      return;
+    }
+    checkinMutation.mutate({ responseId: match.id, name: match.respondent_name || 'Participante' });
+  }, [responsesQuery.data, checkinMutation]);
+
+  const startScanner = useCallback(async () => {
+    setScannerActive(true);
+    // Wait next tick so <video> element is mounted
+    await new Promise(resolve => setTimeout(resolve, 50));
+    if (!videoRef.current) {
+      toast.error('Falha ao iniciar a câmera.');
+      setScannerActive(false);
+      return;
+    }
+    try {
+      const reader = new BrowserMultiFormatReader();
+      const controls = await reader.decodeFromVideoDevice(
+        undefined, // pick default camera; constraint below prefers back camera
+        videoRef.current,
+        (result, err, ctrl) => {
+          if (result) {
+            handleScannedText(result.getText());
+          }
+          // Ignore NotFoundException (normal — no QR in frame yet)
+        },
+      );
+      readerControlsRef.current = controls;
+    } catch (err: any) {
+      const msg = String(err?.message || err || '');
+      if (/Permission|NotAllowed/i.test(msg)) {
+        toast.error('Permissão de câmera negada. Habilite nas configurações do navegador.');
+      } else if (/NotFound|Requested device not found/i.test(msg)) {
+        toast.error('Nenhuma câmera encontrada neste dispositivo.');
+      } else {
+        toast.error('Não foi possível acessar a câmera.');
+      }
+      setScannerActive(false);
+    }
+  }, [handleScannedText]);
 
   const stopScanner = useCallback(() => {
+    readerControlsRef.current?.stop();
+    readerControlsRef.current = null;
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
     setScannerActive(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      readerControlsRef.current?.stop();
+      streamRef.current?.getTracks().forEach(t => t.stop());
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -410,8 +486,11 @@ export default function FormCheckinPanel() {
               </div>
               <video
                 ref={videoRef}
-                className="w-full rounded-lg"
+                className="w-full rounded-lg bg-black"
                 style={{ maxHeight: 300 }}
+                playsInline
+                muted
+                autoPlay
               />
               <p className="text-xs text-muted-foreground text-center mt-2">
                 O participante encontra o QR Code no e-mail de confirmação da inscrição

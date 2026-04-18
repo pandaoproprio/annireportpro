@@ -260,6 +260,17 @@ export default function FormBuilderPage() {
               </a>
             )}
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground shrink-0" title="Permite que o participante confirme presença antecipada após o envio do formulário">
+              Pré-checkin:
+            </span>
+            <Switch
+              checked={(form.settings as any)?.preCheckinEnabled ?? false}
+              onCheckedChange={(checked) => {
+                updateForm.mutateAsync({ id: id!, settings: { ...form.settings, preCheckinEnabled: checked } as any });
+              }}
+            />
+          </div>
         </CardContent>
       </Card>
 
