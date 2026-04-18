@@ -401,7 +401,13 @@ const CheckinPage: React.FC = () => {
           <Button
             onClick={handleCheckin}
             className="w-full"
-            disabled={submitting || (!signatureData && signatureType === 'drawing') || (signatureType === 'digital_accept' && !acceptDeclaration)}
+            disabled={
+              submitting
+              || !geo
+              || (validation != null && !validation.allowed)
+              || (!signatureData && signatureType === 'drawing')
+              || (signatureType === 'digital_accept' && !acceptDeclaration)
+            }
           >
             {submitting ? 'Registrando...' : 'Confirmar Presença'}
           </Button>
