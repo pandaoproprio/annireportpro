@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -288,12 +289,10 @@ export default function FormBuilderPage() {
             <div className="space-y-4">
               <Card>
                 <CardContent className="p-4 space-y-3">
-                  <Textarea
+                  <RichTextEditor
                     value={description}
-                    onChange={e => setDescription(e.target.value)}
+                    onChange={setDescription}
                     placeholder="Descrição do formulário..."
-                    rows={2}
-                    className="resize-none"
                   />
                   <Select value={category} onValueChange={setCategory}>
                     <SelectTrigger className="w-48"><SelectValue /></SelectTrigger>

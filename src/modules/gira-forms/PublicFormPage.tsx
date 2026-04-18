@@ -20,6 +20,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { maskPhone, maskCpfCnpj, maskCpf, maskCnpj } from '@/lib/masks';
 import type { Form, FormField, FormDesignSettings, FieldCondition, FieldConditionGroup } from './types';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { PreCheckinButton } from '@/modules/gira-eventos/components/PreCheckinButton';
 import { EventLocationLinks } from '@/modules/gira-eventos/components/EventLocationLinks';
 
@@ -46,8 +48,19 @@ function maskCep(value: string): string {
   return `${d.slice(0, 5)}-${d.slice(5)}`;
 }
 
-// ─── Bold markdown renderer (apenas **texto**) ──────────────
-function renderBoldMarkdown(text: string): React.ReactNode {
+// ─── Description renderer (HTML rico OU markdown legado **texto**) ──
+function renderDescription(text: string): React.ReactNode {
+  // Se conter qualquer tag HTML, sanitiza e renderiza como HTML
+  if (/<[a-z][\s\S]*>/i.test(text)) {
+    return (
+      <div
+        className="prose prose-sm max-w-none [&_p]:my-1 [&_strong]:font-bold"
+        style={{ color: 'inherit' }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(text) }}
+      />
+    );
+  }
+  // Fallback markdown simples: **texto** -> <strong>texto</strong>
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
@@ -1149,8 +1162,8 @@ export default function PublicFormPage() {
                     <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Formulários</span>
                   </div>
                   <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
-                  {form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{renderBoldMarkdown(form.description)}</p>}
-                  {effectiveSpotsRemaining !== null && (
+                  {form.description && <div className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{renderDescription(form.description)}</div>}
+                  {effectiveSpotsRemaining !== null && form.id !== '5e1aeab8-ebf1-42a4-a7fd-75721b8d3aad' && (
                     <div className="mt-2 flex items-center gap-2">
                       <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full" style={{
                         background: effectiveSpotsRemaining <= 10 ? '#fef2f2' : '#f0fdf4',
@@ -1245,9 +1258,9 @@ export default function PublicFormPage() {
                 <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Formulários</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
-              {currentStep === 0 && form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{renderBoldMarkdown(form.description)}</p>}
+              {currentStep === 0 && form.description && <div className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{renderDescription(form.description)}</div>}
               {/* Vacancy badge */}
-              {effectiveSpotsRemaining !== null && (
+              {effectiveSpotsRemaining !== null && form.id !== '5e1aeab8-ebf1-42a4-a7fd-75721b8d3aad' && (
                 <div className="mt-2 flex items-center gap-2">
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full" style={{
                     background: effectiveSpotsRemaining <= 10 ? '#fef2f2' : '#f0fdf4',
@@ -1511,12 +1524,18 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       return <Input value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="Sua resposta" maxLength={500} />;
     case 'long_text': {
       const enableAudio = !!(field.settings?.enableAudio);
+      const htmlValue = (value as string) || '';
+      const plainLen = htmlValue.replace(/<[^>]*>/g, '').length;
       return (
         <div className="space-y-2">
           <div className="relative">
-            <Textarea value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder={enableAudio ? 'Digite sua resposta aqui. Se preferir, use o botão "Usar microfone" abaixo.' : 'Sua resposta'} rows={4} maxLength={5000} />
+            <RichTextEditor
+              value={htmlValue}
+              onChange={(html) => onChange(html)}
+              placeholder={enableAudio ? 'Digite sua resposta aqui. Se preferir, use o botão "Usar microfone" abaixo.' : 'Sua resposta'}
+            />
             <span className="absolute bottom-2 right-2 text-[10px]" style={{ color: 'var(--form-muted)' }}>
-              {((value as string) || '').length}/5000
+              {plainLen}/5000
             </span>
           </div>
           {enableAudio && (
