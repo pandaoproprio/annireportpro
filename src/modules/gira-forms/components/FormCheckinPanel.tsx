@@ -276,22 +276,26 @@ export default function FormCheckinPanel() {
           </div>
 
           {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-3 mt-3">
-            <div className="bg-primary-foreground/10 rounded-lg p-2.5 text-center">
-              <div className="text-2xl font-bold">{total}</div>
-              <div className="text-[11px] opacity-80 flex items-center justify-center gap-1">
-                <Users className="w-3 h-3" /> Inscritos
+          <div className="grid grid-cols-4 gap-2 mt-3">
+            <div className="bg-primary-foreground/10 rounded-lg p-2 text-center">
+              <div className="text-xl font-bold">{total}</div>
+              <div className="text-[10px] opacity-80 flex items-center justify-center gap-1">
+                <Users className="w-3 h-3" /> Convidados
               </div>
             </div>
-            <div className="bg-primary-foreground/10 rounded-lg p-2.5 text-center">
-              <div className="text-2xl font-bold">{checkedIn}</div>
-              <div className="text-[11px] opacity-80 flex items-center justify-center gap-1">
+            <div className="bg-primary-foreground/10 rounded-lg p-2 text-center">
+              <div className="text-xl font-bold">{preCheckinCount}</div>
+              <div className="text-[10px] opacity-80">Pré-checkin</div>
+            </div>
+            <div className="bg-primary-foreground/10 rounded-lg p-2 text-center">
+              <div className="text-xl font-bold">{checkedIn}</div>
+              <div className="text-[10px] opacity-80 flex items-center justify-center gap-1">
                 <UserCheck className="w-3 h-3" /> Presentes
               </div>
             </div>
-            <div className="bg-primary-foreground/10 rounded-lg p-2.5 text-center">
-              <div className="text-2xl font-bold">{pending}</div>
-              <div className="text-[11px] opacity-80">Aguardando</div>
+            <div className="bg-primary-foreground/10 rounded-lg p-2 text-center">
+              <div className="text-xl font-bold">{pending}</div>
+              <div className="text-[10px] opacity-80">Aguardando</div>
             </div>
           </div>
 
