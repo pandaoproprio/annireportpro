@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Form } from '../types';
+import { useEventPreCheckins } from '@/modules/gira-eventos/hooks/useEventPreCheckins';
 
 interface FormResponseRow {
   id: string;
