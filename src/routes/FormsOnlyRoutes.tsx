@@ -14,6 +14,7 @@ const LgpdConsent = lazy(() => import('@/pages/LgpdConsent').then(m => ({ defaul
 const ForcePasswordChange = lazy(() => import('@/pages/ForcePasswordChange').then(m => ({ default: m.ForcePasswordChange })));
 const PublicFormPage = lazy(() => import('@/modules/gira-forms/PublicFormPage'));
 const FormCheckinPanel = lazy(() => import('@/modules/gira-forms/components/FormCheckinPanel'));
+const PublicCheckinPage = lazy(() => import('@/modules/gira-forms/PublicCheckinPage'));
 const CheckinPage = lazy(() => import('@/modules/gira-eventos/components/CheckinPage'));
 const CertificateVerifyPage = lazy(() => import('@/modules/gira-eventos/components/CertificateVerifyPage'));
 
@@ -47,6 +48,8 @@ export const FormsOnlyRoutes: React.FC = () => {
         {/* Formulário público + checkin */}
         <Route path="/f/:id" element={<PublicFormPage />} />
         <Route path="/form-checkin/:id" element={<FormCheckinPanel />} />
+        <Route path="/c/:code" element={<PublicCheckinPage />} />
+        <Route path="/c" element={<PublicCheckinPage />} />
         <Route path="/checkin/:id" element={<CheckinPage />} />
         <Route path="/certificado/:hash" element={<CertificateVerifyPage />} />
 

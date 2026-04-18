@@ -33,8 +33,9 @@ serve(async (req) => {
       });
     }
 
-    const APP_URL = 'https://relatorios.giraerp.com.br';
-    const checkinUrl = `${APP_URL}/form-checkin/${form_id}?token=${qr_token}`;
+    const APP_URL = 'https://forms.giraerp.com.br';
+    // Public self-checkin URL (geolocation-validated, no login required)
+    const checkinUrl = `${APP_URL}/c/${checkin_code}?token=${qr_token}`;
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(checkinUrl)}&format=png&margin=8`;
 
     const formattedDate = event_date
