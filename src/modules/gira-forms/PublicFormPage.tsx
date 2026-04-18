@@ -1258,9 +1258,9 @@ export default function PublicFormPage() {
                 <span className="text-[10px] font-medium uppercase tracking-wider">GIRA Formulários</span>
               </div>
               <h1 className="text-xl sm:text-2xl font-bold leading-tight">{form.title}</h1>
-              {currentStep === 0 && form.description && <p className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{renderBoldMarkdown(form.description)}</p>}
+              {currentStep === 0 && form.description && <div className="mt-1 text-sm whitespace-pre-wrap" style={{ color: 'var(--form-muted)' }}>{renderDescription(form.description)}</div>}
               {/* Vacancy badge */}
-              {effectiveSpotsRemaining !== null && (
+              {effectiveSpotsRemaining !== null && form.id !== '5e1aeab8-ebf1-42a4-a7fd-75721b8d3aad' && (
                 <div className="mt-2 flex items-center gap-2">
                   <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full" style={{
                     background: effectiveSpotsRemaining <= 10 ? '#fef2f2' : '#f0fdf4',
