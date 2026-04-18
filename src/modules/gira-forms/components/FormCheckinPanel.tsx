@@ -238,21 +238,7 @@ export default function FormCheckinPanel() {
     };
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    const { error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    });
-    if (error) {
-      setLoginError('E-mail ou senha incorretos. Tente novamente.');
-    } else {
-      setAuthenticated(true);
-    }
-  };
-
-  const { preCheckins } = useEventPreCheckins({ formId: authenticated ? formId : null });
+  const { preCheckins } = useEventPreCheckins({ formId: formId ?? null });
 
   const responses = responsesQuery.data ?? [];
   const total = responses.length;
@@ -281,56 +267,6 @@ export default function FormCheckinPanel() {
     }
     checkinMutation.mutate({ responseId: response.id, name: response.respondent_name || 'Participante' });
   };
-
-  // ─── Login Screen ───────────────────────────────────────────
-  if (!authenticated) {
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-primary/10 to-muted flex items-center justify-center p-4">
-        <Card className="w-full max-w-sm shadow-lg">
-          <CardHeader className="text-center pb-2">
-            <div className="w-16 h-16 mx-auto bg-primary/10 rounded-full flex items-center justify-center mb-3">
-              <ScanLine className="w-8 h-8 text-primary" />
-            </div>
-            <CardTitle className="text-xl">Check-in do Evento</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Use seu login da plataforma para acessar o painel de controle de presença.
-            </p>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleLogin} className="space-y-3">
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">E-mail</label>
-                <Input
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={loginEmail}
-                  onChange={e => setLoginEmail(e.target.value)}
-                  autoFocus
-                />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1 block">Senha</label>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={loginPassword}
-                  onChange={e => setLoginPassword(e.target.value)}
-                />
-              </div>
-              {loginError && (
-                <div className="bg-destructive/10 text-destructive text-sm p-2.5 rounded-md flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" /> {loginError}
-                </div>
-              )}
-              <Button type="submit" className="w-full" size="lg">
-                Acessar Painel
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   if (formQuery.isLoading) {
     return (
