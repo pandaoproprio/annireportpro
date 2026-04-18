@@ -174,6 +174,19 @@ export const EventForm: React.FC<EventFormProps> = ({ defaultValues, onSubmit, o
         </div>
       )}
 
+      <GeofenceConfigPanel
+        lat={geoLat}
+        lng={geoLng}
+        radiusMeters={geoRadius}
+        preCheckinEnabled={preCheckinEnabled}
+        onChange={({ lat, lng, radius, preCheckinEnabled: pce }) => {
+          setGeoLat(lat);
+          setGeoLng(lng);
+          setGeoRadius(radius);
+          setPreCheckinEnabled(pce);
+        }}
+      />
+
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="outline" onClick={onCancel}>Cancelar</Button>
         <Button type="submit" disabled={isLoading}>{defaultValues?.id ? 'Salvar' : 'Criar Evento'}</Button>
