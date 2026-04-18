@@ -313,6 +313,44 @@ const CheckinPage: React.FC = () => {
             />
           </div>
 
+          {/* Geolocation Status */}
+          <div className={`rounded-lg border p-3 space-y-2 ${
+            validation == null
+              ? 'bg-muted'
+              : validation.allowed
+                ? 'bg-[hsl(var(--accent))]/40 border-primary/30'
+                : 'bg-destructive/5 border-destructive/30'
+          }`}>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <MapPin className="w-4 h-4" />
+                Validação de localização
+              </h3>
+              {(geoLoading || validating) && <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />}
+            </div>
+            {geoError ? (
+              <>
+                <p className="text-xs text-destructive">{geoError}</p>
+                <Button type="button" size="sm" variant="outline" onClick={requestGeolocation} className="gap-1.5">
+                  <Crosshair className="w-3.5 h-3.5" /> Tentar novamente
+                </Button>
+              </>
+            ) : !geo ? (
+              <p className="text-xs text-muted-foreground">Aguardando localização do dispositivo...</p>
+            ) : validation == null ? (
+              <p className="text-xs text-muted-foreground">Validando distância até o local do evento...</p>
+            ) : validation.allowed ? (
+              <p className="text-xs text-foreground">{validation.message}</p>
+            ) : (
+              <>
+                <p className="text-xs text-destructive font-medium">{validation.message}</p>
+                <Button type="button" size="sm" variant="outline" onClick={requestGeolocation} className="gap-1.5">
+                  <Crosshair className="w-3.5 h-3.5" /> Atualizar localização
+                </Button>
+              </>
+            )}
+          </div>
+
           {/* Signature Section */}
           <div className="border rounded-lg p-4 space-y-3 bg-accent/30">
             <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
