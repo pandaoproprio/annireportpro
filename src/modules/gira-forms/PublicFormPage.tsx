@@ -20,6 +20,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { maskPhone, maskCpfCnpj, maskCpf, maskCnpj } from '@/lib/masks';
 import type { Form, FormField, FormDesignSettings, FieldCondition, FieldConditionGroup } from './types';
+import { sanitizeHtml } from '@/lib/sanitizeHtml';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { PreCheckinButton } from '@/modules/gira-eventos/components/PreCheckinButton';
 import { EventLocationLinks } from '@/modules/gira-eventos/components/EventLocationLinks';
 
