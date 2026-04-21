@@ -1649,6 +1649,7 @@ export type Database = {
         Row: {
           created_at: string
           current_score: number
+          is_eligible: boolean
           last_recalculated_at: string
           level: Database["public"]["Enums"]["gamification_level"]
           streak_no_rework: number
@@ -1662,6 +1663,7 @@ export type Database = {
         Insert: {
           created_at?: string
           current_score?: number
+          is_eligible?: boolean
           last_recalculated_at?: string
           level?: Database["public"]["Enums"]["gamification_level"]
           streak_no_rework?: number
@@ -1675,6 +1677,7 @@ export type Database = {
         Update: {
           created_at?: string
           current_score?: number
+          is_eligible?: boolean
           last_recalculated_at?: string
           level?: Database["public"]["Enums"]["gamification_level"]
           streak_no_rework?: number
