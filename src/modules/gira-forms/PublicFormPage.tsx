@@ -1091,7 +1091,8 @@ export default function PublicFormPage() {
         </div>
       )}
     </div>
-  );
+    );
+  };
 
   // ─── LGPD block (shared) ──────────────────────────────────
   const renderLgpd = () => (
