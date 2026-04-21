@@ -43,3 +43,5 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.manual-form-checkin]
     verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
