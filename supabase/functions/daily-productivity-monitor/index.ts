@@ -594,9 +594,12 @@ Deno.serve(async (req) => {
         const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend'
         const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
 
+        console.log(`[email] Tentando enviar para ${recipients.length} destinatário(s):`, recipients)
+        console.log(`[email] LOVABLE_API_KEY=${!!LOVABLE_API_KEY}, RESEND_API_KEY=${!!resendApiKey}`)
+
         for (const to of recipients) {
           try {
-            await fetch(`${GATEWAY_URL}/emails`, {
+            const resp = await fetch(`${GATEWAY_URL}/emails`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -610,10 +613,18 @@ Deno.serve(async (req) => {
                 html,
               }),
             })
+            const respText = await resp.text()
+            if (!resp.ok) {
+              console.error(`[email] FALHA ${to} — status ${resp.status}: ${respText}`)
+            } else {
+              console.log(`[email] OK ${to}: ${respText}`)
+            }
           } catch (emailErr) {
-            console.error(`Erro ao enviar email para ${to}:`, emailErr)
+            console.error(`[email] EXCEÇÃO ${to}:`, emailErr)
           }
         }
+      } else {
+        console.log(`[email] Pulado — recipients=${recipients.length}, resendApiKey=${!!resendApiKey}`)
       }
     }
 
