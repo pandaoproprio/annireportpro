@@ -18,8 +18,9 @@ import { toast } from 'sonner';
 import {
   Users, AlertTriangle, Download, Plus, Trash2, Save, Settings2,
   TrendingUp, Clock, Play, Loader2, Bell, CheckCircle2, Target,
-  RotateCcw, Award, Link2, RefreshCw,
+  RotateCcw, Award, Link2, RefreshCw, Trophy,
 } from 'lucide-react';
+import { GamificationPanel } from '@/components/gamification/GamificationPanel';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line,
   CartesianGrid, Legend, RadarChart, PolarGrid, PolarAngleAxis,
@@ -366,8 +367,13 @@ const ProductivityMonitoringPage: React.FC = () => {
               <Badge variant="destructive" className="ml-1 h-5 min-w-5 px-1 text-[10px]">{unresolvedAlerts.length}</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="gamification" className="gap-1.5"><Trophy className="w-4 h-4" />Gamificação</TabsTrigger>
           <TabsTrigger value="config" className="gap-1.5"><Settings2 className="w-4 h-4" />Configurações</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="gamification" className="mt-4">
+          <GamificationPanel />
+        </TabsContent>
 
         {/* ── DASHBOARD TAB ── */}
         <TabsContent value="dashboard" className="space-y-6 mt-4">
