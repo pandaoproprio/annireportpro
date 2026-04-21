@@ -483,13 +483,21 @@ export default function PublicFormPage() {
   };
 
   const isFieldVisible = (field: FormField): boolean => {
-    const raw = field.settings?.condition;
-    if (!raw) return true;
-    if ((raw as any).field_id) return evalCondition(raw as FieldCondition);
-    const group = raw as FieldConditionGroup;
-    if (!group.conditions || group.conditions.length === 0) return true;
-    if (group.logic === 'OR') return group.conditions.some(evalCondition);
-    return group.conditions.every(evalCondition);
+    // Support BOTH `condition` (single rule) and `conditionGroup` (multiple rules with AND/OR logic)
+    const single = field.settings?.condition as FieldCondition | FieldConditionGroup | undefined;
+    const group = field.settings?.conditionGroup as FieldConditionGroup | undefined;
+
+    const evalSingleOrGroup = (raw: FieldCondition | FieldConditionGroup): boolean => {
+      if ((raw as FieldCondition).field_id) return evalCondition(raw as FieldCondition);
+      const g = raw as FieldConditionGroup;
+      if (!g.conditions || g.conditions.length === 0) return true;
+      if (g.logic === 'OR') return g.conditions.some(evalCondition);
+      return g.conditions.every(evalCondition);
+    };
+
+    if (single && !evalSingleOrGroup(single)) return false;
+    if (group && !evalSingleOrGroup(group)) return false;
+    return true;
   };
 
   const visibleFields = fields.filter(isFieldVisible);
