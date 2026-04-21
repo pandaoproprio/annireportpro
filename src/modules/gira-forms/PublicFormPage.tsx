@@ -1196,7 +1196,9 @@ export default function PublicFormPage() {
                 </div>
               </div>
               {/* Section fields */}
-              {section.fields.map((field, i) => renderFieldCard(field, i))}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {section.fields.map((field, i) => renderFieldCard(field, i))}
+              </div>
             </div>
           ))}
 
