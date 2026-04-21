@@ -1356,16 +1356,24 @@ export default function PublicFormPage() {
             transition={{ duration: 0.25 }}
             className="space-y-4"
           >
-            {activeStep.type === 'section' && activeStep.fields.map((field, i) => (
-              <motion.div
-                key={field.id}
-                initial={false}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.03 }}
-              >
-                {renderFieldCard(field, i)}
-              </motion.div>
-            ))}
+            {activeStep.type === 'section' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {activeStep.fields.map((field, i) => {
+                  const colSpan = (field.settings as any)?.colSpan === 'half' ? 'sm:col-span-1' : 'sm:col-span-2';
+                  return (
+                    <motion.div
+                      key={field.id}
+                      initial={false}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      className={colSpan}
+                    >
+                      {renderFieldCard(field, i)}
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
 
             {activeStep.type === 'lgpd_review' && (
               <>
