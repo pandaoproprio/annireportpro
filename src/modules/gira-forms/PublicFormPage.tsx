@@ -1626,6 +1626,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
     case 'multi_select':
     case 'checkbox': {
       const allowOtherMulti = !!(field.settings?.allowOther);
+      const exclusiveOption = (field.settings?.exclusiveOption as string | undefined) || undefined;
       // Single boolean checkbox (no options) — must check BEFORE casting to array
       if (options.length === 0 && !allowOtherMulti) {
         return (
@@ -1639,21 +1640,32 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       const otherEntry = selected.find(s => s.startsWith('__other__:'));
       const isOtherChecked = !!otherEntry;
       const otherTextMulti = otherEntry ? otherEntry.replace('__other__:', '') : '';
+      const isExclusiveSelected = exclusiveOption ? selected.includes(exclusiveOption) : false;
       return (
         <div className="space-y-2">
-          {options.map((opt, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <Checkbox
-                id={`${field.id}-${i}`}
-                checked={selected.includes(opt)}
-                onCheckedChange={(checked) => {
-                  const filtered = selected.filter(s => s !== opt);
-                  onChange(checked ? [...filtered, opt] : filtered);
-                }}
-              />
-              <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{opt}</Label>
-            </div>
-          ))}
+          {options.map((opt, i) => {
+            const isThisExclusive = exclusiveOption && opt === exclusiveOption;
+            return (
+              <div key={i} className={`flex items-center gap-2 ${isThisExclusive ? 'mt-2 pt-2 border-t border-dashed' : ''}`} style={isThisExclusive ? { borderColor: 'var(--form-muted)' } : undefined}>
+                <Checkbox
+                  id={`${field.id}-${i}`}
+                  checked={selected.includes(opt)}
+                  onCheckedChange={(checked) => {
+                    if (isThisExclusive) {
+                      // Selecting exclusive -> clear all others; deselecting -> just remove it
+                      onChange(checked ? [opt] : []);
+                      return;
+                    }
+                    // Selecting non-exclusive -> remove exclusive automatically
+                    const cleared = exclusiveOption ? selected.filter(s => s !== exclusiveOption) : selected;
+                    const filtered = cleared.filter(s => s !== opt);
+                    onChange(checked ? [...filtered, opt] : filtered);
+                  }}
+                />
+                <Label htmlFor={`${field.id}-${i}`} className={`text-sm font-normal cursor-pointer ${isThisExclusive ? 'italic' : ''}`}>{opt}</Label>
+              </div>
+            );
+          })}
           {allowOtherMulti && (
             <>
               <div className="flex items-center gap-2">
@@ -1661,7 +1673,8 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
                   id={`${field.id}-other`}
                   checked={isOtherChecked}
                   onCheckedChange={(checked) => {
-                    const filtered = selected.filter(s => !s.startsWith('__other__:'));
+                    const cleared = exclusiveOption ? selected.filter(s => s !== exclusiveOption) : selected;
+                    const filtered = cleared.filter(s => !s.startsWith('__other__:'));
                     onChange(checked ? [...filtered, '__other__:'] : filtered);
                   }}
                 />
@@ -1679,6 +1692,11 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
                 />
               )}
             </>
+          )}
+          {isExclusiveSelected && (
+            <p className="text-xs italic mt-1" style={{ color: 'var(--form-muted)' }}>
+              Esta opção desmarca as demais.
+            </p>
           )}
         </div>
       );
