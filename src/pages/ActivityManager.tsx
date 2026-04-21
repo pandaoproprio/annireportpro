@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { FirstActivityCelebration } from '@/components/FirstActivityCelebration';
+import { ActivityRegisteredCelebration } from '@/components/ActivityRegisteredCelebration';
 import CameraCapture from '@/components/CameraCapture';
 import { AiTextToolbar } from '@/components/report/AiTextToolbar';
 import { useProjectData } from '@/contexts/ProjectContext';
@@ -51,6 +52,7 @@ export const ActivityManager: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [registerCelebration, setRegisterCelebration] = useState<{ open: boolean; isDraft: boolean }>({ open: false, isDraft: false });
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [viewingActivity, setViewingActivity] = useState<Activity | null>(null);
@@ -249,6 +251,10 @@ export const ActivityManager: React.FC = () => {
         setorResponsavel: deriveSetor(role),
       });
       toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade registrada!');
+      // Celebração para perfis de execução (oficineiro, voluntário, analista, coordenador, usuário) — exclui admin/super_admin
+      if (!isAdmin) {
+        setRegisterCelebration({ open: true, isDraft: asDraft });
+      }
     }
     setIsSaving(false);
     resetForm();
@@ -605,6 +611,14 @@ export const ActivityManager: React.FC = () => {
             onClose={() => setShowCelebration(false)}
             userName={profile?.name || 'Usuário'}
             activityCount={activities.length}
+          />
+
+          <ActivityRegisteredCelebration
+            open={registerCelebration.open}
+            isDraft={registerCelebration.isDraft}
+            userName={profile?.name || 'Usuário'}
+            totalActivities={activities.length + 1}
+            onClose={() => setRegisterCelebration({ open: false, isDraft: false })}
           />
 
           <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
