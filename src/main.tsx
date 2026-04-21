@@ -13,7 +13,7 @@ import "./index.css";
 // receba o bundle novo, desregistramos TODOS os SWs e apagamos TODOS os
 // caches uma única vez por versão.
 // ──────────────────────────────────────────────────────────────────────────
-const SW_KILL_VERSION = 'v3-2026-04-18';
+const SW_KILL_VERSION = 'v4-2026-04-21-forms-routes';
 
 if ('serviceWorker' in navigator) {
   try {
