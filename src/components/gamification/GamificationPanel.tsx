@@ -9,7 +9,7 @@ import {
   nextLevelXp, levelProgress,
 } from '@/hooks/useGamification';
 import { BadgeIcon } from './BadgeIcon';
-import { Trophy, Lock, Target, Sparkles, RefreshCw, Crown, Flame, Shield } from 'lucide-react';
+import { Trophy, Lock, Target, Sparkles, RefreshCw, Crown, FileCheck, BookOpen, ListChecks } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function GamificationPanel() {
@@ -76,10 +76,19 @@ export function GamificationPanel() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatTile icon={<Flame className="w-4 h-4 text-orange-500" />} label="Sem retrabalho" value={stats?.streak_no_rework || 0} suffix="dias" />
-            <StatTile icon={<Shield className="w-4 h-4 text-emerald-500" />} label="No prazo" value={stats?.streak_on_time || 0} suffix="dias" />
-            <StatTile icon={<Target className="w-4 h-4 text-blue-500" />} label="Atividades" value={stats?.total_activities || 0} />
-            <StatTile icon={<Trophy className="w-4 h-4 text-yellow-500" />} label="Badges" value={`${unlockedIds.size}/${badges.length}`} />
+            <StatTile icon={<BookOpen className="w-4 h-4 text-blue-500" />} label="Atividades" value={stats?.total_activities || 0} suffix="× 10 XP" />
+            <StatTile icon={<FileCheck className="w-4 h-4 text-emerald-500" />} label="Relatórios" value={stats?.total_published || 0} suffix="× 25 XP" />
+            <StatTile icon={<ListChecks className="w-4 h-4 text-violet-500" />} label="Tarefas Asana" value={Math.max(0, Math.round(((stats?.xp || 0) - (stats?.total_activities || 0) * 10 - (stats?.total_published || 0) * 25) / 5))} suffix="× 5 XP" />
+            <StatTile icon={<Trophy className="w-4 h-4 text-yellow-500" />} label="Conquistas" value={`${unlockedIds.size}/${badges.length}`} />
+          </div>
+
+          <div className="rounded-lg bg-muted/30 border p-3 text-xs text-muted-foreground space-y-1">
+            <p className="font-semibold text-foreground">Como o XP é calculado</p>
+            <p>• Atividade do Diário publicada = <strong>+10 XP</strong></p>
+            <p>• Relatório de Equipe publicado = <strong>+25 XP</strong></p>
+            <p>• Relatório de Justificativa publicado = <strong>+25 XP</strong></p>
+            <p>• Tarefa do Asana concluída = <strong>+5 XP</strong></p>
+            <p className="pt-1">Histórico total acumulado · Admins não entram no ranking.</p>
           </div>
         </CardContent>
       </Card>
@@ -192,7 +201,7 @@ export function GamificationPanel() {
                     </div>
                     <div className="text-right">
                       <p className="font-bold text-sm">{u.xp.toLocaleString('pt-BR')} XP</p>
-                      <p className="text-[10px] text-muted-foreground">Score: {Number(u.current_score).toFixed(0)}</p>
+                      <p className="text-[10px] text-muted-foreground">{u.total_activities} ativ. · {u.total_published} relat.</p>
                     </div>
                   </div>
                 ))}
