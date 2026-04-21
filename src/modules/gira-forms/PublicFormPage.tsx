@@ -1045,9 +1045,8 @@ export default function PublicFormPage() {
 
   // ─── Render field card (shared between modes) ─────────────
   const renderFieldCard = (field: FormField, i: number) => {
-    const colSpan = (field.settings as any)?.colSpan === 'half' ? 'sm:col-span-1' : 'sm:col-span-2';
     return (
-    <div key={field.id} id={`field-${field.id}`} className={colSpan}>
+    <div key={field.id} id={`field-${field.id}`}>
       {field.type === 'info_text' ? (
         <div className="rounded-xl p-5 shadow-sm" style={{ background: 'var(--form-card-bg)' }}>
           {field.label && <h3 className="font-semibold mb-2">{field.label}</h3>}
