@@ -559,72 +559,42 @@ Deno.serve(async (req) => {
       await supabase.from('monitoring_alerts').insert(newAlerts)
     }
 
-    // 12. Send email alerts
+    // 12. Send email alerts via Lovable Emails (transactional queue)
     if (alertUsers.length > 0) {
       const { data: emailRecipients } = await supabase
         .from('monitoring_emails')
         .select('email')
 
       const recipients = (emailRecipients || []).map(e => e.email)
+      const reportDate = new Date().toLocaleDateString('pt-BR')
+      const idemDate = new Date().toISOString().split('T')[0]
 
-      if (recipients.length > 0 && resendApiKey) {
-        const tableRows = alertUsers
-          .map(u => `<tr><td style="padding:6px 12px;border-bottom:1px solid #e5e7eb">${u.name}</td><td style="padding:6px 12px;border-bottom:1px solid #e5e7eb">${u.email}</td><td style="padding:6px 12px;border-bottom:1px solid #e5e7eb">${u.reason}</td></tr>`)
-          .join('')
+      console.log(`[email] Enviando alerta para ${recipients.length} destinatário(s)`)
 
-        const html = `
-          <div style="font-family:Arial,sans-serif;max-width:700px;margin:0 auto">
-            <div style="background:#1e40af;padding:16px 24px;border-radius:8px 8px 0 0">
-              <h1 style="color:#fff;margin:0;font-size:18px">🔔 GIRA — Alerta de Produtividade</h1>
-            </div>
-            <div style="padding:20px 24px;background:#fff;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 8px 8px">
-              <p style="color:#374151;font-size:14px">Relatório diário de monitoramento — ${new Date().toLocaleDateString('pt-BR')}</p>
-              <p style="color:#374151;font-size:14px"><strong>${alertUsers.length}</strong> usuário(s) requerem atenção:</p>
-              <table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:12px">
-                <thead>
-                  <tr style="background:#f3f4f6"><th style="padding:8px 12px;text-align:left">Usuário</th><th style="padding:8px 12px;text-align:left">Email</th><th style="padding:8px 12px;text-align:left">Motivo</th></tr>
-                </thead>
-                <tbody>${tableRows}</tbody>
-              </table>
-              <p style="color:#9ca3af;font-size:12px;margin-top:20px">Este email é gerado automaticamente pelo GIRA Diário de Bordo.</p>
-            </div>
-          </div>
-        `
-
-        const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend'
-        const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY')
-
-        console.log(`[email] Tentando enviar para ${recipients.length} destinatário(s):`, recipients)
-        console.log(`[email] LOVABLE_API_KEY=${!!LOVABLE_API_KEY}, RESEND_API_KEY=${!!resendApiKey}`)
-
-        for (const to of recipients) {
-          try {
-            const resp = await fetch(`${GATEWAY_URL}/emails`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-                'X-Connection-Api-Key': resendApiKey,
+      for (const to of recipients) {
+        try {
+          const { error: invokeErr } = await supabase.functions.invoke(
+            'send-transactional-email',
+            {
+              body: {
+                templateName: 'productivity-alert',
+                recipientEmail: to,
+                idempotencyKey: `productivity-alert-${idemDate}-${to}`,
+                templateData: {
+                  alertUsers,
+                  reportDate,
+                },
               },
-              body: JSON.stringify({
-                from: 'GIRA Monitoramento <onboarding@resend.dev>',
-                to: [to],
-                subject: `[GIRA] Alerta de Produtividade — ${alertUsers.length} usuário(s) — ${new Date().toLocaleDateString('pt-BR')}`,
-                html,
-              }),
-            })
-            const respText = await resp.text()
-            if (!resp.ok) {
-              console.error(`[email] FALHA ${to} — status ${resp.status}: ${respText}`)
-            } else {
-              console.log(`[email] OK ${to}: ${respText}`)
             }
-          } catch (emailErr) {
-            console.error(`[email] EXCEÇÃO ${to}:`, emailErr)
+          )
+          if (invokeErr) {
+            console.error(`[email] FALHA ${to}:`, invokeErr)
+          } else {
+            console.log(`[email] Enfileirado para ${to}`)
           }
+        } catch (emailErr) {
+          console.error(`[email] EXCEÇÃO ${to}:`, emailErr)
         }
-      } else {
-        console.log(`[email] Pulado — recipients=${recipients.length}, resendApiKey=${!!resendApiKey}`)
       }
     }
 
