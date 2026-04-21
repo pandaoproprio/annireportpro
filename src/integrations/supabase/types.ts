@@ -1489,6 +1489,204 @@ export type Database = {
           },
         ]
       }
+      gamification_badges: {
+        Row: {
+          created_at: string
+          criterion_type: string
+          criterion_value: number
+          description: string
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          rarity: Database["public"]["Enums"]["gamification_rarity"]
+          xp_reward: number
+        }
+        Insert: {
+          created_at?: string
+          criterion_type: string
+          criterion_value?: number
+          description: string
+          icon?: string
+          id: string
+          is_active?: boolean
+          name: string
+          rarity?: Database["public"]["Enums"]["gamification_rarity"]
+          xp_reward?: number
+        }
+        Update: {
+          created_at?: string
+          criterion_type?: string
+          criterion_value?: number
+          description?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          rarity?: Database["public"]["Enums"]["gamification_rarity"]
+          xp_reward?: number
+        }
+        Relationships: []
+      }
+      gamification_missions: {
+        Row: {
+          badge_reward: string | null
+          created_at: string
+          description: string
+          ends_at: string
+          id: string
+          is_active: boolean
+          metric: string
+          starts_at: string
+          target_value: number
+          title: string
+          xp_reward: number
+        }
+        Insert: {
+          badge_reward?: string | null
+          created_at?: string
+          description: string
+          ends_at: string
+          id?: string
+          is_active?: boolean
+          metric: string
+          starts_at?: string
+          target_value: number
+          title: string
+          xp_reward?: number
+        }
+        Update: {
+          badge_reward?: string | null
+          created_at?: string
+          description?: string
+          ends_at?: string
+          id?: string
+          is_active?: boolean
+          metric?: string
+          starts_at?: string
+          target_value?: number
+          title?: string
+          xp_reward?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_missions_badge_reward_fkey"
+            columns: ["badge_reward"]
+            isOneToOne: false
+            referencedRelation: "gamification_badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gamification_user_badges: {
+        Row: {
+          badge_id: string
+          id: string
+          unlocked_at: string
+          user_id: string
+        }
+        Insert: {
+          badge_id: string
+          id?: string
+          unlocked_at?: string
+          user_id: string
+        }
+        Update: {
+          badge_id?: string
+          id?: string
+          unlocked_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_user_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "gamification_badges"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gamification_user_missions: {
+        Row: {
+          claimed_at: string | null
+          completed_at: string | null
+          id: string
+          mission_id: string
+          progress: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          completed_at?: string | null
+          id?: string
+          mission_id: string
+          progress?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          completed_at?: string | null
+          id?: string
+          mission_id?: string
+          progress?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamification_user_missions_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "gamification_missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gamification_user_stats: {
+        Row: {
+          created_at: string
+          current_score: number
+          last_recalculated_at: string
+          level: Database["public"]["Enums"]["gamification_level"]
+          streak_no_rework: number
+          streak_on_time: number
+          total_activities: number
+          total_published: number
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          current_score?: number
+          last_recalculated_at?: string
+          level?: Database["public"]["Enums"]["gamification_level"]
+          streak_no_rework?: number
+          streak_on_time?: number
+          total_activities?: number
+          total_published?: number
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          created_at?: string
+          current_score?: number
+          last_recalculated_at?: string
+          level?: Database["public"]["Enums"]["gamification_level"]
+          streak_no_rework?: number
+          streak_on_time?: number
+          total_activities?: number
+          total_published?: number
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       invoices: {
         Row: {
           created_at: string
@@ -3624,6 +3822,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      recalc_all_user_gamification: { Args: never; Returns: number }
+      recalc_user_gamification: {
+        Args: { _user_id: string }
+        Returns: undefined
+      }
       validate_workflow_transition: {
         Args: {
           _current_status: Database["public"]["Enums"]["workflow_status"]
@@ -3696,6 +3899,8 @@ export type Database = {
         | "capacitacao"
         | "equipamentos"
         | "outros"
+      gamification_level: "bronze" | "prata" | "ouro" | "diamante" | "lendario"
+      gamification_rarity: "comum" | "raro" | "epico" | "lendario"
       lgpd_request_status: "pending" | "processing" | "completed" | "failed"
       lgpd_request_type: "export" | "deletion"
       risk_category:
@@ -3929,6 +4134,8 @@ export const Constants = {
         "equipamentos",
         "outros",
       ],
+      gamification_level: ["bronze", "prata", "ouro", "diamante", "lendario"],
+      gamification_rarity: ["comum", "raro", "epico", "lendario"],
       lgpd_request_status: ["pending", "processing", "completed", "failed"],
       lgpd_request_type: ["export", "deletion"],
       risk_category: [
