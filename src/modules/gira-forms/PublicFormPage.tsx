@@ -1196,7 +1196,10 @@ export default function PublicFormPage() {
               </div>
               {/* Section fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {section.fields.map((field, i) => renderFieldCard(field, i))}
+                {section.fields.map((field, i) => {
+                  const colSpan = (field.settings as any)?.colSpan === 'half' ? 'sm:col-span-1' : 'sm:col-span-2';
+                  return <div key={field.id} className={colSpan}>{renderFieldCard(field, i)}</div>;
+                })}
               </div>
             </div>
           ))}
