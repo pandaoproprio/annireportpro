@@ -93,8 +93,11 @@ export const TeamContributionDashboard: React.FC<Props> = ({ activities, project
 
   const uniqueRoles = useMemo(() => {
     const set = new Set<string>();
-    activities.forEach(a => { if (a.projectRoleSnapshot) set.add(a.projectRoleSnapshot); });
-    return Array.from(set);
+    activities.forEach(a => {
+      const r = normalizeRole(a.projectRoleSnapshot || a.setorResponsavel);
+      if (r) set.add(r);
+    });
+    return Array.from(set).sort();
   }, [activities]);
 
   const totalRecords = memberStats.reduce((s, m) => s + m.totalRecords, 0);
