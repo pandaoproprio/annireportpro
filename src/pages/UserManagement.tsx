@@ -74,6 +74,9 @@ export const UserManagement: React.FC = () => {
   // Fetch team members to show linked member info
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string; email: string | null; function_role: string }>>([]);
 
+  // Fetch user-project links (owner + collaborator)
+  const [userProjects, setUserProjects] = useState<Array<{ user_id: string; project_name: string }>>([]);
+
   const fetchReminders = useCallback(async () => {
     const { data } = await supabase
       .from('login_reminders')
