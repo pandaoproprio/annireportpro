@@ -74,6 +74,9 @@ export const UserManagement: React.FC = () => {
   // Fetch team members to show linked member info
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string; email: string | null; function_role: string }>>([]);
 
+  // Fetch user-project links (owner + collaborator)
+  const [userProjects, setUserProjects] = useState<Array<{ user_id: string; project_name: string }>>([]);
+
   const fetchReminders = useCallback(async () => {
     const { data } = await supabase
       .from('login_reminders')
@@ -89,6 +92,26 @@ export const UserManagement: React.FC = () => {
       supabase.from('team_members').select('id, name, email, function_role').then(({ data }) => {
         if (data) setTeamMembers(data);
       });
+      // Load user → project links (owner + collaborator)
+      (async () => {
+        const links: Array<{ user_id: string; project_name: string }> = [];
+        const { data: ownerProjects } = await supabase
+          .from('projects')
+          .select('user_id, name')
+          .is('deleted_at', null);
+        ownerProjects?.forEach(p => {
+          if (p.user_id) links.push({ user_id: p.user_id, project_name: p.name });
+        });
+        const { data: collabs } = await supabase
+          .from('project_collaborators')
+          .select('user_id, projects:project_id(name, deleted_at)');
+        collabs?.forEach((c: any) => {
+          if (c.projects && !c.projects.deleted_at) {
+            links.push({ user_id: c.user_id, project_name: c.projects.name });
+          }
+        });
+        setUserProjects(links);
+      })();
     }
   }, [role, fetchUsers, fetchReminders]);
 
@@ -100,6 +123,16 @@ export const UserManagement: React.FC = () => {
     });
     return map;
   }, [teamMembers]);
+
+  // Map user_id -> set of project names
+  const projectsByUserId = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    userProjects.forEach(({ user_id, project_name }) => {
+      if (!map.has(user_id)) map.set(user_id, new Set());
+      map.get(user_id)!.add(project_name);
+    });
+    return map;
+  }, [userProjects]);
 
   // Reminder tracking maps
   const reminderByUserId = useMemo(() => {
@@ -472,6 +505,7 @@ export const UserManagement: React.FC = () => {
                   <TableHead>E-mail</TableHead>
                   <TableHead>Papel</TableHead>
                   <TableHead className="hidden lg:table-cell">Membro de Equipe</TableHead>
+                  <TableHead className="hidden lg:table-cell">Projeto(s)</TableHead>
                   <TableHead className="hidden md:table-cell">Último acesso</TableHead>
                   {loginFilter === 'never_logged' && <TableHead className="hidden md:table-cell">Lembrete</TableHead>}
                   <TableHead className="text-right">Ações</TableHead>
@@ -519,6 +553,26 @@ export const UserManagement: React.FC = () => {
                           );
                         }
                         return <span className="text-muted-foreground text-xs">—</span>;
+                      })()}
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {(() => {
+                        const projs = projectsByUserId.get(user.id);
+                        if (!projs || projs.size === 0) {
+                          return <span className="text-muted-foreground text-xs">—</span>;
+                        }
+                        const list = Array.from(projs);
+                        const first = list[0];
+                        const extra = list.length - 1;
+                        return (
+                          <div className="flex items-center gap-1.5 text-sm" title={list.join(', ')}>
+                            <FolderOpen className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span className="truncate max-w-[180px]">{first}</span>
+                            {extra > 0 && (
+                              <Badge variant="secondary" className="text-xs h-5 px-1.5">+{extra}</Badge>
+                            )}
+                          </div>
+                        );
                       })()}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
