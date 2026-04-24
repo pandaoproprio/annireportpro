@@ -57,7 +57,7 @@ function renderDescription(text: string): React.ReactNode {
     if (sanitized && sanitized.trim().length > 0) {
       return (
         <div
-          className="prose prose-sm max-w-none [&_p]:my-1 [&_strong]:font-bold [&_hr]:my-2 [&_br]:block"
+          className="prose prose-sm max-w-none [&_p]:my-1 [&_strong]:font-bold [&_hr]:my-2"
           style={{ color: 'inherit' }}
           dangerouslySetInnerHTML={{ __html: sanitized }}
         />
