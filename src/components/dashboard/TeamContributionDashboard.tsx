@@ -26,12 +26,17 @@ export const TeamContributionDashboard: React.FC<Props> = ({ activities, project
   const [filterDateStart, setFilterDateStart] = useState('');
   const [filterDateEnd, setFilterDateEnd] = useState('');
 
+  const normalizeRole = (r?: string) => (r || '').trim().toUpperCase();
+
   const filtered = useMemo(() => {
     return activities.filter(a => {
       if (!a.authorName) return false;
       if (filterDateStart && a.date < filterDateStart) return false;
       if (filterDateEnd && a.date > filterDateEnd) return false;
-      if (filterRole !== 'all' && a.projectRoleSnapshot !== filterRole) return false;
+      if (filterRole !== 'all') {
+        const effective = normalizeRole(a.projectRoleSnapshot || a.setorResponsavel);
+        if (effective !== filterRole) return false;
+      }
       return true;
     });
   }, [activities, filterRole, filterDateStart, filterDateEnd]);
@@ -88,8 +93,11 @@ export const TeamContributionDashboard: React.FC<Props> = ({ activities, project
 
   const uniqueRoles = useMemo(() => {
     const set = new Set<string>();
-    activities.forEach(a => { if (a.projectRoleSnapshot) set.add(a.projectRoleSnapshot); });
-    return Array.from(set);
+    activities.forEach(a => {
+      const r = normalizeRole(a.projectRoleSnapshot || a.setorResponsavel);
+      if (r) set.add(r);
+    });
+    return Array.from(set).sort();
   }, [activities]);
 
   const totalRecords = memberStats.reduce((s, m) => s + m.totalRecords, 0);
