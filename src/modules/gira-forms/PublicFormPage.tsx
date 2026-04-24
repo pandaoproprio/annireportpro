@@ -1548,8 +1548,47 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
 
   // Standard field types
   switch (field.type) {
-    case 'short_text':
-      return <Input value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder="Sua resposta" maxLength={500} />;
+    case 'short_text': {
+      // Smart placeholder for address fields
+      const labelLower = field.label.toLowerCase();
+      let placeholder = 'Sua resposta';
+      let icon: React.ReactNode = null;
+      if (isAddressField(field.label)) {
+        if (/completo|rua.*n[°ºo]|logradouro/.test(labelLower)) {
+          placeholder = 'Ex: Rua das Flores, 123 — Apto 101';
+        } else if (/\bbairro\b/.test(labelLower)) {
+          placeholder = 'Ex: Centro';
+        } else if (/munic[ií]pio.*uf|cidade.*estado/.test(labelLower)) {
+          placeholder = 'Ex: Rio de Janeiro / RJ';
+        } else if (/\bcidade\b|\bmunic[ií]pio\b/.test(labelLower)) {
+          placeholder = 'Ex: Rio de Janeiro';
+        } else if (/\bestado\b|\buf\b/.test(labelLower)) {
+          placeholder = 'Ex: RJ';
+        } else if (/\brua\b/.test(labelLower)) {
+          placeholder = 'Ex: Rua das Flores';
+        } else if (/n[úu]mero|\bn[°ºo]\b/.test(labelLower)) {
+          placeholder = 'Ex: 123';
+        } else if (/complemento/.test(labelLower)) {
+          placeholder = 'Ex: Apto 101, Bloco B';
+        }
+        icon = <MapPin className="h-4 w-4" style={{ color: 'var(--form-muted)' }} />;
+      }
+      if (icon) {
+        return (
+          <div className="relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">{icon}</div>
+            <Input
+              value={(value as string) || ''}
+              onChange={e => onChange(e.target.value)}
+              placeholder={placeholder}
+              maxLength={500}
+              className="pl-9"
+            />
+          </div>
+        );
+      }
+      return <Input value={(value as string) || ''} onChange={e => onChange(e.target.value)} placeholder={placeholder} maxLength={500} />;
+    }
     case 'long_text': {
       const enableAudio = !!(field.settings?.enableAudio);
       const htmlValue = (value as string) || '';
