@@ -124,6 +124,16 @@ export const UserManagement: React.FC = () => {
     return map;
   }, [teamMembers]);
 
+  // Map user_id -> set of project names
+  const projectsByUserId = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    userProjects.forEach(({ user_id, project_name }) => {
+      if (!map.has(user_id)) map.set(user_id, new Set());
+      map.get(user_id)!.add(project_name);
+    });
+    return map;
+  }, [userProjects]);
+
   // Reminder tracking maps
   const reminderByUserId = useMemo(() => {
     const map = new Map<string, ReminderRecord>();
