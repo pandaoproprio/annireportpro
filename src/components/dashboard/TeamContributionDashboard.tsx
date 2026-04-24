@@ -167,60 +167,88 @@ export const TeamContributionDashboard: React.FC<Props> = ({ activities, project
         </Card>
       </div>
 
-      {/* Ranking Table */}
+      {/* Ranking by Role */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Award className="w-5 h-5 text-warning" />
-            Ranking de Participação
+            Ranking de Participação por Função
           </CardTitle>
         </CardHeader>
         <CardContent>
           {memberStats.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Nenhum registro encontrado para os filtros selecionados.</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="py-2 px-3 font-medium text-muted-foreground">#</th>
-                    <th className="py-2 px-3 font-medium text-muted-foreground">Membro</th>
-                    <th className="py-2 px-3 font-medium text-muted-foreground">Função</th>
-                    <th className="py-2 px-3 font-medium text-muted-foreground text-center">Registros</th>
-                    <th className="py-2 px-3 font-medium text-muted-foreground text-center">Anexos</th>
-                    <th className="py-2 px-3 font-medium text-muted-foreground text-center">Freq. Semanal</th>
-                    <th className="py-2 px-3 font-medium text-muted-foreground text-center">Intervalo Médio (dias)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {memberStats.map((m, i) => (
-                    <tr key={m.email || m.name} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
-                      <td className="py-2.5 px-3">
-                        {i === 0 && <span className="text-warning font-bold">🥇</span>}
-                        {i === 1 && <span className="text-muted-foreground font-bold">🥈</span>}
-                        {i === 2 && <span className="text-muted-foreground font-bold">🥉</span>}
-                        {i > 2 && <span className="text-muted-foreground">{i + 1}</span>}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <p className="font-medium text-foreground">{m.name}</p>
-                        <p className="text-xs text-muted-foreground">{m.email}</p>
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <Badge variant="secondary" className="text-xs">{m.role || '—'}</Badge>
-                      </td>
-                      <td className="py-2.5 px-3 text-center font-semibold text-primary">{m.totalRecords}</td>
-                      <td className="py-2.5 px-3 text-center">{m.totalAttachments}</td>
-                      <td className="py-2.5 px-3 text-center">{m.weeklyFrequency}</td>
-                      <td className="py-2.5 px-3 text-center">
-                        <span className={m.avgDaysBetween > 7 ? 'text-destructive' : m.avgDaysBetween > 3 ? 'text-warning' : 'text-success'}>
-                          {m.avgDaysBetween || '—'}
-                        </span>
-                      </td>
-                    </tr>
+            (() => {
+              // Group member stats by normalized role
+              const groups = new Map<string, MemberStats[]>();
+              memberStats.forEach(m => {
+                const key = normalizeRole(m.role) || 'SEM FUNÇÃO';
+                if (!groups.has(key)) groups.set(key, []);
+                groups.get(key)!.push(m);
+              });
+              const orderedGroups = Array.from(groups.entries())
+                .map(([role, members]) => ({
+                  role,
+                  members: [...members].sort((a, b) => b.totalRecords - a.totalRecords),
+                }))
+                .sort((a, b) => a.role.localeCompare(b.role, 'pt-BR'));
+
+              return (
+                <div className="space-y-8">
+                  {orderedGroups.map(group => (
+                    <div key={group.role} className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                          <Badge variant="secondary" className="text-xs">{group.role}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {group.members.length} {group.members.length === 1 ? 'membro' : 'membros'}
+                          </span>
+                        </h3>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-sm">
+                          <thead>
+                            <tr className="border-b text-left">
+                              <th className="py-2 px-3 font-medium text-muted-foreground w-10">#</th>
+                              <th className="py-2 px-3 font-medium text-muted-foreground">Membro</th>
+                              <th className="py-2 px-3 font-medium text-muted-foreground text-center">Registros</th>
+                              <th className="py-2 px-3 font-medium text-muted-foreground text-center">Anexos</th>
+                              <th className="py-2 px-3 font-medium text-muted-foreground text-center">Freq. Semanal</th>
+                              <th className="py-2 px-3 font-medium text-muted-foreground text-center">Intervalo Médio (dias)</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {group.members.map((m, i) => (
+                              <tr key={m.email || m.name} className="border-b last:border-0 hover:bg-muted/50 transition-colors">
+                                <td className="py-2.5 px-3">
+                                  {i === 0 && <span className="text-warning font-bold">🥇</span>}
+                                  {i === 1 && <span className="text-muted-foreground font-bold">🥈</span>}
+                                  {i === 2 && <span className="text-muted-foreground font-bold">🥉</span>}
+                                  {i > 2 && <span className="text-muted-foreground">{i + 1}</span>}
+                                </td>
+                                <td className="py-2.5 px-3">
+                                  <p className="font-medium text-foreground">{m.name}</p>
+                                  <p className="text-xs text-muted-foreground">{m.email}</p>
+                                </td>
+                                <td className="py-2.5 px-3 text-center font-semibold text-primary">{m.totalRecords}</td>
+                                <td className="py-2.5 px-3 text-center">{m.totalAttachments}</td>
+                                <td className="py-2.5 px-3 text-center">{m.weeklyFrequency}</td>
+                                <td className="py-2.5 px-3 text-center">
+                                  <span className={m.avgDaysBetween > 7 ? 'text-destructive' : m.avgDaysBetween > 3 ? 'text-warning' : 'text-success'}>
+                                    {m.avgDaysBetween || '—'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
-            </div>
+                </div>
+              );
+            })()
           )}
         </CardContent>
       </Card>
