@@ -505,6 +505,7 @@ export const UserManagement: React.FC = () => {
                   <TableHead>E-mail</TableHead>
                   <TableHead>Papel</TableHead>
                   <TableHead className="hidden lg:table-cell">Membro de Equipe</TableHead>
+                  <TableHead className="hidden lg:table-cell">Projeto(s)</TableHead>
                   <TableHead className="hidden md:table-cell">Último acesso</TableHead>
                   {loginFilter === 'never_logged' && <TableHead className="hidden md:table-cell">Lembrete</TableHead>}
                   <TableHead className="text-right">Ações</TableHead>
