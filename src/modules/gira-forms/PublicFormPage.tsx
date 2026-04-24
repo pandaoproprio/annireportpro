@@ -1078,6 +1078,12 @@ export default function PublicFormPage() {
               {field.required && <span className="ml-1" style={{ color: '#ef4444' }}>*</span>}
             </Label>
             {field.description && <p className="text-xs mt-0.5" style={{ color: 'var(--form-muted)' }}>{field.description}</p>}
+            {isAddressField(field.label) && fields.some(f => detectSmartType(f) === 'cep') && (
+              <p className="text-xs mt-1 inline-flex items-center gap-1" style={{ color: 'var(--form-muted)' }}>
+                <Sparkles className="h-3 w-3" />
+                Será preenchido automaticamente ao informar o CEP
+              </p>
+            )}
           </div>
           <SmartFieldInput
             field={field}
