@@ -50,20 +50,19 @@ function maskCep(value: string): string {
 
 // ─── Description renderer (HTML rico OU markdown legado **texto**) ──
 function renderDescription(text: string): React.ReactNode {
-  // Detecção estrita: tags HTML conhecidas (evita falsos positivos de "<3" etc.)
-  const HTML_TAG_RE = /<(p|br|strong|b|em|i|u|h[1-6]|ul|ol|li|span|div|a|blockquote|hr|sub|sup|table|thead|tbody|tr|th|td)\b[^>]*>/i;
-  if (HTML_TAG_RE.test(text)) {
+  // Detecção ampla: qualquer tag HTML (não apenas a whitelist)
+  const HAS_HTML_TAG = /<\/?[a-z][\s\S]*?>/i.test(text);
+  if (HAS_HTML_TAG) {
     const sanitized = sanitizeHtml(text);
     if (sanitized && sanitized.trim().length > 0) {
       return (
         <div
-          className="prose prose-sm max-w-none [&_p]:my-1 [&_strong]:font-bold"
+          className="prose prose-sm max-w-none [&_p]:my-1 [&_strong]:font-bold [&_hr]:my-2"
           style={{ color: 'inherit' }}
           dangerouslySetInnerHTML={{ __html: sanitized }}
         />
       );
     }
-    console.warn('[renderDescription] sanitizeHtml retornou vazio para input com tags; caindo para fallback markdown');
   }
   // Fallback markdown simples: **texto** -> <strong>texto</strong>
   const parts = text.split(/(\*\*[^*]+\*\*)/g);
