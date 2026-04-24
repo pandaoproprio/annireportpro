@@ -555,6 +555,26 @@ export const UserManagement: React.FC = () => {
                         return <span className="text-muted-foreground text-xs">—</span>;
                       })()}
                     </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {(() => {
+                        const projs = projectsByUserId.get(user.id);
+                        if (!projs || projs.size === 0) {
+                          return <span className="text-muted-foreground text-xs">—</span>;
+                        }
+                        const list = Array.from(projs);
+                        const first = list[0];
+                        const extra = list.length - 1;
+                        return (
+                          <div className="flex items-center gap-1.5 text-sm" title={list.join(', ')}>
+                            <FolderOpen className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span className="truncate max-w-[180px]">{first}</span>
+                            {extra > 0 && (
+                              <Badge variant="secondary" className="text-xs h-5 px-1.5">+{extra}</Badge>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {user.lastSignIn 
                         ? format(new Date(user.lastSignIn), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
