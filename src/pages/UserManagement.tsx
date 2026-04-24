@@ -92,6 +92,26 @@ export const UserManagement: React.FC = () => {
       supabase.from('team_members').select('id, name, email, function_role').then(({ data }) => {
         if (data) setTeamMembers(data);
       });
+      // Load user → project links (owner + collaborator)
+      (async () => {
+        const links: Array<{ user_id: string; project_name: string }> = [];
+        const { data: ownerProjects } = await supabase
+          .from('projects')
+          .select('user_id, name')
+          .is('deleted_at', null);
+        ownerProjects?.forEach(p => {
+          if (p.user_id) links.push({ user_id: p.user_id, project_name: p.name });
+        });
+        const { data: collabs } = await supabase
+          .from('project_collaborators')
+          .select('user_id, projects:project_id(name, deleted_at)');
+        collabs?.forEach((c: any) => {
+          if (c.projects && !c.projects.deleted_at) {
+            links.push({ user_id: c.user_id, project_name: c.projects.name });
+          }
+        });
+        setUserProjects(links);
+      })();
     }
   }, [role, fetchUsers, fetchReminders]);
 
