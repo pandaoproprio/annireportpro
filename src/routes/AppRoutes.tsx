@@ -23,6 +23,7 @@ const CertificateVerifyPage = lazy(() => import('@/modules/gira-eventos/componen
 const FormCheckinPanel = lazy(() => import('@/modules/gira-forms/components/FormCheckinPanel'));
 const PublicCheckinPage = lazy(() => import('@/modules/gira-forms/PublicCheckinPage'));
 const VerifyJustificationPage = lazy(() => import('@/pages/VerifyJustificationPage'));
+const PublicSignJustificationPage = lazy(() => import('@/pages/PublicSignJustificationPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -52,6 +53,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/c/:code" element={<Suspense fallback={<PageFallback />}><PublicCheckinPage /></Suspense>} />
         <Route path="/c" element={<Suspense fallback={<PageFallback />}><PublicCheckinPage /></Suspense>} />
         <Route path="/verificar/:hash" element={<Suspense fallback={<PageFallback />}><VerifyJustificationPage /></Suspense>} />
+        <Route path="/assinar/:token" element={<Suspense fallback={<PageFallback />}><PublicSignJustificationPage /></Suspense>} />
 
         {/* Protected routes */}
         <Route path="/consentimento" element={<ProtectedRoute><LgpdConsent /></ProtectedRoute>} />
