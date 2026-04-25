@@ -17,10 +17,11 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { BudgetAdjustmentGuidancePanel } from '@/components/budget/BudgetAdjustmentGuidancePanel';
+import { BudgetAdjustmentSpreadsheet } from '@/components/budget/BudgetAdjustmentSpreadsheet';
 import { toast } from 'sonner';
 import {
-  PlusCircle, Edit, Trash2, FileText, Sparkles, Check, X,
-  ArrowRight, AlertTriangle, FileSpreadsheet, Loader2, ChevronDown, ChevronUp
+  PlusCircle, Trash2, Sparkles,
+  ArrowRight, FileSpreadsheet, Loader2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
