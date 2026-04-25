@@ -1,8 +1,21 @@
 import jsPDF from 'jspdf';
-import { Document as DocxDocument, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel, PageBreak } from 'docx';
+import { Document as DocxDocument, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel, PageBreak, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
+import QRCode from 'qrcode';
 import type { LegalJustification, JustificationSignature } from '@/hooks/useLegalJustifications';
 import { TYPE_LABELS } from '@/hooks/useLegalJustifications';
+
+const generateQrDataUrl = async (text: string): Promise<string> => {
+  return await QRCode.toDataURL(text, { margin: 1, width: 256, errorCorrectionLevel: 'M' });
+};
+
+const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
+  const base64 = dataUrl.split(',')[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+};
 
 interface ProjectInfo {
   name?: string;
