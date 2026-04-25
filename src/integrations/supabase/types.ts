@@ -625,8 +625,12 @@ export type Database = {
           notes: string
           project_id: string
           ra_balance: number
+          ra_executed_percentage: number | null
           ra_justification: string
+          ra_period_end: string | null
+          ra_period_start: string | null
           ra_schedule: string
+          ra_status: string
           status: string
           title: string
           updated_at: string
@@ -638,8 +642,12 @@ export type Database = {
           notes?: string
           project_id: string
           ra_balance?: number
+          ra_executed_percentage?: number | null
           ra_justification?: string
+          ra_period_end?: string | null
+          ra_period_start?: string | null
           ra_schedule?: string
+          ra_status?: string
           status?: string
           title?: string
           updated_at?: string
@@ -651,8 +659,12 @@ export type Database = {
           notes?: string
           project_id?: string
           ra_balance?: number
+          ra_executed_percentage?: number | null
           ra_justification?: string
+          ra_period_end?: string | null
+          ra_period_start?: string | null
           ra_schedule?: string
+          ra_status?: string
           status?: string
           title?: string
           updated_at?: string
@@ -1895,6 +1907,214 @@ export type Database = {
           },
         ]
       }
+      legal_justification_signatures: {
+        Row: {
+          created_at: string
+          id: string
+          justification_id: string
+          signature_method: string
+          signature_token: string | null
+          signed: boolean
+          signed_at: string | null
+          signed_ip: string | null
+          signer_cpf_cnpj: string
+          signer_email: string | null
+          signer_name: string
+          signer_role: string
+          signer_type: string
+          signer_user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          justification_id: string
+          signature_method?: string
+          signature_token?: string | null
+          signed?: boolean
+          signed_at?: string | null
+          signed_ip?: string | null
+          signer_cpf_cnpj: string
+          signer_email?: string | null
+          signer_name: string
+          signer_role?: string
+          signer_type: string
+          signer_user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          justification_id?: string
+          signature_method?: string
+          signature_token?: string | null
+          signed?: boolean
+          signed_at?: string | null
+          signed_ip?: string | null
+          signer_cpf_cnpj?: string
+          signer_email?: string | null
+          signer_name?: string
+          signer_role?: string
+          signer_type?: string
+          signer_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_justification_signatures_justification_id_fkey"
+            columns: ["justification_id"]
+            isOneToOne: false
+            referencedRelation: "legal_justifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_justification_versions: {
+        Row: {
+          change_note: string
+          created_at: string
+          created_by: string
+          document_body: string
+          id: string
+          justification_id: string
+          legal_basis: string
+          source: string
+          version_number: number
+        }
+        Insert: {
+          change_note?: string
+          created_at?: string
+          created_by: string
+          document_body: string
+          id?: string
+          justification_id: string
+          legal_basis?: string
+          source?: string
+          version_number: number
+        }
+        Update: {
+          change_note?: string
+          created_at?: string
+          created_by?: string
+          document_body?: string
+          id?: string
+          justification_id?: string
+          legal_basis?: string
+          source?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_justification_versions_justification_id_fkey"
+            columns: ["justification_id"]
+            isOneToOne: false
+            referencedRelation: "legal_justifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      legal_justifications: {
+        Row: {
+          attached_documents: Json
+          budget_adjustment_id: string | null
+          context_snapshot: Json
+          created_at: string
+          deleted_at: string | null
+          document_body: string
+          document_hash: string | null
+          document_title: string
+          docx_storage_path: string | null
+          hash_generated_at: string | null
+          id: string
+          involved_budget_lines: Json
+          is_sealed: boolean
+          legal_basis: string
+          new_value: number | null
+          pdf_storage_path: string | null
+          previous_value: number | null
+          project_id: string
+          qr_verification_code: string | null
+          reference_period_end: string | null
+          reference_period_start: string | null
+          sealed_at: string | null
+          status: Database["public"]["Enums"]["legal_justification_status"]
+          type: Database["public"]["Enums"]["legal_justification_type"]
+          updated_at: string
+          user_id: string
+          user_reason: string
+        }
+        Insert: {
+          attached_documents?: Json
+          budget_adjustment_id?: string | null
+          context_snapshot?: Json
+          created_at?: string
+          deleted_at?: string | null
+          document_body?: string
+          document_hash?: string | null
+          document_title?: string
+          docx_storage_path?: string | null
+          hash_generated_at?: string | null
+          id?: string
+          involved_budget_lines?: Json
+          is_sealed?: boolean
+          legal_basis?: string
+          new_value?: number | null
+          pdf_storage_path?: string | null
+          previous_value?: number | null
+          project_id: string
+          qr_verification_code?: string | null
+          reference_period_end?: string | null
+          reference_period_start?: string | null
+          sealed_at?: string | null
+          status?: Database["public"]["Enums"]["legal_justification_status"]
+          type: Database["public"]["Enums"]["legal_justification_type"]
+          updated_at?: string
+          user_id: string
+          user_reason?: string
+        }
+        Update: {
+          attached_documents?: Json
+          budget_adjustment_id?: string | null
+          context_snapshot?: Json
+          created_at?: string
+          deleted_at?: string | null
+          document_body?: string
+          document_hash?: string | null
+          document_title?: string
+          docx_storage_path?: string | null
+          hash_generated_at?: string | null
+          id?: string
+          involved_budget_lines?: Json
+          is_sealed?: boolean
+          legal_basis?: string
+          new_value?: number | null
+          pdf_storage_path?: string | null
+          previous_value?: number | null
+          project_id?: string
+          qr_verification_code?: string | null
+          reference_period_end?: string | null
+          reference_period_start?: string | null
+          sealed_at?: string | null
+          status?: Database["public"]["Enums"]["legal_justification_status"]
+          type?: Database["public"]["Enums"]["legal_justification_type"]
+          updated_at?: string
+          user_id?: string
+          user_reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legal_justifications_budget_adjustment_id_fkey"
+            columns: ["budget_adjustment_id"]
+            isOneToOne: false
+            referencedRelation: "budget_adjustments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legal_justifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lgpd_requests: {
         Row: {
           completed_at: string | null
@@ -2722,17 +2942,24 @@ export type Database = {
       }
       projects: {
         Row: {
+          counterpart_value: number | null
           created_at: string
           deleted_at: string | null
           end_date: string
           fomento_number: string
           funder: string
+          funder_cnpj: string | null
+          global_value: number | null
           goals: Json
           id: string
+          legal_responsible_cpf: string | null
+          legal_responsible_name: string | null
+          legal_responsible_role: string | null
           locations: string[]
           name: string
           object: string
           organization_address: string | null
+          organization_cnpj: string | null
           organization_email: string | null
           organization_name: string
           organization_phone: string | null
@@ -2741,21 +2968,29 @@ export type Database = {
           start_date: string
           summary: string
           team: Json
+          transfer_value: number | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          counterpart_value?: number | null
           created_at?: string
           deleted_at?: string | null
           end_date: string
           fomento_number: string
           funder: string
+          funder_cnpj?: string | null
+          global_value?: number | null
           goals?: Json
           id?: string
+          legal_responsible_cpf?: string | null
+          legal_responsible_name?: string | null
+          legal_responsible_role?: string | null
           locations?: string[]
           name: string
           object: string
           organization_address?: string | null
+          organization_cnpj?: string | null
           organization_email?: string | null
           organization_name: string
           organization_phone?: string | null
@@ -2764,21 +2999,29 @@ export type Database = {
           start_date: string
           summary: string
           team?: Json
+          transfer_value?: number | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          counterpart_value?: number | null
           created_at?: string
           deleted_at?: string | null
           end_date?: string
           fomento_number?: string
           funder?: string
+          funder_cnpj?: string | null
+          global_value?: number | null
           goals?: Json
           id?: string
+          legal_responsible_cpf?: string | null
+          legal_responsible_name?: string | null
+          legal_responsible_role?: string | null
           locations?: string[]
           name?: string
           object?: string
           organization_address?: string | null
+          organization_cnpj?: string | null
           organization_email?: string | null
           organization_name?: string
           organization_phone?: string | null
@@ -2787,6 +3030,7 @@ export type Database = {
           start_date?: string
           summary?: string
           team?: Json
+          transfer_value?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -4242,6 +4486,7 @@ export type Database = {
         | "events_create"
         | "events_edit"
         | "events_delete"
+        | "legal_justifications"
       app_role:
         | "user"
         | "admin"
@@ -4264,6 +4509,21 @@ export type Database = {
         | "outros"
       gamification_level: "bronze" | "prata" | "ouro" | "diamante" | "lendario"
       gamification_rarity: "comum" | "raro" | "epico" | "lendario"
+      legal_justification_status:
+        | "rascunho"
+        | "gerado"
+        | "aguardando_assinatura"
+        | "parcialmente_assinado"
+        | "finalizado"
+        | "arquivado"
+      legal_justification_type:
+        | "ajuste_pt"
+        | "prorrogacao_vigencia"
+        | "execucao_financeira"
+        | "despesa_nao_prevista"
+        | "atraso_execucao"
+        | "substituicao_fornecedor"
+        | "cancelamento_meta"
       lgpd_request_status: "pending" | "processing" | "completed" | "failed"
       lgpd_request_type: "export" | "deletion"
       risk_category:
@@ -4474,6 +4734,7 @@ export const Constants = {
         "events_create",
         "events_edit",
         "events_delete",
+        "legal_justifications",
       ],
       app_role: [
         "user",
@@ -4499,6 +4760,23 @@ export const Constants = {
       ],
       gamification_level: ["bronze", "prata", "ouro", "diamante", "lendario"],
       gamification_rarity: ["comum", "raro", "epico", "lendario"],
+      legal_justification_status: [
+        "rascunho",
+        "gerado",
+        "aguardando_assinatura",
+        "parcialmente_assinado",
+        "finalizado",
+        "arquivado",
+      ],
+      legal_justification_type: [
+        "ajuste_pt",
+        "prorrogacao_vigencia",
+        "execucao_financeira",
+        "despesa_nao_prevista",
+        "atraso_execucao",
+        "substituicao_fornecedor",
+        "cancelamento_meta",
+      ],
       lgpd_request_status: ["pending", "processing", "completed", "failed"],
       lgpd_request_type: ["export", "deletion"],
       risk_category: [
