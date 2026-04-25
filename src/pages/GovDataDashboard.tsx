@@ -211,7 +211,6 @@ const TransfereGovTab: React.FC = () => {
   const planApi = useGovApi();
   const executorApi = useGovApi();
   const fundoApi = useGovApi();
-  const tedApi = useGovApi();
   const [synced, setSynced] = useState(false);
 
   const handleSync = async () => {
@@ -225,24 +224,23 @@ const TransfereGovTab: React.FC = () => {
         cnpj_executor: `eq.${CEAP_CNPJ}`,
         limit: '100',
       }),
+      // Fundo a Fundo: filtra pelo CNPJ do ente recebedor (beneficiário do repasse)
       fundoApi.query('transferegov_fundo', 'plano_acao', {
-        cnpj_beneficiario: `eq.${CEAP_CNPJ}`,
+        cnpj_ente_recebedor_plano_acao: `eq.${CEAP_CNPJ}`,
         limit: '100',
       }),
-      tedApi.query('transferegov_ted', 'descentralizacao', {
-        cnpj_descentralizado: `eq.${CEAP_CNPJ}`,
-        limit: '100',
-      }),
+      // Obs.: A API TED não expõe endpoint filtrável por CNPJ de beneficiário,
+      // por isso essa base não é consultada (recursos TED trafegam entre órgãos federais).
     ]);
     setSynced(true);
   };
 
-  const allLoading = planApi.loading || executorApi.loading || fundoApi.loading || tedApi.loading;
+  const allLoading = planApi.loading || executorApi.loading || fundoApi.loading;
   const plans = Array.isArray(planApi.data) ? planApi.data : [];
   const executors = Array.isArray(executorApi.data) ? executorApi.data : [];
   const fundos = Array.isArray(fundoApi.data) ? fundoApi.data : [];
-  const teds = Array.isArray(tedApi.data) ? tedApi.data : [];
-  const totalRegistros = plans.length + executors.length + fundos.length + teds.length;
+  const teds: any[] = [];
+  const totalRegistros = plans.length + executors.length + fundos.length;
 
   return (
     <div className="space-y-4">
