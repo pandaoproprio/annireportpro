@@ -96,6 +96,7 @@ export const sidebarSections: SidebarSection[] = [
       { to: '/ai-audit', label: 'Auditoria de IA', iconName: 'Brain' },
       { to: '/valuation', label: 'Valuation Report', iconName: 'TrendingUp' },
       { to: '/gov-data', label: 'Consultas Gov', iconName: 'Globe' },
+      { to: '/strategic-tools', label: 'Ferramentas Estratégicas', iconName: 'Target' },
     ],
   },
   {
