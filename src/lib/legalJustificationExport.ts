@@ -294,13 +294,29 @@ export const exportJustificationDOCX = async (
       ),
     );
     if (just.qr_verification_code) {
-      children.push(
-        new Paragraph({ children: [new TextRun({ text: '' })], spacing: { after: 200 } }),
-        new Paragraph({
-          children: [new TextRun({ text: `Verificação: ${VERIFY_BASE}${just.qr_verification_code}`, size: 20 })],
-          alignment: AlignmentType.CENTER,
-        }),
-      );
+      const verifyUrlDocx = `${VERIFY_BASE}${just.qr_verification_code}`;
+      try {
+        const qrUrl = await generateQrDataUrl(verifyUrlDocx);
+        const qrBytes = dataUrlToUint8Array(qrUrl);
+        children.push(
+          new Paragraph({ children: [new TextRun({ text: '' })], spacing: { after: 200 } }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new ImageRun({ type: 'png', data: qrBytes, transformation: { width: 140, height: 140 } } as any)],
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: `Verificação: ${verifyUrlDocx}`, size: 18 })],
+            alignment: AlignmentType.CENTER,
+          }),
+        );
+      } catch {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: `Verificação: ${verifyUrlDocx}`, size: 20 })],
+            alignment: AlignmentType.CENTER,
+          }),
+        );
+      }
     }
   }
 
