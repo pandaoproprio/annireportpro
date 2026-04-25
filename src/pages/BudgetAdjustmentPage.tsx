@@ -324,6 +324,15 @@ const BudgetAdjustmentPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Guidance + Import/Export panel */}
+        <BudgetAdjustmentGuidancePanel
+          adjustment={activeAdjustment}
+          items={items}
+          projectName={project.name}
+          onAddItem={addItem}
+          onUpdateItem={updateItem}
+        />
+
         {/* Summary cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           <Card><CardContent className="p-3 text-center">
