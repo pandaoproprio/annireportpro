@@ -15,6 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { BudgetAdjustmentGuidancePanel } from '@/components/budget/BudgetAdjustmentGuidancePanel';
 import { BudgetAdjustmentSpreadsheet } from '@/components/budget/BudgetAdjustmentSpreadsheet';
+import { LinkedJustificationsCard } from '@/components/budget/LinkedJustificationsCard';
 import { toast } from 'sonner';
 import {
   PlusCircle, Trash2, Sparkles,
@@ -307,6 +308,9 @@ const BudgetAdjustmentPage: React.FC = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* ─── Justificativas jurídicas vinculadas ─── */}
+        <LinkedJustificationsCard adjustmentId={activeAdjustment.id} projectId={project.id} />
       </div>
 
       <ConfirmDialog

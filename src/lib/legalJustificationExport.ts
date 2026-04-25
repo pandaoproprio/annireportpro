@@ -1,8 +1,21 @@
 import jsPDF from 'jspdf';
-import { Document as DocxDocument, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel, PageBreak } from 'docx';
+import { Document as DocxDocument, Packer, Paragraph, TextRun, AlignmentType, HeadingLevel, PageBreak, ImageRun } from 'docx';
 import { saveAs } from 'file-saver';
+import QRCode from 'qrcode';
 import type { LegalJustification, JustificationSignature } from '@/hooks/useLegalJustifications';
 import { TYPE_LABELS } from '@/hooks/useLegalJustifications';
+
+const generateQrDataUrl = async (text: string): Promise<string> => {
+  return await QRCode.toDataURL(text, { margin: 1, width: 256, errorCorrectionLevel: 'M' });
+};
+
+const dataUrlToUint8Array = (dataUrl: string): Uint8Array => {
+  const base64 = dataUrl.split(',')[1];
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
+};
 
 interface ProjectInfo {
   name?: string;
@@ -51,6 +64,9 @@ export const exportJustificationPDF = async (
   const contentW = pageW - margin * 2;
   let y = margin;
 
+  const verifyUrl = just.qr_verification_code ? `${VERIFY_BASE}${just.qr_verification_code}` : '';
+  const qrDataUrl = verifyUrl ? await generateQrDataUrl(verifyUrl) : '';
+
   const ensureSpace = (needed: number) => {
     if (y + needed > pageH - 30) {
       addFooter();
@@ -63,11 +79,17 @@ export const exportJustificationPDF = async (
     const totalPages = (pdf as any).internal.getNumberOfPages();
     pdf.setFontSize(8);
     pdf.setFont('times', 'normal');
-    const footerY = pageH - 12;
-    if (just.qr_verification_code) {
-      pdf.text(`Verificação: ${VERIFY_BASE}${just.qr_verification_code}`, margin, footerY);
+    const footerY = pageH - 18;
+    // QR code (visual) — bottom-right corner
+    if (qrDataUrl) {
+      try {
+        pdf.addImage(qrDataUrl, 'PNG', pageW - margin - 18, footerY - 4, 18, 18);
+      } catch { /* ignore */ }
     }
-    pdf.text(`Pág. ${(pdf as any).internal.getCurrentPageInfo().pageNumber}/${totalPages}`, pageW - margin, footerY, { align: 'right' });
+    if (verifyUrl) {
+      pdf.text(`Verificação: ${verifyUrl}`, margin, footerY);
+    }
+    pdf.text(`Pág. ${(pdf as any).internal.getCurrentPageInfo().pageNumber}/${totalPages}`, pageW - margin - 22, footerY + 14, { align: 'right' });
     if (just.document_hash) {
       pdf.text(`Hash SHA-256: ${just.document_hash.substring(0, 32)}…`, margin, footerY + 4);
     }
@@ -146,8 +168,13 @@ export const exportJustificationPDF = async (
 6. Confirme com sua senha ou biometria do aplicativo gov.br
 7. Baixe o PDF assinado e encaminhe ao CEAP`;
     writeParagraph(instr, { size: 11, spacingAfter: 6 });
-    if (just.qr_verification_code) {
-      writeParagraph(`Para verificar a autenticidade deste documento, acesse:\n${VERIFY_BASE}${just.qr_verification_code}`, { size: 10, align: 'center' });
+    if (qrDataUrl) {
+      writeParagraph('Verifique a autenticidade deste documento escaneando o QR Code:', { size: 10, align: 'center', spacingAfter: 2 });
+      try {
+        pdf.addImage(qrDataUrl, 'PNG', pageW / 2 - 25, y, 50, 50);
+        y += 54;
+      } catch { /* ignore */ }
+      writeParagraph(verifyUrl, { size: 9, align: 'center' });
     }
   }
 
@@ -267,13 +294,29 @@ export const exportJustificationDOCX = async (
       ),
     );
     if (just.qr_verification_code) {
-      children.push(
-        new Paragraph({ children: [new TextRun({ text: '' })], spacing: { after: 200 } }),
-        new Paragraph({
-          children: [new TextRun({ text: `Verificação: ${VERIFY_BASE}${just.qr_verification_code}`, size: 20 })],
-          alignment: AlignmentType.CENTER,
-        }),
-      );
+      const verifyUrlDocx = `${VERIFY_BASE}${just.qr_verification_code}`;
+      try {
+        const qrUrl = await generateQrDataUrl(verifyUrlDocx);
+        const qrBytes = dataUrlToUint8Array(qrUrl);
+        children.push(
+          new Paragraph({ children: [new TextRun({ text: '' })], spacing: { after: 200 } }),
+          new Paragraph({
+            alignment: AlignmentType.CENTER,
+            children: [new ImageRun({ type: 'png', data: qrBytes, transformation: { width: 140, height: 140 } } as any)],
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: `Verificação: ${verifyUrlDocx}`, size: 18 })],
+            alignment: AlignmentType.CENTER,
+          }),
+        );
+      } catch {
+        children.push(
+          new Paragraph({
+            children: [new TextRun({ text: `Verificação: ${verifyUrlDocx}`, size: 20 })],
+            alignment: AlignmentType.CENTER,
+          }),
+        );
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useProjects } from '@/hooks/useProjects';
 import { useLegalJustifications, TYPE_LABELS, STATUS_LABELS, type LegalJustificationType, type LegalJustification, type JustificationSignature } from '@/hooks/useLegalJustifications';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +19,7 @@ import { exportJustificationPDF, exportJustificationDOCX } from '@/lib/legalJust
 const TYPES: LegalJustificationType[] = ['ajuste_pt','prorrogacao_vigencia','execucao_financeira','despesa_nao_prevista','atraso_execucao','substituicao_fornecedor','cancelamento_meta'];
 
 const StrategicJustificationsPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { projects } = useProjects();
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const projectList = useMemo(() => projects.filter(p => !(p as any).deletedAt), [projects]);
@@ -27,6 +29,40 @@ const StrategicJustificationsPage: React.FC = () => {
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [editingJust, setEditingJust] = useState<LegalJustification | null>(null);
+  const [presetType, setPresetType] = useState<LegalJustificationType | null>(null);
+  const [presetAdjustmentId, setPresetAdjustmentId] = useState<string | null>(null);
+
+  // Handle deep-link query params: ?project=&adjustment=&type=&new=1 / ?open=<id>
+  useEffect(() => {
+    const projectParam = searchParams.get('project');
+    const openId = searchParams.get('open');
+    const newFlag = searchParams.get('new');
+    const typeParam = searchParams.get('type') as LegalJustificationType | null;
+    const adjParam = searchParams.get('adjustment');
+
+    if (projectParam && projectList.some(p => p.id === projectParam)) {
+      setSelectedProjectId(projectParam);
+    }
+    if (openId && items.length > 0) {
+      const target = items.find(i => i.id === openId);
+      if (target) {
+        setEditingJust(target);
+        setSelectedProjectId(target.project_id);
+        // clear param after consuming
+        searchParams.delete('open');
+        setSearchParams(searchParams, { replace: true });
+      }
+    }
+    if (newFlag === '1' && projectParam) {
+      if (typeParam && TYPES.includes(typeParam)) setPresetType(typeParam);
+      if (adjParam) setPresetAdjustmentId(adjParam);
+      setEditingJust(null);
+      setWizardOpen(true);
+      searchParams.delete('new');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, items, projectList]);
+
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -104,9 +140,13 @@ const StrategicJustificationsPage: React.FC = () => {
       {wizardOpen && project && (
         <WizardDialog
           project={project}
-          onClose={() => setWizardOpen(false)}
+          presetType={presetType}
+          presetAdjustmentId={presetAdjustmentId}
+          onClose={() => { setWizardOpen(false); setPresetType(null); setPresetAdjustmentId(null); }}
           onCreated={async (id) => {
             setWizardOpen(false);
+            setPresetType(null);
+            setPresetAdjustmentId(null);
             await fetchAll();
             const created = (await supabase.from('legal_justifications' as any).select('*').eq('id', id).maybeSingle()).data;
             if (created) setEditingJust(created as any);
@@ -133,16 +173,16 @@ const StrategicJustificationsPage: React.FC = () => {
 };
 
 // ─────────── Wizard de criação ───────────
-const WizardDialog: React.FC<any> = ({ project, onClose, onCreated, create, generateAI, saveVersion }) => {
+const WizardDialog: React.FC<any> = ({ project, onClose, onCreated, create, generateAI, saveVersion, presetType, presetAdjustmentId }) => {
   const [step, setStep] = useState(1);
-  const [type, setType] = useState<LegalJustificationType>('ajuste_pt');
+  const [type, setType] = useState<LegalJustificationType>(presetType || 'ajuste_pt');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const [previousValue, setPreviousValue] = useState('');
   const [newValue, setNewValue] = useState('');
   const [involvedLines, setInvolvedLines] = useState('');
   const [reason, setReason] = useState('');
-  const [adjustmentId, setAdjustmentId] = useState<string>('');
+  const [adjustmentId, setAdjustmentId] = useState<string>(presetAdjustmentId || '');
   const [adjustments, setAdjustments] = useState<any[]>([]);
   const [generating, setGenerating] = useState(false);
 
