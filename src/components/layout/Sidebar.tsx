@@ -19,7 +19,7 @@ import {
   ScrollText, Layers, FileCode2, PenTool, ClipboardList, CalendarDays,
   Bot, ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign, Zap,
   ListChecks, Receipt, MessageSquare, Shield, FileSpreadsheet, FileCheck,
-  Activity, Gauge, Globe,
+  Activity, Gauge, Globe, Target,
 } from 'lucide-react';
 import logoGira from '@/assets/logo-gira-relatorios.png';
 import { sidebarSections, type SidebarItem as SidebarItemType } from '@/routes/sidebarConfig';
@@ -32,7 +32,7 @@ const iconMap: Record<string, React.ElementType> = {
   FileCode2, PenTool, ClipboardList, CalendarDays, Bot,
   ShieldCheck, Brain, TrendingUp, ShieldAlert, DollarSign,
   Zap, ListChecks, Receipt, MessageSquare, Shield, FileSpreadsheet, FileCheck,
-  Activity, Gauge, Globe,
+  Activity, Gauge, Globe, Target,
 };
 
 interface SidebarProps {

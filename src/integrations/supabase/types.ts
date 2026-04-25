@@ -2172,6 +2172,65 @@ export type Database = {
         }
         Relationships: []
       }
+      msc_stories: {
+        Row: {
+          collected_at: string
+          consent_given: boolean
+          created_at: string
+          domain: string | null
+          id: string
+          project_id: string
+          selected_for_report: boolean
+          selection_notes: string | null
+          story: string
+          storyteller_name: string
+          storyteller_role: string | null
+          updated_at: string
+          user_id: string
+          why_significant: string | null
+        }
+        Insert: {
+          collected_at?: string
+          consent_given?: boolean
+          created_at?: string
+          domain?: string | null
+          id?: string
+          project_id: string
+          selected_for_report?: boolean
+          selection_notes?: string | null
+          story: string
+          storyteller_name: string
+          storyteller_role?: string | null
+          updated_at?: string
+          user_id: string
+          why_significant?: string | null
+        }
+        Update: {
+          collected_at?: string
+          consent_given?: boolean
+          created_at?: string
+          domain?: string | null
+          id?: string
+          project_id?: string
+          selected_for_report?: boolean
+          selection_notes?: string | null
+          story?: string
+          storyteller_name?: string
+          storyteller_role?: string | null
+          updated_at?: string
+          user_id?: string
+          why_significant?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "msc_stories_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       performance_config: {
         Row: {
           created_at: string
@@ -3435,6 +3494,112 @@ export type Database = {
           },
         ]
       }
+      sroi_analyses: {
+        Row: {
+          ai_summary: string | null
+          beneficiaries_override: number | null
+          created_at: string
+          id: string
+          mode: string
+          notes: string | null
+          project_id: string
+          proxy_value_per_beneficiary: number
+          sroi_ratio: number
+          total_impact_value: number
+          total_invested: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_summary?: string | null
+          beneficiaries_override?: number | null
+          created_at?: string
+          id?: string
+          mode?: string
+          notes?: string | null
+          project_id: string
+          proxy_value_per_beneficiary?: number
+          sroi_ratio?: number
+          total_impact_value?: number
+          total_invested?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_summary?: string | null
+          beneficiaries_override?: number | null
+          created_at?: string
+          id?: string
+          mode?: string
+          notes?: string | null
+          project_id?: string
+          proxy_value_per_beneficiary?: number
+          sroi_ratio?: number
+          total_impact_value?: number
+          total_invested?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sroi_analyses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sroi_outcomes: {
+        Row: {
+          analysis_id: string
+          attribution_pct: number
+          created_at: string
+          deadweight_pct: number
+          description: string
+          drop_off_pct: number
+          duration_years: number
+          id: string
+          proxy_indicator: string | null
+          quantity: number
+          unit_value: number
+        }
+        Insert: {
+          analysis_id: string
+          attribution_pct?: number
+          created_at?: string
+          deadweight_pct?: number
+          description: string
+          drop_off_pct?: number
+          duration_years?: number
+          id?: string
+          proxy_indicator?: string | null
+          quantity?: number
+          unit_value?: number
+        }
+        Update: {
+          analysis_id?: string
+          attribution_pct?: number
+          created_at?: string
+          deadweight_pct?: number
+          description?: string
+          drop_off_pct?: number
+          duration_years?: number
+          id?: string
+          proxy_indicator?: string | null
+          quantity?: number
+          unit_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sroi_outcomes_analysis_id_fkey"
+            columns: ["analysis_id"]
+            isOneToOne: false
+            referencedRelation: "sroi_analyses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       suppressed_emails: {
         Row: {
           created_at: string
@@ -3619,6 +3784,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "team_reports_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tows_analyses: {
+        Row: {
+          ai_generated_at: string | null
+          created_at: string
+          id: string
+          opportunities: Json
+          project_id: string
+          so_strategies: Json
+          st_strategies: Json
+          strengths: Json
+          threats: Json
+          updated_at: string
+          user_id: string
+          weaknesses: Json
+          wo_strategies: Json
+          wt_strategies: Json
+        }
+        Insert: {
+          ai_generated_at?: string | null
+          created_at?: string
+          id?: string
+          opportunities?: Json
+          project_id: string
+          so_strategies?: Json
+          st_strategies?: Json
+          strengths?: Json
+          threats?: Json
+          updated_at?: string
+          user_id: string
+          weaknesses?: Json
+          wo_strategies?: Json
+          wt_strategies?: Json
+        }
+        Update: {
+          ai_generated_at?: string | null
+          created_at?: string
+          id?: string
+          opportunities?: Json
+          project_id?: string
+          so_strategies?: Json
+          st_strategies?: Json
+          strengths?: Json
+          threats?: Json
+          updated_at?: string
+          user_id?: string
+          weaknesses?: Json
+          wo_strategies?: Json
+          wt_strategies?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tows_analyses_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
