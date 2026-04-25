@@ -2942,6 +2942,9 @@ export type Database = {
       }
       projects: {
         Row: {
+          cnpj_concedente: string | null
+          cnpj_convenente: string | null
+          contrapartida: number | null
           counterpart_value: number | null
           created_at: string
           deleted_at: string | null
@@ -2965,14 +2968,22 @@ export type Database = {
           organization_phone: string | null
           organization_website: string | null
           report_data: Json | null
+          responsavel_cargo: string | null
+          responsavel_cpf: string | null
+          responsavel_nome: string | null
           start_date: string
           summary: string
           team: Json
           transfer_value: number | null
           updated_at: string
           user_id: string
+          valor_global: number | null
+          valor_repasse: number | null
         }
         Insert: {
+          cnpj_concedente?: string | null
+          cnpj_convenente?: string | null
+          contrapartida?: number | null
           counterpart_value?: number | null
           created_at?: string
           deleted_at?: string | null
@@ -2996,14 +3007,22 @@ export type Database = {
           organization_phone?: string | null
           organization_website?: string | null
           report_data?: Json | null
+          responsavel_cargo?: string | null
+          responsavel_cpf?: string | null
+          responsavel_nome?: string | null
           start_date: string
           summary: string
           team?: Json
           transfer_value?: number | null
           updated_at?: string
           user_id: string
+          valor_global?: number | null
+          valor_repasse?: number | null
         }
         Update: {
+          cnpj_concedente?: string | null
+          cnpj_convenente?: string | null
+          contrapartida?: number | null
           counterpart_value?: number | null
           created_at?: string
           deleted_at?: string | null
@@ -3027,12 +3046,17 @@ export type Database = {
           organization_phone?: string | null
           organization_website?: string | null
           report_data?: Json | null
+          responsavel_cargo?: string | null
+          responsavel_cpf?: string | null
+          responsavel_nome?: string | null
           start_date?: string
           summary?: string
           team?: Json
           transfer_value?: number | null
           updated_at?: string
           user_id?: string
+          valor_global?: number | null
+          valor_repasse?: number | null
         }
         Relationships: []
       }
