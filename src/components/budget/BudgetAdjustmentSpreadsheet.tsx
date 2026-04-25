@@ -202,13 +202,7 @@ export const BudgetAdjustmentSpreadsheet: React.FC<Props> = ({
     return null;
   };
 
-  if (items.length === 0) {
-    return (
-      <div className="border rounded-md p-8 text-center text-muted-foreground text-sm">
-        Nenhum item cadastrado. Use "Importar PT" no painel acima ou adicione itens manualmente.
-      </div>
-    );
-  }
+  const isEmpty = items.length === 0;
 
   return (
     <div className="border rounded-md overflow-x-auto">
@@ -240,6 +234,17 @@ export const BudgetAdjustmentSpreadsheet: React.FC<Props> = ({
           </tr>
         </thead>
         <tbody>
+          {isEmpty && (
+            <tr>
+              <td colSpan={11} className="p-8 text-center text-muted-foreground text-sm">
+                <p className="mb-3">Nenhum item cadastrado ainda.</p>
+                <p className="text-xs mb-4">Use <span className="font-medium">"Importar PT"</span> no painel de orientação acima para carregar todos os itens da planilha CEAP de uma vez, ou adicione um item manualmente:</p>
+                <Button size="sm" onClick={() => addNewLine('META 1')} className="gap-1">
+                  <PlusCircle className="w-4 h-4" /> Adicionar primeiro item
+                </Button>
+              </td>
+            </tr>
+          )}
           {groups.map(([metaGroup, groupItems]) => (
             <React.Fragment key={metaGroup}>
               <tr className="bg-muted/30">
