@@ -140,9 +140,13 @@ const StrategicJustificationsPage: React.FC = () => {
       {wizardOpen && project && (
         <WizardDialog
           project={project}
-          onClose={() => setWizardOpen(false)}
+          presetType={presetType}
+          presetAdjustmentId={presetAdjustmentId}
+          onClose={() => { setWizardOpen(false); setPresetType(null); setPresetAdjustmentId(null); }}
           onCreated={async (id) => {
             setWizardOpen(false);
+            setPresetType(null);
+            setPresetAdjustmentId(null);
             await fetchAll();
             const created = (await supabase.from('legal_justifications' as any).select('*').eq('id', id).maybeSingle()).data;
             if (created) setEditingJust(created as any);
@@ -169,16 +173,16 @@ const StrategicJustificationsPage: React.FC = () => {
 };
 
 // ─────────── Wizard de criação ───────────
-const WizardDialog: React.FC<any> = ({ project, onClose, onCreated, create, generateAI, saveVersion }) => {
+const WizardDialog: React.FC<any> = ({ project, onClose, onCreated, create, generateAI, saveVersion, presetType, presetAdjustmentId }) => {
   const [step, setStep] = useState(1);
-  const [type, setType] = useState<LegalJustificationType>('ajuste_pt');
+  const [type, setType] = useState<LegalJustificationType>(presetType || 'ajuste_pt');
   const [periodStart, setPeriodStart] = useState('');
   const [periodEnd, setPeriodEnd] = useState('');
   const [previousValue, setPreviousValue] = useState('');
   const [newValue, setNewValue] = useState('');
   const [involvedLines, setInvolvedLines] = useState('');
   const [reason, setReason] = useState('');
-  const [adjustmentId, setAdjustmentId] = useState<string>('');
+  const [adjustmentId, setAdjustmentId] = useState<string>(presetAdjustmentId || '');
   const [adjustments, setAdjustments] = useState<any[]>([]);
   const [generating, setGenerating] = useState(false);
 
