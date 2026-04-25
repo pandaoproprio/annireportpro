@@ -263,7 +263,6 @@ const TransfereGovTab: React.FC = () => {
             <ul className="list-disc list-inside ml-2 mt-1">
               <li>Transferências Especiais (planos, executores)</li>
               <li>Fundo a Fundo</li>
-              <li>TED — Termo de Execução Descentralizada</li>
             </ul>
             <p className="mt-2 italic">
               Essas bases listam principalmente entes federativos (estados/municípios) e órgãos
