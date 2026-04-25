@@ -168,8 +168,13 @@ export const exportJustificationPDF = async (
 6. Confirme com sua senha ou biometria do aplicativo gov.br
 7. Baixe o PDF assinado e encaminhe ao CEAP`;
     writeParagraph(instr, { size: 11, spacingAfter: 6 });
-    if (just.qr_verification_code) {
-      writeParagraph(`Para verificar a autenticidade deste documento, acesse:\n${VERIFY_BASE}${just.qr_verification_code}`, { size: 10, align: 'center' });
+    if (qrDataUrl) {
+      writeParagraph('Verifique a autenticidade deste documento escaneando o QR Code:', { size: 10, align: 'center', spacingAfter: 2 });
+      try {
+        pdf.addImage(qrDataUrl, 'PNG', pageW / 2 - 25, y, 50, 50);
+        y += 54;
+      } catch { /* ignore */ }
+      writeParagraph(verifyUrl, { size: 9, align: 'center' });
     }
   }
 
