@@ -371,7 +371,94 @@ export const Settings: React.FC = () => {
                         rows={3}
                       />
                     </div>
-                    
+
+                    {/* Dados jurídicos para Justificativas (Lei 13.019/2014) */}
+                    <div className="border rounded-lg p-4 space-y-4">
+                      <div>
+                        <h4 className="font-medium">Dados Jurídicos do Convênio</h4>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Usados nas Justificativas, Termo de Fomento e Pedido de RA. Obrigatórios para gerar documentos válidos perante o concedente.
+                        </p>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>CNPJ da Convenente (Organização)</Label>
+                          <Input
+                            value={formData.cnpjConvenente}
+                            onChange={e => setFormData({ ...formData, cnpjConvenente: e.target.value })}
+                            placeholder="00.000.000/0000-00"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>CNPJ da Concedente (Órgão Público)</Label>
+                          <Input
+                            value={formData.cnpjConcedente}
+                            onChange={e => setFormData({ ...formData, cnpjConcedente: e.target.value })}
+                            placeholder="00.000.000/0000-00"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Valor Global (R$)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.valorGlobal}
+                            onChange={e => setFormData({ ...formData, valorGlobal: e.target.value })}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Valor de Repasse (R$)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.valorRepasse}
+                            onChange={e => setFormData({ ...formData, valorRepasse: e.target.value })}
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
+                          <Label>Contrapartida (R$)</Label>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={formData.contrapartida}
+                            onChange={e => setFormData({ ...formData, contrapartida: e.target.value })}
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t">
+                        <div className="space-y-2 md:col-span-2">
+                          <Label>Nome do Responsável Legal</Label>
+                          <Input
+                            value={formData.responsavelNome}
+                            onChange={e => setFormData({ ...formData, responsavelNome: e.target.value })}
+                            placeholder="Nome completo do signatário"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>CPF do Responsável</Label>
+                          <Input
+                            value={formData.responsavelCpf}
+                            onChange={e => setFormData({ ...formData, responsavelCpf: e.target.value })}
+                            placeholder="000.000.000-00"
+                          />
+                        </div>
+                        <div className="space-y-2 md:col-span-3">
+                          <Label>Cargo do Responsável</Label>
+                          <Input
+                            value={formData.responsavelCargo}
+                            onChange={e => setFormData({ ...formData, responsavelCargo: e.target.value })}
+                            placeholder="Ex: Presidente, Diretor Executivo"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Goals */}
                     <div className="border rounded-lg p-4 space-y-4">
                       <h4 className="font-medium">Metas do Projeto</h4>
