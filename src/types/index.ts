@@ -159,6 +159,15 @@ export interface Project {
   team: TeamMember[];
   locations: string[];
   reportData?: ReportData;
+  // Dados jurídicos para Justificativas (Lei 13.019/2014)
+  cnpjConvenente?: string;
+  cnpjConcedente?: string;
+  valorGlobal?: number;
+  valorRepasse?: number;
+  contrapartida?: number;
+  responsavelNome?: string;
+  responsavelCpf?: string;
+  responsavelCargo?: string;
 }
 
 export interface PhotoWithCaption {
