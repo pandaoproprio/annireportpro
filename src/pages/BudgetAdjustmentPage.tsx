@@ -16,6 +16,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { BudgetAdjustmentGuidancePanel } from '@/components/budget/BudgetAdjustmentGuidancePanel';
 import { toast } from 'sonner';
 import {
   PlusCircle, Edit, Trash2, FileText, Sparkles, Check, X,
@@ -322,6 +323,15 @@ const BudgetAdjustmentPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Guidance + Import/Export panel */}
+        <BudgetAdjustmentGuidancePanel
+          adjustment={activeAdjustment}
+          items={items}
+          projectName={project.name}
+          onAddItem={addItem}
+          onUpdateItem={updateItem}
+        />
 
         {/* Summary cards */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
