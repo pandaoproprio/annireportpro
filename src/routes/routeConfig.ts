@@ -37,6 +37,7 @@ const ObservabilityDashboard = lazy(() => import('@/pages/ObservabilityDashboard
 const ProductivityMonitoringPage = lazy(() => import('@/pages/ProductivityMonitoringPage'));
 const GovDataDashboard = lazy(() => import('@/pages/GovDataDashboard'));
 const StrategicToolsPage = lazy(() => import('@/pages/StrategicToolsPage'));
+const StrategicJustificationsPage = lazy(() => import('@/pages/StrategicJustificationsPage'));
 export interface RouteEntry {
   path: string;
   element: React.LazyExoticComponent<React.ComponentType<any>>;
@@ -85,4 +86,5 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/monitoring', element: ProductivityMonitoringPage },
   { path: '/gov-data', element: GovDataDashboard },
   { path: '/strategic-tools', element: StrategicToolsPage },
+  { path: '/justificativas', element: StrategicJustificationsPage },
 ];
