@@ -55,7 +55,15 @@ const mapDbToProject = (db: DbProject): Project => ({
   goals: (Array.isArray(db.goals) ? db.goals as unknown as Goal[] : []),
   team: (Array.isArray(db.team) ? db.team as unknown as TeamMember[] : []),
   locations: db.locations || [],
-  reportData: (db.report_data as ReportData) || {}
+  reportData: (db.report_data as ReportData) || {},
+  cnpjConvenente: db.cnpj_convenente || undefined,
+  cnpjConcedente: db.cnpj_concedente || undefined,
+  valorGlobal: db.valor_global != null ? Number(db.valor_global) : undefined,
+  valorRepasse: db.valor_repasse != null ? Number(db.valor_repasse) : undefined,
+  contrapartida: db.contrapartida != null ? Number(db.contrapartida) : undefined,
+  responsavelNome: db.responsavel_nome || undefined,
+  responsavelCpf: db.responsavel_cpf || undefined,
+  responsavelCargo: db.responsavel_cargo || undefined,
 });
 
 const fetchProjectsFromDb = async (
