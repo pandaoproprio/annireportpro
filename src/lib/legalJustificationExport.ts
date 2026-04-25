@@ -64,6 +64,9 @@ export const exportJustificationPDF = async (
   const contentW = pageW - margin * 2;
   let y = margin;
 
+  const verifyUrl = just.qr_verification_code ? `${VERIFY_BASE}${just.qr_verification_code}` : '';
+  const qrDataUrl = verifyUrl ? await generateQrDataUrl(verifyUrl) : '';
+
   const ensureSpace = (needed: number) => {
     if (y + needed > pageH - 30) {
       addFooter();
@@ -76,11 +79,17 @@ export const exportJustificationPDF = async (
     const totalPages = (pdf as any).internal.getNumberOfPages();
     pdf.setFontSize(8);
     pdf.setFont('times', 'normal');
-    const footerY = pageH - 12;
-    if (just.qr_verification_code) {
-      pdf.text(`Verificação: ${VERIFY_BASE}${just.qr_verification_code}`, margin, footerY);
+    const footerY = pageH - 18;
+    // QR code (visual) — bottom-right corner
+    if (qrDataUrl) {
+      try {
+        pdf.addImage(qrDataUrl, 'PNG', pageW - margin - 18, footerY - 4, 18, 18);
+      } catch { /* ignore */ }
     }
-    pdf.text(`Pág. ${(pdf as any).internal.getCurrentPageInfo().pageNumber}/${totalPages}`, pageW - margin, footerY, { align: 'right' });
+    if (verifyUrl) {
+      pdf.text(`Verificação: ${verifyUrl}`, margin, footerY);
+    }
+    pdf.text(`Pág. ${(pdf as any).internal.getCurrentPageInfo().pageNumber}/${totalPages}`, pageW - margin - 22, footerY + 14, { align: 'right' });
     if (just.document_hash) {
       pdf.text(`Hash SHA-256: ${just.document_hash.substring(0, 32)}…`, margin, footerY + 4);
     }
