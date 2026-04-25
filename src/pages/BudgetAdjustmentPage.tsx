@@ -2,19 +2,16 @@ import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { useProjectData } from '@/contexts/ProjectContext';
-import { useBudgetAdjustments, BudgetAdjustment, BudgetAdjustmentItem } from '@/hooks/useBudgetAdjustments';
+import { useBudgetAdjustments } from '@/hooks/useBudgetAdjustments';
 import { supabase } from '@/integrations/supabase/client';
 import { PageTransition } from '@/components/ui/page-transition';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { BudgetAdjustmentGuidancePanel } from '@/components/budget/BudgetAdjustmentGuidancePanel';
 import { BudgetAdjustmentSpreadsheet } from '@/components/budget/BudgetAdjustmentSpreadsheet';
@@ -26,12 +23,6 @@ import {
 import { format } from 'date-fns';
 
 const fmt = (v: number) => `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
-const PROPOSAL_LABELS: Record<string, { label: string; color: string }> = {
-  manter: { label: 'Manter', color: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' },
-  alterar: { label: 'Alterar', color: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' },
-  excluir: { label: 'Excluir', color: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' },
-};
 
 const STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   rascunho: { label: 'Rascunho', variant: 'secondary' },
@@ -45,29 +36,13 @@ const BudgetAdjustmentPage: React.FC = () => {
   const { activeProject: project } = useProjectData();
   const {
     adjustments, activeAdjustment, setActiveAdjustment,
-    items, originalItems, newItems, isLoading,
+    items, isLoading,
     createAdjustment, updateAdjustment, deleteAdjustment,
     addItem, updateItem, deleteItem, summary,
   } = useBudgetAdjustments(project?.id);
 
-  const [itemDialogOpen, setItemDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<BudgetAdjustmentItem | null>(null);
-  const [isNewItem, setIsNewItem] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'adj' | 'item'; id: string } | null>(null);
   const [generatingAI, setGeneratingAI] = useState<string | null>(null);
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-
-  // Item form state
-  const [formData, setFormData] = useState({
-    item_number: '', specification: '', description: '',
-    original_unit_value: '', original_unit_measure: 'Mês', original_quantity: '', original_total: '',
-    executed_amount: '',
-    proposal: 'manter' as 'manter' | 'alterar' | 'excluir',
-    new_specification: '', new_unit_value: '', new_unit_measure: 'Mês', new_quantity: '', new_total: '',
-    justification: '', meta_group: '',
-    price_ref_1: '', price_ref_1_value: '', price_ref_2: '', price_ref_2_value: '',
-    price_ref_3: '', price_ref_3_value: '', price_average: '',
-  });
 
   if (!user) return <Navigate to="/login" replace />;
   if (!project) return (
@@ -79,119 +54,12 @@ const BudgetAdjustmentPage: React.FC = () => {
     </PageTransition>
   );
 
-  const resetForm = () => setFormData({
-    item_number: '', specification: '', description: '',
-    original_unit_value: '', original_unit_measure: 'Mês', original_quantity: '', original_total: '',
-    executed_amount: '', proposal: 'manter',
-    new_specification: '', new_unit_value: '', new_unit_measure: 'Mês', new_quantity: '', new_total: '',
-    justification: '', meta_group: '',
-    price_ref_1: '', price_ref_1_value: '', price_ref_2: '', price_ref_2_value: '',
-    price_ref_3: '', price_ref_3_value: '', price_average: '',
-  });
-
-  const openNewItem = (isNew: boolean) => {
-    resetForm();
-    setEditingItem(null);
-    setIsNewItem(isNew);
-    if (isNew) setFormData(prev => ({ ...prev, proposal: 'alterar' }));
-    setItemDialogOpen(true);
-  };
-
-  const openEditItem = (item: BudgetAdjustmentItem) => {
-    setEditingItem(item);
-    setIsNewItem(item.is_new_item);
-    setFormData({
-      item_number: item.item_number,
-      specification: item.specification,
-      description: item.description,
-      original_unit_value: String(item.original_unit_value),
-      original_unit_measure: item.original_unit_measure,
-      original_quantity: String(item.original_quantity),
-      original_total: String(item.original_total),
-      executed_amount: String(item.executed_amount),
-      proposal: item.proposal,
-      new_specification: item.new_specification,
-      new_unit_value: String(item.new_unit_value),
-      new_unit_measure: item.new_unit_measure,
-      new_quantity: String(item.new_quantity),
-      new_total: String(item.new_total),
-      justification: item.justification,
-      meta_group: item.meta_group,
-      price_ref_1: item.price_ref_1, price_ref_1_value: String(item.price_ref_1_value),
-      price_ref_2: item.price_ref_2, price_ref_2_value: String(item.price_ref_2_value),
-      price_ref_3: item.price_ref_3, price_ref_3_value: String(item.price_ref_3_value),
-      price_average: String(item.price_average),
-    });
-    setItemDialogOpen(true);
-  };
-
-  const handleSubmitItem = async () => {
-    if (!activeAdjustment) return;
-    const payload: any = {
-      ...formData,
-      original_unit_value: parseFloat(formData.original_unit_value) || 0,
-      original_quantity: parseFloat(formData.original_quantity) || 0,
-      original_total: parseFloat(formData.original_total) || 0,
-      executed_amount: parseFloat(formData.executed_amount) || 0,
-      new_unit_value: parseFloat(formData.new_unit_value) || 0,
-      new_quantity: parseFloat(formData.new_quantity) || 0,
-      new_total: parseFloat(formData.new_total) || 0,
-      price_ref_1_value: parseFloat(formData.price_ref_1_value) || 0,
-      price_ref_2_value: parseFloat(formData.price_ref_2_value) || 0,
-      price_ref_3_value: parseFloat(formData.price_ref_3_value) || 0,
-      price_average: parseFloat(formData.price_average) || 0,
-      is_new_item: isNewItem,
-      sort_order: editingItem ? editingItem.sort_order : items.length,
-    };
-
-    let ok: boolean;
-    if (editingItem) {
-      ok = await updateItem(editingItem.id, payload);
-    } else {
-      ok = await addItem(activeAdjustment.id, payload);
-    }
-    if (ok) {
-      setItemDialogOpen(false);
-      resetForm();
-    }
-  };
-
-  const generateAIJustification = async (item: BudgetAdjustmentItem) => {
-    setGeneratingAI(item.id);
-    try {
-      const { data, error } = await supabase.functions.invoke('generate-adjustment-justification', {
-        body: {
-          item: {
-            specification: item.specification,
-            description: item.description,
-            proposal: item.proposal,
-            original_total: item.original_total,
-            new_total: item.new_total,
-            executed_amount: item.executed_amount,
-            is_new_item: item.is_new_item,
-          },
-          type: 'item_justification',
-          projectContext: `${project.name} - ${project.object}`,
-        },
-      });
-      if (error) throw error;
-      if (data?.justification) {
-        await updateItem(item.id, { justification: data.justification } as any);
-        toast.success('Justificativa gerada por IA');
-      }
-    } catch (e) {
-      console.error(e);
-      toast.error('Erro ao gerar justificativa');
-    }
-    setGeneratingAI(null);
-  };
-
   const generateRAJustification = async () => {
     if (!activeAdjustment) return;
     setGeneratingAI('ra');
     try {
       const raItems = [...items.filter(i => i.is_new_item), ...items.filter(i => i.proposal === 'alterar')]
-        .map(i => `- ${i.specification}: ${fmt(Number(i.new_total))}`)
+        .map(i => `- ${i.new_specification || i.specification}: ${fmt(Number(i.new_total))}`)
         .join('\n');
 
       const { data, error } = await supabase.functions.invoke('generate-adjustment-justification', {
@@ -221,14 +89,6 @@ const BudgetAdjustmentPage: React.FC = () => {
     if (deleteTarget.type === 'adj') await deleteAdjustment(deleteTarget.id);
     else await deleteItem(deleteTarget.id);
     setDeleteTarget(null);
-  };
-
-  const toggleExpand = (id: string) => {
-    setExpandedItems(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
   };
 
   // ─── LIST VIEW (no active adjustment) ───
