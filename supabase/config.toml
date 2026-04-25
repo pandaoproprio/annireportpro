@@ -53,3 +53,7 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.handle-email-suppression]
     verify_jwt = false
+  [functions.legal-justification-public-sign]
+    verify_jwt = false
+  [functions.legal-justification-verify]
+    verify_jwt = false
