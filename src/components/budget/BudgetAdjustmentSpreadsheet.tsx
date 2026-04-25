@@ -202,13 +202,7 @@ export const BudgetAdjustmentSpreadsheet: React.FC<Props> = ({
     return null;
   };
 
-  if (items.length === 0) {
-    return (
-      <div className="border rounded-md p-8 text-center text-muted-foreground text-sm">
-        Nenhum item cadastrado. Use "Importar PT" no painel acima ou adicione itens manualmente.
-      </div>
-    );
-  }
+  const isEmpty = items.length === 0;
 
   return (
     <div className="border rounded-md overflow-x-auto">
