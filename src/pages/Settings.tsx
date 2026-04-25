@@ -133,6 +133,14 @@ export const Settings: React.FC = () => {
         goals: [...(activeProject.goals || [])],
         team: [...(activeProject.team || [])],
         locations: [...(activeProject.locations || [])],
+        cnpjConvenente: activeProject.cnpjConvenente || '',
+        cnpjConcedente: activeProject.cnpjConcedente || '',
+        valorGlobal: activeProject.valorGlobal != null ? String(activeProject.valorGlobal) : '',
+        valorRepasse: activeProject.valorRepasse != null ? String(activeProject.valorRepasse) : '',
+        contrapartida: activeProject.contrapartida != null ? String(activeProject.contrapartida) : '',
+        responsavelNome: activeProject.responsavelNome || '',
+        responsavelCpf: activeProject.responsavelCpf || '',
+        responsavelCargo: activeProject.responsavelCargo || '',
       });
       setIsEditingProject(true);
     }
