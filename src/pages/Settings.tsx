@@ -101,6 +101,14 @@ export const Settings: React.FC = () => {
     goals: [] as Goal[],
     team: [] as TeamMember[],
     locations: [] as string[],
+    cnpjConvenente: '',
+    cnpjConcedente: '',
+    valorGlobal: '' as string,
+    valorRepasse: '' as string,
+    contrapartida: '' as string,
+    responsavelNome: '',
+    responsavelCpf: '',
+    responsavelCargo: '',
   });
   
   const [tempGoal, setTempGoal] = useState<Partial<Goal>>({ title: '', description: '', targetAudience: '' });
