@@ -158,9 +158,18 @@ export const Settings: React.FC = () => {
     
     setIsSaving(true);
     try {
+      const parseNum = (v: string) => {
+        if (!v) return undefined;
+        const n = Number(v.replace(',', '.'));
+        return Number.isFinite(n) ? n : undefined;
+      };
+      const { valorGlobal, valorRepasse, contrapartida, ...rest } = formData;
       await updateProject({
         ...activeProject,
-        ...formData,
+        ...rest,
+        valorGlobal: parseNum(valorGlobal),
+        valorRepasse: parseNum(valorRepasse),
+        contrapartida: parseNum(contrapartida),
       });
       toast.success('Projeto atualizado com sucesso!');
       setIsEditingProject(false);
