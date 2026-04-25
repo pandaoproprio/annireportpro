@@ -28,6 +28,14 @@ interface DbProject {
   report_data: Json;
   created_at: string;
   updated_at: string;
+  cnpj_convenente?: string | null;
+  cnpj_concedente?: string | null;
+  valor_global?: number | string | null;
+  valor_repasse?: number | string | null;
+  contrapartida?: number | string | null;
+  responsavel_nome?: string | null;
+  responsavel_cpf?: string | null;
+  responsavel_cargo?: string | null;
 }
 
 const mapDbToProject = (db: DbProject): Project => ({
@@ -47,7 +55,15 @@ const mapDbToProject = (db: DbProject): Project => ({
   goals: (Array.isArray(db.goals) ? db.goals as unknown as Goal[] : []),
   team: (Array.isArray(db.team) ? db.team as unknown as TeamMember[] : []),
   locations: db.locations || [],
-  reportData: (db.report_data as ReportData) || {}
+  reportData: (db.report_data as ReportData) || {},
+  cnpjConvenente: db.cnpj_convenente || undefined,
+  cnpjConcedente: db.cnpj_concedente || undefined,
+  valorGlobal: db.valor_global != null ? Number(db.valor_global) : undefined,
+  valorRepasse: db.valor_repasse != null ? Number(db.valor_repasse) : undefined,
+  contrapartida: db.contrapartida != null ? Number(db.contrapartida) : undefined,
+  responsavelNome: db.responsavel_nome || undefined,
+  responsavelCpf: db.responsavel_cpf || undefined,
+  responsavelCargo: db.responsavel_cargo || undefined,
 });
 
 const fetchProjectsFromDb = async (
@@ -152,27 +168,36 @@ export const useProjects = () => {
   const addProjectMutation = useMutation({
     mutationFn: async (project: Omit<Project, 'id'>) => {
       if (!user) throw new Error('Not authenticated');
+      const insertPayload: Record<string, unknown> = {
+        user_id: user.id,
+        organization_name: project.organizationName,
+        organization_address: project.organizationAddress || null,
+        organization_website: project.organizationWebsite || null,
+        organization_email: project.organizationEmail || null,
+        organization_phone: project.organizationPhone || null,
+        name: project.name,
+        fomento_number: project.fomentoNumber,
+        funder: project.funder,
+        start_date: project.startDate,
+        end_date: project.endDate,
+        object: project.object,
+        summary: project.summary,
+        goals: project.goals as unknown as Json,
+        team: project.team as unknown as Json,
+        locations: project.locations,
+        report_data: (project.reportData || {}) as unknown as Json,
+        cnpj_convenente: project.cnpjConvenente || null,
+        cnpj_concedente: project.cnpjConcedente || null,
+        valor_global: project.valorGlobal ?? null,
+        valor_repasse: project.valorRepasse ?? null,
+        contrapartida: project.contrapartida ?? null,
+        responsavel_nome: project.responsavelNome || null,
+        responsavel_cpf: project.responsavelCpf || null,
+        responsavel_cargo: project.responsavelCargo || null,
+      };
       const { data, error } = await supabase
         .from('projects')
-        .insert({
-          user_id: user.id,
-          organization_name: project.organizationName,
-          organization_address: project.organizationAddress || null,
-          organization_website: project.organizationWebsite || null,
-          organization_email: project.organizationEmail || null,
-          organization_phone: project.organizationPhone || null,
-          name: project.name,
-          fomento_number: project.fomentoNumber,
-          funder: project.funder,
-          start_date: project.startDate,
-          end_date: project.endDate,
-          object: project.object,
-          summary: project.summary,
-          goals: project.goals as unknown as Json,
-          team: project.team as unknown as Json,
-          locations: project.locations,
-          report_data: (project.reportData || {}) as unknown as Json
-        })
+        .insert(insertPayload as never)
         .select()
         .single();
       if (error) throw error;
@@ -188,26 +213,35 @@ export const useProjects = () => {
   const updateProjectMutation = useMutation({
     mutationFn: async (project: Project) => {
       if (!user) throw new Error('Not authenticated');
+      const updatePayload: Record<string, unknown> = {
+        organization_name: project.organizationName,
+        organization_address: project.organizationAddress || null,
+        organization_website: project.organizationWebsite || null,
+        organization_email: project.organizationEmail || null,
+        organization_phone: project.organizationPhone || null,
+        name: project.name,
+        fomento_number: project.fomentoNumber,
+        funder: project.funder,
+        start_date: project.startDate,
+        end_date: project.endDate,
+        object: project.object,
+        summary: project.summary,
+        goals: project.goals as unknown as Json,
+        team: project.team as unknown as Json,
+        locations: project.locations,
+        report_data: (project.reportData || {}) as unknown as Json,
+        cnpj_convenente: project.cnpjConvenente || null,
+        cnpj_concedente: project.cnpjConcedente || null,
+        valor_global: project.valorGlobal ?? null,
+        valor_repasse: project.valorRepasse ?? null,
+        contrapartida: project.contrapartida ?? null,
+        responsavel_nome: project.responsavelNome || null,
+        responsavel_cpf: project.responsavelCpf || null,
+        responsavel_cargo: project.responsavelCargo || null,
+      };
       let query = supabase
         .from('projects')
-        .update({
-          organization_name: project.organizationName,
-          organization_address: project.organizationAddress || null,
-          organization_website: project.organizationWebsite || null,
-          organization_email: project.organizationEmail || null,
-          organization_phone: project.organizationPhone || null,
-          name: project.name,
-          fomento_number: project.fomentoNumber,
-          funder: project.funder,
-          start_date: project.startDate,
-          end_date: project.endDate,
-          object: project.object,
-          summary: project.summary,
-          goals: project.goals as unknown as Json,
-          team: project.team as unknown as Json,
-          locations: project.locations,
-          report_data: (project.reportData || {}) as unknown as Json
-        })
+        .update(updatePayload as never)
         .eq('id', project.id);
       if (!isAdmin) query = query.eq('user_id', user.id);
       const { error } = await query;
