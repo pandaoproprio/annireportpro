@@ -28,6 +28,14 @@ interface DbProject {
   report_data: Json;
   created_at: string;
   updated_at: string;
+  cnpj_convenente?: string | null;
+  cnpj_concedente?: string | null;
+  valor_global?: number | string | null;
+  valor_repasse?: number | string | null;
+  contrapartida?: number | string | null;
+  responsavel_nome?: string | null;
+  responsavel_cpf?: string | null;
+  responsavel_cargo?: string | null;
 }
 
 const mapDbToProject = (db: DbProject): Project => ({
