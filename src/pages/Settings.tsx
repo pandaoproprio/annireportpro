@@ -20,6 +20,7 @@ import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { SlaConfigPanel } from '@/components/sla/SlaConfigPanel';
 import { AsanaConfigPanel } from '@/components/asana/AsanaConfigPanel';
 import { MfaSetupDialog } from '@/components/MfaSetupDialog';
+import { SignedDocumentsSection } from '@/components/projects/SignedDocumentsSection';
 import { supabase } from '@/integrations/supabase/client';
 
 export const Settings: React.FC = () => {
@@ -577,8 +578,12 @@ export const Settings: React.FC = () => {
                 )}
               </div>
             </div>
-          </CardContent>
+           </CardContent>
         </Card>
+      )}
+
+      {activeProject && (
+        <SignedDocumentsSection projectId={activeProject.id} canUpload={hasPermission('settings_edit') || isAdmin || isSuperAdmin} />
       )}
 
       {showBatchDelete && hasPermission('project_delete') && (
