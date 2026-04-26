@@ -2901,6 +2901,78 @@ export type Database = {
           },
         ]
       }
+      project_signed_documents: {
+        Row: {
+          category: Database["public"]["Enums"]["signed_document_category"]
+          created_at: string
+          display_name: string
+          file_size_bytes: number
+          id: string
+          legal_justification_id: string | null
+          notes: string | null
+          original_filename: string
+          project_id: string
+          sha256_hash: string
+          signature_provider: string | null
+          signed_at: string | null
+          signers: Json
+          storage_path: string
+          updated_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["signed_document_category"]
+          created_at?: string
+          display_name: string
+          file_size_bytes: number
+          id?: string
+          legal_justification_id?: string | null
+          notes?: string | null
+          original_filename: string
+          project_id: string
+          sha256_hash: string
+          signature_provider?: string | null
+          signed_at?: string | null
+          signers?: Json
+          storage_path: string
+          updated_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["signed_document_category"]
+          created_at?: string
+          display_name?: string
+          file_size_bytes?: number
+          id?: string
+          legal_justification_id?: string | null
+          notes?: string | null
+          original_filename?: string
+          project_id?: string
+          sha256_hash?: string
+          signature_provider?: string | null
+          signed_at?: string | null
+          signers?: Json
+          storage_path?: string
+          updated_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_signed_documents_legal_justification_id_fkey"
+            columns: ["legal_justification_id"]
+            isOneToOne: false
+            referencedRelation: "legal_justifications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_signed_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_team_members: {
         Row: {
           added_by: string
@@ -4540,6 +4612,7 @@ export type Database = {
         | "parcialmente_assinado"
         | "finalizado"
         | "arquivado"
+        | "imported_signed"
       legal_justification_type:
         | "ajuste_pt"
         | "prorrogacao_vigencia"
@@ -4578,6 +4651,15 @@ export type Database = {
         | "aceito"
         | "resolvido"
         | "materializado"
+      signed_document_category:
+        | "termo_fomento"
+        | "plano_trabalho"
+        | "contrato_rh"
+        | "contrato_servico"
+        | "contrato_fornecedor"
+        | "declaracao_justificativa"
+        | "aditivo"
+        | "outro"
       sla_report_type: "report_object" | "report_team" | "justification"
       sla_status: "no_prazo" | "atencao" | "atrasado" | "bloqueado"
       sprint_item_status: "todo" | "in_progress" | "done" | "blocked"
@@ -4791,6 +4873,7 @@ export const Constants = {
         "parcialmente_assinado",
         "finalizado",
         "arquivado",
+        "imported_signed",
       ],
       legal_justification_type: [
         "ajuste_pt",
@@ -4828,6 +4911,16 @@ export const Constants = {
         "aceito",
         "resolvido",
         "materializado",
+      ],
+      signed_document_category: [
+        "termo_fomento",
+        "plano_trabalho",
+        "contrato_rh",
+        "contrato_servico",
+        "contrato_fornecedor",
+        "declaracao_justificativa",
+        "aditivo",
+        "outro",
       ],
       sla_report_type: ["report_object", "report_team", "justification"],
       sla_status: ["no_prazo", "atencao", "atrasado", "bloqueado"],
