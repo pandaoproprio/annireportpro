@@ -1776,32 +1776,41 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       return <CepField value={(value as string) || ''} onChange={onChange} onAutoFill={onCepAutoFill} isDark={isDark} />;
     case 'single_select': {
       const allowOther = !!(field.settings?.allowOther);
-      const otherPosition = (field.settings?.otherPosition as 'start' | 'end' | undefined) || 'end';
+      const legacyPosition = (field.settings?.otherPosition as 'start' | 'end' | undefined) || 'end';
+      const rawOptions = options || [];
+      const hasInlineOther = rawOptions.includes('__other__');
+      // Lista renderizada na ordem definida no editor. Se "__other__" estiver inline,
+      // sua posição é respeitada. Caso contrário, fallback ao legado otherPosition.
+      const renderList: Array<{ kind: 'option' | 'other'; value: string }> = [];
+      if (hasInlineOther) {
+        rawOptions.forEach(opt => {
+          if (opt === '__other__') renderList.push({ kind: 'other', value: '' });
+          else renderList.push({ kind: 'option', value: opt });
+        });
+      } else {
+        if (allowOther && legacyPosition === 'start') renderList.push({ kind: 'other', value: '' });
+        rawOptions.forEach(opt => renderList.push({ kind: 'option', value: opt }));
+        if (allowOther && legacyPosition === 'end') renderList.push({ kind: 'other', value: '' });
+      }
       const isOtherSelected = typeof value === 'string' && value.startsWith('__other__:');
       const otherText = isOtherSelected ? (value as string).replace('__other__:', '') : '';
-      const otherBlock = allowOther ? (
-        <div className="flex items-center gap-2" key="__other__">
-          <RadioGroupItem value="__other__" id={`${field.id}-other`} />
-          <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
-        </div>
-      ) : null;
       return (
         <div className="space-y-2">
           <RadioGroup value={isOtherSelected ? '__other__' : (value as string) || ''} onValueChange={(v) => {
-            if (v === '__other__') {
-              onChange('__other__:');
-            } else {
-              onChange(v);
-            }
+            if (v === '__other__') onChange('__other__:');
+            else onChange(v);
           }}>
-            {otherBlock && otherPosition === 'start' && otherBlock}
-            {options.map((opt, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <RadioGroupItem value={opt} id={`${field.id}-${i}`} />
-                <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{opt}</Label>
+            {renderList.map((entry, i) => entry.kind === 'other' ? (
+              <div className="flex items-center gap-2" key={`__other__-${i}`}>
+                <RadioGroupItem value="__other__" id={`${field.id}-other`} />
+                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+              </div>
+            ) : (
+              <div key={`opt-${i}`} className="flex items-center gap-2">
+                <RadioGroupItem value={entry.value} id={`${field.id}-${i}`} />
+                <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{entry.value}</Label>
               </div>
             ))}
-            {otherBlock && otherPosition === 'end' && otherBlock}
           </RadioGroup>
           {allowOther && isOtherSelected && (
             <Input
@@ -1817,10 +1826,12 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
     case 'multi_select':
     case 'checkbox': {
       const allowOtherMulti = !!(field.settings?.allowOther);
-      const otherPositionMulti = (field.settings?.otherPosition as 'start' | 'end' | undefined) || 'end';
+      const legacyPositionMulti = (field.settings?.otherPosition as 'start' | 'end' | undefined) || 'end';
       const exclusiveOption = (field.settings?.exclusiveOption as string | undefined) || undefined;
+      const rawOptionsMulti = options || [];
+      const hasInlineOtherMulti = rawOptionsMulti.includes('__other__');
       // Single boolean checkbox (no options) — must check BEFORE casting to array
-      if (options.length === 0 && !allowOtherMulti) {
+      if (rawOptionsMulti.filter(o => o !== '__other__').length === 0 && !allowOtherMulti) {
         return (
           <div className="flex items-center gap-2">
             <Checkbox id={field.id} checked={!!value} onCheckedChange={(checked) => onChange(!!checked)} />
@@ -1833,8 +1844,22 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       const isOtherChecked = !!otherEntry;
       const otherTextMulti = otherEntry ? otherEntry.replace('__other__:', '') : '';
       const isExclusiveSelected = exclusiveOption ? selected.includes(exclusiveOption) : false;
-      const otherBlockMulti = allowOtherMulti ? (
-        <React.Fragment key="__other__">
+
+      // Lista renderizada respeitando posição inline do "__other__".
+      const renderListMulti: Array<{ kind: 'option' | 'other'; value: string }> = [];
+      if (hasInlineOtherMulti) {
+        rawOptionsMulti.forEach(opt => {
+          if (opt === '__other__') renderListMulti.push({ kind: 'other', value: '' });
+          else renderListMulti.push({ kind: 'option', value: opt });
+        });
+      } else {
+        if (allowOtherMulti && legacyPositionMulti === 'start') renderListMulti.push({ kind: 'other', value: '' });
+        rawOptionsMulti.forEach(opt => renderListMulti.push({ kind: 'option', value: opt }));
+        if (allowOtherMulti && legacyPositionMulti === 'end') renderListMulti.push({ kind: 'other', value: '' });
+      }
+
+      const otherBlockMulti = (
+        <React.Fragment>
           <div className="flex items-center gap-2">
             <Checkbox
               id={`${field.id}-other`}
@@ -1859,24 +1884,26 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
             />
           )}
         </React.Fragment>
-      ) : null;
+      );
+
       return (
         <div className="space-y-2">
-          {otherBlockMulti && otherPositionMulti === 'start' && otherBlockMulti}
-          {options.map((opt, i) => {
+          {renderListMulti.map((entry, i) => {
+            if (entry.kind === 'other') {
+              return <React.Fragment key={`__other__-${i}`}>{otherBlockMulti}</React.Fragment>;
+            }
+            const opt = entry.value;
             const isThisExclusive = exclusiveOption && opt === exclusiveOption;
             return (
-              <div key={i} className={`flex items-center gap-2 ${isThisExclusive ? 'mt-2 pt-2 border-t border-dashed' : ''}`} style={isThisExclusive ? { borderColor: 'var(--form-muted)' } : undefined}>
+              <div key={`opt-${i}`} className={`flex items-center gap-2 ${isThisExclusive ? 'mt-2 pt-2 border-t border-dashed' : ''}`} style={isThisExclusive ? { borderColor: 'var(--form-muted)' } : undefined}>
                 <Checkbox
                   id={`${field.id}-${i}`}
                   checked={selected.includes(opt)}
                   onCheckedChange={(checked) => {
                     if (isThisExclusive) {
-                      // Selecting exclusive -> clear all others; deselecting -> just remove it
                       onChange(checked ? [opt] : []);
                       return;
                     }
-                    // Selecting non-exclusive -> remove exclusive automatically
                     const cleared = exclusiveOption ? selected.filter(s => s !== exclusiveOption) : selected;
                     const filtered = cleared.filter(s => s !== opt);
                     onChange(checked ? [...filtered, opt] : filtered);
@@ -1886,7 +1913,6 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
               </div>
             );
           })}
-          {otherBlockMulti && otherPositionMulti === 'end' && otherBlockMulti}
           {isExclusiveSelected && (
             <p className="text-xs italic mt-1" style={{ color: 'var(--form-muted)' }}>
               Esta opção desmarca as demais.
