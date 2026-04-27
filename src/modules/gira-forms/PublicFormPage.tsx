@@ -152,16 +152,31 @@ export default function PublicFormPage() {
   const formQuery = useQuery({
     queryKey: ['public-form', id],
     queryFn: async () => {
-      let data: any;
-      let error: any;
+      // Usa maybeSingle() para não disparar erro PGRST116 quando 0 linhas;
+      // assim diferenciamos "não existe" (data null sem erro) de
+      // "falha de rede" (error preenchido). Em mobile, .single() costumava
+      // estourar AbortError silenciosamente em redes lentas.
+      let data: any = null;
+      let error: any = null;
       if (isUuid) {
-        const res = await supabase.from('forms').select('*').eq('id', id!).single();
+        const res = await supabase.from('forms').select('*').eq('id', id!).maybeSingle();
         data = res.data; error = res.error;
       } else {
-        const res = await supabase.from('forms').select('*').filter('public_slug', 'eq', id!).single();
+        const res = await supabase.from('forms').select('*').filter('public_slug', 'eq', id!).maybeSingle();
         data = res.data; error = res.error;
       }
-      if (error) throw error;
+      if (error) {
+        // Re-throw para o React Query tratar como erro (mostra "tentar novamente"
+        // e ativa o retry automático configurado abaixo).
+        throw error;
+      }
+      if (!data) {
+        // Form realmente não existe — sinaliza com flag para a UI mostrar
+        // "não encontrado" sem confundir com falha de rede.
+        const notFound: any = new Error('FORM_NOT_FOUND');
+        notFound.code = 'FORM_NOT_FOUND';
+        throw notFound;
+      }
       const form = data as unknown as Form;
       // Auto-close: if closes_at is in the past and still active, treat as encerrado
       if (form.closes_at && new Date(form.closes_at) <= new Date() && form.status === 'ativo') {
@@ -170,6 +185,14 @@ export default function PublicFormPage() {
       return form;
     },
     enabled: !!id,
+    // Retry agressivo para celulares com rede instável (3G/4G oscilante).
+    // Não tenta de novo se o form realmente não existe.
+    retry: (failureCount, err: any) => {
+      if (err?.code === 'FORM_NOT_FOUND') return false;
+      return failureCount < 3;
+    },
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
+    staleTime: 30_000,
   });
 
   const formId = formQuery.data?.id;
@@ -238,6 +261,9 @@ export default function PublicFormPage() {
       return (data || []) as unknown as FormField[];
     },
     enabled: !!formId,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
+    staleTime: 30_000,
   });
 
   const form = formQuery.data;
@@ -812,22 +838,35 @@ export default function PublicFormPage() {
   }
 
   if (!form) {
-    const isNetworkError = !!formQuery.error;
+    // Distingue corretamente: erro de rede vs. form realmente não encontrado.
+    // Em mobile com 3G/4G fraco, AbortError/TypeError aparecem — esses são
+    // network. Só mostra "indisponível" quando o servidor confirmou 0 linhas.
+    const err: any = formQuery.error;
+    const isNotFound = err?.code === 'FORM_NOT_FOUND';
+    const isNetworkError = !!err && !isNotFound;
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center space-y-3">
-            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#999' }} />
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: isNetworkError ? '#f59e0b' : '#999' }} />
             <h2 className="text-xl font-semibold">
               {isNetworkError ? 'Não foi possível carregar o formulário' : 'Formulário indisponível'}
             </h2>
             <p className="text-sm" style={{ color: '#666' }}>
               {isNetworkError
-                ? 'Verifique sua conexão e tente novamente.'
+                ? 'Sua conexão pode estar instável. Toque em "Tentar novamente" — geralmente funciona na segunda tentativa.'
                 : 'Este formulário não existe ou não está mais ativo.'}
             </p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                if (isNetworkError) {
+                  // Refetch sem perder o estado da página (melhor que reload no mobile)
+                  formQuery.refetch();
+                  fieldsQuery.refetch();
+                } else {
+                  window.location.reload();
+                }
+              }}
               className="mt-2 px-4 py-2 rounded text-sm font-medium"
               style={{ background: '#075291', color: '#fff' }}
             >
