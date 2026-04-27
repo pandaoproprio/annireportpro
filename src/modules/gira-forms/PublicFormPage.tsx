@@ -515,28 +515,77 @@ export default function PublicFormPage() {
   const evalCondition = (cond: FieldCondition): boolean => {
     if (!cond.field_id) return true;
     const answer = answers[cond.field_id];
-    const strVal = answer == null ? '' : Array.isArray(answer) ? answer.join(', ') : String(answer);
+    const isArr = Array.isArray(answer);
+    const arrVals = isArr ? (answer as unknown[]).map(v => String(v ?? '')) : [];
+    const strVal = answer == null ? '' : isArr ? arrVals.join(', ') : String(answer);
+    const expected = (cond.value ?? '').toString();
+    const expectedLc = expected.toLowerCase();
+    const strValLc = strVal.toLowerCase();
+    const numVal = Number(strVal.replace(',', '.'));
+    const numExpected = Number(expected.replace(',', '.'));
+    const list = expected.split(',').map(s => s.trim()).filter(Boolean);
+    const listLc = list.map(s => s.toLowerCase());
+
     switch (cond.operator) {
-      case 'equals': return strVal === cond.value;
-      case 'not_equals': return strVal !== cond.value;
-      case 'contains': return strVal.toLowerCase().includes((cond.value || '').toLowerCase());
-      case 'not_empty': return strVal !== '';
-      case 'is_empty': return strVal === '';
-      default: return true;
+      case 'equals':
+        return isArr ? arrVals.includes(expected) : strVal === expected;
+      case 'not_equals':
+        return isArr ? !arrVals.includes(expected) : strVal !== expected;
+      case 'contains':
+        return isArr
+          ? arrVals.some(v => v.toLowerCase().includes(expectedLc))
+          : strValLc.includes(expectedLc);
+      case 'not_contains':
+        return isArr
+          ? !arrVals.some(v => v.toLowerCase().includes(expectedLc))
+          : !strValLc.includes(expectedLc);
+      case 'starts_with':
+        return isArr
+          ? arrVals.some(v => v.toLowerCase().startsWith(expectedLc))
+          : strValLc.startsWith(expectedLc);
+      case 'ends_with':
+        return isArr
+          ? arrVals.some(v => v.toLowerCase().endsWith(expectedLc))
+          : strValLc.endsWith(expectedLc);
+      case 'in_list':
+        return isArr
+          ? arrVals.some(v => listLc.includes(v.toLowerCase()))
+          : listLc.includes(strValLc);
+      case 'not_in_list':
+        return isArr
+          ? !arrVals.some(v => listLc.includes(v.toLowerCase()))
+          : !listLc.includes(strValLc);
+      case 'greater_than':
+        return !isNaN(numVal) && !isNaN(numExpected) && numVal > numExpected;
+      case 'less_than':
+        return !isNaN(numVal) && !isNaN(numExpected) && numVal < numExpected;
+      case 'not_empty':
+        return isArr ? arrVals.length > 0 : strVal !== '';
+      case 'is_empty':
+        return isArr ? arrVals.length === 0 : strVal === '';
+      default:
+        return true;
     }
   };
 
   const isFieldVisible = (field: FormField): boolean => {
-    // Support BOTH `condition` (single rule) and `conditionGroup` (multiple rules with AND/OR logic)
+    // Support BOTH `condition` (single rule) and `conditionGroup` (multiple rules with AND/OR logic + show/hide action)
     const single = field.settings?.condition as FieldCondition | FieldConditionGroup | undefined;
     const group = field.settings?.conditionGroup as FieldConditionGroup | undefined;
 
     const evalSingleOrGroup = (raw: FieldCondition | FieldConditionGroup): boolean => {
-      if ((raw as FieldCondition).field_id) return evalCondition(raw as FieldCondition);
+      if ((raw as FieldCondition).field_id) {
+        // legacy single-condition: always treated as "show if true"
+        return evalCondition(raw as FieldCondition);
+      }
       const g = raw as FieldConditionGroup;
       if (!g.conditions || g.conditions.length === 0) return true;
-      if (g.logic === 'OR') return g.conditions.some(evalCondition);
-      return g.conditions.every(evalCondition);
+      const passed = g.logic === 'OR'
+        ? g.conditions.some(evalCondition)
+        : g.conditions.every(evalCondition);
+      // action: 'show' (default) -> visible when passed; 'hide' -> visible when NOT passed
+      const action = g.action ?? 'show';
+      return action === 'hide' ? !passed : passed;
     };
 
     if (single && !evalSingleOrGroup(single)) return false;
