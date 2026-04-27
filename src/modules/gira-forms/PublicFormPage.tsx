@@ -406,12 +406,12 @@ export default function PublicFormPage() {
           });
         }
       } else if (showRegNumber) {
-        // Standalone registration number (count-based)
-        const nextStandaloneRegNumber = formResponseCount + 1;
+        // Standalone registration number (DB-assigned, race-safe)
+        const nextStandaloneRegNumber = standaloneServerRegNumber ?? (formResponseCount + 1);
         emailRegistrationNumber = nextStandaloneRegNumber;
         setStandaloneRegNumber(nextStandaloneRegNumber);
       } else {
-        emailRegistrationNumber = formResponseCount + 1;
+        emailRegistrationNumber = standaloneServerRegNumber ?? (formResponseCount + 1);
       }
 
       // ─── Set checkin result for success screen ──────────────
