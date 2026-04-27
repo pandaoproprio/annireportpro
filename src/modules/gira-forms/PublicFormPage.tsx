@@ -152,16 +152,31 @@ export default function PublicFormPage() {
   const formQuery = useQuery({
     queryKey: ['public-form', id],
     queryFn: async () => {
-      let data: any;
-      let error: any;
+      // Usa maybeSingle() para não disparar erro PGRST116 quando 0 linhas;
+      // assim diferenciamos "não existe" (data null sem erro) de
+      // "falha de rede" (error preenchido). Em mobile, .single() costumava
+      // estourar AbortError silenciosamente em redes lentas.
+      let data: any = null;
+      let error: any = null;
       if (isUuid) {
-        const res = await supabase.from('forms').select('*').eq('id', id!).single();
+        const res = await supabase.from('forms').select('*').eq('id', id!).maybeSingle();
         data = res.data; error = res.error;
       } else {
-        const res = await supabase.from('forms').select('*').filter('public_slug', 'eq', id!).single();
+        const res = await supabase.from('forms').select('*').filter('public_slug', 'eq', id!).maybeSingle();
         data = res.data; error = res.error;
       }
-      if (error) throw error;
+      if (error) {
+        // Re-throw para o React Query tratar como erro (mostra "tentar novamente"
+        // e ativa o retry automático configurado abaixo).
+        throw error;
+      }
+      if (!data) {
+        // Form realmente não existe — sinaliza com flag para a UI mostrar
+        // "não encontrado" sem confundir com falha de rede.
+        const notFound: any = new Error('FORM_NOT_FOUND');
+        notFound.code = 'FORM_NOT_FOUND';
+        throw notFound;
+      }
       const form = data as unknown as Form;
       // Auto-close: if closes_at is in the past and still active, treat as encerrado
       if (form.closes_at && new Date(form.closes_at) <= new Date() && form.status === 'ativo') {
@@ -170,6 +185,14 @@ export default function PublicFormPage() {
       return form;
     },
     enabled: !!id,
+    // Retry agressivo para celulares com rede instável (3G/4G oscilante).
+    // Não tenta de novo se o form realmente não existe.
+    retry: (failureCount, err: any) => {
+      if (err?.code === 'FORM_NOT_FOUND') return false;
+      return failureCount < 3;
+    },
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
+    staleTime: 30_000,
   });
 
   const formId = formQuery.data?.id;
