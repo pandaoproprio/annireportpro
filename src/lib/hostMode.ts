@@ -3,7 +3,7 @@
  * (subdomínio dedicado apenas para o módulo GIRA Forms).
  *
  * Hosts considerados Forms-only:
- *  - forms.giraerp.com.br (produção)
+ *  - relatorios.giraerp.com.br (produção)
  *  - qualquer host que comece com "forms." 
  *  - ?forms=1 na URL (para testes locais / preview)
  */
@@ -14,7 +14,7 @@ export function isFormsOnlyHost(): boolean {
     const params = new URLSearchParams(window.location.search);
     if (params.get('forms') === '1') return true;
     if (host.startsWith('forms.')) return true;
-    if (host === 'forms.giraerp.com.br') return true;
+    if (host === 'relatorios.giraerp.com.br') return true;
 
     // Rotas públicas de formulários DEVEM rodar em modo leve (sem Auth/AppData
     // pesados) em qualquer host — incluindo relatorios.giraerp.com.br — para
@@ -40,7 +40,7 @@ export function isFormsOnlyHost(): boolean {
  * Rotas públicas de formulários abertas em outros domínios devem ser
  * redirecionadas para cá.
  */
-export const FORMS_CANONICAL_HOST = 'forms.giraerp.com.br';
+export const FORMS_CANONICAL_HOST = 'relatorios.giraerp.com.br';
 
 /**
  * Prefixos de rota que pertencem exclusivamente ao módulo Forms público.
