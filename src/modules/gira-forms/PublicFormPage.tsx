@@ -838,22 +838,35 @@ export default function PublicFormPage() {
   }
 
   if (!form) {
-    const isNetworkError = !!formQuery.error;
+    // Distingue corretamente: erro de rede vs. form realmente não encontrado.
+    // Em mobile com 3G/4G fraco, AbortError/TypeError aparecem — esses são
+    // network. Só mostra "indisponível" quando o servidor confirmou 0 linhas.
+    const err: any = formQuery.error;
+    const isNotFound = err?.code === 'FORM_NOT_FOUND';
+    const isNetworkError = !!err && !isNotFound;
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center space-y-3">
-            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#999' }} />
+            <AlertCircle className="w-12 h-12 mx-auto" style={{ color: isNetworkError ? '#f59e0b' : '#999' }} />
             <h2 className="text-xl font-semibold">
               {isNetworkError ? 'Não foi possível carregar o formulário' : 'Formulário indisponível'}
             </h2>
             <p className="text-sm" style={{ color: '#666' }}>
               {isNetworkError
-                ? 'Verifique sua conexão e tente novamente.'
+                ? 'Sua conexão pode estar instável. Toque em "Tentar novamente" — geralmente funciona na segunda tentativa.'
                 : 'Este formulário não existe ou não está mais ativo.'}
             </p>
             <button
-              onClick={() => window.location.reload()}
+              onClick={() => {
+                if (isNetworkError) {
+                  // Refetch sem perder o estado da página (melhor que reload no mobile)
+                  formQuery.refetch();
+                  fieldsQuery.refetch();
+                } else {
+                  window.location.reload();
+                }
+              }}
               className="mt-2 px-4 py-2 rounded text-sm font-medium"
               style={{ background: '#075291', color: '#fff' }}
             >
