@@ -205,6 +205,31 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
                       />
                       <Label className="text-xs">Incluir opção "Outros (especifique)"</Label>
                     </div>
+                    {allowOther && (
+                      <div className="flex items-center gap-2 mt-2 pl-6">
+                        <Label className="text-xs text-muted-foreground">Posição:</Label>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={otherPosition === 'end' ? 'default' : 'outline'}
+                            className="h-6 text-xs px-2"
+                            onClick={() => setOtherPosition('end')}
+                          >
+                            No fim
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={otherPosition === 'start' ? 'default' : 'outline'}
+                            className="h-6 text-xs px-2"
+                            onClick={() => setOtherPosition('start')}
+                          >
+                            No início
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
