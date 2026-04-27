@@ -261,6 +261,9 @@ export default function PublicFormPage() {
       return (data || []) as unknown as FormField[];
     },
     enabled: !!formId,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 5000),
+    staleTime: 30_000,
   });
 
   const form = formQuery.data;
