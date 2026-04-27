@@ -23,9 +23,18 @@ const CONDITION_OPERATORS: { value: FieldCondition['operator']; label: string }[
   { value: 'equals', label: 'É igual a' },
   { value: 'not_equals', label: 'É diferente de' },
   { value: 'contains', label: 'Contém' },
-  { value: 'not_empty', label: 'Não está vazio' },
+  { value: 'not_contains', label: 'Não contém' },
+  { value: 'starts_with', label: 'Começa com' },
+  { value: 'ends_with', label: 'Termina com' },
+  { value: 'in_list', label: 'É um destes (separe por vírgula)' },
+  { value: 'not_in_list', label: 'Não é nenhum destes (vírgula)' },
+  { value: 'greater_than', label: 'Maior que (número)' },
+  { value: 'less_than', label: 'Menor que (número)' },
+  { value: 'not_empty', label: 'Está preenchido' },
   { value: 'is_empty', label: 'Está vazio' },
 ];
+
+type OtherPosition = 'end' | 'start';
 
 function parseLegacyCondition(raw: unknown): FieldConditionGroup | null {
   if (!raw) return null;
