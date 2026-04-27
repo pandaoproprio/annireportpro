@@ -57,6 +57,5 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.legal-justification-verify]
     verify_jwt = false
-
-[functions.send-form-reminder]
-verify_jwt = false
+  [functions.send-form-reminder]
+    verify_jwt = false
