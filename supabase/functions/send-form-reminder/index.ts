@@ -75,7 +75,7 @@ serve(async (req) => {
     let sent = 0;
     let failed = 0;
 
-    for (const r of recipients) {
+    const sendOne = async (r: typeof recipients[number]) => {
       const checkinUrl = r.checkin_code && r.qr_token
         ? `${APP_URL}/c/${r.checkin_code}?token=${r.qr_token}`
         : null;
@@ -95,59 +95,35 @@ serve(async (req) => {
       <h1 style="color: #ffffff; font-size: 20px; margin: 0;">${heading || 'Lembrete do evento'}</h1>
       <p style="color: #e0f2fe; font-size: 13px; margin: 6px 0 0;">${form.title}</p>
     </div>
-
     <div style="padding: 24px;">
-      <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">
-        Olá, <strong>${r.name || 'Participante'}</strong>!
-      </p>
-
-      <div style="font-size: 14px; color: #334155; line-height: 1.6;">
-        ${message_html}
-      </div>
-
+      <p style="font-size: 15px; color: #1e293b; margin: 0 0 12px;">Olá, <strong>${r.name || 'Participante'}</strong>!</p>
+      <div style="font-size: 14px; color: #334155; line-height: 1.6;">${message_html}</div>
       ${program_url ? `
       <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
         <p style="font-size: 13px; font-weight: bold; color: #92400e; margin: 0 0 10px;">📋 Programação completa do evento</p>
-        <a href="${program_url}" target="_blank" style="display: inline-block; padding: 10px 22px; background: #92400e; color: #ffffff; font-size: 13px; font-weight: bold; border-radius: 6px; text-decoration: none;">
-          ${program_label || 'Ver programação'}
-        </a>
-      </div>
-      ` : ''}
-
+        <a href="${program_url}" target="_blank" style="display: inline-block; padding: 10px 22px; background: #92400e; color: #ffffff; font-size: 13px; font-weight: bold; border-radius: 6px; text-decoration: none;">${program_label || 'Ver programação'}</a>
+      </div>` : ''}
       ${regNumberFormatted ? `
       <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 14px; margin: 16px 0; text-align: center;">
         <p style="font-size: 22px; font-weight: bold; color: #0ea5e9; margin: 0;">${regNumberFormatted}</p>
         <p style="font-size: 11px; color: #64748b; margin: 4px 0 0;">Número da sua inscrição</p>
-      </div>
-      ` : ''}
-
+      </div>` : ''}
       ${qrImageUrl ? `
       <div style="text-align: center; margin: 22px 0;">
         <p style="font-size: 13px; font-weight: bold; color: #1e293b; margin: 0 0 10px;">Seu QR Code de Check-in</p>
         <img src="${qrImageUrl}" alt="QR Code" width="180" height="180" style="border-radius: 8px; border: 1px solid #e2e8f0;" />
         ${r.checkin_code ? `<p style="font-size: 11px; color: #64748b; margin: 8px 0 0;">Código: <strong style="font-family: monospace; letter-spacing: 2px;">${r.checkin_code}</strong></p>` : ''}
-      </div>
-      ` : ''}
-
+      </div>` : ''}
       ${form.event_address ? `
       <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin: 16px 0; text-align: center;">
         <p style="font-size: 13px; font-weight: bold; color: #0c4a6e; margin: 0 0 6px;">📍 Local</p>
         <p style="font-size: 12px; color: #475569; margin: 0 0 10px;">${form.event_address}</p>
-        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.event_address)}" target="_blank" style="display: inline-block; padding: 8px 18px; background: #0ea5e9; color: #ffffff; font-size: 12px; font-weight: bold; border-radius: 6px; text-decoration: none;">
-          🗺️ Abrir no Google Maps
-        </a>
-      </div>
-      ` : ''}
-
-      <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 20px 0 0;">
-        Apresente o QR Code ou o código de 6 dígitos na entrada.
-      </p>
+        <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.event_address)}" target="_blank" style="display: inline-block; padding: 8px 18px; background: #0ea5e9; color: #ffffff; font-size: 12px; font-weight: bold; border-radius: 6px; text-decoration: none;">🗺️ Abrir no Google Maps</a>
+      </div>` : ''}
+      <p style="font-size: 11px; color: #94a3b8; text-align: center; margin: 20px 0 0;">Apresente o QR Code ou o código de 6 dígitos na entrada.</p>
     </div>
-
     <div style="padding: 16px 24px; background: #f8fafc; text-align: center;">
-      <p style="font-size: 10px; color: #94a3b8; margin: 0;">
-        GIRA Forms — Lembrete enviado pela organização do evento
-      </p>
+      <p style="font-size: 10px; color: #94a3b8; margin: 0;">GIRA Forms — Lembrete enviado pela organização do evento</p>
     </div>
   </div>
 </body>
@@ -180,9 +156,13 @@ serve(async (req) => {
         failed++;
         results.push({ email: r.email, success: false, error: String(err).slice(0, 200) });
       }
+    };
 
-      // pequena pausa para evitar rate limit (Resend ~10/s)
-      await new Promise((r) => setTimeout(r, 120));
+    // processa em lotes paralelos para caber no timeout
+    const CONCURRENCY = 8;
+    for (let i = 0; i < recipients.length; i += CONCURRENCY) {
+      const batch = recipients.slice(i, i + CONCURRENCY);
+      await Promise.all(batch.map(sendOne));
     }
 
     return new Response(JSON.stringify({ total: recipients.length, sent, failed, results }), {
