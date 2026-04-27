@@ -345,16 +345,26 @@ export default function PublicFormPage() {
 
       let emailRegistrationNumber: number | null = null;
 
-      const { error } = await supabase.from('form_responses').insert({
-        id: responseId,
-        form_id: formId!,
-        respondent_name: respondentName,
-        respondent_email: respondentEmail,
-        checkin_code: checkinCode,
-        qr_token: qrTokenVal,
-        answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
-      } as any);
+      const { data: insertedResponse, error } = await supabase
+        .from('form_responses')
+        .insert({
+          id: responseId,
+          form_id: formId!,
+          respondent_name: respondentName,
+          respondent_email: respondentEmail,
+          checkin_code: checkinCode,
+          qr_token: qrTokenVal,
+          answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
+        } as any)
+        .select('registration_number')
+        .single();
       if (error) throw error;
+
+      // Real per-form sequential number assigned by the database trigger
+      const standaloneServerRegNumber: number | null =
+        typeof (insertedResponse as any)?.registration_number === 'number'
+          ? (insertedResponse as any).registration_number
+          : null;
 
       // Track submitted info for pre-checkin offer on success screen
       setSubmittedInfo({
