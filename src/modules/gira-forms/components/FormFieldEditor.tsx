@@ -53,6 +53,9 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     () => parseLegacyCondition(field.settings?.condition)
   );
   const [allowOther, setAllowOther] = useState<boolean>(!!(field.settings?.allowOther));
+  const [otherPosition, setOtherPosition] = useState<OtherPosition>(
+    (field.settings?.otherPosition as OtherPosition) || 'end'
+  );
 
   const hasOptions = ['single_select', 'multi_select', 'checkbox'].includes(type);
   const isNonInput = NON_INPUT_TYPES.includes(type);
@@ -70,6 +73,11 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     }
     if (hasOptions) {
       newSettings.allowOther = allowOther;
+      if (allowOther) {
+        newSettings.otherPosition = otherPosition;
+      } else {
+        delete newSettings.otherPosition;
+      }
     }
     await onUpdate({ label, description, required: isNonInput ? false : required, type, options, settings: newSettings });
     onToggleEdit();
@@ -83,6 +91,7 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     setOptions(field.options || []);
     setConditionGroup(parseLegacyCondition(field.settings?.condition));
     setAllowOther(!!(field.settings?.allowOther));
+    setOtherPosition((field.settings?.otherPosition as OtherPosition) || 'end');
   }, [field]);
 
   const getIcon = () => {
