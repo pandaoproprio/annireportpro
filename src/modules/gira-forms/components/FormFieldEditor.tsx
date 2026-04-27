@@ -259,6 +259,30 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
                     </div>
                     {conditionGroup && (
                       <div className="space-y-3">
+                        {/* Action: show or hide */}
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs">Quando verdadeiro:</Label>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={(conditionGroup.action ?? 'show') === 'show' ? 'default' : 'outline'}
+                              className="h-6 text-xs px-2"
+                              onClick={() => setConditionGroup({ ...conditionGroup, action: 'show' })}
+                            >
+                              Mostrar campo
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={conditionGroup.action === 'hide' ? 'default' : 'outline'}
+                              className="h-6 text-xs px-2"
+                              onClick={() => setConditionGroup({ ...conditionGroup, action: 'hide' })}
+                            >
+                              Ocultar campo
+                            </Button>
+                          </div>
+                        </div>
                         {/* AND/OR toggle */}
                         {conditionGroup.conditions.length > 1 && (
                           <div className="flex items-center gap-2">
