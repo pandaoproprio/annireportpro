@@ -1776,8 +1776,15 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       return <CepField value={(value as string) || ''} onChange={onChange} onAutoFill={onCepAutoFill} isDark={isDark} />;
     case 'single_select': {
       const allowOther = !!(field.settings?.allowOther);
+      const otherPosition = (field.settings?.otherPosition as 'start' | 'end' | undefined) || 'end';
       const isOtherSelected = typeof value === 'string' && value.startsWith('__other__:');
       const otherText = isOtherSelected ? (value as string).replace('__other__:', '') : '';
+      const otherBlock = allowOther ? (
+        <div className="flex items-center gap-2" key="__other__">
+          <RadioGroupItem value="__other__" id={`${field.id}-other`} />
+          <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+        </div>
+      ) : null;
       return (
         <div className="space-y-2">
           <RadioGroup value={isOtherSelected ? '__other__' : (value as string) || ''} onValueChange={(v) => {
@@ -1787,18 +1794,14 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
               onChange(v);
             }
           }}>
+            {otherBlock && otherPosition === 'start' && otherBlock}
             {options.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
                 <RadioGroupItem value={opt} id={`${field.id}-${i}`} />
                 <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{opt}</Label>
               </div>
             ))}
-            {allowOther && (
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="__other__" id={`${field.id}-other`} />
-                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
-              </div>
-            )}
+            {otherBlock && otherPosition === 'end' && otherBlock}
           </RadioGroup>
           {allowOther && isOtherSelected && (
             <Input
