@@ -1817,6 +1817,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
     case 'multi_select':
     case 'checkbox': {
       const allowOtherMulti = !!(field.settings?.allowOther);
+      const otherPositionMulti = (field.settings?.otherPosition as 'start' | 'end' | undefined) || 'end';
       const exclusiveOption = (field.settings?.exclusiveOption as string | undefined) || undefined;
       // Single boolean checkbox (no options) — must check BEFORE casting to array
       if (options.length === 0 && !allowOtherMulti) {
