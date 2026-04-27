@@ -23,6 +23,7 @@ import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink, D
 import { FIELD_TYPE_LABELS, CATEGORIES, type Form, type FormField, type FieldType, type FormDesignSettings, type FormStatus } from './types';
 import { motion, Reorder } from 'framer-motion';
 import { toast } from 'sonner';
+import { FORMS_CANONICAL_HOST } from '@/lib/hostMode';
 
 export default function FormBuilderPage() {
   const { id } = useParams<{ id: string }>();
@@ -99,7 +100,7 @@ export default function FormBuilderPage() {
     reorderFields.mutate(updates);
   };
 
-  const CUSTOM_DOMAIN = 'https://forms.giraerp.com.br';
+  const CUSTOM_DOMAIN = `https://${FORMS_CANONICAL_HOST}`;
   const slugOrId = publicSlug || id;
   const publicUrl = `${CUSTOM_DOMAIN}/f/${slugOrId}`;
 
