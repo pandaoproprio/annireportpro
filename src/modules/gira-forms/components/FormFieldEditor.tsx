@@ -23,9 +23,18 @@ const CONDITION_OPERATORS: { value: FieldCondition['operator']; label: string }[
   { value: 'equals', label: 'É igual a' },
   { value: 'not_equals', label: 'É diferente de' },
   { value: 'contains', label: 'Contém' },
-  { value: 'not_empty', label: 'Não está vazio' },
+  { value: 'not_contains', label: 'Não contém' },
+  { value: 'starts_with', label: 'Começa com' },
+  { value: 'ends_with', label: 'Termina com' },
+  { value: 'in_list', label: 'É um destes (separe por vírgula)' },
+  { value: 'not_in_list', label: 'Não é nenhum destes (vírgula)' },
+  { value: 'greater_than', label: 'Maior que (número)' },
+  { value: 'less_than', label: 'Menor que (número)' },
+  { value: 'not_empty', label: 'Está preenchido' },
   { value: 'is_empty', label: 'Está vazio' },
 ];
+
+type OtherPosition = 'end' | 'start';
 
 function parseLegacyCondition(raw: unknown): FieldConditionGroup | null {
   if (!raw) return null;
@@ -44,6 +53,9 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     () => parseLegacyCondition(field.settings?.condition)
   );
   const [allowOther, setAllowOther] = useState<boolean>(!!(field.settings?.allowOther));
+  const [otherPosition, setOtherPosition] = useState<OtherPosition>(
+    (field.settings?.otherPosition as OtherPosition) || 'end'
+  );
 
   const hasOptions = ['single_select', 'multi_select', 'checkbox'].includes(type);
   const isNonInput = NON_INPUT_TYPES.includes(type);
@@ -61,6 +73,11 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     }
     if (hasOptions) {
       newSettings.allowOther = allowOther;
+      if (allowOther) {
+        newSettings.otherPosition = otherPosition;
+      } else {
+        delete newSettings.otherPosition;
+      }
     }
     await onUpdate({ label, description, required: isNonInput ? false : required, type, options, settings: newSettings });
     onToggleEdit();
@@ -74,6 +91,7 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
     setOptions(field.options || []);
     setConditionGroup(parseLegacyCondition(field.settings?.condition));
     setAllowOther(!!(field.settings?.allowOther));
+    setOtherPosition((field.settings?.otherPosition as OtherPosition) || 'end');
   }, [field]);
 
   const getIcon = () => {
@@ -187,6 +205,31 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
                       />
                       <Label className="text-xs">Incluir opção "Outros (especifique)"</Label>
                     </div>
+                    {allowOther && (
+                      <div className="flex items-center gap-2 mt-2 pl-6">
+                        <Label className="text-xs text-muted-foreground">Posição:</Label>
+                        <div className="flex gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={otherPosition === 'end' ? 'default' : 'outline'}
+                            className="h-6 text-xs px-2"
+                            onClick={() => setOtherPosition('end')}
+                          >
+                            No fim
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={otherPosition === 'start' ? 'default' : 'outline'}
+                            className="h-6 text-xs px-2"
+                            onClick={() => setOtherPosition('start')}
+                          >
+                            No início
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -216,6 +259,30 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
                     </div>
                     {conditionGroup && (
                       <div className="space-y-3">
+                        {/* Action: show or hide */}
+                        <div className="flex items-center gap-2">
+                          <Label className="text-xs">Quando verdadeiro:</Label>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={(conditionGroup.action ?? 'show') === 'show' ? 'default' : 'outline'}
+                              className="h-6 text-xs px-2"
+                              onClick={() => setConditionGroup({ ...conditionGroup, action: 'show' })}
+                            >
+                              Mostrar campo
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={conditionGroup.action === 'hide' ? 'default' : 'outline'}
+                              className="h-6 text-xs px-2"
+                              onClick={() => setConditionGroup({ ...conditionGroup, action: 'hide' })}
+                            >
+                              Ocultar campo
+                            </Button>
+                          </div>
+                        </div>
                         {/* AND/OR toggle */}
                         {conditionGroup.conditions.length > 1 && (
                           <div className="flex items-center gap-2">

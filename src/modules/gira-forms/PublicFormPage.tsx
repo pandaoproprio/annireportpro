@@ -515,28 +515,77 @@ export default function PublicFormPage() {
   const evalCondition = (cond: FieldCondition): boolean => {
     if (!cond.field_id) return true;
     const answer = answers[cond.field_id];
-    const strVal = answer == null ? '' : Array.isArray(answer) ? answer.join(', ') : String(answer);
+    const isArr = Array.isArray(answer);
+    const arrVals = isArr ? (answer as unknown[]).map(v => String(v ?? '')) : [];
+    const strVal = answer == null ? '' : isArr ? arrVals.join(', ') : String(answer);
+    const expected = (cond.value ?? '').toString();
+    const expectedLc = expected.toLowerCase();
+    const strValLc = strVal.toLowerCase();
+    const numVal = Number(strVal.replace(',', '.'));
+    const numExpected = Number(expected.replace(',', '.'));
+    const list = expected.split(',').map(s => s.trim()).filter(Boolean);
+    const listLc = list.map(s => s.toLowerCase());
+
     switch (cond.operator) {
-      case 'equals': return strVal === cond.value;
-      case 'not_equals': return strVal !== cond.value;
-      case 'contains': return strVal.toLowerCase().includes((cond.value || '').toLowerCase());
-      case 'not_empty': return strVal !== '';
-      case 'is_empty': return strVal === '';
-      default: return true;
+      case 'equals':
+        return isArr ? arrVals.includes(expected) : strVal === expected;
+      case 'not_equals':
+        return isArr ? !arrVals.includes(expected) : strVal !== expected;
+      case 'contains':
+        return isArr
+          ? arrVals.some(v => v.toLowerCase().includes(expectedLc))
+          : strValLc.includes(expectedLc);
+      case 'not_contains':
+        return isArr
+          ? !arrVals.some(v => v.toLowerCase().includes(expectedLc))
+          : !strValLc.includes(expectedLc);
+      case 'starts_with':
+        return isArr
+          ? arrVals.some(v => v.toLowerCase().startsWith(expectedLc))
+          : strValLc.startsWith(expectedLc);
+      case 'ends_with':
+        return isArr
+          ? arrVals.some(v => v.toLowerCase().endsWith(expectedLc))
+          : strValLc.endsWith(expectedLc);
+      case 'in_list':
+        return isArr
+          ? arrVals.some(v => listLc.includes(v.toLowerCase()))
+          : listLc.includes(strValLc);
+      case 'not_in_list':
+        return isArr
+          ? !arrVals.some(v => listLc.includes(v.toLowerCase()))
+          : !listLc.includes(strValLc);
+      case 'greater_than':
+        return !isNaN(numVal) && !isNaN(numExpected) && numVal > numExpected;
+      case 'less_than':
+        return !isNaN(numVal) && !isNaN(numExpected) && numVal < numExpected;
+      case 'not_empty':
+        return isArr ? arrVals.length > 0 : strVal !== '';
+      case 'is_empty':
+        return isArr ? arrVals.length === 0 : strVal === '';
+      default:
+        return true;
     }
   };
 
   const isFieldVisible = (field: FormField): boolean => {
-    // Support BOTH `condition` (single rule) and `conditionGroup` (multiple rules with AND/OR logic)
+    // Support BOTH `condition` (single rule) and `conditionGroup` (multiple rules with AND/OR logic + show/hide action)
     const single = field.settings?.condition as FieldCondition | FieldConditionGroup | undefined;
     const group = field.settings?.conditionGroup as FieldConditionGroup | undefined;
 
     const evalSingleOrGroup = (raw: FieldCondition | FieldConditionGroup): boolean => {
-      if ((raw as FieldCondition).field_id) return evalCondition(raw as FieldCondition);
+      if ((raw as FieldCondition).field_id) {
+        // legacy single-condition: always treated as "show if true"
+        return evalCondition(raw as FieldCondition);
+      }
       const g = raw as FieldConditionGroup;
       if (!g.conditions || g.conditions.length === 0) return true;
-      if (g.logic === 'OR') return g.conditions.some(evalCondition);
-      return g.conditions.every(evalCondition);
+      const passed = g.logic === 'OR'
+        ? g.conditions.some(evalCondition)
+        : g.conditions.every(evalCondition);
+      // action: 'show' (default) -> visible when passed; 'hide' -> visible when NOT passed
+      const action = g.action ?? 'show';
+      return action === 'hide' ? !passed : passed;
     };
 
     if (single && !evalSingleOrGroup(single)) return false;
@@ -1727,8 +1776,15 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       return <CepField value={(value as string) || ''} onChange={onChange} onAutoFill={onCepAutoFill} isDark={isDark} />;
     case 'single_select': {
       const allowOther = !!(field.settings?.allowOther);
+      const otherPosition = (field.settings?.otherPosition as 'start' | 'end' | undefined) || 'end';
       const isOtherSelected = typeof value === 'string' && value.startsWith('__other__:');
       const otherText = isOtherSelected ? (value as string).replace('__other__:', '') : '';
+      const otherBlock = allowOther ? (
+        <div className="flex items-center gap-2" key="__other__">
+          <RadioGroupItem value="__other__" id={`${field.id}-other`} />
+          <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+        </div>
+      ) : null;
       return (
         <div className="space-y-2">
           <RadioGroup value={isOtherSelected ? '__other__' : (value as string) || ''} onValueChange={(v) => {
@@ -1738,18 +1794,14 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
               onChange(v);
             }
           }}>
+            {otherBlock && otherPosition === 'start' && otherBlock}
             {options.map((opt, i) => (
               <div key={i} className="flex items-center gap-2">
                 <RadioGroupItem value={opt} id={`${field.id}-${i}`} />
                 <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{opt}</Label>
               </div>
             ))}
-            {allowOther && (
-              <div className="flex items-center gap-2">
-                <RadioGroupItem value="__other__" id={`${field.id}-other`} />
-                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
-              </div>
-            )}
+            {otherBlock && otherPosition === 'end' && otherBlock}
           </RadioGroup>
           {allowOther && isOtherSelected && (
             <Input
@@ -1765,6 +1817,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
     case 'multi_select':
     case 'checkbox': {
       const allowOtherMulti = !!(field.settings?.allowOther);
+      const otherPositionMulti = (field.settings?.otherPosition as 'start' | 'end' | undefined) || 'end';
       const exclusiveOption = (field.settings?.exclusiveOption as string | undefined) || undefined;
       // Single boolean checkbox (no options) — must check BEFORE casting to array
       if (options.length === 0 && !allowOtherMulti) {
@@ -1780,8 +1833,36 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       const isOtherChecked = !!otherEntry;
       const otherTextMulti = otherEntry ? otherEntry.replace('__other__:', '') : '';
       const isExclusiveSelected = exclusiveOption ? selected.includes(exclusiveOption) : false;
+      const otherBlockMulti = allowOtherMulti ? (
+        <React.Fragment key="__other__">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`${field.id}-other`}
+              checked={isOtherChecked}
+              onCheckedChange={(checked) => {
+                const cleared = exclusiveOption ? selected.filter(s => s !== exclusiveOption) : selected;
+                const filtered = cleared.filter(s => !s.startsWith('__other__:'));
+                onChange(checked ? [...filtered, '__other__:'] : filtered);
+              }}
+            />
+            <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+          </div>
+          {isOtherChecked && (
+            <Input
+              value={otherTextMulti}
+              onChange={e => {
+                const filtered = selected.filter(s => !s.startsWith('__other__:'));
+                onChange([...filtered, `__other__:${e.target.value}`]);
+              }}
+              placeholder="Especifique aqui..."
+              className="ml-6"
+            />
+          )}
+        </React.Fragment>
+      ) : null;
       return (
         <div className="space-y-2">
+          {otherBlockMulti && otherPositionMulti === 'start' && otherBlockMulti}
           {options.map((opt, i) => {
             const isThisExclusive = exclusiveOption && opt === exclusiveOption;
             return (
@@ -1805,33 +1886,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
               </div>
             );
           })}
-          {allowOtherMulti && (
-            <>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={`${field.id}-other`}
-                  checked={isOtherChecked}
-                  onCheckedChange={(checked) => {
-                    const cleared = exclusiveOption ? selected.filter(s => s !== exclusiveOption) : selected;
-                    const filtered = cleared.filter(s => !s.startsWith('__other__:'));
-                    onChange(checked ? [...filtered, '__other__:'] : filtered);
-                  }}
-                />
-                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
-              </div>
-              {isOtherChecked && (
-                <Input
-                  value={otherTextMulti}
-                  onChange={e => {
-                    const filtered = selected.filter(s => !s.startsWith('__other__:'));
-                    onChange([...filtered, `__other__:${e.target.value}`]);
-                  }}
-                  placeholder="Especifique aqui..."
-                  className="ml-6"
-                />
-              )}
-            </>
-          )}
+          {otherBlockMulti && otherPositionMulti === 'end' && otherBlockMulti}
           {isExclusiveSelected && (
             <p className="text-xs italic mt-1" style={{ color: 'var(--form-muted)' }}>
               Esta opção desmarca as demais.
