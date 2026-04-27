@@ -9,6 +9,7 @@ import { FormResponsesTab } from './components/FormResponsesTab';
 import { FormDashboardTab } from './components/FormDashboardTab';
 import { FormDesignEditor } from './components/FormDesignEditor';
 import { FormDigestConfig } from './components/FormDigestConfig';
+import { FormErrataDialog } from './components/FormErrataDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -149,6 +150,9 @@ export default function FormBuilderPage() {
         <Button variant="outline" size="sm" className="gap-2" onClick={copyLink}>
           <Share2 className="w-3.5 h-3.5" /> Compartilhar
         </Button>
+        {publicSlug === 'seminario-labrd-baixada' && id && (
+          <FormErrataDialog formId={id} />
+        )}
         <Button onClick={handleSaveForm} disabled={updateForm.isPending} className="gap-2">
           <Save className="w-4 h-4" /> Salvar
         </Button>
