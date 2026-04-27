@@ -50,22 +50,31 @@ function maskCep(value: string): string {
 
 // ─── Description renderer (HTML rico OU markdown legado **texto**) ──
 function renderDescription(text: string): React.ReactNode {
-  // Detecção ampla: qualquer tag HTML (não apenas a whitelist)
-  const HAS_HTML_TAG = /<\/?[a-z][\s\S]*?>/i.test(text);
+  if (!text) return null;
+  // Decodifica HTML entities caso o conteúdo venha escapado (ex.: &lt;p&gt;)
+  let normalized = text;
+  if (/&(lt|gt|amp|quot|#\d+);/i.test(normalized) && !/<[a-z]/i.test(normalized)) {
+    try {
+      const ta = document.createElement('textarea');
+      ta.innerHTML = normalized;
+      normalized = ta.value;
+    } catch {}
+  }
+  // Detecção ampla: qualquer tag HTML
+  const HAS_HTML_TAG = /<\/?[a-z][\s\S]*?>/i.test(normalized);
   if (HAS_HTML_TAG) {
-    const sanitized = sanitizeHtml(text);
-    if (sanitized && sanitized.trim().length > 0) {
-      return (
-        <div
-          className="prose prose-sm max-w-none [&_p]:my-1 [&_strong]:font-bold [&_hr]:my-2"
-          style={{ color: 'inherit' }}
-          dangerouslySetInnerHTML={{ __html: sanitized }}
-        />
-      );
-    }
+    const sanitized = sanitizeHtml(normalized);
+    const finalHtml = sanitized && sanitized.trim().length > 0 ? sanitized : normalized;
+    return (
+      <div
+        className="prose prose-sm max-w-none [&_p]:my-1 [&_p]:leading-relaxed [&_strong]:font-bold [&_hr]:my-2 [&_br]:block"
+        style={{ color: 'inherit' }}
+        dangerouslySetInnerHTML={{ __html: finalHtml }}
+      />
+    );
   }
   // Fallback markdown simples: **texto** -> <strong>texto</strong>
-  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  const parts = normalized.split(/(\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={i}>{part.slice(2, -2)}</strong>;
