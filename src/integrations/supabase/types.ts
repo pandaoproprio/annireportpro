@@ -1476,6 +1476,7 @@ export type Database = {
           form_id: string
           id: string
           qr_token: string | null
+          registration_number: number | null
           respondent_email: string | null
           respondent_name: string | null
           submitted_at: string
@@ -1488,6 +1489,7 @@ export type Database = {
           form_id: string
           id?: string
           qr_token?: string | null
+          registration_number?: number | null
           respondent_email?: string | null
           respondent_name?: string | null
           submitted_at?: string
@@ -1500,6 +1502,7 @@ export type Database = {
           form_id?: string
           id?: string
           qr_token?: string | null
+          registration_number?: number | null
           respondent_email?: string | null
           respondent_name?: string | null
           submitted_at?: string

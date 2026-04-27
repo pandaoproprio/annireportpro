@@ -345,16 +345,26 @@ export default function PublicFormPage() {
 
       let emailRegistrationNumber: number | null = null;
 
-      const { error } = await supabase.from('form_responses').insert({
-        id: responseId,
-        form_id: formId!,
-        respondent_name: respondentName,
-        respondent_email: respondentEmail,
-        checkin_code: checkinCode,
-        qr_token: qrTokenVal,
-        answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
-      } as any);
+      const { data: insertedResponse, error } = await supabase
+        .from('form_responses')
+        .insert({
+          id: responseId,
+          form_id: formId!,
+          respondent_name: respondentName,
+          respondent_email: respondentEmail,
+          checkin_code: checkinCode,
+          qr_token: qrTokenVal,
+          answers: { ...cleanedAnswers, _lgpd_consent: true, _lgpd_consent_at: new Date().toISOString() } as any,
+        } as any)
+        .select('registration_number')
+        .single();
       if (error) throw error;
+
+      // Real per-form sequential number assigned by the database trigger
+      const standaloneServerRegNumber: number | null =
+        typeof (insertedResponse as any)?.registration_number === 'number'
+          ? (insertedResponse as any).registration_number
+          : null;
 
       // Track submitted info for pre-checkin offer on success screen
       setSubmittedInfo({
@@ -396,12 +406,12 @@ export default function PublicFormPage() {
           });
         }
       } else if (showRegNumber) {
-        // Standalone registration number (count-based)
-        const nextStandaloneRegNumber = formResponseCount + 1;
+        // Standalone registration number (DB-assigned, race-safe)
+        const nextStandaloneRegNumber = standaloneServerRegNumber ?? (formResponseCount + 1);
         emailRegistrationNumber = nextStandaloneRegNumber;
         setStandaloneRegNumber(nextStandaloneRegNumber);
       } else {
-        emailRegistrationNumber = formResponseCount + 1;
+        emailRegistrationNumber = standaloneServerRegNumber ?? (formResponseCount + 1);
       }
 
       // ─── Set checkin result for success screen ──────────────
@@ -793,13 +803,27 @@ export default function PublicFormPage() {
   }
 
   if (!form) {
+    const isNetworkError = !!formQuery.error;
     return (
       <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#f5f5f5' }}>
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center space-y-3">
             <AlertCircle className="w-12 h-12 mx-auto" style={{ color: '#999' }} />
-            <h2 className="text-xl font-semibold">Formulário indisponível</h2>
-            <p className="text-sm" style={{ color: '#666' }}>Este formulário não existe ou não está mais ativo.</p>
+            <h2 className="text-xl font-semibold">
+              {isNetworkError ? 'Não foi possível carregar o formulário' : 'Formulário indisponível'}
+            </h2>
+            <p className="text-sm" style={{ color: '#666' }}>
+              {isNetworkError
+                ? 'Verifique sua conexão e tente novamente.'
+                : 'Este formulário não existe ou não está mais ativo.'}
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 px-4 py-2 rounded text-sm font-medium"
+              style={{ background: '#075291', color: '#fff' }}
+            >
+              Tentar novamente
+            </button>
           </CardContent>
         </Card>
       </div>
