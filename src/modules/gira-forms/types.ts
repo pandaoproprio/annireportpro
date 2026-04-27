@@ -33,16 +33,32 @@ export const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   email: 'E-mail',
 };
 
+export type ConditionOperator =
+  | 'equals'
+  | 'not_equals'
+  | 'contains'
+  | 'not_contains'
+  | 'starts_with'
+  | 'ends_with'
+  | 'in_list'
+  | 'not_in_list'
+  | 'greater_than'
+  | 'less_than'
+  | 'not_empty'
+  | 'is_empty';
+
 export interface FieldCondition {
   field_id: string;
-  operator: 'equals' | 'not_equals' | 'contains' | 'not_empty' | 'is_empty';
+  operator: ConditionOperator;
   value?: string;
 }
 
 export type ConditionLogic = 'AND' | 'OR';
+export type ConditionAction = 'show' | 'hide';
 
 export interface FieldConditionGroup {
   logic: ConditionLogic;
+  action?: ConditionAction; // 'show' (default) = mostra se a condição for verdadeira; 'hide' = oculta
   conditions: FieldCondition[];
 }
 
