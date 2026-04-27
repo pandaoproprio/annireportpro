@@ -1833,8 +1833,36 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
       const isOtherChecked = !!otherEntry;
       const otherTextMulti = otherEntry ? otherEntry.replace('__other__:', '') : '';
       const isExclusiveSelected = exclusiveOption ? selected.includes(exclusiveOption) : false;
+      const otherBlockMulti = allowOtherMulti ? (
+        <React.Fragment key="__other__">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id={`${field.id}-other`}
+              checked={isOtherChecked}
+              onCheckedChange={(checked) => {
+                const cleared = exclusiveOption ? selected.filter(s => s !== exclusiveOption) : selected;
+                const filtered = cleared.filter(s => !s.startsWith('__other__:'));
+                onChange(checked ? [...filtered, '__other__:'] : filtered);
+              }}
+            />
+            <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+          </div>
+          {isOtherChecked && (
+            <Input
+              value={otherTextMulti}
+              onChange={e => {
+                const filtered = selected.filter(s => !s.startsWith('__other__:'));
+                onChange([...filtered, `__other__:${e.target.value}`]);
+              }}
+              placeholder="Especifique aqui..."
+              className="ml-6"
+            />
+          )}
+        </React.Fragment>
+      ) : null;
       return (
         <div className="space-y-2">
+          {otherBlockMulti && otherPositionMulti === 'start' && otherBlockMulti}
           {options.map((opt, i) => {
             const isThisExclusive = exclusiveOption && opt === exclusiveOption;
             return (
@@ -1858,33 +1886,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
               </div>
             );
           })}
-          {allowOtherMulti && (
-            <>
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id={`${field.id}-other`}
-                  checked={isOtherChecked}
-                  onCheckedChange={(checked) => {
-                    const cleared = exclusiveOption ? selected.filter(s => s !== exclusiveOption) : selected;
-                    const filtered = cleared.filter(s => !s.startsWith('__other__:'));
-                    onChange(checked ? [...filtered, '__other__:'] : filtered);
-                  }}
-                />
-                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
-              </div>
-              {isOtherChecked && (
-                <Input
-                  value={otherTextMulti}
-                  onChange={e => {
-                    const filtered = selected.filter(s => !s.startsWith('__other__:'));
-                    onChange([...filtered, `__other__:${e.target.value}`]);
-                  }}
-                  placeholder="Especifique aqui..."
-                  className="ml-6"
-                />
-              )}
-            </>
-          )}
+          {otherBlockMulti && otherPositionMulti === 'end' && otherBlockMulti}
           {isExclusiveSelected && (
             <p className="text-xs italic mt-1" style={{ color: 'var(--form-muted)' }}>
               Esta opção desmarca as demais.
