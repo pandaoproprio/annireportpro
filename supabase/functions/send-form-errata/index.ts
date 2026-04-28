@@ -175,10 +175,15 @@ serve(async (req) => {
       }
     };
 
-    const CONCURRENCY = 8;
+    // Resend free-tier limit: 2 req/s. Use 2 paralelos com 1100ms entre lotes.
+    const CONCURRENCY = 2;
+    const DELAY_MS = 1100;
     for (let i = 0; i < recipients.length; i += CONCURRENCY) {
       const batch = recipients.slice(i, i + CONCURRENCY);
       await Promise.all(batch.map(sendOne));
+      if (i + CONCURRENCY < recipients.length) {
+        await new Promise((r) => setTimeout(r, DELAY_MS));
+      }
     }
 
     return new Response(JSON.stringify({ total: recipients.length, sent, failed, results }), {
