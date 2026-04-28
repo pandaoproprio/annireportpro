@@ -578,10 +578,20 @@ export const UserManagement: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={selectedForBulk.size > 0 && selectedForBulk.size === filteredUsers.length}
+                      onCheckedChange={(checked) => {
+                        if (checked) setSelectedForBulk(new Set(filteredUsers.map(u => u.id)));
+                        else setSelectedForBulk(new Set());
+                      }}
+                    />
+                  </TableHead>
                   {loginFilter === 'never_logged' && <TableHead className="w-10"></TableHead>}
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Papel</TableHead>
+                  <TableHead className="hidden xl:table-cell">Senha temporária</TableHead>
                   <TableHead className="hidden lg:table-cell">Membro de Equipe</TableHead>
                   <TableHead className="hidden lg:table-cell">Projeto(s)</TableHead>
                   <TableHead className="hidden md:table-cell">Último acesso</TableHead>
