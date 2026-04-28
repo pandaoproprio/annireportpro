@@ -15,6 +15,21 @@ export interface AdminUser {
   lastSignIn: string | null;
   emailConfirmed: boolean;
   mfaEnabled: boolean;
+  mustChangePassword?: boolean;
+  tempPassword?: string | null;
+  tempPasswordSetAt?: string | null;
+  firstLoginAt?: string | null;
+  activeResetLinkSentAt?: string | null;
+  activeResetLinkExpiresAt?: string | null;
+  activeResetLinkEmailSent?: boolean;
+}
+
+export interface ResetLinkResult {
+  userId: string;
+  email: string;
+  resetUrl?: string;
+  emailSent?: boolean;
+  error?: string;
 }
 
 const ADMIN_USERS_KEY = ['admin-users'];
