@@ -53,11 +53,24 @@ serve(async (req) => {
           seen.add(e);
           return true;
         })
-        .map((r: any) => ({ name: r.respondent_name, email: r.respondent_email }));
+        .map((r: any) => ({ name: r.respondent_name, email: r.respondent_email.trim() }));
+    }
+
+    let alreadySentCount = 0;
+    if (skip_already_sent && !test_email) {
+      const { data: sentRows } = await supabase
+        .from('form_errata_sends')
+        .select('recipient_email')
+        .eq('form_id', form_id)
+        .eq('errata_key', ERRATA_KEY);
+      const sentSet = new Set((sentRows || []).map((r: any) => r.recipient_email.toLowerCase().trim()));
+      const before = recipients.length;
+      recipients = recipients.filter(r => !sentSet.has(r.email.toLowerCase().trim()));
+      alreadySentCount = before - recipients.length;
     }
 
     if (dry_run) {
-      return new Response(JSON.stringify({ total: recipients.length, dry_run: true }), {
+      return new Response(JSON.stringify({ total: recipients.length, already_sent: alreadySentCount, dry_run: true }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
