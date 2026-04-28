@@ -15,8 +15,8 @@ export function isFormsOnlyHost(): boolean {
     if (host.startsWith('forms.')) return true;
 
     // Rotas públicas de formulários DEVEM rodar em modo leve (sem Auth/AppData
-    // pesados) em qualquer host — incluindo relatorios.giraerp.com.br — para
-    // evitar travamentos em mobile/Android com rede instável.
+    // pesados) em qualquer host para evitar travamentos em mobile/Android com
+    // rede instável.
     const path = window.location.pathname;
     if (
       path.startsWith('/f/') ||
