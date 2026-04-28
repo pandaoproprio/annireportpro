@@ -788,17 +788,38 @@ export const UserManagement: React.FC = () => {
               <Input
                 id="new-password"
                 type="password"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 10 caracteres, com maiúscula, número e símbolo"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
+                autoComplete="new-password"
               />
+              <ul className="text-xs text-muted-foreground space-y-0.5 mt-1">
+                <li className={newPassword.length >= 10 ? 'text-green-600' : ''}>• Mínimo 10 caracteres</li>
+                <li className={/[A-Z]/.test(newPassword) ? 'text-green-600' : ''}>• Pelo menos uma letra maiúscula</li>
+                <li className={/[a-z]/.test(newPassword) ? 'text-green-600' : ''}>• Pelo menos uma letra minúscula</li>
+                <li className={/[0-9]/.test(newPassword) ? 'text-green-600' : ''}>• Pelo menos um número</li>
+                <li className={/[^A-Za-z0-9]/.test(newPassword) ? 'text-green-600' : ''}>• Pelo menos um símbolo (!@#$...)</li>
+              </ul>
+              <p className="text-[11px] text-muted-foreground italic">
+                Evite senhas comuns (ex.: "123456", "senha123", "qwerty"). Senhas vazadas em sites públicos serão recusadas pelo sistema.
+              </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsResetPasswordOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleResetPassword} disabled={isLoading || newPassword.length < 6}>
+            <Button
+              onClick={handleResetPassword}
+              disabled={
+                isLoading ||
+                newPassword.length < 10 ||
+                !/[A-Z]/.test(newPassword) ||
+                !/[a-z]/.test(newPassword) ||
+                !/[0-9]/.test(newPassword) ||
+                !/[^A-Za-z0-9]/.test(newPassword)
+              }
+            >
               {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Redefinir Senha
             </Button>

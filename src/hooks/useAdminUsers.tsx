@@ -63,7 +63,21 @@ export const useAdminUsers = () => {
   const updateUserMutation = useMutation({
     mutationFn: async ({ userId, ...updates }: { userId: string; name?: string; email?: string; role?: AdminRole; password?: string; permissions?: string[] }) => {
       const { data, error } = await supabase.functions.invoke('admin-users', { method: 'PATCH', body: { userId, ...updates } });
-      if (error) throw error;
+      if (error) {
+        let friendly = error.message || 'Erro ao atualizar usuário';
+        try {
+          const ctx: any = (error as any).context;
+          if (ctx?.json) {
+            const body = await ctx.json();
+            if (body?.error) friendly = body.error;
+          } else if (ctx?.text) {
+            const txt = await ctx.text();
+            try { const body = JSON.parse(txt); if (body?.error) friendly = body.error; } catch {}
+          }
+        } catch {}
+        throw new Error(friendly);
+      }
+      if ((data as any)?.error) throw new Error((data as any).error);
       return { data, updates };
     },
     onSuccess: (result) => {
