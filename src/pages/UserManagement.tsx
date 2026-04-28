@@ -603,7 +603,13 @@ export const UserManagement: React.FC = () => {
                 {filteredUsers.map((user) => {
                   const reminder = reminderByUserId.get(user.id);
                   return (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.id} data-state={selectedForBulk.has(user.id) ? 'selected' : undefined}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedForBulk.has(user.id)}
+                        onCheckedChange={() => toggleBulk(user.id)}
+                      />
+                    </TableCell>
                     {loginFilter === 'never_logged' && (
                       <TableCell>
                         <Checkbox
@@ -614,11 +620,33 @@ export const UserManagement: React.FC = () => {
                     )}
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {user.email}
-                        {!user.emailConfirmed && (
-                          <Badge variant="outline" className="text-xs">Pendente</Badge>
-                        )}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>{user.email}</span>
+                          {!user.emailConfirmed && (
+                            <Badge variant="outline" className="text-xs">Pendente</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {user.tempPassword && (
+                            <Badge className="text-[10px] h-4 px-1.5 gap-1 bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20">
+                              <KeyRound className="w-2.5 h-2.5" />
+                              Senha temporária
+                            </Badge>
+                          )}
+                          {user.mustChangePassword && (
+                            <Badge className="text-[10px] h-4 px-1.5 gap-1 bg-orange-500/20 text-orange-700 dark:text-orange-300 hover:bg-orange-500/20">
+                              <MailWarning className="w-2.5 h-2.5" />
+                              Troca pendente
+                            </Badge>
+                          )}
+                          {user.activeResetLinkSentAt && (
+                            <Badge className="text-[10px] h-4 px-1.5 gap-1 bg-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20" title={`Enviado em ${format(new Date(user.activeResetLinkSentAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}`}>
+                              <Link2 className="w-2.5 h-2.5" />
+                              Link enviado
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -626,6 +654,23 @@ export const UserManagement: React.FC = () => {
                         {roleLabels[user.role].icon}
                         {roleLabels[user.role].label}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell">
+                      {user.tempPassword ? (
+                        <div className="flex items-center gap-1.5">
+                          <code className="text-xs font-mono bg-muted px-2 py-1 rounded select-all">
+                            {revealedTemp.has(user.id) ? user.tempPassword : '••••••••'}
+                          </code>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleRevealTemp(user.id)} title={revealedTemp.has(user.id) ? 'Ocultar' : 'Mostrar'}>
+                            {revealedTemp.has(user.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyTempPassword(user.id, user.tempPassword!)} title="Copiar">
+                            {copiedTemp === user.id ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {(() => {
