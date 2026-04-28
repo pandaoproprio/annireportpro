@@ -45,7 +45,7 @@ interface ReminderRecord {
 export const UserManagement: React.FC = () => {
   const { role } = useAuth();
   const { toast } = useToast();
-  const { users, isLoading, fetchUsers, createUser, updateUser, deleteUser, disableMfa } = useAdminUsers();
+  const { users, isLoading, fetchUsers, createUser, updateUser, deleteUser, disableMfa, generateResetLink, forceChangePassword } = useAdminUsers();
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
