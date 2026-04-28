@@ -1698,48 +1698,74 @@ export default function PublicFormPage() {
         </AnimatePresence>
 
         {/* Navigation Buttons */}
-        <div className="flex gap-3 pt-2 pb-4">
-          {!isFirstStep && (
-            <motion.button
-              type="button"
-              onClick={goPrev}
-              className="flex-1 py-3 rounded-lg font-semibold text-sm border-2 hover:opacity-80 transition-all flex items-center justify-center gap-2"
-              style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)', background: 'var(--form-card-bg)' }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <ChevronLeft className="w-4 h-4" /> Anterior
-            </motion.button>
-          )}
-
-          {isLastStep ? (
-            <motion.button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitMutation.isPending}
-              className="flex-1 py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              style={{ background: 'var(--form-button)' }}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {submitMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
-              ) : (
-                <><Send className="w-4 h-4" /> Enviar Resposta</>
+        {(() => {
+          // Calcula campos obrigatórios pendentes nesta etapa para sinalizar
+          // visualmente o botão (não bloqueia o clique — ainda chama validateStep
+          // que mostra erros inline).
+          const stepInputs = activeStep.type === 'section'
+            ? activeStep.fields.filter(f => isFieldVisible(f) && f.type !== 'info_text' && f.type !== 'section_header' && f.required)
+            : [];
+          const stepMissing = stepInputs.filter(f => {
+            const v = answers[f.id];
+            return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
+          });
+          const hasMissing = stepMissing.length > 0;
+          const lgpdMissing = activeStep.type === 'lgpd_review' && !lgpdConsent;
+          const blocked = hasMissing || lgpdMissing;
+          const tooltip = lgpdMissing
+            ? 'Aceite os termos para enviar.'
+            : hasMissing
+              ? `Preencha ${stepMissing.length} ${stepMissing.length === 1 ? 'campo obrigatório' : 'campos obrigatórios'} para continuar.`
+              : '';
+          return (
+            <div className="flex gap-3 pt-2 pb-4">
+              {!isFirstStep && (
+                <motion.button
+                  type="button"
+                  onClick={goPrev}
+                  className="flex-1 min-h-[48px] py-3 rounded-lg font-semibold text-sm border-2 hover:opacity-80 transition-all flex items-center justify-center gap-2"
+                  style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)', background: 'var(--form-card-bg)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <ChevronLeft className="w-4 h-4" /> Anterior
+                </motion.button>
               )}
-            </motion.button>
-          ) : (
-            <motion.button
-              type="button"
-              onClick={goNext}
-              className="flex-1 py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
-              style={{ background: 'var(--form-button)' }}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Próxima Etapa <ChevronRight className="w-4 h-4" />
-            </motion.button>
-          )}
-        </div>
+
+              {isLastStep ? (
+                <motion.button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitMutation.isPending}
+                  title={tooltip || undefined}
+                  aria-disabled={blocked}
+                  className="flex-1 min-h-[48px] py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ background: 'var(--form-button)', opacity: blocked ? 0.55 : 1, cursor: blocked ? 'not-allowed' : 'pointer' }}
+                  whileHover={blocked ? undefined : { scale: 1.01 }}
+                  whileTap={blocked ? undefined : { scale: 0.98 }}
+                >
+                  {submitMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Enviar Resposta</>
+                  )}
+                </motion.button>
+              ) : (
+                <motion.button
+                  type="button"
+                  onClick={goNext}
+                  title={tooltip || undefined}
+                  aria-disabled={blocked}
+                  className="flex-1 min-h-[48px] py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                  style={{ background: 'var(--form-button)', opacity: blocked ? 0.55 : 1, cursor: blocked ? 'not-allowed' : 'pointer' }}
+                  whileHover={blocked ? undefined : { scale: 1.01 }}
+                  whileTap={blocked ? undefined : { scale: 0.98 }}
+                >
+                  Próxima Etapa <ChevronRight className="w-4 h-4" />
+                </motion.button>
+              )}
+            </div>
+          );
+        })()}
 
         <p className="text-center text-xs pb-4" style={{ color: 'var(--form-muted)' }}>
           Desenvolvido com <span className="font-semibold">GIRA Formulários</span>
