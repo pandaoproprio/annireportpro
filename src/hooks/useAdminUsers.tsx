@@ -135,7 +135,54 @@ export const useAdminUsers = () => {
     },
   });
 
-  const isMutating = createUserMutation.isPending || updateUserMutation.isPending || deleteUserMutation.isPending || disableMfaMutation.isPending;
+  // ===== Restored password management actions =====
+  const setTempPasswordMutation = useMutation({
+    mutationFn: async ({ userId, password }: { userId: string; password: string }) => {
+      const { data, error } = await supabase.functions.invoke('admin-users?action=set-temp-password', {
+        method: 'POST',
+        body: { userId, password },
+      });
+      if (error) throw new Error((data as any)?.error || error.message);
+      if ((data as any)?.error) throw new Error((data as any).error);
+      return data;
+    },
+    onSuccess: () => {
+      toast({ title: 'Senha temporária definida', description: 'O usuário deverá trocar a senha no próximo acesso.' });
+      invalidate();
+    },
+    onError: (err: Error) => toast({ variant: 'destructive', title: 'Erro', description: err.message }),
+  });
+
+  const forceChangeMutation = useMutation({
+    mutationFn: async (params: { userId?: string; userIds?: string[] }) => {
+      const { data, error } = await supabase.functions.invoke('admin-users?action=force-change', {
+        method: 'POST',
+        body: params,
+      });
+      if (error) throw new Error((data as any)?.error || error.message);
+      return data;
+    },
+    onSuccess: (data: any) => {
+      toast({ title: 'Troca solicitada', description: `${data?.count || 1} usuário(s) precisarão trocar a senha no próximo acesso.` });
+      invalidate();
+    },
+    onError: (err: Error) => toast({ variant: 'destructive', title: 'Erro', description: err.message }),
+  });
+
+  const generateResetLinkMutation = useMutation({
+    mutationFn: async (params: { userId?: string; userIds?: string[]; sendEmail: boolean; redirectTo?: string }) => {
+      const { data, error } = await supabase.functions.invoke('admin-users?action=generate-reset-link', {
+        method: 'POST',
+        body: params,
+      });
+      if (error) throw new Error((data as any)?.error || error.message);
+      return data as { success: boolean; results: ResetLinkResult[] };
+    },
+    onSuccess: () => invalidate(),
+    onError: (err: Error) => toast({ variant: 'destructive', title: 'Erro', description: err.message }),
+  });
+
+  const isMutating = createUserMutation.isPending || updateUserMutation.isPending || deleteUserMutation.isPending || disableMfaMutation.isPending || setTempPasswordMutation.isPending || forceChangeMutation.isPending || generateResetLinkMutation.isPending;
 
   return {
     users: usersQuery.data || [],
@@ -173,6 +220,30 @@ export const useAdminUsers = () => {
         return { success: true };
       } catch (error) {
         return { success: false, error };
+      }
+    },
+    setTempPassword: async (userId: string, password: string) => {
+      try {
+        await setTempPasswordMutation.mutateAsync({ userId, password });
+        return { success: true };
+      } catch (error) {
+        return { success: false, error };
+      }
+    },
+    forceChangePassword: async (params: { userId?: string; userIds?: string[] }) => {
+      try {
+        await forceChangeMutation.mutateAsync(params);
+        return { success: true };
+      } catch (error) {
+        return { success: false, error };
+      }
+    },
+    generateResetLink: async (params: { userId?: string; userIds?: string[]; sendEmail: boolean; redirectTo?: string }) => {
+      try {
+        const data = await generateResetLinkMutation.mutateAsync(params);
+        return { success: true, results: data.results };
+      } catch (error) {
+        return { success: false, error, results: [] as ResetLinkResult[] };
       }
     },
   };
