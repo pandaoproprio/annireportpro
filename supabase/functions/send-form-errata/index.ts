@@ -16,7 +16,8 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    const { form_id, dry_run, test_email } = await req.json();
+    const { form_id, dry_run, test_email, skip_already_sent } = await req.json();
+    const ERRATA_KEY = 'labrd-data-2026-04-29';
     if (!form_id) {
       return new Response(JSON.stringify({ error: 'form_id obrigatório' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
