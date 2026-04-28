@@ -2523,6 +2523,45 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_links: {
+        Row: {
+          created_at: string
+          created_by: string
+          email_sent: boolean
+          email_sent_at: string | null
+          expires_at: string
+          id: string
+          reset_url: string
+          used_at: string | null
+          user_email: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          email_sent?: boolean
+          email_sent_at?: string | null
+          expires_at: string
+          id?: string
+          reset_url: string
+          used_at?: string | null
+          user_email: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          email_sent?: boolean
+          email_sent_at?: string | null
+          expires_at?: string
+          id?: string
+          reset_url?: string
+          used_at?: string | null
+          user_email?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       performance_config: {
         Row: {
           created_at: string
@@ -2653,6 +2692,9 @@ export type Database = {
           name: string
           password_changed_at: string | null
           suspended_at: string | null
+          temp_password_plaintext: string | null
+          temp_password_set_at: string | null
+          temp_password_set_by: string | null
           updated_at: string
           user_id: string
         }
@@ -2669,6 +2711,9 @@ export type Database = {
           name: string
           password_changed_at?: string | null
           suspended_at?: string | null
+          temp_password_plaintext?: string | null
+          temp_password_set_at?: string | null
+          temp_password_set_by?: string | null
           updated_at?: string
           user_id: string
         }
@@ -2685,6 +2730,9 @@ export type Database = {
           name?: string
           password_changed_at?: string | null
           suspended_at?: string | null
+          temp_password_plaintext?: string | null
+          temp_password_set_at?: string | null
+          temp_password_set_by?: string | null
           updated_at?: string
           user_id?: string
         }
