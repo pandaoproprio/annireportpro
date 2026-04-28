@@ -55,9 +55,7 @@ export const UserManagement: React.FC = () => {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [permissionsUser, setPermissionsUser] = useState<AdminUser | null>(null);
   const [createMethod, setCreateMethod] = useState<'invite' | 'direct'>('invite');
-  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
-  const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null);
-  const [newPassword, setNewPassword] = useState('');
+  
   
   // Filter state
   const [loginFilter, setLoginFilter] = useState<LoginFilter>('all');
