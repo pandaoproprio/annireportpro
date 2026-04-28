@@ -678,9 +678,7 @@ export const UserManagement: React.FC = () => {
                             <ShieldCheck className="w-4 h-4" />
                           </Button>
                         )}
-                         <Button variant="ghost" size="icon" title="Resetar senha" onClick={() => { setResetPasswordUser(user); setNewPassword(''); setIsResetPasswordOpen(true); }}>
-                           <KeyRound className="w-4 h-4" />
-                         </Button>
+                         <UserPasswordActionsMenu user={user} />
                          {role === 'SUPER_ADMIN' && (
                            user.mfaEnabled ? (
                              <AlertDialog>
