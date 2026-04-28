@@ -214,6 +214,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     
     if (!error && data.user) {
+      // Atualiza o contexto imediatamente para evitar corrida entre o navigate('/')
+      // do login e o ProtectedRoute, que poderia ver user=null e devolver para /login.
+      setSession(data.session);
+      setUser(data.user);
+      setIsLoading(false);
+
       // Check if blocked by login attempts
       const { data: prof } = await supabase
         .from('profiles')
@@ -231,6 +237,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         await supabase.auth.signOut();
         return { error: new Error('Senha temporária expirada. Contate o administrador para redefinir sua senha.') };
       }
+
+      await trackLogin(data.user.id);
     }
     
     return { error };
