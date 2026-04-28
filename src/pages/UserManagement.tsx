@@ -66,6 +66,57 @@ export const UserManagement: React.FC = () => {
   const [selectedForReminder, setSelectedForReminder] = useState<Set<string>>(new Set());
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   const [reminderRecords, setReminderRecords] = useState<ReminderRecord[]>([]);
+
+  // Bulk password actions
+  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [revealedTemp, setRevealedTemp] = useState<Set<string>>(new Set());
+  const [copiedTemp, setCopiedTemp] = useState<string | null>(null);
+
+  const toggleBulk = (id: string) => {
+    setSelectedForBulk(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const toggleRevealTemp = (id: string) => {
+    setRevealedTemp(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const copyTempPassword = async (id: string, value: string) => {
+    await navigator.clipboard.writeText(value);
+    setCopiedTemp(id);
+    setTimeout(() => setCopiedTemp(null), 1500);
+  };
+
+  const handleBulkResetLink = async () => {
+    const ids = Array.from(selectedForBulk);
+    if (ids.length === 0) return;
+    const r = await generateResetLink({ userIds: ids, sendEmail: true });
+    if (r.success) {
+      const sent = r.results.filter(x => x.emailSent).length;
+      toast({ title: 'Links de reset gerados', description: `${ids.length} link(s) gerado(s). ${sent} e-mail(s) enviado(s).` });
+      setSelectedForBulk(new Set());
+      setIsBulkOpen(false);
+    }
+  };
+
+  const handleBulkForceChange = async () => {
+    const ids = Array.from(selectedForBulk);
+    if (ids.length === 0) return;
+    const r = await forceChangePassword({ userIds: ids });
+    if (r.success) {
+      setSelectedForBulk(new Set());
+      setIsBulkOpen(false);
+    }
+  };
+
   
   // Form state
   const [email, setEmail] = useState('');
