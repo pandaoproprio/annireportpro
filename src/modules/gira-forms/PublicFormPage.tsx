@@ -1033,6 +1033,49 @@ export default function PublicFormPage() {
     submitMutation.mutate();
   };
 
+  // Sign volunteer term — runs BEFORE form_response insert. If it fails,
+  // submission is blocked and user can retry.
+  const handleSignTerm = useCallback(async () => {
+    if (isSigningTerm || signedTermId) return;
+    if (!orgSettings || !formId) return;
+
+    const respondentName = nameFieldId ? String(answers[nameFieldId] || '').trim() : '';
+    const respondentEmail = emailFieldId ? String(answers[emailFieldId] || '').trim() : '';
+    const respondentCpf = cpfFieldId ? String(answers[cpfFieldId] || '').trim() : '';
+    // tenta achar campo cidade/estado
+    const cidadeField = fields.find(f => /munic[ií]pio.*uf|cidade.*estado|cidade/i.test(f.label));
+    const cidadeEstado = cidadeField ? String(answers[cidadeField.id] || '').trim() : '';
+
+    setIsSigningTerm(true);
+    try {
+      const result = await signAndPersistTerm({
+        org: orgSettings,
+        volunteer: {
+          nome: respondentName,
+          cpf: respondentCpf,
+          email: respondentEmail,
+          cidadeEstado,
+        },
+        formId,
+        formTitle: form?.title,
+        formResponseId: null,
+        metodo: termValue.metodo,
+        signatureImage: termValue.signatureImage,
+        signatureText: termValue.signatureText,
+      });
+      setSignedTermId(result.termoId);
+      toast.success('Termo assinado com sucesso! Avance para enviar a inscrição.');
+      // avança automaticamente para a próxima etapa (Revisão e Envio)
+      setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1));
+      scrollToTop();
+    } catch (e: any) {
+      console.error('[volunteer-term] sign failed:', e);
+      toast.error(`Não foi possível gerar o termo: ${e?.message || e}. Tente novamente.`);
+    } finally {
+      setIsSigningTerm(false);
+    }
+  }, [isSigningTerm, signedTermId, orgSettings, formId, form, fields, answers, nameFieldId, emailFieldId, cpfFieldId, termValue, totalSteps]);
+
   const updateAnswer = useCallback((fieldId: string, value: unknown) => {
     setAnswers(prev => ({ ...prev, [fieldId]: value }));
     setValidationErrors(prev => {
