@@ -564,6 +564,7 @@ Deno.serve(async (req) => {
       }
 
       let userData;
+      let reusedExistingUser = false;
 
       if (effectiveSendInvite) {
         const { data, error } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
@@ -572,13 +573,21 @@ Deno.serve(async (req) => {
         });
         if (error) {
           if (error.message?.includes('already been registered')) {
-            return new Response(JSON.stringify({ error: 'Este e-mail já está cadastrado no sistema' }), {
-              status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+            const { data: existingUsers, error: lookupError } = await supabaseAdmin.auth.admin.listUsers();
+            if (lookupError) throw lookupError;
+            userData = existingUsers.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+            reusedExistingUser = Boolean(userData);
+            if (!userData) {
+              return new Response(JSON.stringify({ error: 'Este e-mail já está cadastrado no sistema' }), {
+                status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+          } else {
+            throw error;
           }
-          throw error;
+        } else {
+          userData = data.user;
         }
-        userData = data.user;
       } else {
         if (!password || password.length < 6) {
           return new Response(JSON.stringify({ error: 'Password must be at least 6 characters' }), {
@@ -592,16 +601,40 @@ Deno.serve(async (req) => {
         });
         if (error) {
           if (error.message?.includes('already been registered')) {
-            return new Response(JSON.stringify({ error: 'Este e-mail já está cadastrado no sistema' }), {
-              status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            });
+            const { data: existingUsers, error: lookupError } = await supabaseAdmin.auth.admin.listUsers();
+            if (lookupError) throw lookupError;
+            userData = existingUsers.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+            reusedExistingUser = Boolean(userData);
+            if (!userData) {
+              return new Response(JSON.stringify({ error: 'Este e-mail já está cadastrado no sistema' }), {
+                status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+              });
+            }
+          } else {
+            throw error;
           }
-          throw error;
+        } else {
+          userData = data.user;
         }
-        userData = data.user;
       }
 
       if (userData) {
+        if (reusedExistingUser && password && !effectiveSendInvite) {
+          const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(userData.id, { password });
+          if (pwError) {
+            const msg = (pwError.message || '').toLowerCase();
+            let friendly = pwError.message || 'Erro ao redefinir senha';
+            if (msg.includes('weak') || msg.includes('pwned') || msg.includes('known')) {
+              friendly = 'Esta senha é muito comum e foi encontrada em vazamentos públicos. Escolha uma senha mais forte e única.';
+            } else if (msg.includes('should be at least') || msg.includes('at least')) {
+              friendly = 'A senha não atende ao tamanho mínimo exigido.';
+            }
+            return new Response(JSON.stringify({ error: friendly }), {
+              status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+        }
+
         // Update role from default 'usuario' to requested role
         await supabaseAdmin.from('user_roles').update({ role }).eq('user_id', userData.id);
         // Populate permissions for the role
@@ -658,7 +691,7 @@ Deno.serve(async (req) => {
                   .update({
                     temp_password_plaintext: password,
                     temp_password_set_at: new Date().toISOString(),
-                    temp_password_set_by: callerUser.id,
+                    temp_password_set_by: callingUser.id,
                     must_change_password: true,
                   })
                   .eq('user_id', userData.id);
