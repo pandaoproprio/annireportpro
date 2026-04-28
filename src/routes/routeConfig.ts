@@ -19,6 +19,7 @@ const ReportV2Page = lazy(() => import('@/modules/reports-v2/ReportV2Page'));
 const ReportObjetoIIPage = lazy(() => import('@/modules/report-objeto-ii/ReportObjetoIIPage'));
 const FormsListPage = lazy(() => import('@/modules/gira-forms/FormsListPage'));
 const FormBuilderPage = lazy(() => import('@/modules/gira-forms/FormBuilderPage'));
+const VolunteerTermsAdminPage = lazy(() => import('@/modules/gira-forms/volunteer-term/VolunteerTermsAdminPage'));
 const EventsListPage = lazy(() => import('@/modules/gira-eventos/EventsListPage'));
 const EventDetailPage = lazy(() => import('@/modules/gira-eventos/EventDetailPage'));
 const AutomatoDashboard = lazy(() => import('@/pages/AutomatoDashboard'));
@@ -67,6 +68,7 @@ export const protectedRoutes: RouteEntry[] = [
   { path: '/report-v2', element: ReportV2Page, permission: 'report_object' },
   { path: '/report-objeto-ii', element: ReportObjetoIIPage, permission: 'report_object' },
   { path: '/forms', element: FormsListPage, permission: 'forms_view' },
+  { path: '/forms/voluntarios/termos', element: VolunteerTermsAdminPage, permission: 'forms_view' },
   { path: '/forms/:id', element: FormBuilderPage, permission: 'forms_view' },
   { path: '/eventos', element: EventsListPage, permission: 'events_view' },
   { path: '/eventos/:id', element: EventDetailPage, permission: 'events_view' },
