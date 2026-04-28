@@ -2031,7 +2031,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
 
       const otherBlockMulti = (
         <React.Fragment>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-h-[44px] py-1">
             <Checkbox
               id={`${field.id}-other`}
               checked={isOtherChecked}
@@ -2041,7 +2041,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
                 onChange(checked ? [...filtered, '__other__:'] : filtered);
               }}
             />
-            <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+            <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer flex-1 py-2">Outros (especifique)</Label>
           </div>
           {isOtherChecked && (
             <Input
