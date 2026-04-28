@@ -152,7 +152,18 @@ serve(async (req) => {
             html: buildHtml(firstName),
           }),
         });
-        if (res.ok) { sent++; results.push({ email: r.email, success: true }); }
+        if (res.ok) {
+          sent++;
+          const json = await res.json().catch(() => ({}));
+          results.push({ email: r.email, success: true });
+          if (!test_email) {
+            await supabase.from('form_errata_sends').upsert({
+              form_id, errata_key: ERRATA_KEY,
+              recipient_email: r.email.toLowerCase().trim(),
+              resend_id: json?.id ?? null,
+            }, { onConflict: 'form_id,errata_key,recipient_email' });
+          }
+        }
         else {
           failed++;
           const txt = await res.text();
