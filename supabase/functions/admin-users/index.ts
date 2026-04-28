@@ -233,25 +233,14 @@ Deno.serve(async (req) => {
           let emailSent = false;
 
           if (sendEmail) {
-            // Reaproveita send-password-reset, se existir; senão deixa false
             try {
-              const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-              const r = await fetch(`${supabaseUrl}/functions/v1/send-password-reset`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${supabaseAnonKey}`,
-                },
-                body: JSON.stringify({
-                  to: targetEmail,
-                  resetUrl,
-                  expiresInHours: 24,
-                  name: authUser.user.user_metadata?.name || targetEmail.split('@')[0],
-                }),
+              const { error: emailErr } = await supabaseAdmin.auth.resetPasswordForEmail(targetEmail, {
+                redirectTo,
               });
-              emailSent = r.ok;
+              emailSent = !emailErr;
+              if (emailErr) console.error('resetPasswordForEmail failed:', emailErr.message);
             } catch (e) {
-              console.error('send-password-reset failed:', e);
+              console.error('resetPasswordForEmail threw:', e);
             }
           }
 
