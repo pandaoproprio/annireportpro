@@ -155,6 +155,32 @@ export default function PublicFormPage() {
   const [currentStep, setCurrentStep] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Volunteer term state
+  const [termValue, setTermValue] = useState<VolunteerTermStepValue>({
+    metodo: 'canvas', scrolledToEnd: false, lgpdAccepted: false,
+  });
+  const [signedTermId, setSignedTermId] = useState<string | null>(null);
+  const [isSigningTerm, setIsSigningTerm] = useState(false);
+
+  // Org legal settings (silently degrades to placeholders if not configured)
+  const orgSettingsQuery = useQuery({
+    queryKey: ['org-legal-settings'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('organization_legal_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      return (data as unknown as OrgLegalSettings) || {
+        id: '', is_active: false,
+        razao_social: null, cnpj: null, endereco: null, cidade: null, estado: null,
+        email_administrativo: null, logo_url: null,
+      };
+    },
+    staleTime: 60_000,
+  });
+  const orgSettings = orgSettingsQuery.data;
+
   const isUuid = id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) : false;
 
   const formQuery = useQuery({
