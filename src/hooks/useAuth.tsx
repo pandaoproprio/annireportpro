@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     const { data: prof } = await supabase
       .from('profiles')
-      .select('must_change_password, login_attempts_without_change, first_login_at')
+      .select('must_change_password, login_attempts_without_change, first_login_at, password_changed_at, last_login_at, email, name')
       .eq('user_id', userId)
       .single();
 
@@ -108,6 +108,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!prof.first_login_at) {
         updates.first_login_at = now;
       }
+    }
+
+    // Detecta login após redefinição de senha: password_changed_at > last_login_at
+    const pwdChanged = prof.password_changed_at ? new Date(prof.password_changed_at).getTime() : 0;
+    const lastLogin = prof.last_login_at ? new Date(prof.last_login_at).getTime() : 0;
+    if (pwdChanged > 0 && pwdChanged > lastLogin) {
+      supabase.functions.invoke('notify-admin-password-event', {
+        body: { event: 'login_after_reset', userEmail: prof.email, userName: prof.name, timestamp: now },
+      }).catch(() => {});
     }
 
     await supabase.from('profiles').update(updates).eq('user_id', userId);

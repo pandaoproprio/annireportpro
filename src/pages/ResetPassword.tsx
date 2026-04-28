@@ -97,6 +97,17 @@ export const ResetPassword = () => {
         return;
       }
 
+      // Marca password_changed_at e dispara alerta admin
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from('profiles')
+          .update({ password_changed_at: new Date().toISOString(), must_change_password: false, login_attempts_without_change: 0 })
+          .eq('user_id', user.id);
+        supabase.functions.invoke('notify-admin-password-event', {
+          body: { event: 'password_changed', userEmail: user.email, userName: user.user_metadata?.name, timestamp: new Date().toISOString() },
+        }).catch(() => {});
+      }
+
       setResetSuccess(true);
       toast({
         title: 'Sucesso',
