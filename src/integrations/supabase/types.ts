@@ -1363,6 +1363,33 @@ export type Database = {
           },
         ]
       }
+      form_errata_sends: {
+        Row: {
+          errata_key: string
+          form_id: string
+          id: string
+          recipient_email: string
+          resend_id: string | null
+          sent_at: string
+        }
+        Insert: {
+          errata_key: string
+          form_id: string
+          id?: string
+          recipient_email: string
+          resend_id?: string | null
+          sent_at?: string
+        }
+        Update: {
+          errata_key?: string
+          form_id?: string
+          id?: string
+          recipient_email?: string
+          resend_id?: string | null
+          sent_at?: string
+        }
+        Relationships: []
+      }
       form_fields: {
         Row: {
           created_at: string

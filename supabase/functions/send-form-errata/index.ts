@@ -16,7 +16,8 @@ serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-    const { form_id, dry_run, test_email } = await req.json();
+    const { form_id, dry_run, test_email, skip_already_sent } = await req.json();
+    const ERRATA_KEY = 'labrd-data-2026-04-29';
     if (!form_id) {
       return new Response(JSON.stringify({ error: 'form_id obrigatório' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -52,11 +53,24 @@ serve(async (req) => {
           seen.add(e);
           return true;
         })
-        .map((r: any) => ({ name: r.respondent_name, email: r.respondent_email }));
+        .map((r: any) => ({ name: r.respondent_name, email: r.respondent_email.trim() }));
+    }
+
+    let alreadySentCount = 0;
+    if (skip_already_sent && !test_email) {
+      const { data: sentRows } = await supabase
+        .from('form_errata_sends')
+        .select('recipient_email')
+        .eq('form_id', form_id)
+        .eq('errata_key', ERRATA_KEY);
+      const sentSet = new Set((sentRows || []).map((r: any) => r.recipient_email.toLowerCase().trim()));
+      const before = recipients.length;
+      recipients = recipients.filter(r => !sentSet.has(r.email.toLowerCase().trim()));
+      alreadySentCount = before - recipients.length;
     }
 
     if (dry_run) {
-      return new Response(JSON.stringify({ total: recipients.length, dry_run: true }), {
+      return new Response(JSON.stringify({ total: recipients.length, already_sent: alreadySentCount, dry_run: true }), {
         status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -138,7 +152,18 @@ serve(async (req) => {
             html: buildHtml(firstName),
           }),
         });
-        if (res.ok) { sent++; results.push({ email: r.email, success: true }); }
+        if (res.ok) {
+          sent++;
+          const json = await res.json().catch(() => ({}));
+          results.push({ email: r.email, success: true });
+          if (!test_email) {
+            await supabase.from('form_errata_sends').upsert({
+              form_id, errata_key: ERRATA_KEY,
+              recipient_email: r.email.toLowerCase().trim(),
+              resend_id: json?.id ?? null,
+            }, { onConflict: 'form_id,errata_key,recipient_email' });
+          }
+        }
         else {
           failed++;
           const txt = await res.text();
@@ -150,10 +175,15 @@ serve(async (req) => {
       }
     };
 
-    const CONCURRENCY = 8;
+    // Resend free-tier limit: 2 req/s. Use 2 paralelos com 1100ms entre lotes.
+    const CONCURRENCY = 2;
+    const DELAY_MS = 1100;
     for (let i = 0; i < recipients.length; i += CONCURRENCY) {
       const batch = recipients.slice(i, i + CONCURRENCY);
       await Promise.all(batch.map(sendOne));
+      if (i + CONCURRENCY < recipients.length) {
+        await new Promise((r) => setTimeout(r, DELAY_MS));
+      }
     }
 
     return new Response(JSON.stringify({ total: recipients.length, sent, failed, results }), {
