@@ -8,6 +8,7 @@ const corsHeaders = {
 const ALLOWED_REDIRECT_ORIGINS = [
   'https://annireportpro.lovable.app',
   'https://id-preview--a407ccf0-0b77-49f0-a842-b87f8ef15ed4.lovable.app',
+  'https://relatorios.giraerp.com.br',
 ];
 
 function isAllowedRedirect(url: string): boolean {
