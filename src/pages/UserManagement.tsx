@@ -55,9 +55,7 @@ export const UserManagement: React.FC = () => {
   const [isPermissionsOpen, setIsPermissionsOpen] = useState(false);
   const [permissionsUser, setPermissionsUser] = useState<AdminUser | null>(null);
   const [createMethod, setCreateMethod] = useState<'invite' | 'direct'>('invite');
-  const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
-  const [resetPasswordUser, setResetPasswordUser] = useState<AdminUser | null>(null);
-  const [newPassword, setNewPassword] = useState('');
+  
   
   // Filter state
   const [loginFilter, setLoginFilter] = useState<LoginFilter>('all');
@@ -257,15 +255,6 @@ export const UserManagement: React.FC = () => {
     await deleteUser(userId);
   };
 
-  const handleResetPassword = async () => {
-    if (!resetPasswordUser || !newPassword) return;
-    const result = await updateUser(resetPasswordUser.id, { password: newPassword });
-    if (result.success) {
-      setIsResetPasswordOpen(false);
-      setResetPasswordUser(null);
-      setNewPassword('');
-    }
-  };
 
   const openEdit = (user: AdminUser) => {
     setEditingUser(user);
@@ -474,6 +463,30 @@ export const UserManagement: React.FC = () => {
         </Dialog>
       </div>
 
+      {/* Bulk password actions banner */}
+      {selectedForBulk.size > 0 && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium">
+              {selectedForBulk.size} usuário(s) selecionado(s) para ações de senha
+            </span>
+            <div className="ml-auto flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => setSelectedForBulk(new Set())}>
+                Limpar seleção
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleBulkForceChange} disabled={isLoading}>
+                <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+                Forçar troca no próximo login
+              </Button>
+              <Button size="sm" onClick={handleBulkResetLink} disabled={isLoading}>
+                <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                Gerar link de reset + enviar e-mail
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filter & Reminder Banner */}
       <Card>
         <CardContent className="pt-4 pb-3">
@@ -554,10 +567,20 @@ export const UserManagement: React.FC = () => {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10">
+                    <Checkbox
+                      checked={selectedForBulk.size > 0 && selectedForBulk.size === filteredUsers.length}
+                      onCheckedChange={(checked) => {
+                        if (checked) setSelectedForBulk(new Set(filteredUsers.map(u => u.id)));
+                        else setSelectedForBulk(new Set());
+                      }}
+                    />
+                  </TableHead>
                   {loginFilter === 'never_logged' && <TableHead className="w-10"></TableHead>}
                   <TableHead>Nome</TableHead>
                   <TableHead>E-mail</TableHead>
                   <TableHead>Papel</TableHead>
+                  <TableHead className="hidden xl:table-cell">Senha temporária</TableHead>
                   <TableHead className="hidden lg:table-cell">Membro de Equipe</TableHead>
                   <TableHead className="hidden lg:table-cell">Projeto(s)</TableHead>
                   <TableHead className="hidden md:table-cell">Último acesso</TableHead>
@@ -569,7 +592,13 @@ export const UserManagement: React.FC = () => {
                 {filteredUsers.map((user) => {
                   const reminder = reminderByUserId.get(user.id);
                   return (
-                  <TableRow key={user.id}>
+                  <TableRow key={user.id} data-state={selectedForBulk.has(user.id) ? 'selected' : undefined}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedForBulk.has(user.id)}
+                        onCheckedChange={() => toggleBulk(user.id)}
+                      />
+                    </TableCell>
                     {loginFilter === 'never_logged' && (
                       <TableCell>
                         <Checkbox
@@ -580,11 +609,33 @@ export const UserManagement: React.FC = () => {
                     )}
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        {user.email}
-                        {!user.emailConfirmed && (
-                          <Badge variant="outline" className="text-xs">Pendente</Badge>
-                        )}
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>{user.email}</span>
+                          {!user.emailConfirmed && (
+                            <Badge variant="outline" className="text-xs">Pendente</Badge>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {user.tempPassword && (
+                            <Badge className="text-[10px] h-4 px-1.5 gap-1 bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-500/20">
+                              <KeyRound className="w-2.5 h-2.5" />
+                              Senha temporária
+                            </Badge>
+                          )}
+                          {user.mustChangePassword && (
+                            <Badge className="text-[10px] h-4 px-1.5 gap-1 bg-orange-500/20 text-orange-700 dark:text-orange-300 hover:bg-orange-500/20">
+                              <MailWarning className="w-2.5 h-2.5" />
+                              Troca pendente
+                            </Badge>
+                          )}
+                          {user.activeResetLinkSentAt && (
+                            <Badge className="text-[10px] h-4 px-1.5 gap-1 bg-blue-500/20 text-blue-700 dark:text-blue-300 hover:bg-blue-500/20" title={`Enviado em ${format(new Date(user.activeResetLinkSentAt), "dd/MM/yyyy HH:mm", { locale: ptBR })}`}>
+                              <Link2 className="w-2.5 h-2.5" />
+                              Link enviado
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -592,6 +643,23 @@ export const UserManagement: React.FC = () => {
                         {roleLabels[user.role].icon}
                         {roleLabels[user.role].label}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell">
+                      {user.tempPassword ? (
+                        <div className="flex items-center gap-1.5">
+                          <code className="text-xs font-mono bg-muted px-2 py-1 rounded select-all">
+                            {revealedTemp.has(user.id) ? user.tempPassword : '••••••••'}
+                          </code>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleRevealTemp(user.id)} title={revealedTemp.has(user.id) ? 'Ocultar' : 'Mostrar'}>
+                            {revealedTemp.has(user.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => copyTempPassword(user.id, user.tempPassword!)} title="Copiar">
+                            {copiedTemp === user.id ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          </Button>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {(() => {
@@ -825,59 +893,6 @@ export const UserManagement: React.FC = () => {
         isSaving={isLoading}
       />
 
-      {/* Reset Password Dialog */}
-      <Dialog open={isResetPasswordOpen} onOpenChange={setIsResetPasswordOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Resetar Senha</DialogTitle>
-            <DialogDescription>
-              Defina uma nova senha para <strong>{resetPasswordUser?.name}</strong> ({resetPasswordUser?.email})
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-password">Nova Senha</Label>
-              <Input
-                id="new-password"
-                type="password"
-                placeholder="Mínimo 10 caracteres, com maiúscula, número e símbolo"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                autoComplete="new-password"
-              />
-              <ul className="text-xs text-muted-foreground space-y-0.5 mt-1">
-                <li className={newPassword.length >= 10 ? 'text-green-600' : ''}>• Mínimo 10 caracteres</li>
-                <li className={/[A-Z]/.test(newPassword) ? 'text-green-600' : ''}>• Pelo menos uma letra maiúscula</li>
-                <li className={/[a-z]/.test(newPassword) ? 'text-green-600' : ''}>• Pelo menos uma letra minúscula</li>
-                <li className={/[0-9]/.test(newPassword) ? 'text-green-600' : ''}>• Pelo menos um número</li>
-                <li className={/[^A-Za-z0-9]/.test(newPassword) ? 'text-green-600' : ''}>• Pelo menos um símbolo (!@#$...)</li>
-              </ul>
-              <p className="text-[11px] text-muted-foreground italic">
-                Evite senhas comuns (ex.: "123456", "senha123", "qwerty"). Senhas vazadas em sites públicos serão recusadas pelo sistema.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsResetPasswordOpen(false)}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={handleResetPassword}
-              disabled={
-                isLoading ||
-                newPassword.length < 10 ||
-                !/[A-Z]/.test(newPassword) ||
-                !/[a-z]/.test(newPassword) ||
-                !/[0-9]/.test(newPassword) ||
-                !/[^A-Za-z0-9]/.test(newPassword)
-              }
-            >
-              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Redefinir Senha
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
