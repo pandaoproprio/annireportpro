@@ -62,9 +62,11 @@ export async function buildSignedTerm(opts: BuildOptions): Promise<BuiltTerm> {
   const ip = await fetchClientIp();
   const assinadoEm = new Date().toISOString();
 
-  // 1ª passada: gera o PDF SEM hash visível (placeholder no rodapé) — a partir
-  // dele calculamos o SHA-256 que será o "hash de integridade" do documento.
-  const docFirst = (
+  // Gera o PDF JÁ com a assinatura embutida. O rodapé carrega um placeholder
+  // de hash ('—') que faz parte do bytes do arquivo. O SHA-256 é calculado
+  // sobre exatamente esses bytes — assim a verificação futura recomputa
+  // o mesmo valor a partir do PDF salvo.
+  const doc = (
     <VolunteerTermPdf
       org={opts.org}
       volunteer={opts.volunteer}
@@ -78,33 +80,12 @@ export async function buildSignedTerm(opts: BuildOptions): Promise<BuiltTerm> {
     />
   );
 
-  const blobFirst = await pdf(docFirst).toBlob();
-  const arrayFirst = await blobFirst.arrayBuffer();
-  const hash = await sha256Hex(arrayFirst);
+  const blob = await pdf(doc).toBlob();
+  const arr = await blob.arrayBuffer();
+  const hash = await sha256Hex(arr);
+  const base64 = await blobToBase64(blob);
 
-  // 2ª passada: regenera o PDF com o hash agora estampado no rodapé.
-  // O hash gravado no banco é sempre o da PRIMEIRA passada (o documento
-  // sem o próprio hash impresso), para que a verificação de integridade
-  // futura recompute exatamente o mesmo valor.
-  const docFinal = (
-    <VolunteerTermPdf
-      org={opts.org}
-      volunteer={opts.volunteer}
-      metodo={opts.metodo}
-      signatureImage={opts.signatureImage}
-      signatureText={opts.signatureText}
-      termoId={opts.termoId}
-      cidadeEntidade={opts.cidadeEntidadeFallback}
-      ip={ip}
-      assinadoEm={assinadoEm}
-      hash={hash}
-    />
-  );
-
-  const blobFinal = await pdf(docFinal).toBlob();
-  const base64 = await blobToBase64(blobFinal);
-
-  return { blob: blobFinal, base64, hash, ip, assinadoEm };
+  return { blob, base64, hash, ip, assinadoEm };
 }
 
 /** Recomputa o hash de um PDF baixado, para verificação de integridade. */
