@@ -95,10 +95,10 @@ Deno.serve(async (req: Request) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  const brevoApiKey = Deno.env.get('BREVO_API_KEY');
 
-  if (!resendApiKey) {
-    return new Response(JSON.stringify({ error: 'RESEND_API_KEY not configured' }), {
+  if (!brevoApiKey) {
+    return new Response(JSON.stringify({ error: 'BREVO_API_KEY not configured' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -152,17 +152,18 @@ Deno.serve(async (req: Request) => {
       totalResponses,
     );
 
-    const emailRes = await fetch('https://api.resend.com/emails', {
+    const emailRes = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
+        'api-key': brevoApiKey,
         'Content-Type': 'application/json',
+        'accept': 'application/json',
       },
       body: JSON.stringify({
-        from: 'GIRA Forms <diario@giraerp.com.br>',
-        to: digestConfig.recipients,
+        sender: { name: 'GIRA Forms', email: 'diario@giraerp.com.br' },
+        to: (digestConfig.recipients as string[]).map((email: string) => ({ email })),
         subject: `📋 Nova resposta — ${formRes.data.title} (Total: ${totalResponses})`,
-        html,
+        htmlContent: html,
       }),
     });
 

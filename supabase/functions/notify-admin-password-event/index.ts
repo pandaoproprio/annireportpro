@@ -6,8 +6,11 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ADMIN_RECIPIENTS = ['juanpablorj@gmail.com', 'rapha.araujo.cultura@gmail.com'];
-const FROM_EMAIL = 'GIRA Relatórios <onboarding@resend.dev>';
+const ADMIN_RECIPIENTS = [
+  { email: 'juanpablorj@gmail.com' },
+  { email: 'rapha.araujo.cultura@gmail.com' },
+];
+const SENDER = { name: 'GIRA Relatórios', email: 'diario@giraerp.com.br' };
 
 type EventType = 'password_changed' | 'login_after_reset';
 
@@ -29,9 +32,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) {
-      return new Response(JSON.stringify({ error: 'RESEND_API_KEY ausente' }), {
+    const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY');
+    if (!BREVO_API_KEY) {
+      return new Response(JSON.stringify({ error: 'BREVO_API_KEY ausente' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -65,29 +68,30 @@ Deno.serve(async (req) => {
       </div>
     `;
 
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'api-key': BREVO_API_KEY,
         'Content-Type': 'application/json',
+        'accept': 'application/json',
       },
       body: JSON.stringify({
-        from: FROM_EMAIL,
+        sender: SENDER,
         to: ADMIN_RECIPIENTS,
         subject,
-        html,
+        htmlContent: html,
       }),
     });
 
     const data = await res.json();
     if (!res.ok) {
-      console.error('Resend error', data);
+      console.error('Brevo error', data);
       return new Response(JSON.stringify({ error: 'Falha ao enviar', details: data }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    return new Response(JSON.stringify({ success: true, id: data.id }), {
+    return new Response(JSON.stringify({ success: true, id: data.messageId }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {

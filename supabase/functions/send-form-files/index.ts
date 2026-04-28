@@ -10,9 +10,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  const resendApiKey = Deno.env.get('RESEND_API_KEY');
-  if (!resendApiKey) {
-    return new Response(JSON.stringify({ error: 'RESEND_API_KEY not configured' }), {
+  const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY');
+  if (!BREVO_API_KEY) {
+    return new Response(JSON.stringify({ error: 'BREVO_API_KEY not configured' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -20,31 +20,38 @@ serve(async (req) => {
   try {
     const { recipients, subject, html } = await req.json();
 
-    const resendRes = await fetch('https://api.resend.com/emails', {
+    const toList = Array.isArray(recipients)
+      ? recipients.map((r: string | { email: string; name?: string }) =>
+          typeof r === 'string' ? { email: r } : { email: r.email, name: r.name }
+        )
+      : [];
+
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
+        'api-key': BREVO_API_KEY,
         'Content-Type': 'application/json',
+        'accept': 'application/json',
       },
       body: JSON.stringify({
-        from: 'GIRA Diário de Bordo <diario@giraerp.com.br>',
-        to: recipients,
+        sender: { name: 'GIRA Diário de Bordo', email: 'diario@giraerp.com.br' },
+        to: toList,
         subject,
-        html,
+        htmlContent: html,
       }),
     });
 
-    const resendData = await resendRes.json();
-    if (!resendRes.ok) {
-      throw new Error(resendData.message || JSON.stringify(resendData));
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.message || JSON.stringify(data));
     }
 
-    return new Response(JSON.stringify({ success: true, id: resendData.id }), {
+    return new Response(JSON.stringify({ success: true, id: data.messageId }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
     console.error('send-form-files error:', e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    return new Response(JSON.stringify({ error: (e as Error).message }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }

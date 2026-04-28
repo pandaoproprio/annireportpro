@@ -10,8 +10,8 @@ serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY ausente');
+    const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY');
+    if (!BREVO_API_KEY) throw new Error('BREVO_API_KEY ausente');
 
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -138,18 +138,19 @@ serve(async (req) => {
     const sendOne = async (r: typeof recipients[number]) => {
       const firstName = (r.name || 'Participante').trim().split(/\s+/)[0];
       try {
-        const res = await fetch('https://api.resend.com/emails', {
+        const res = await fetch('https://api.brevo.com/v3/smtp/email', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'api-key': BREVO_API_KEY,
             'Content-Type': 'application/json',
+            'accept': 'application/json',
           },
           body: JSON.stringify({
-            from: 'GIRA Forms <diario@giraerp.com.br>',
-            to: [r.email],
-            bcc: ['juanpablorj@gmail.com'],
+            sender: { name: 'GIRA Forms', email: 'diario@giraerp.com.br' },
+            to: [{ email: r.email, name: r.name || 'Participante' }],
+            bcc: [{ email: 'juanpablorj@gmail.com' }],
             subject: '[ERRATA] Lembrete incorreto — 1º Seminário LabRD da Baixada Fluminense',
-            html: buildHtml(firstName),
+            htmlContent: buildHtml(firstName),
           }),
         });
         if (res.ok) {
@@ -160,7 +161,7 @@ serve(async (req) => {
             await supabase.from('form_errata_sends').upsert({
               form_id, errata_key: ERRATA_KEY,
               recipient_email: r.email.toLowerCase().trim(),
-              resend_id: json?.id ?? null,
+              resend_id: json?.messageId ?? null,
             }, { onConflict: 'form_id,errata_key,recipient_email' });
           }
         }
@@ -175,9 +176,9 @@ serve(async (req) => {
       }
     };
 
-    // Resend free-tier limit: 2 req/s. Use 2 paralelos com 1100ms entre lotes.
-    const CONCURRENCY = 2;
-    const DELAY_MS = 1100;
+    // Brevo permite ~10 req/s no plano free. Mantemos folga.
+    const CONCURRENCY = 5;
+    const DELAY_MS = 600;
     for (let i = 0; i < recipients.length; i += CONCURRENCY) {
       const batch = recipients.slice(i, i + CONCURRENCY);
       await Promise.all(batch.map(sendOne));

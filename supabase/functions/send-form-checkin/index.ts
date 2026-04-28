@@ -11,8 +11,8 @@ serve(async (req) => {
   }
 
   try {
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
+    const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY');
+    if (!BREVO_API_KEY) throw new Error('BREVO_API_KEY not configured');
 
     const {
       respondent_name,
@@ -34,7 +34,6 @@ serve(async (req) => {
     }
 
     const APP_URL = 'https://relatorios.giraerp.com.br';
-    // Public self-checkin URL (geolocation-validated, no login required)
     const checkinUrl = `${APP_URL}/c/${checkin_code}?token=${qr_token}`;
     const qrImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(checkinUrl)}&format=png&margin=8`;
 
@@ -120,28 +119,40 @@ serve(async (req) => {
 </body>
 </html>`;
 
-    const res = await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'api-key': BREVO_API_KEY,
         'Content-Type': 'application/json',
+        'accept': 'application/json',
       },
       body: JSON.stringify({
-        from: 'GIRA Diário de Bordo <diario@giraerp.com.br>',
-        to: [respondent_email],
-        cc: ['juanpablorj@gmail.com', 'rapha.araujo.cultura@gmail.com'],
+        sender: { name: 'GIRA Diário de Bordo', email: 'diario@giraerp.com.br' },
+        to: [{ email: respondent_email, name: respondent_name || 'Participante' }],
+        cc: [
+          { email: 'juanpablorj@gmail.com' },
+          { email: 'rapha.araujo.cultura@gmail.com' },
+        ],
         subject: `✅ Inscrição Confirmada — ${form_title}`,
-        html,
+        htmlContent: html,
       }),
     });
 
     const data = await res.json();
+    if (!res.ok) {
+      console.error('Brevo error:', data);
+      return new Response(JSON.stringify({ success: false, error: data }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
-    return new Response(JSON.stringify({ success: res.ok, id: data.id }), {
-      status: res.ok ? 200 : 500,
+    return new Response(JSON.stringify({ success: true, id: data.messageId }), {
+      status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
+    console.error('send-form-checkin error:', err);
     return new Response(JSON.stringify({ error: String(err) }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

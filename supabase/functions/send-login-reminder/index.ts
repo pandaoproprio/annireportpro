@@ -116,10 +116,10 @@ Deno.serve(async (req: Request) => {
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
+    const brevoApiKey = Deno.env.get('BREVO_API_KEY');
 
-    if (!resendApiKey) {
-      return new Response(JSON.stringify({ error: 'RESEND_API_KEY not configured' }), {
+    if (!brevoApiKey) {
+      return new Response(JSON.stringify({ error: 'BREVO_API_KEY not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
@@ -178,25 +178,26 @@ Deno.serve(async (req: Request) => {
         try {
           const html = buildReminderHtml(u.name || u.email.split('@')[0], u.email, loginUrl);
 
-          const resendRes = await fetch('https://api.resend.com/emails', {
+          const resendRes = await fetch('https://api.brevo.com/v3/smtp/email', {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${resendApiKey}`,
+              'api-key': brevoApiKey,
               'Content-Type': 'application/json',
+              'accept': 'application/json',
             },
             body: JSON.stringify({
-              from: 'GIRA Diário de Bordo <diario@giraerp.com.br>',
-              to: [u.email],
-              cc: CC_RECIPIENTS,
+              sender: { name: 'GIRA Diário de Bordo', email: 'diario@giraerp.com.br' },
+              to: [{ email: u.email, name: u.name || u.email.split('@')[0] }],
+              cc: CC_RECIPIENTS.map(email => ({ email })),
               subject: 'GIRA – Lembrete: acesse o Diário de Bordo',
-              html,
+              htmlContent: html,
             }),
           });
 
           const resendData = await resendRes.json();
 
           if (!resendRes.ok) {
-            results.push({ email: u.email, success: false, error: resendData.message || 'Resend error' });
+            results.push({ email: u.email, success: false, error: resendData.message || 'Brevo error' });
             continue;
           }
 
@@ -206,10 +207,10 @@ Deno.serve(async (req: Request) => {
             user_email: u.email,
             user_name: u.name,
             sent_by: callingUser.id,
-            email_message_id: resendData.id || null,
+            email_message_id: resendData.messageId || null,
           });
 
-          results.push({ email: u.email, success: true, messageId: resendData.id });
+          results.push({ email: u.email, success: true, messageId: resendData.messageId });
         } catch (e) {
           results.push({ email: u.email, success: false, error: e.message });
         }
@@ -243,18 +244,19 @@ Deno.serve(async (req: Request) => {
     const displayName = userName || userEmail.split('@')[0];
     const html = buildReminderHtml(displayName, userEmail, loginUrl);
 
-    const resendRes = await fetch('https://api.resend.com/emails', {
+    const resendRes = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
+        'api-key': brevoApiKey,
         'Content-Type': 'application/json',
+        'accept': 'application/json',
       },
       body: JSON.stringify({
-        from: 'GIRA Diário de Bordo <diario@giraerp.com.br>',
-        to: [userEmail],
-        cc: CC_RECIPIENTS,
+        sender: { name: 'GIRA Diário de Bordo', email: 'diario@giraerp.com.br' },
+        to: [{ email: userEmail, name: displayName }],
+        cc: CC_RECIPIENTS.map(email => ({ email })),
         subject: 'GIRA – Lembrete: acesse o Diário de Bordo',
-        html,
+        htmlContent: html,
       }),
     });
 
@@ -270,7 +272,7 @@ Deno.serve(async (req: Request) => {
       user_email: userEmail,
       user_name: displayName,
       sent_by: callingUser.id,
-      email_message_id: resendData.id || null,
+      email_message_id: resendData.messageId || null,
     });
 
     await supabaseAdmin.from('system_logs').insert([{
@@ -281,7 +283,7 @@ Deno.serve(async (req: Request) => {
       new_data: { email: userEmail, name: displayName },
     }]);
 
-    return new Response(JSON.stringify({ success: true, messageId: resendData.id }), {
+    return new Response(JSON.stringify({ success: true, messageId: resendData.messageId }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {

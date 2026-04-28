@@ -11,8 +11,8 @@ serve(async (req) => {
   }
 
   try {
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
+    const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY');
+    if (!BREVO_API_KEY) throw new Error('BREVO_API_KEY not configured');
 
     const {
       event_id,
@@ -36,7 +36,6 @@ serve(async (req) => {
       hour: '2-digit', minute: '2-digit',
     });
 
-    // Build "Como chegar" block
     const hasCoords = typeof geofence_lat === 'number' && typeof geofence_lng === 'number';
     const mapsQuery = hasCoords
       ? `${geofence_lat},${geofence_lng}`
@@ -114,23 +113,27 @@ serve(async (req) => {
 </html>`;
 
       try {
-        const res = await fetch('https://api.resend.com/emails', {
+        const res = await fetch('https://api.brevo.com/v3/smtp/email', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'api-key': BREVO_API_KEY,
             'Content-Type': 'application/json',
+            'accept': 'application/json',
           },
           body: JSON.stringify({
-            from: 'Confirmação de Inscrição <diario@giraerp.com.br>',
-            to: [reg.email],
-            cc: ['juanpablorj@gmail.com', 'rapha.araujo.cultura@gmail.com'],
+            sender: { name: 'Confirmação de Inscrição', email: 'diario@giraerp.com.br' },
+            to: [{ email: reg.email, name: reg.name || 'Participante' }],
+            cc: [
+              { email: 'juanpablorj@gmail.com' },
+              { email: 'rapha.araujo.cultura@gmail.com' },
+            ],
             subject: `✅ Inscrição Confirmada — ${event_title}`,
-            html,
+            htmlContent: html,
           }),
         });
 
         const data = await res.json();
-        results.push({ email: reg.email, success: res.ok, id: data.id });
+        results.push({ email: reg.email, success: res.ok, id: data.messageId, error: res.ok ? undefined : data });
       } catch (err) {
         results.push({ email: reg.email, success: false, error: String(err) });
       }
