@@ -1972,14 +1972,14 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
             else onChange(v);
           }}>
             {renderList.map((entry, i) => entry.kind === 'other' ? (
-              <div className="flex items-center gap-2" key={`__other__-${i}`}>
+              <div className="flex items-center gap-2 min-h-[44px] py-1" key={`__other__-${i}`}>
                 <RadioGroupItem value="__other__" id={`${field.id}-other`} />
-                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer flex-1 py-2">Outros (especifique)</Label>
               </div>
             ) : (
-              <div key={`opt-${i}`} className="flex items-center gap-2">
+              <div key={`opt-${i}`} className="flex items-center gap-2 min-h-[44px] py-1">
                 <RadioGroupItem value={entry.value} id={`${field.id}-${i}`} />
-                <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{entry.value}</Label>
+                <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer flex-1 py-2">{entry.value}</Label>
               </div>
             ))}
           </RadioGroup>
