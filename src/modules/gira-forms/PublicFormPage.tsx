@@ -532,6 +532,11 @@ export default function PublicFormPage() {
       } catch {
         // Non-critical
       }
+
+      // Vincula o termo de voluntariado (se houver) ao response recém-criado
+      if (signedTermId) {
+        await linkTermToResponse(signedTermId, responseId);
+      }
     },
     onSuccess: () => setSubmitted(true),
     onError: (err) => {
