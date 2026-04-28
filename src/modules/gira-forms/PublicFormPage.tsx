@@ -1871,6 +1871,23 @@ export default function PublicFormPage() {
             : hasMissing
               ? `Preencha ${stepMissing.length} ${stepMissing.length === 1 ? 'campo obrigatório' : 'campos obrigatórios'} para continuar.`
               : '';
+          if (activeStep.type === 'volunteer_term' && !signedTermId) {
+            return (
+              <div className="flex gap-3 pt-2 pb-4">
+                {!isFirstStep && (
+                  <motion.button
+                    type="button"
+                    onClick={goPrev}
+                    className="flex-1 min-h-[48px] py-3 rounded-lg font-semibold text-sm border-2 hover:opacity-80 transition-all flex items-center justify-center gap-2"
+                    style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)', background: 'var(--form-card-bg)' }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Anterior
+                  </motion.button>
+                )}
+              </div>
+            );
+          }
           return (
             <div className="flex gap-3 pt-2 pb-4">
               {!isFirstStep && (
