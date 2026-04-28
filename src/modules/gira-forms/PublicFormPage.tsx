@@ -1467,23 +1467,40 @@ export default function PublicFormPage() {
           {renderLgpd()}
 
           {/* Submit button */}
-          <div className="pb-4">
-            <motion.button
-              type="button"
-              onClick={handleSinglePageSubmit}
-              disabled={submitMutation.isPending}
-              className="w-full py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              style={{ background: 'var(--form-button)' }}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {submitMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
-              ) : (
-                <><Send className="w-4 h-4" /> Enviar Inscrição</>
-              )}
-            </motion.button>
-          </div>
+          {(() => {
+            const blocked = visibleRequiredMissing.length > 0 || !lgpdConsent;
+            const tooltip = !lgpdConsent && visibleRequiredMissing.length === 0
+              ? 'Aceite os termos para enviar.'
+              : visibleRequiredMissing.length > 0
+                ? `Preencha ${visibleRequiredMissing.length} ${visibleRequiredMissing.length === 1 ? 'campo obrigatório' : 'campos obrigatórios'} para enviar.`
+                : '';
+            return (
+              <div className="pb-4">
+                <motion.button
+                  type="button"
+                  onClick={handleSinglePageSubmit}
+                  disabled={submitMutation.isPending}
+                  title={tooltip || undefined}
+                  aria-disabled={blocked}
+                  className="w-full min-h-[48px] py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ background: 'var(--form-button)', opacity: blocked ? 0.55 : 1, cursor: blocked ? 'not-allowed' : 'pointer' }}
+                  whileHover={blocked ? undefined : { scale: 1.01 }}
+                  whileTap={blocked ? undefined : { scale: 0.98 }}
+                >
+                  {submitMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Enviar Inscrição</>
+                  )}
+                </motion.button>
+                {blocked && (
+                  <p className="text-xs text-center mt-2" style={{ color: 'var(--form-muted)' }}>
+                    {tooltip}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           <p className="text-center text-xs pb-4" style={{ color: 'var(--form-muted)' }}>
             Desenvolvido com <span className="font-semibold">GIRA Formulários</span>
