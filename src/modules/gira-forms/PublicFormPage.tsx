@@ -816,7 +816,7 @@ export default function PublicFormPage() {
   }, [steps, isVolunteer]);
 
 
-  const totalSteps = steps.length;
+  const totalSteps = stepsWithTerm.length;
   const progress = useMemo(() => Math.round(((currentStep + 1) / totalSteps) * 100), [currentStep, totalSteps]);
 
   const isSinglePage = design.singlePage ?? false;
