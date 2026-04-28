@@ -132,7 +132,12 @@ interface Step {
   title: string;
   description?: string;
   fields: FormField[];
-  type: 'section' | 'lgpd_review';
+  type: 'section' | 'lgpd_review' | 'volunteer_term';
+}
+
+const VOLUNTEER_TRIGGER_VALUE = 'Sim, quero somar com minha força de trabalho voluntária.';
+function isVolunteerTriggerField(field: FormField): boolean {
+  return /deseja\s+colaborar\s+voluntariamente/i.test(field.label);
 }
 
 // ─── Main Component ─────────────────────────────────────────
