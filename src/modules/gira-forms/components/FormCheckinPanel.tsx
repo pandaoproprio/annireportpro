@@ -120,7 +120,7 @@ export default function FormCheckinPanel() {
     }
   }, [qrToken, responsesQuery.data]);
 
-  const handleScannedText = useCallback((text: string) => {
+  const handleScannedText = useCallback(async (text: string) => {
     if (!text) return;
     // Debounce: ignore same code within 3s
     const now = Date.now();
@@ -131,12 +131,16 @@ export default function FormCheckinPanel() {
 
     const responses = responsesQuery.data ?? [];
     let match: FormResponseRow | undefined;
+    let scannedToken: string | null = null;
+    let isEventCheckinUrl = false;
 
     // Try URL with token param
     try {
       const url = new URL(text);
-      const token = url.searchParams.get('token');
-      if (token) match = responses.find(r => r.qr_token === token);
+      scannedToken = url.searchParams.get('token');
+      // Detect /checkin/{eventId} (event registration QR generated for forms linked to events)
+      isEventCheckinUrl = /\/checkin\/[0-9a-f-]{36}/i.test(url.pathname);
+      if (scannedToken) match = responses.find(r => r.qr_token === scannedToken);
     } catch {
       // not a URL
     }
@@ -147,6 +151,37 @@ export default function FormCheckinPanel() {
       const code = text.trim().toUpperCase();
       if (/^[A-Z0-9]{6}$/.test(code)) {
         match = responses.find(r => (r.checkin_code || '').toUpperCase() === code);
+      }
+    }
+
+    // Fallback: QR aponta para event_registrations (form vinculado a evento).
+    // Buscamos a inscrição do evento pelo token e tentamos casar com a resposta
+    // do formulário pelo email/documento/nome.
+    if (!match && scannedToken && isEventCheckinUrl) {
+      try {
+        const { data: eventReg } = await supabase
+          .from('event_registrations')
+          .select('email, document, name')
+          .eq('qr_token', scannedToken)
+          .maybeSingle();
+        if (eventReg) {
+          const emailLc = (eventReg.email || '').toLowerCase().trim();
+          const docDigits = (eventReg.document || '').replace(/\D/g, '');
+          const nameLc = (eventReg.name || '').toLowerCase().trim();
+          match = responses.find(r => {
+            if (emailLc && (r.respondent_email || '').toLowerCase().trim() === emailLc) return true;
+            if (docDigits) {
+              const ans = r.answers || {};
+              for (const v of Object.values(ans)) {
+                if (typeof v === 'string' && v.replace(/\D/g, '') === docDigits && docDigits.length >= 11) return true;
+              }
+            }
+            if (nameLc && (r.respondent_name || '').toLowerCase().trim() === nameLc) return true;
+            return false;
+          });
+        }
+      } catch {
+        // ignore
       }
     }
 
