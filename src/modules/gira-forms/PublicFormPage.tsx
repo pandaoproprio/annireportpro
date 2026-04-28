@@ -798,6 +798,65 @@ export default function PublicFormPage() {
     }
   }, [reorderedFields]);
 
+  // ─── Validação por campo individual (para onBlur em tempo real) ────
+  const validateSingleField = useCallback((field: FormField): string | null => {
+    if (!isFieldVisible(field)) return null;
+    if (field.type === 'info_text' || field.type === 'section_header') return null;
+    const smart = detectSmartType(field);
+    const val = answers[field.id];
+    if (field.required) {
+      if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
+        return 'Este campo é obrigatório.';
+      }
+    }
+    if (!val) return null;
+    if (smart === 'email' || field.type === 'email') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val))) return 'Informe um e-mail válido para continuar.';
+    }
+    if (smart === 'cpf_cnpj' || field.type === 'cpf_cnpj') {
+      const digits = String(val).replace(/\D/g, '');
+      if (digits.length !== 11 && digits.length !== 14) return 'CPF (11) ou CNPJ (14) dígitos';
+    }
+    if (smart === 'cpf') {
+      const digits = String(val).replace(/\D/g, '');
+      if (digits.length !== 11) return 'CPF deve ter 11 dígitos';
+    }
+    if (smart === 'cnpj') {
+      const digits = String(val).replace(/\D/g, '');
+      if (digits.length !== 14) return 'CNPJ deve ter 14 dígitos';
+    }
+    if (field.type === 'date' && isBirthDateField(field.label)) {
+      const age = calculateAge(String(val));
+      if (age < 18) return 'Inscrição permitida apenas para maiores de 18 anos.';
+    }
+    if (smart === 'phone') {
+      if (String(val).replace(/\D/g, '').length < 10) return 'Telefone inválido';
+    }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, fields, visibleIdsKey]);
+
+  const handleFieldBlur = useCallback((field: FormField) => {
+    const err = validateSingleField(field);
+    setValidationErrors(prev => {
+      const next = { ...prev };
+      if (err) next[field.id] = err;
+      else delete next[field.id];
+      return next;
+    });
+  }, [validateSingleField]);
+
+  // Lista de IDs de campos visíveis ainda obrigatórios não preenchidos
+  // (usado para desabilitar visualmente o botão de avançar/enviar).
+  const visibleRequiredMissing = useMemo(() => {
+    return visibleFields.filter(f => {
+      if (f.type === 'info_text' || f.type === 'section_header') return false;
+      if (!f.required) return false;
+      const v = answers[f.id];
+      return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
+    });
+  }, [visibleFields, answers]);
+
   // ─── Validation per step ──────────────────────────────────
   const validateStep = (stepIndex: number): boolean => {
     const step = steps[stepIndex];
