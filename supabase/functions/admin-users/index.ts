@@ -582,7 +582,18 @@ Deno.serve(async (req) => {
           });
         }
         const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
-        if (pwError) throw pwError;
+        if (pwError) {
+          const msg = (pwError.message || '').toLowerCase();
+          let friendly = pwError.message || 'Erro ao redefinir senha';
+          if (msg.includes('weak') || msg.includes('pwned') || msg.includes('known')) {
+            friendly = 'Esta senha é muito comum e foi encontrada em vazamentos públicos. Escolha uma senha mais forte e única.';
+          } else if (msg.includes('should be at least') || msg.includes('at least')) {
+            friendly = 'A senha não atende ao tamanho mínimo exigido.';
+          }
+          return new Response(JSON.stringify({ error: friendly }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
         // Reset password policy flags when admin resets password
         await supabaseAdmin.from('profiles').update({
           must_change_password: true,
