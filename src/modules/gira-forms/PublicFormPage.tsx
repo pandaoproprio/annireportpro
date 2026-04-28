@@ -1274,7 +1274,7 @@ export default function PublicFormPage() {
     );
   }
 
-  const activeStep = steps[currentStep];
+  const activeStep = stepsWithTerm[currentStep];
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
 
