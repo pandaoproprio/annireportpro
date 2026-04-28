@@ -255,15 +255,6 @@ export const UserManagement: React.FC = () => {
     await deleteUser(userId);
   };
 
-  const handleResetPassword = async () => {
-    if (!resetPasswordUser || !newPassword) return;
-    const result = await updateUser(resetPasswordUser.id, { password: newPassword });
-    if (result.success) {
-      setIsResetPasswordOpen(false);
-      setResetPasswordUser(null);
-      setNewPassword('');
-    }
-  };
 
   const openEdit = (user: AdminUser) => {
     setEditingUser(user);
