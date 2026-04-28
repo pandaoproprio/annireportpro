@@ -82,7 +82,7 @@ export const FormErrataDialog: React.FC<Props> = ({ formId }) => {
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2 border-amber-500 text-amber-700 hover:bg-amber-50" onClick={previewCount}>
+        <Button variant="outline" size="sm" className="gap-2 border-amber-500 text-amber-700 hover:bg-amber-50" onClick={() => previewCount(true)}>
           <AlertTriangle className="w-3.5 h-3.5" /> Enviar errata
         </Button>
       </DialogTrigger>
