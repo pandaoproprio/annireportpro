@@ -595,6 +595,43 @@ export default function PublicFormPage() {
 
   const visibleFields = fields.filter(isFieldVisible);
 
+  // ─── Limpar valores de campos que ficaram ocultos por condicional ────
+  // Quando o usuário muda uma resposta (ex.: de "Sim" para "Não"), os campos
+  // condicionais somem — e suas respostas precisam ser apagadas para que o
+  // payload não carregue dados inconsistentes nem quebre validações posteriores.
+  const visibleIdsKey = useMemo(() => visibleFields.map(f => f.id).sort().join(','), [visibleFields]);
+  React.useEffect(() => {
+    const visibleIds = new Set(visibleFields.map(f => f.id));
+    setAnswers(prev => {
+      let mutated = false;
+      const next = { ...prev };
+      for (const key of Object.keys(prev)) {
+        // Mantém chaves auxiliares (_lgpd_consent, *_audio_url) e respostas
+        // de campos visíveis. Remove apenas campos que existem no form mas
+        // estão ocultos agora.
+        if (key.startsWith('_') || key.endsWith('_audio_url')) continue;
+        const fieldExists = fields.some(f => f.id === key);
+        if (fieldExists && !visibleIds.has(key)) {
+          delete next[key];
+          mutated = true;
+        }
+      }
+      return mutated ? next : prev;
+    });
+    setValidationErrors(prev => {
+      let mutated = false;
+      const next = { ...prev };
+      for (const key of Object.keys(prev)) {
+        if (!visibleIds.has(key)) {
+          delete next[key];
+          mutated = true;
+        }
+      }
+      return mutated ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleIdsKey]);
+
   // ─── Reorder: move CEP before address fields in each section ──
   const reorderedFields = useMemo(() => {
     const result: FormField[] = [];
@@ -760,6 +797,65 @@ export default function PublicFormPage() {
       setAnswers(prev => ({ ...prev, ...updates }));
     }
   }, [reorderedFields]);
+
+  // ─── Validação por campo individual (para onBlur em tempo real) ────
+  const validateSingleField = useCallback((field: FormField): string | null => {
+    if (!isFieldVisible(field)) return null;
+    if (field.type === 'info_text' || field.type === 'section_header') return null;
+    const smart = detectSmartType(field);
+    const val = answers[field.id];
+    if (field.required) {
+      if (val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0)) {
+        return 'Este campo é obrigatório.';
+      }
+    }
+    if (!val) return null;
+    if (smart === 'email' || field.type === 'email') {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(val))) return 'Informe um e-mail válido para continuar.';
+    }
+    if (smart === 'cpf_cnpj' || field.type === 'cpf_cnpj') {
+      const digits = String(val).replace(/\D/g, '');
+      if (digits.length !== 11 && digits.length !== 14) return 'CPF (11) ou CNPJ (14) dígitos';
+    }
+    if (smart === 'cpf') {
+      const digits = String(val).replace(/\D/g, '');
+      if (digits.length !== 11) return 'CPF deve ter 11 dígitos';
+    }
+    if (smart === 'cnpj') {
+      const digits = String(val).replace(/\D/g, '');
+      if (digits.length !== 14) return 'CNPJ deve ter 14 dígitos';
+    }
+    if (field.type === 'date' && isBirthDateField(field.label)) {
+      const age = calculateAge(String(val));
+      if (age < 18) return 'Inscrição permitida apenas para maiores de 18 anos.';
+    }
+    if (smart === 'phone') {
+      if (String(val).replace(/\D/g, '').length < 10) return 'Telefone inválido';
+    }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [answers, fields, visibleIdsKey]);
+
+  const handleFieldBlur = useCallback((field: FormField) => {
+    const err = validateSingleField(field);
+    setValidationErrors(prev => {
+      const next = { ...prev };
+      if (err) next[field.id] = err;
+      else delete next[field.id];
+      return next;
+    });
+  }, [validateSingleField]);
+
+  // Lista de IDs de campos visíveis ainda obrigatórios não preenchidos
+  // (usado para desabilitar visualmente o botão de avançar/enviar).
+  const visibleRequiredMissing = useMemo(() => {
+    return visibleFields.filter(f => {
+      if (f.type === 'info_text' || f.type === 'section_header') return false;
+      if (!f.required) return false;
+      const v = answers[f.id];
+      return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
+    });
+  }, [visibleFields, answers]);
 
   // ─── Validation per step ──────────────────────────────────
   const validateStep = (stepIndex: number): boolean => {
@@ -1173,8 +1269,19 @@ export default function PublicFormPage() {
 
   // ─── Render field card (shared between modes) ─────────────
   const renderFieldCard = (field: FormField, i: number) => {
+    const isConditional = !!(field.settings?.condition || field.settings?.conditionGroup);
+    const hasError = !!validationErrors[field.id];
     return (
-    <div key={field.id} id={`field-${field.id}`}>
+    <motion.div
+      key={field.id}
+      id={`field-${field.id}`}
+      layout
+      initial={isConditional ? { opacity: 0, y: -8, height: 0 } : false}
+      animate={{ opacity: 1, y: 0, height: 'auto' }}
+      exit={isConditional ? { opacity: 0, y: -8, height: 0 } : undefined}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      style={{ overflow: isConditional ? 'hidden' : undefined }}
+    >
       {field.type === 'info_text' ? (
         <div className="rounded-xl p-5 shadow-sm" style={{ background: 'var(--form-card-bg)' }}>
           {field.label && <h3 className="font-semibold mb-2">{field.label}</h3>}
@@ -1186,16 +1293,31 @@ export default function PublicFormPage() {
         </div>
       ) : (
         <div
-          className="rounded-xl p-5 shadow-sm space-y-3 transition-all"
+          className={`rounded-xl p-5 shadow-sm space-y-3 transition-all ${isConditional ? 'border-l-4' : ''}`}
+          onBlur={(e) => {
+            // Valida ao perder foco (somente quando o foco realmente sai do card,
+            // não ao mover entre inputs internos como rádio/checkbox).
+            const next = e.relatedTarget as Node | null;
+            if (next && e.currentTarget.contains(next)) return;
+            handleFieldBlur(field);
+          }}
           style={{
-            background: 'var(--form-card-bg)',
-            ...(validationErrors[field.id] ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
+            background: isConditional ? (isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc') : 'var(--form-card-bg)',
+            borderLeftColor: isConditional ? 'var(--form-primary)' : undefined,
+            ...(hasError ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
           }}
         >
           <div>
             <Label className="text-sm font-medium">
               {field.label}
-              {field.required && <span className="ml-1" style={{ color: '#ef4444' }}>*</span>}
+              {field.required && (
+                <span
+                  className="ml-1 font-bold"
+                  style={{ color: '#ef4444' }}
+                  aria-label="campo obrigatório"
+                  title="Campo obrigatório"
+                >*</span>
+              )}
             </Label>
             {field.description && <p className="text-xs mt-0.5" style={{ color: 'var(--form-muted)' }}>{field.description}</p>}
             {isAddressField(field.label) && fields.some(f => detectSmartType(f) === 'cep') && (
@@ -1216,14 +1338,15 @@ export default function PublicFormPage() {
               setAnswers(prev => ({ ...prev, [`${fieldId}_audio_url`]: url }));
             }}
           />
-          {validationErrors[field.id] && (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs" style={{ color: '#ef4444' }}>
+          {hasError && (
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs flex items-center gap-1" style={{ color: '#ef4444' }}>
+              <AlertCircle className="w-3 h-3" />
               {validationErrors[field.id]}
             </motion.p>
           )}
         </div>
       )}
-    </div>
+    </motion.div>
     );
   };
 
@@ -1330,10 +1453,12 @@ export default function PublicFormPage() {
               </div>
               {/* Section fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {section.fields.map((field, i) => {
-                  const colSpan = (field.settings as any)?.colSpan === 'half' ? 'sm:col-span-1' : 'sm:col-span-2';
-                  return <div key={field.id} className={colSpan}>{renderFieldCard(field, i)}</div>;
-                })}
+                <AnimatePresence initial={false}>
+                  {section.fields.map((field, i) => {
+                    const colSpan = (field.settings as any)?.colSpan === 'half' ? 'sm:col-span-1' : 'sm:col-span-2';
+                    return <div key={field.id} className={colSpan}>{renderFieldCard(field, i)}</div>;
+                  })}
+                </AnimatePresence>
               </div>
             </div>
           ))}
@@ -1342,23 +1467,40 @@ export default function PublicFormPage() {
           {renderLgpd()}
 
           {/* Submit button */}
-          <div className="pb-4">
-            <motion.button
-              type="button"
-              onClick={handleSinglePageSubmit}
-              disabled={submitMutation.isPending}
-              className="w-full py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              style={{ background: 'var(--form-button)' }}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {submitMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
-              ) : (
-                <><Send className="w-4 h-4" /> Enviar Inscrição</>
-              )}
-            </motion.button>
-          </div>
+          {(() => {
+            const blocked = visibleRequiredMissing.length > 0 || !lgpdConsent;
+            const tooltip = !lgpdConsent && visibleRequiredMissing.length === 0
+              ? 'Aceite os termos para enviar.'
+              : visibleRequiredMissing.length > 0
+                ? `Preencha ${visibleRequiredMissing.length} ${visibleRequiredMissing.length === 1 ? 'campo obrigatório' : 'campos obrigatórios'} para enviar.`
+                : '';
+            return (
+              <div className="pb-4">
+                <motion.button
+                  type="button"
+                  onClick={handleSinglePageSubmit}
+                  disabled={submitMutation.isPending}
+                  title={tooltip || undefined}
+                  aria-disabled={blocked}
+                  className="w-full min-h-[48px] py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ background: 'var(--form-button)', opacity: blocked ? 0.55 : 1, cursor: blocked ? 'not-allowed' : 'pointer' }}
+                  whileHover={blocked ? undefined : { scale: 1.01 }}
+                  whileTap={blocked ? undefined : { scale: 0.98 }}
+                >
+                  {submitMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Enviar Inscrição</>
+                  )}
+                </motion.button>
+                {blocked && (
+                  <p className="text-xs text-center mt-2" style={{ color: 'var(--form-muted)' }}>
+                    {tooltip}
+                  </p>
+                )}
+              </div>
+            );
+          })()}
 
           <p className="text-center text-xs pb-4" style={{ color: 'var(--form-muted)' }}>
             Desenvolvido com <span className="font-semibold">GIRA Formulários</span>
@@ -1494,20 +1636,23 @@ export default function PublicFormPage() {
           >
             {activeStep.type === 'section' && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {activeStep.fields.map((field, i) => {
-                  const colSpan = (field.settings as any)?.colSpan === 'half' ? 'sm:col-span-1' : 'sm:col-span-2';
-                  return (
-                    <motion.div
-                      key={field.id}
-                      initial={false}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className={colSpan}
-                    >
-                      {renderFieldCard(field, i)}
-                    </motion.div>
-                  );
-                })}
+                <AnimatePresence initial={false}>
+                  {activeStep.fields.map((field, i) => {
+                    const colSpan = (field.settings as any)?.colSpan === 'half' ? 'sm:col-span-1' : 'sm:col-span-2';
+                    return (
+                      <motion.div
+                        key={field.id}
+                        layout
+                        initial={false}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className={colSpan}
+                      >
+                        {renderFieldCard(field, i)}
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               </div>
             )}
 
@@ -1570,48 +1715,74 @@ export default function PublicFormPage() {
         </AnimatePresence>
 
         {/* Navigation Buttons */}
-        <div className="flex gap-3 pt-2 pb-4">
-          {!isFirstStep && (
-            <motion.button
-              type="button"
-              onClick={goPrev}
-              className="flex-1 py-3 rounded-lg font-semibold text-sm border-2 hover:opacity-80 transition-all flex items-center justify-center gap-2"
-              style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)', background: 'var(--form-card-bg)' }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <ChevronLeft className="w-4 h-4" /> Anterior
-            </motion.button>
-          )}
-
-          {isLastStep ? (
-            <motion.button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitMutation.isPending}
-              className="flex-1 py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-              style={{ background: 'var(--form-button)' }}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              {submitMutation.isPending ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
-              ) : (
-                <><Send className="w-4 h-4" /> Enviar Resposta</>
+        {(() => {
+          // Calcula campos obrigatórios pendentes nesta etapa para sinalizar
+          // visualmente o botão (não bloqueia o clique — ainda chama validateStep
+          // que mostra erros inline).
+          const stepInputs = activeStep.type === 'section'
+            ? activeStep.fields.filter(f => isFieldVisible(f) && f.type !== 'info_text' && f.type !== 'section_header' && f.required)
+            : [];
+          const stepMissing = stepInputs.filter(f => {
+            const v = answers[f.id];
+            return v === undefined || v === null || v === '' || (Array.isArray(v) && v.length === 0);
+          });
+          const hasMissing = stepMissing.length > 0;
+          const lgpdMissing = activeStep.type === 'lgpd_review' && !lgpdConsent;
+          const blocked = hasMissing || lgpdMissing;
+          const tooltip = lgpdMissing
+            ? 'Aceite os termos para enviar.'
+            : hasMissing
+              ? `Preencha ${stepMissing.length} ${stepMissing.length === 1 ? 'campo obrigatório' : 'campos obrigatórios'} para continuar.`
+              : '';
+          return (
+            <div className="flex gap-3 pt-2 pb-4">
+              {!isFirstStep && (
+                <motion.button
+                  type="button"
+                  onClick={goPrev}
+                  className="flex-1 min-h-[48px] py-3 rounded-lg font-semibold text-sm border-2 hover:opacity-80 transition-all flex items-center justify-center gap-2"
+                  style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)', background: 'var(--form-card-bg)' }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <ChevronLeft className="w-4 h-4" /> Anterior
+                </motion.button>
               )}
-            </motion.button>
-          ) : (
-            <motion.button
-              type="button"
-              onClick={goNext}
-              className="flex-1 py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
-              style={{ background: 'var(--form-button)' }}
-              whileHover={{ scale: 1.01 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              Próxima Etapa <ChevronRight className="w-4 h-4" />
-            </motion.button>
-          )}
-        </div>
+
+              {isLastStep ? (
+                <motion.button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitMutation.isPending}
+                  title={tooltip || undefined}
+                  aria-disabled={blocked}
+                  className="flex-1 min-h-[48px] py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ background: 'var(--form-button)', opacity: blocked ? 0.55 : 1, cursor: blocked ? 'not-allowed' : 'pointer' }}
+                  whileHover={blocked ? undefined : { scale: 1.01 }}
+                  whileTap={blocked ? undefined : { scale: 0.98 }}
+                >
+                  {submitMutation.isPending ? (
+                    <><Loader2 className="w-4 h-4 animate-spin" /> Enviando...</>
+                  ) : (
+                    <><Send className="w-4 h-4" /> Enviar Resposta</>
+                  )}
+                </motion.button>
+              ) : (
+                <motion.button
+                  type="button"
+                  onClick={goNext}
+                  title={tooltip || undefined}
+                  aria-disabled={blocked}
+                  className="flex-1 min-h-[48px] py-3 rounded-lg text-white font-semibold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2"
+                  style={{ background: 'var(--form-button)', opacity: blocked ? 0.55 : 1, cursor: blocked ? 'not-allowed' : 'pointer' }}
+                  whileHover={blocked ? undefined : { scale: 1.01 }}
+                  whileTap={blocked ? undefined : { scale: 0.98 }}
+                >
+                  Próxima Etapa <ChevronRight className="w-4 h-4" />
+                </motion.button>
+              )}
+            </div>
+          );
+        })()}
 
         <p className="text-center text-xs pb-4" style={{ color: 'var(--form-muted)' }}>
           Desenvolvido com <span className="font-semibold">GIRA Formulários</span>
@@ -1801,14 +1972,14 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
             else onChange(v);
           }}>
             {renderList.map((entry, i) => entry.kind === 'other' ? (
-              <div className="flex items-center gap-2" key={`__other__-${i}`}>
+              <div className="flex items-center gap-2 min-h-[44px] py-1" key={`__other__-${i}`}>
                 <RadioGroupItem value="__other__" id={`${field.id}-other`} />
-                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+                <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer flex-1 py-2">Outros (especifique)</Label>
               </div>
             ) : (
-              <div key={`opt-${i}`} className="flex items-center gap-2">
+              <div key={`opt-${i}`} className="flex items-center gap-2 min-h-[44px] py-1">
                 <RadioGroupItem value={entry.value} id={`${field.id}-${i}`} />
-                <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer">{entry.value}</Label>
+                <Label htmlFor={`${field.id}-${i}`} className="text-sm font-normal cursor-pointer flex-1 py-2">{entry.value}</Label>
               </div>
             ))}
           </RadioGroup>
@@ -1860,7 +2031,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
 
       const otherBlockMulti = (
         <React.Fragment>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 min-h-[44px] py-1">
             <Checkbox
               id={`${field.id}-other`}
               checked={isOtherChecked}
@@ -1870,7 +2041,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
                 onChange(checked ? [...filtered, '__other__:'] : filtered);
               }}
             />
-            <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer">Outros (especifique)</Label>
+            <Label htmlFor={`${field.id}-other`} className="text-sm font-normal cursor-pointer flex-1 py-2">Outros (especifique)</Label>
           </div>
           {isOtherChecked && (
             <Input
@@ -1895,7 +2066,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
             const opt = entry.value;
             const isThisExclusive = exclusiveOption && opt === exclusiveOption;
             return (
-              <div key={`opt-${i}`} className={`flex items-center gap-2 ${isThisExclusive ? 'mt-2 pt-2 border-t border-dashed' : ''}`} style={isThisExclusive ? { borderColor: 'var(--form-muted)' } : undefined}>
+              <div key={`opt-${i}`} className={`flex items-center gap-2 min-h-[44px] py-1 ${isThisExclusive ? 'mt-2 pt-2 border-t border-dashed' : ''}`} style={isThisExclusive ? { borderColor: 'var(--form-muted)' } : undefined}>
                 <Checkbox
                   id={`${field.id}-${i}`}
                   checked={selected.includes(opt)}
@@ -1909,7 +2080,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
                     onChange(checked ? [...filtered, opt] : filtered);
                   }}
                 />
-                <Label htmlFor={`${field.id}-${i}`} className={`text-sm font-normal cursor-pointer ${isThisExclusive ? 'italic' : ''}`}>{opt}</Label>
+                <Label htmlFor={`${field.id}-${i}`} className={`text-sm font-normal cursor-pointer flex-1 py-2 ${isThisExclusive ? 'italic' : ''}`}>{opt}</Label>
               </div>
             );
           })}
