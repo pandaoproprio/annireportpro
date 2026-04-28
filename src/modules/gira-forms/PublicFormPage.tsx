@@ -788,6 +788,34 @@ export default function PublicFormPage() {
     return merged;
   }, [reorderedFields]);
 
+  // Detect volunteer modality (added before final lgpd step when triggered)
+  const isVolunteer = useMemo(() => {
+    const triggerField = fields.find(isVolunteerTriggerField);
+    if (!triggerField) return false;
+    const v = answers[triggerField.id];
+    const str = Array.isArray(v) ? v.join(',') : String(v ?? '');
+    return str.includes(VOLUNTEER_TRIGGER_VALUE);
+  }, [fields, answers]);
+
+  const stepsWithTerm = useMemo<Step[]>(() => {
+    if (!isVolunteer) return steps;
+    // Insert volunteer_term step BEFORE lgpd_review (last step)
+    const lastIdx = steps.length - 1;
+    const head = steps.slice(0, lastIdx);
+    const tail = steps.slice(lastIdx);
+    return [
+      ...head,
+      {
+        title: 'Termo de Voluntariado',
+        description: 'Leia e assine o Termo de Compromisso',
+        fields: [],
+        type: 'volunteer_term',
+      },
+      ...tail,
+    ];
+  }, [steps, isVolunteer]);
+
+
   const totalSteps = steps.length;
   const progress = useMemo(() => Math.round(((currentStep + 1) / totalSteps) * 100), [currentStep, totalSteps]);
 
