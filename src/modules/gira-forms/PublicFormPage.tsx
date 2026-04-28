@@ -2066,7 +2066,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
             const opt = entry.value;
             const isThisExclusive = exclusiveOption && opt === exclusiveOption;
             return (
-              <div key={`opt-${i}`} className={`flex items-center gap-2 ${isThisExclusive ? 'mt-2 pt-2 border-t border-dashed' : ''}`} style={isThisExclusive ? { borderColor: 'var(--form-muted)' } : undefined}>
+              <div key={`opt-${i}`} className={`flex items-center gap-2 min-h-[44px] py-1 ${isThisExclusive ? 'mt-2 pt-2 border-t border-dashed' : ''}`} style={isThisExclusive ? { borderColor: 'var(--form-muted)' } : undefined}>
                 <Checkbox
                   id={`${field.id}-${i}`}
                   checked={selected.includes(opt)}
@@ -2080,7 +2080,7 @@ function SmartFieldInput({ field, value, onChange, onCepAutoFill, isDark, formId
                     onChange(checked ? [...filtered, opt] : filtered);
                   }}
                 />
-                <Label htmlFor={`${field.id}-${i}`} className={`text-sm font-normal cursor-pointer ${isThisExclusive ? 'italic' : ''}`}>{opt}</Label>
+                <Label htmlFor={`${field.id}-${i}`} className={`text-sm font-normal cursor-pointer flex-1 py-2 ${isThisExclusive ? 'italic' : ''}`}>{opt}</Label>
               </div>
             );
           })}
