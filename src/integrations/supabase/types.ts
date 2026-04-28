@@ -2481,6 +2481,48 @@ export type Database = {
           },
         ]
       }
+      organization_legal_settings: {
+        Row: {
+          cidade: string | null
+          cnpj: string | null
+          created_at: string
+          email_administrativo: string | null
+          endereco: string | null
+          estado: string | null
+          id: string
+          is_active: boolean
+          logo_url: string | null
+          razao_social: string | null
+          updated_at: string
+        }
+        Insert: {
+          cidade?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email_administrativo?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          razao_social?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cidade?: string | null
+          cnpj?: string | null
+          created_at?: string
+          email_administrativo?: string | null
+          endereco?: string | null
+          estado?: string | null
+          id?: string
+          is_active?: boolean
+          logo_url?: string | null
+          razao_social?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       performance_config: {
         Row: {
           created_at: string
@@ -4339,6 +4381,111 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      voluntario_termos: {
+        Row: {
+          assinado_em: string
+          assinatura_imagem_base64: string | null
+          assinatura_texto: string | null
+          created_at: string
+          entidade_cidade: string | null
+          entidade_cnpj: string | null
+          entidade_endereco: string | null
+          entidade_razao_social: string | null
+          form_id: string | null
+          form_response_id: string | null
+          hash_sha256: string
+          id: string
+          ip_address: string | null
+          metodo_assinatura: string
+          pdf_path: string | null
+          pdf_url: string | null
+          public_token: string
+          revogado_em: string | null
+          revogado_motivo: string | null
+          revogado_por: string | null
+          status: string
+          updated_at: string
+          user_agent: string | null
+          voluntario_cidade_estado: string | null
+          voluntario_cpf: string | null
+          voluntario_email: string | null
+          voluntario_nome: string
+        }
+        Insert: {
+          assinado_em?: string
+          assinatura_imagem_base64?: string | null
+          assinatura_texto?: string | null
+          created_at?: string
+          entidade_cidade?: string | null
+          entidade_cnpj?: string | null
+          entidade_endereco?: string | null
+          entidade_razao_social?: string | null
+          form_id?: string | null
+          form_response_id?: string | null
+          hash_sha256: string
+          id?: string
+          ip_address?: string | null
+          metodo_assinatura: string
+          pdf_path?: string | null
+          pdf_url?: string | null
+          public_token?: string
+          revogado_em?: string | null
+          revogado_motivo?: string | null
+          revogado_por?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          voluntario_cidade_estado?: string | null
+          voluntario_cpf?: string | null
+          voluntario_email?: string | null
+          voluntario_nome: string
+        }
+        Update: {
+          assinado_em?: string
+          assinatura_imagem_base64?: string | null
+          assinatura_texto?: string | null
+          created_at?: string
+          entidade_cidade?: string | null
+          entidade_cnpj?: string | null
+          entidade_endereco?: string | null
+          entidade_razao_social?: string | null
+          form_id?: string | null
+          form_response_id?: string | null
+          hash_sha256?: string
+          id?: string
+          ip_address?: string | null
+          metodo_assinatura?: string
+          pdf_path?: string | null
+          pdf_url?: string | null
+          public_token?: string
+          revogado_em?: string | null
+          revogado_motivo?: string | null
+          revogado_por?: string | null
+          status?: string
+          updated_at?: string
+          user_agent?: string | null
+          voluntario_cidade_estado?: string | null
+          voluntario_cpf?: string | null
+          voluntario_email?: string | null
+          voluntario_nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voluntario_termos_form_id_fkey"
+            columns: ["form_id"]
+            isOneToOne: false
+            referencedRelation: "forms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voluntario_termos_form_response_id_fkey"
+            columns: ["form_response_id"]
+            isOneToOne: false
+            referencedRelation: "form_responses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       webhook_config: {
         Row: {
