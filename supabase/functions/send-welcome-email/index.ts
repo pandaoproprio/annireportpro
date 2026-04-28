@@ -190,10 +190,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const resendApiKey = Deno.env.get('RESEND_API_KEY');
-    if (!resendApiKey) {
+    const brevoApiKey = Deno.env.get('BREVO_API_KEY');
+    if (!brevoApiKey) {
       return new Response(
-        JSON.stringify({ error: 'RESEND_API_KEY not configured' }),
+        JSON.stringify({ error: 'BREVO_API_KEY not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -201,32 +201,33 @@ Deno.serve(async (req: Request) => {
     const displayName = name || to.split('@')[0];
     const htmlContent = buildHtml(displayName, to, password, loginUrl);
 
-    const response = await fetch('https://api.resend.com/emails', {
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
+        'api-key': brevoApiKey,
         'Content-Type': 'application/json',
+        'accept': 'application/json',
       },
       body: JSON.stringify({
-        from: 'GIRA Diário de Bordo <diario@giraerp.com.br>',
-        to: [to],
+        sender: { name: 'GIRA Diário de Bordo', email: 'diario@giraerp.com.br' },
+        to: [{ email: to, name: displayName }],
         subject: 'GIRA – Suas credenciais de acesso ao Diário de Bordo',
-        html: htmlContent,
+        htmlContent,
       }),
     });
 
     const result = await response.json();
 
     if (!response.ok) {
-      console.error('Resend API error:', result);
+      console.error('Brevo API error:', result);
       return new Response(
-        JSON.stringify({ error: result.message || 'Erro ao enviar e-mail via Resend' }),
+        JSON.stringify({ error: result.message || 'Erro ao enviar e-mail via Brevo' }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     return new Response(
-      JSON.stringify({ success: true, message: `E-mail enviado para ${to}`, message_id: result.id }),
+      JSON.stringify({ success: true, message: `E-mail enviado para ${to}`, message_id: result.messageId }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {

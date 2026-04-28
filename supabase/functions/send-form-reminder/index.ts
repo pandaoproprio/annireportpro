@@ -12,8 +12,8 @@ serve(async (req) => {
   }
 
   try {
-    const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-    if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY not configured');
+    const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY');
+    if (!BREVO_API_KEY) throw new Error('BREVO_API_KEY not configured');
 
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -130,18 +130,22 @@ serve(async (req) => {
 </html>`;
 
       try {
-        const res = await fetch('https://api.resend.com/emails', {
+        const res = await fetch('https://api.brevo.com/v3/smtp/email', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'api-key': BREVO_API_KEY,
             'Content-Type': 'application/json',
+            'accept': 'application/json',
           },
           body: JSON.stringify({
-            from: 'GIRA Diário de Bordo <diario@giraerp.com.br>',
-            to: [r.email],
-            cc: ['juanpablorj@gmail.com', 'rapha.araujo.cultura@gmail.com'],
+            sender: { name: 'GIRA Diário de Bordo', email: 'diario@giraerp.com.br' },
+            to: [{ email: r.email, name: r.name || 'Participante' }],
+            cc: [
+              { email: 'juanpablorj@gmail.com' },
+              { email: 'rapha.araujo.cultura@gmail.com' },
+            ],
             subject,
-            html,
+            htmlContent: html,
           }),
         });
         if (res.ok) {

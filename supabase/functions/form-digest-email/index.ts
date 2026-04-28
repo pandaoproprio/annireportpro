@@ -197,10 +197,10 @@ Deno.serve(async (req: Request) => {
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const resendApiKey = Deno.env.get('RESEND_API_KEY');
+  const brevoApiKey = Deno.env.get('BREVO_API_KEY');
 
-  if (!resendApiKey) {
-    return new Response(JSON.stringify({ error: 'RESEND_API_KEY not configured' }), {
+  if (!brevoApiKey) {
+    return new Response(JSON.stringify({ error: 'BREVO_API_KEY not configured' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -317,10 +317,11 @@ Deno.serve(async (req: Request) => {
 
       const xlsBuf = generateXlsBuffer(form.title, (fields || []) as FormField[], responseList);
 
-      const attachments: { filename: string; content: string }[] = [];
+      // Brevo: campo `attachment` (singular) com { name, content (base64) }
+      const attachments: { name: string; content: string }[] = [];
 
       if (aiPdfBuf && aiPdfBuf.byteLength > 0) {
-        attachments.push({ filename: 'Relatório_IA.pdf', content: arrayBufferToBase64(aiPdfBuf) });
+        attachments.push({ name: 'Relatório_IA.pdf', content: arrayBufferToBase64(aiPdfBuf) });
         console.log(`✓ AI Report: ${Math.round(aiPdfBuf.byteLength / 1024)}KB`);
       } else {
         errors.push(`Form ${config.form_id}: AI Report generation failed`);
@@ -328,7 +329,7 @@ Deno.serve(async (req: Request) => {
       }
 
       if (tablePdfBuf && tablePdfBuf.byteLength > 0) {
-        attachments.push({ filename: 'Respostas.pdf', content: arrayBufferToBase64(tablePdfBuf) });
+        attachments.push({ name: 'Respostas.pdf', content: arrayBufferToBase64(tablePdfBuf) });
         console.log(`✓ Table PDF: ${Math.round(tablePdfBuf.byteLength / 1024)}KB`);
       } else {
         errors.push(`Form ${config.form_id}: Table PDF generation failed`);
@@ -336,25 +337,26 @@ Deno.serve(async (req: Request) => {
       }
 
       if (xlsBuf.byteLength > 0) {
-        attachments.push({ filename: 'Respostas.xls', content: arrayBufferToBase64(xlsBuf.buffer as ArrayBuffer) });
+        attachments.push({ name: 'Respostas.xls', content: arrayBufferToBase64(xlsBuf.buffer as ArrayBuffer) });
         console.log(`✓ XLS: ${Math.round(xlsBuf.byteLength / 1024)}KB`);
       }
 
       console.log(`Sending email to ${recipients.join(', ')} with ${attachments.length} attachment(s)...`);
 
-      // Send email via Resend
-      const emailRes = await fetch('https://api.resend.com/emails', {
+      // Send email via Brevo
+      const emailRes = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${resendApiKey}`,
+          'api-key': brevoApiKey,
           'Content-Type': 'application/json',
+          'accept': 'application/json',
         },
         body: JSON.stringify({
-          from: 'GIRA Forms <diario@giraerp.com.br>',
-          to: recipients,
+          sender: { name: 'GIRA Forms', email: 'diario@giraerp.com.br' },
+          to: recipients.map((email: string) => ({ email })),
           subject: `📋 Resumo — ${form.title} (${responseList.length} resposta${responseList.length !== 1 ? 's' : ''})`,
-          html,
-          attachments,
+          htmlContent: html,
+          attachment: attachments,
         }),
       });
 
