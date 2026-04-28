@@ -595,6 +595,43 @@ export default function PublicFormPage() {
 
   const visibleFields = fields.filter(isFieldVisible);
 
+  // ─── Limpar valores de campos que ficaram ocultos por condicional ────
+  // Quando o usuário muda uma resposta (ex.: de "Sim" para "Não"), os campos
+  // condicionais somem — e suas respostas precisam ser apagadas para que o
+  // payload não carregue dados inconsistentes nem quebre validações posteriores.
+  const visibleIdsKey = useMemo(() => visibleFields.map(f => f.id).sort().join(','), [visibleFields]);
+  React.useEffect(() => {
+    const visibleIds = new Set(visibleFields.map(f => f.id));
+    setAnswers(prev => {
+      let mutated = false;
+      const next = { ...prev };
+      for (const key of Object.keys(prev)) {
+        // Mantém chaves auxiliares (_lgpd_consent, *_audio_url) e respostas
+        // de campos visíveis. Remove apenas campos que existem no form mas
+        // estão ocultos agora.
+        if (key.startsWith('_') || key.endsWith('_audio_url')) continue;
+        const fieldExists = fields.some(f => f.id === key);
+        if (fieldExists && !visibleIds.has(key)) {
+          delete next[key];
+          mutated = true;
+        }
+      }
+      return mutated ? next : prev;
+    });
+    setValidationErrors(prev => {
+      let mutated = false;
+      const next = { ...prev };
+      for (const key of Object.keys(prev)) {
+        if (!visibleIds.has(key)) {
+          delete next[key];
+          mutated = true;
+        }
+      }
+      return mutated ? next : prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleIdsKey]);
+
   // ─── Reorder: move CEP before address fields in each section ──
   const reorderedFields = useMemo(() => {
     const result: FormField[] = [];
