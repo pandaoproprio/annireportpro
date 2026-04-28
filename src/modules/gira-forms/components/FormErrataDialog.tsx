@@ -16,19 +16,23 @@ export const FormErrataDialog: React.FC<Props> = ({ formId }) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [count, setCount] = useState<number | null>(null);
+  const [alreadySent, setAlreadySent] = useState<number>(0);
+  const [skipAlreadySent, setSkipAlreadySent] = useState(true);
   const [step, setStep] = useState<'idle' | 'confirm' | 'sent'>('idle');
   const [result, setResult] = useState<{ sent: number; failed: number } | null>(null);
   const [testEmail, setTestEmail] = useState('');
 
-  const previewCount = async () => {
+  const previewCount = async (skip = true) => {
     setLoading(true);
+    setSkipAlreadySent(skip);
     try {
       const { data, error } = await supabase.functions.invoke('send-form-errata', {
-        body: { form_id: formId, dry_run: true },
+        body: { form_id: formId, dry_run: true, skip_already_sent: skip },
       });
       if (error) throw error;
-      const r = data as { total: number };
+      const r = data as { total: number; already_sent?: number };
       setCount(r.total);
+      setAlreadySent(r.already_sent || 0);
       setStep('confirm');
     } catch (e: any) {
       toast.error('Falha ao calcular destinatários: ' + (e?.message || String(e)));
@@ -41,7 +45,7 @@ export const FormErrataDialog: React.FC<Props> = ({ formId }) => {
     if (!testEmail.trim()) { toast.error('Informe um e-mail'); return; }
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('send-form-errata', {
+      const { error } = await supabase.functions.invoke('send-form-errata', {
         body: { form_id: formId, test_email: testEmail.trim() },
       });
       if (error) throw error;
@@ -57,7 +61,7 @@ export const FormErrataDialog: React.FC<Props> = ({ formId }) => {
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-form-errata', {
-        body: { form_id: formId },
+        body: { form_id: formId, skip_already_sent: skipAlreadySent },
       });
       if (error) throw error;
       const r = data as { sent: number; failed: number };
@@ -72,7 +76,7 @@ export const FormErrataDialog: React.FC<Props> = ({ formId }) => {
   };
 
   const reset = () => {
-    setStep('idle'); setCount(null); setResult(null); setTestEmail('');
+    setStep('idle'); setCount(null); setResult(null); setTestEmail(''); setAlreadySent(0); setSkipAlreadySent(true);
   };
 
   return (
