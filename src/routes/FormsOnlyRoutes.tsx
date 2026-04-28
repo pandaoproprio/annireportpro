@@ -17,6 +17,7 @@ const FormCheckinPanel = lazy(() => import('@/modules/gira-forms/components/Form
 const PublicCheckinPage = lazy(() => import('@/modules/gira-forms/PublicCheckinPage'));
 const CheckinPage = lazy(() => import('@/modules/gira-eventos/components/CheckinPage'));
 const CertificateVerifyPage = lazy(() => import('@/modules/gira-eventos/components/CertificateVerifyPage'));
+const VolunteerTermVerifyPage = lazy(() => import('@/modules/gira-forms/volunteer-term/VolunteerTermVerifyPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
