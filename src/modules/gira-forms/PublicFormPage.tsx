@@ -1269,8 +1269,19 @@ export default function PublicFormPage() {
 
   // ─── Render field card (shared between modes) ─────────────
   const renderFieldCard = (field: FormField, i: number) => {
+    const isConditional = !!(field.settings?.condition || field.settings?.conditionGroup);
+    const hasError = !!validationErrors[field.id];
     return (
-    <div key={field.id} id={`field-${field.id}`}>
+    <motion.div
+      key={field.id}
+      id={`field-${field.id}`}
+      layout
+      initial={isConditional ? { opacity: 0, y: -8, height: 0 } : false}
+      animate={{ opacity: 1, y: 0, height: 'auto' }}
+      exit={isConditional ? { opacity: 0, y: -8, height: 0 } : undefined}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
+      style={{ overflow: isConditional ? 'hidden' : undefined }}
+    >
       {field.type === 'info_text' ? (
         <div className="rounded-xl p-5 shadow-sm" style={{ background: 'var(--form-card-bg)' }}>
           {field.label && <h3 className="font-semibold mb-2">{field.label}</h3>}
@@ -1282,16 +1293,31 @@ export default function PublicFormPage() {
         </div>
       ) : (
         <div
-          className="rounded-xl p-5 shadow-sm space-y-3 transition-all"
+          className={`rounded-xl p-5 shadow-sm space-y-3 transition-all ${isConditional ? 'border-l-4' : ''}`}
+          onBlur={(e) => {
+            // Valida ao perder foco (somente quando o foco realmente sai do card,
+            // não ao mover entre inputs internos como rádio/checkbox).
+            const next = e.relatedTarget as Node | null;
+            if (next && e.currentTarget.contains(next)) return;
+            handleFieldBlur(field);
+          }}
           style={{
-            background: 'var(--form-card-bg)',
-            ...(validationErrors[field.id] ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
+            background: isConditional ? (isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc') : 'var(--form-card-bg)',
+            borderLeftColor: isConditional ? 'var(--form-primary)' : undefined,
+            ...(hasError ? { boxShadow: '0 0 0 2px #ef4444' } : {}),
           }}
         >
           <div>
             <Label className="text-sm font-medium">
               {field.label}
-              {field.required && <span className="ml-1" style={{ color: '#ef4444' }}>*</span>}
+              {field.required && (
+                <span
+                  className="ml-1 font-bold"
+                  style={{ color: '#ef4444' }}
+                  aria-label="campo obrigatório"
+                  title="Campo obrigatório"
+                >*</span>
+              )}
             </Label>
             {field.description && <p className="text-xs mt-0.5" style={{ color: 'var(--form-muted)' }}>{field.description}</p>}
             {isAddressField(field.label) && fields.some(f => detectSmartType(f) === 'cep') && (
@@ -1312,14 +1338,15 @@ export default function PublicFormPage() {
               setAnswers(prev => ({ ...prev, [`${fieldId}_audio_url`]: url }));
             }}
           />
-          {validationErrors[field.id] && (
-            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs" style={{ color: '#ef4444' }}>
+          {hasError && (
+            <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-xs flex items-center gap-1" style={{ color: '#ef4444' }}>
+              <AlertCircle className="w-3 h-3" />
               {validationErrors[field.id]}
             </motion.p>
           )}
         </div>
       )}
-    </div>
+    </motion.div>
     );
   };
 
