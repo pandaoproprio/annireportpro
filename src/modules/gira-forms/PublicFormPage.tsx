@@ -24,6 +24,9 @@ import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { PreCheckinButton } from '@/modules/gira-eventos/components/PreCheckinButton';
 import { EventLocationLinks } from '@/modules/gira-eventos/components/EventLocationLinks';
+import { VolunteerTermStep, type VolunteerTermStepValue } from './volunteer-term/VolunteerTermStep';
+import { signAndPersistTerm, linkTermToResponse } from './volunteer-term/signAndPersist';
+import type { OrgLegalSettings } from './volunteer-term/types';
 
 // ─── CEP API ────────────────────────────────────────────────
 interface CepData {
