@@ -491,11 +491,24 @@ Deno.serve(async (req) => {
       const { data: roles } = await supabaseAdmin.from('user_roles').select('*');
       const { data: allPermissions } = await supabaseAdmin.from('user_permissions').select('*');
 
+      // Latest UNUSED reset link per user (for "Link enviado" badge)
+      const { data: resetLinks } = await supabaseAdmin
+        .from('password_reset_links')
+        .select('user_id, created_at, expires_at, used_at, email_sent')
+        .is('used_at', null)
+        .order('created_at', { ascending: false });
+      const latestResetByUser = new Map<string, any>();
+      (resetLinks || []).forEach((l: any) => {
+        if (!latestResetByUser.has(l.user_id) && new Date(l.expires_at) > new Date()) {
+          latestResetByUser.set(l.user_id, l);
+        }
+      });
+
       const enrichedUsers = await Promise.all(users.users.map(async (user) => {
         const profile = profiles?.find(p => p.user_id === user.id);
         const role = roles?.find(r => r.user_id === user.id);
         const userPerms = allPermissions?.filter(p => p.user_id === user.id).map(p => p.permission) || [];
-        
+
         // Check MFA factors
         let mfaEnabled = false;
         try {
@@ -508,6 +521,8 @@ Deno.serve(async (req) => {
           }
         } catch { /* ignore */ }
 
+        const link = latestResetByUser.get(user.id);
+
         return {
           id: user.id,
           email: user.email,
@@ -518,6 +533,13 @@ Deno.serve(async (req) => {
           lastSignIn: user.last_sign_in_at,
           emailConfirmed: user.email_confirmed_at !== null,
           mfaEnabled,
+          mustChangePassword: profile?.must_change_password === true,
+          tempPassword: profile?.temp_password_plaintext || null,
+          tempPasswordSetAt: profile?.temp_password_set_at || null,
+          firstLoginAt: profile?.first_login_at || null,
+          activeResetLinkSentAt: link?.created_at || null,
+          activeResetLinkExpiresAt: link?.expires_at || null,
+          activeResetLinkEmailSent: link?.email_sent || false,
         };
       }));
 
