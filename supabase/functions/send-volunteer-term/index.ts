@@ -5,14 +5,17 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const INSTITUTIONAL_BCC = ['juanpablorj@gmail.com', 'rapha.araujo.cultura@gmail.com'];
+const INSTITUTIONAL_BCC = [
+  { email: 'juanpablorj@gmail.com' },
+  { email: 'rapha.araujo.cultura@gmail.com' },
+];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
-  const resendApiKey = Deno.env.get('RESEND_API_KEY');
-  if (!resendApiKey) {
-    return new Response(JSON.stringify({ error: 'RESEND_API_KEY not configured' }), {
+  const BREVO_API_KEY = Deno.env.get('BREVO_API_KEY');
+  if (!BREVO_API_KEY) {
+    return new Response(JSON.stringify({ error: 'BREVO_API_KEY not configured' }), {
       status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
@@ -79,34 +82,35 @@ serve(async (req) => {
       </html>
     `;
 
-    const resendRes = await fetch('https://api.resend.com/emails', {
+    const res = await fetch('https://api.brevo.com/v3/smtp/email', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
+        'api-key': BREVO_API_KEY,
         'Content-Type': 'application/json',
+        'accept': 'application/json',
       },
       body: JSON.stringify({
-        from: 'GIRA Forms <diario@giraerp.com.br>',
-        to: [voluntarioEmail],
+        sender: { name: 'GIRA Forms', email: 'diario@giraerp.com.br' },
+        to: [{ email: voluntarioEmail, name: voluntarioNome || 'Voluntário(a)' }],
         bcc: INSTITUTIONAL_BCC,
         subject: 'Seu Termo de Compromisso de Voluntariado — GIRA Forms',
-        html,
-        attachments: [
+        htmlContent: html,
+        attachment: [
           {
-            filename: `termo-voluntariado-${termoId.slice(0, 8)}.pdf`,
+            name: `termo-voluntariado-${termoId.slice(0, 8)}.pdf`,
             content: pdfBase64,
           },
         ],
       }),
     });
 
-    const resendData = await resendRes.json();
-    if (!resendRes.ok) {
-      console.error('Resend error:', resendData);
-      throw new Error(resendData.message || JSON.stringify(resendData));
+    const data = await res.json();
+    if (!res.ok) {
+      console.error('Brevo error:', data);
+      throw new Error(data.message || JSON.stringify(data));
     }
 
-    return new Response(JSON.stringify({ success: true, id: resendData.id }), {
+    return new Response(JSON.stringify({ success: true, id: data.messageId }), {
       status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (e) {
