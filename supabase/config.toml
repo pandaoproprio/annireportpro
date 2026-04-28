@@ -63,3 +63,5 @@ project_id = "pmexspghvnabwxcnrstr"
     verify_jwt = false
   [functions.send-form-errata]
     verify_jwt = false
+  [functions.notify-admin-password-event]
+    verify_jwt = false
