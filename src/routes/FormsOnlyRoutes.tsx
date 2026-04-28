@@ -17,6 +17,7 @@ const FormCheckinPanel = lazy(() => import('@/modules/gira-forms/components/Form
 const PublicCheckinPage = lazy(() => import('@/modules/gira-forms/PublicCheckinPage'));
 const CheckinPage = lazy(() => import('@/modules/gira-eventos/components/CheckinPage'));
 const CertificateVerifyPage = lazy(() => import('@/modules/gira-eventos/components/CertificateVerifyPage'));
+const VolunteerTermVerifyPage = lazy(() => import('@/modules/gira-forms/volunteer-term/VolunteerTermVerifyPage'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -52,6 +53,7 @@ export const FormsOnlyRoutes: React.FC = () => {
         <Route path="/c" element={<PublicCheckinPage />} />
         <Route path="/checkin/:id" element={<CheckinPage />} />
         <Route path="/certificado/:hash" element={<CertificateVerifyPage />} />
+        <Route path="/voluntario/termo/:token" element={<VolunteerTermVerifyPage />} />
 
         {/* Fluxos auth obrigatórios */}
         <Route path="/consentimento" element={<ProtectedRoute><LgpdConsent /></ProtectedRoute>} />

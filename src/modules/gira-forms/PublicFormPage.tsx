@@ -24,6 +24,9 @@ import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { PreCheckinButton } from '@/modules/gira-eventos/components/PreCheckinButton';
 import { EventLocationLinks } from '@/modules/gira-eventos/components/EventLocationLinks';
+import { VolunteerTermStep, type VolunteerTermStepValue } from './volunteer-term/VolunteerTermStep';
+import { signAndPersistTerm, linkTermToResponse } from './volunteer-term/signAndPersist';
+import type { OrgLegalSettings } from './volunteer-term/types';
 
 // ─── CEP API ────────────────────────────────────────────────
 interface CepData {
@@ -129,7 +132,12 @@ interface Step {
   title: string;
   description?: string;
   fields: FormField[];
-  type: 'section' | 'lgpd_review';
+  type: 'section' | 'lgpd_review' | 'volunteer_term';
+}
+
+const VOLUNTEER_TRIGGER_VALUE = 'Sim, quero somar com minha força de trabalho voluntária.';
+function isVolunteerTriggerField(field: FormField): boolean {
+  return /deseja\s+colaborar\s+voluntariamente/i.test(field.label);
 }
 
 // ─── Main Component ─────────────────────────────────────────
@@ -146,6 +154,32 @@ export default function PublicFormPage() {
   const [lgpdError, setLgpdError] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Volunteer term state
+  const [termValue, setTermValue] = useState<VolunteerTermStepValue>({
+    metodo: 'canvas', scrolledToEnd: false, lgpdAccepted: false,
+  });
+  const [signedTermId, setSignedTermId] = useState<string | null>(null);
+  const [isSigningTerm, setIsSigningTerm] = useState(false);
+
+  // Org legal settings (silently degrades to placeholders if not configured)
+  const orgSettingsQuery = useQuery({
+    queryKey: ['org-legal-settings'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('organization_legal_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      return (data as unknown as OrgLegalSettings) || {
+        id: '', is_active: false,
+        razao_social: null, cnpj: null, endereco: null, cidade: null, estado: null,
+        email_administrativo: null, logo_url: null,
+      };
+    },
+    staleTime: 60_000,
+  });
+  const orgSettings = orgSettingsQuery.data;
 
   const isUuid = id ? /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) : false;
 
@@ -498,6 +532,11 @@ export default function PublicFormPage() {
       } catch {
         // Non-critical
       }
+
+      // Vincula o termo de voluntariado (se houver) ao response recém-criado
+      if (signedTermId) {
+        await linkTermToResponse(signedTermId, responseId);
+      }
     },
     onSuccess: () => setSubmitted(true),
     onError: (err) => {
@@ -754,7 +793,35 @@ export default function PublicFormPage() {
     return merged;
   }, [reorderedFields]);
 
-  const totalSteps = steps.length;
+  // Detect volunteer modality (added before final lgpd step when triggered)
+  const isVolunteer = useMemo(() => {
+    const triggerField = fields.find(isVolunteerTriggerField);
+    if (!triggerField) return false;
+    const v = answers[triggerField.id];
+    const str = Array.isArray(v) ? v.join(',') : String(v ?? '');
+    return str.includes(VOLUNTEER_TRIGGER_VALUE);
+  }, [fields, answers]);
+
+  const stepsWithTerm = useMemo<Step[]>(() => {
+    if (!isVolunteer) return steps;
+    // Insert volunteer_term step BEFORE lgpd_review (last step)
+    const lastIdx = steps.length - 1;
+    const head = steps.slice(0, lastIdx);
+    const tail = steps.slice(lastIdx);
+    return [
+      ...head,
+      {
+        title: 'Termo de Voluntariado',
+        description: 'Leia e assine o Termo de Compromisso',
+        fields: [],
+        type: 'volunteer_term',
+      },
+      ...tail,
+    ];
+  }, [steps, isVolunteer]);
+
+
+  const totalSteps = stepsWithTerm.length;
   const progress = useMemo(() => Math.round(((currentStep + 1) / totalSteps) * 100), [currentStep, totalSteps]);
 
   const isSinglePage = design.singlePage ?? false;
@@ -859,11 +926,19 @@ export default function PublicFormPage() {
 
   // ─── Validation per step ──────────────────────────────────
   const validateStep = (stepIndex: number): boolean => {
-    const step = steps[stepIndex];
+    const step = stepsWithTerm[stepIndex];
     if (!step) return true;
 
     if (step.type === 'lgpd_review') {
       if (!lgpdConsent) { setLgpdError(true); return false; }
+      return true;
+    }
+
+    if (step.type === 'volunteer_term') {
+      if (!signedTermId) {
+        toast.error('Conclua a assinatura do Termo de Voluntariado para continuar.');
+        return false;
+      }
       return true;
     }
 
@@ -957,6 +1032,49 @@ export default function PublicFormPage() {
     if (!validateStep(currentStep)) return;
     submitMutation.mutate();
   };
+
+  // Sign volunteer term — runs BEFORE form_response insert. If it fails,
+  // submission is blocked and user can retry.
+  const handleSignTerm = useCallback(async () => {
+    if (isSigningTerm || signedTermId) return;
+    if (!orgSettings || !formId) return;
+
+    const respondentName = nameFieldId ? String(answers[nameFieldId] || '').trim() : '';
+    const respondentEmail = emailFieldId ? String(answers[emailFieldId] || '').trim() : '';
+    const respondentCpf = cpfFieldId ? String(answers[cpfFieldId] || '').trim() : '';
+    // tenta achar campo cidade/estado
+    const cidadeField = fields.find(f => /munic[ií]pio.*uf|cidade.*estado|cidade/i.test(f.label));
+    const cidadeEstado = cidadeField ? String(answers[cidadeField.id] || '').trim() : '';
+
+    setIsSigningTerm(true);
+    try {
+      const result = await signAndPersistTerm({
+        org: orgSettings,
+        volunteer: {
+          nome: respondentName,
+          cpf: respondentCpf,
+          email: respondentEmail,
+          cidadeEstado,
+        },
+        formId,
+        formTitle: form?.title,
+        formResponseId: null,
+        metodo: termValue.metodo,
+        signatureImage: termValue.signatureImage,
+        signatureText: termValue.signatureText,
+      });
+      setSignedTermId(result.termoId);
+      toast.success('Termo assinado com sucesso! Avance para enviar a inscrição.');
+      // avança automaticamente para a próxima etapa (Revisão e Envio)
+      setCurrentStep(prev => Math.min(prev + 1, totalSteps - 1));
+      scrollToTop();
+    } catch (e: any) {
+      console.error('[volunteer-term] sign failed:', e);
+      toast.error(`Não foi possível gerar o termo: ${e?.message || e}. Tente novamente.`);
+    } finally {
+      setIsSigningTerm(false);
+    }
+  }, [isSigningTerm, signedTermId, orgSettings, formId, form, fields, answers, nameFieldId, emailFieldId, cpfFieldId, termValue, totalSteps]);
 
   const updateAnswer = useCallback((fieldId: string, value: unknown) => {
     setAnswers(prev => ({ ...prev, [fieldId]: value }));
@@ -1204,7 +1322,7 @@ export default function PublicFormPage() {
     );
   }
 
-  const activeStep = steps[currentStep];
+  const activeStep = stepsWithTerm[currentStep];
   const isLastStep = currentStep === totalSteps - 1;
   const isFirstStep = currentStep === 0;
 
@@ -1656,6 +1774,25 @@ export default function PublicFormPage() {
               </div>
             )}
 
+            {activeStep.type === 'volunteer_term' && orgSettings && (
+              <VolunteerTermStep
+                org={orgSettings}
+                volunteer={{
+                  nome: nameFieldId ? String(answers[nameFieldId] || '') : '',
+                  cpf: cpfFieldId ? String(answers[cpfFieldId] || '') : '',
+                  email: emailFieldId ? String(answers[emailFieldId] || '') : '',
+                  cidadeEstado: (() => {
+                    const cf = fields.find(f => /munic[ií]pio.*uf|cidade.*estado|cidade/i.test(f.label));
+                    return cf ? String(answers[cf.id] || '') : '';
+                  })(),
+                }}
+                value={termValue}
+                onChange={setTermValue}
+                onSubmit={handleSignTerm}
+                isSubmitting={isSigningTerm}
+              />
+            )}
+
             {activeStep.type === 'lgpd_review' && (
               <>
                 <div className="rounded-xl p-5 shadow-sm space-y-4" style={{ background: 'var(--form-card-bg)' }}>
@@ -1734,6 +1871,23 @@ export default function PublicFormPage() {
             : hasMissing
               ? `Preencha ${stepMissing.length} ${stepMissing.length === 1 ? 'campo obrigatório' : 'campos obrigatórios'} para continuar.`
               : '';
+          if (activeStep.type === 'volunteer_term' && !signedTermId) {
+            return (
+              <div className="flex gap-3 pt-2 pb-4">
+                {!isFirstStep && (
+                  <motion.button
+                    type="button"
+                    onClick={goPrev}
+                    className="flex-1 min-h-[48px] py-3 rounded-lg font-semibold text-sm border-2 hover:opacity-80 transition-all flex items-center justify-center gap-2"
+                    style={{ borderColor: 'var(--form-primary)', color: 'var(--form-primary)', background: 'var(--form-card-bg)' }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Anterior
+                  </motion.button>
+                )}
+              </div>
+            );
+          }
           return (
             <div className="flex gap-3 pt-2 pb-4">
               {!isFirstStep && (
