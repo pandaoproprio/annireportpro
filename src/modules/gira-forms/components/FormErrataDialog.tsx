@@ -105,8 +105,18 @@ export const FormErrataDialog: React.FC<Props> = ({ formId }) => {
 
         {step === 'confirm' && (
           <div className="space-y-4">
-            <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm">
-              Total de destinatários únicos com e-mail: <strong>{count}</strong>
+            <div className="bg-amber-50 border border-amber-200 rounded p-3 text-sm space-y-1">
+              <p>{skipAlreadySent ? 'A enviar (somente quem ainda não recebeu)' : 'A enviar (todos)'}: <strong>{count}</strong></p>
+              {alreadySent > 0 && skipAlreadySent && (
+                <p className="text-xs text-amber-800">{alreadySent} já receberam com sucesso e serão pulados.</p>
+              )}
+              <button
+                type="button"
+                onClick={() => previewCount(!skipAlreadySent)}
+                className="text-xs underline text-amber-700 hover:text-amber-900"
+              >
+                {skipAlreadySent ? 'Reenviar para TODOS (inclusive quem já recebeu)' : 'Apenas para quem faltou'}
+              </button>
             </div>
 
             <div className="space-y-2 border rounded p-3">
