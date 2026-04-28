@@ -1774,6 +1774,25 @@ export default function PublicFormPage() {
               </div>
             )}
 
+            {activeStep.type === 'volunteer_term' && orgSettings && (
+              <VolunteerTermStep
+                org={orgSettings}
+                volunteer={{
+                  nome: nameFieldId ? String(answers[nameFieldId] || '') : '',
+                  cpf: cpfFieldId ? String(answers[cpfFieldId] || '') : '',
+                  email: emailFieldId ? String(answers[emailFieldId] || '') : '',
+                  cidadeEstado: (() => {
+                    const cf = fields.find(f => /munic[ií]pio.*uf|cidade.*estado|cidade/i.test(f.label));
+                    return cf ? String(answers[cf.id] || '') : '';
+                  })(),
+                }}
+                value={termValue}
+                onChange={setTermValue}
+                onSubmit={handleSignTerm}
+                isSubmitting={isSigningTerm}
+              />
+            )}
+
             {activeStep.type === 'lgpd_review' && (
               <>
                 <div className="rounded-xl p-5 shadow-sm space-y-4" style={{ background: 'var(--form-card-bg)' }}>
