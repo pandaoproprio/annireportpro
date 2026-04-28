@@ -648,19 +648,23 @@ Deno.serve(async (req) => {
           } catch (emailErr) {
             console.error('Failed to send welcome email after user creation:', emailErr);
 
-            if (isAutoProvision && userData?.id) {
+            // Email provider failed (e.g. unverified domain). DO NOT roll back the account —
+            // store the password as a temporary plaintext so the admin can share it manually
+            // through the password actions menu.
+            if (isAutoProvision && userData?.id && password) {
               try {
-                await supabaseAdmin.auth.admin.deleteUser(userData.id);
-              } catch (cleanupErr) {
-                console.error('Failed to rollback user after email failure:', cleanupErr);
+                await supabaseAdmin
+                  .from('profiles')
+                  .update({
+                    temp_password_plaintext: password,
+                    temp_password_set_at: new Date().toISOString(),
+                    temp_password_set_by: callerUser.id,
+                    must_change_password: true,
+                  })
+                  .eq('user_id', userData.id);
+              } catch (persistErr) {
+                console.error('Failed to persist temp password after email failure:', persistErr);
               }
-
-              return new Response(JSON.stringify({
-                error: 'Não foi possível enviar o e-mail com as credenciais. A conta não foi criada. Tente novamente.'
-              }), {
-                status: 502,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-              });
             }
           }
         }
