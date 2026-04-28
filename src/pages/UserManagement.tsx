@@ -474,6 +474,30 @@ export const UserManagement: React.FC = () => {
         </Dialog>
       </div>
 
+      {/* Bulk password actions banner */}
+      {selectedForBulk.size > 0 && (
+        <Card className="border-primary/40 bg-primary/5">
+          <CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
+            <span className="text-sm font-medium">
+              {selectedForBulk.size} usuário(s) selecionado(s) para ações de senha
+            </span>
+            <div className="ml-auto flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => setSelectedForBulk(new Set())}>
+                Limpar seleção
+              </Button>
+              <Button size="sm" variant="outline" onClick={handleBulkForceChange} disabled={isLoading}>
+                <KeyRound className="w-3.5 h-3.5 mr-1.5" />
+                Forçar troca no próximo login
+              </Button>
+              <Button size="sm" onClick={handleBulkResetLink} disabled={isLoading}>
+                <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                Gerar link de reset + enviar e-mail
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Filter & Reminder Banner */}
       <Card>
         <CardContent className="pt-4 pb-3">
