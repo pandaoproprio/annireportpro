@@ -921,11 +921,19 @@ export default function PublicFormPage() {
 
   // ─── Validation per step ──────────────────────────────────
   const validateStep = (stepIndex: number): boolean => {
-    const step = steps[stepIndex];
+    const step = stepsWithTerm[stepIndex];
     if (!step) return true;
 
     if (step.type === 'lgpd_review') {
       if (!lgpdConsent) { setLgpdError(true); return false; }
+      return true;
+    }
+
+    if (step.type === 'volunteer_term') {
+      if (!signedTermId) {
+        toast.error('Conclua a assinatura do Termo de Voluntariado para continuar.');
+        return false;
+      }
       return true;
     }
 
