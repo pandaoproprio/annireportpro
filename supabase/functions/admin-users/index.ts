@@ -113,6 +113,168 @@ Deno.serve(async (req) => {
     const url = new URL(req.url);
     const action = url.searchParams.get('action');
 
+    // ===== PASSWORD MANAGEMENT (RESTAURADO) =====
+    // Ações: set-temp-password | force-change | generate-reset-link | batch-reset-link | batch-force-change
+    if (action === 'set-temp-password' && req.method === 'POST') {
+      const { userId, password } = await req.json();
+      if (!userId || !password) {
+        return new Response(JSON.stringify({ error: 'userId e password são obrigatórios' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      if (password.length < 8) {
+        return new Response(JSON.stringify({ error: 'A senha temporária precisa ter pelo menos 8 caracteres.' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      const { error: pwError } = await supabaseAdmin.auth.admin.updateUserById(userId, { password });
+      if (pwError) {
+        const msg = (pwError.message || '').toLowerCase();
+        let friendly = pwError.message || 'Erro ao redefinir senha';
+        if (msg.includes('weak') || msg.includes('pwned') || msg.includes('known')) {
+          friendly = 'Esta senha é muito comum e foi encontrada em vazamentos públicos. Escolha uma senha mais forte e única.';
+        }
+        return new Response(JSON.stringify({ error: friendly }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+      await supabaseAdmin.from('profiles').update({
+        must_change_password: true,
+        login_attempts_without_change: 0,
+        first_login_at: null,
+        temp_password_plaintext: password,
+        temp_password_set_at: new Date().toISOString(),
+        temp_password_set_by: callingUser.id,
+      }).eq('user_id', userId);
+
+      await supabaseAdmin.from('system_logs').insert([{
+        user_id: callingUser.id,
+        action: 'admin_set_temp_password',
+        entity_type: 'user',
+        entity_id: userId,
+        new_data: { method: 'manual_temp_password' },
+        ip_address: req.headers.get('x-forwarded-for') || null,
+        user_agent: req.headers.get('user-agent') || null,
+      }]);
+
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (action === 'force-change' && req.method === 'POST') {
+      const { userId, userIds } = await req.json();
+      const ids: string[] = Array.isArray(userIds) ? userIds : (userId ? [userId] : []);
+      if (ids.length === 0) {
+        return new Response(JSON.stringify({ error: 'userId ou userIds é obrigatório' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const { error: updErr } = await supabaseAdmin
+        .from('profiles')
+        .update({ must_change_password: true })
+        .in('user_id', ids);
+      if (updErr) throw updErr;
+
+      const logRows = ids.map((uid) => ({
+        user_id: callingUser.id,
+        action: 'admin_force_password_change',
+        entity_type: 'user',
+        entity_id: uid,
+        new_data: { batch: ids.length > 1 },
+        ip_address: req.headers.get('x-forwarded-for') || null,
+        user_agent: req.headers.get('user-agent') || null,
+      }));
+      await supabaseAdmin.from('system_logs').insert(logRows);
+
+      return new Response(JSON.stringify({ success: true, count: ids.length }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    if (action === 'generate-reset-link' && req.method === 'POST') {
+      const body = await req.json();
+      const userId: string | undefined = body.userId;
+      const userIds: string[] = Array.isArray(body.userIds) ? body.userIds : (userId ? [userId] : []);
+      const sendEmail: boolean = body.sendEmail !== false; // default true
+      const redirectTo: string = body.redirectTo || 'https://relatorios.giraerp.com.br/reset-password';
+
+      if (userIds.length === 0) {
+        return new Response(JSON.stringify({ error: 'userId ou userIds é obrigatório' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      const results: Array<{ userId: string; email: string; resetUrl?: string; emailSent?: boolean; error?: string }> = [];
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      for (const uid of userIds) {
+        try {
+          const { data: authUser, error: getErr } = await supabaseAdmin.auth.admin.getUserById(uid);
+          if (getErr || !authUser?.user?.email) {
+            results.push({ userId: uid, email: '', error: 'Usuário não encontrado' });
+            continue;
+          }
+          const targetEmail = authUser.user.email;
+
+          const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+            type: 'recovery',
+            email: targetEmail,
+            options: { redirectTo },
+          });
+
+          if (linkErr || !linkData?.properties?.action_link) {
+            results.push({ userId: uid, email: targetEmail, error: linkErr?.message || 'Falha ao gerar link' });
+            continue;
+          }
+
+          const resetUrl = linkData.properties.action_link;
+          let emailSent = false;
+
+          if (sendEmail) {
+            try {
+              const { error: emailErr } = await supabaseAdmin.auth.resetPasswordForEmail(targetEmail, {
+                redirectTo,
+              });
+              emailSent = !emailErr;
+              if (emailErr) console.error('resetPasswordForEmail failed:', emailErr.message);
+            } catch (e) {
+              console.error('resetPasswordForEmail threw:', e);
+            }
+          }
+
+          await supabaseAdmin.from('password_reset_links').insert({
+            user_id: uid,
+            user_email: targetEmail,
+            reset_url: resetUrl,
+            expires_at: expiresAt,
+            email_sent: emailSent,
+            email_sent_at: emailSent ? new Date().toISOString() : null,
+            created_by: callingUser.id,
+          });
+
+          await supabaseAdmin.from('system_logs').insert([{
+            user_id: callingUser.id,
+            action: 'admin_generate_reset_link',
+            entity_type: 'user',
+            entity_id: uid,
+            new_data: { email_sent: emailSent, expires_at: expiresAt, batch: userIds.length > 1 },
+            ip_address: req.headers.get('x-forwarded-for') || null,
+            user_agent: req.headers.get('user-agent') || null,
+          }]);
+
+          results.push({ userId: uid, email: targetEmail, resetUrl, emailSent });
+        } catch (e: any) {
+          results.push({ userId: uid, email: '', error: e?.message || 'Erro desconhecido' });
+        }
+      }
+
+      return new Response(JSON.stringify({ success: true, results }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
     // ===== MFA MANAGEMENT =====
     if (action === 'disable-mfa') {
       if (callerRole !== 'super_admin') {
@@ -318,11 +480,24 @@ Deno.serve(async (req) => {
       const { data: roles } = await supabaseAdmin.from('user_roles').select('*');
       const { data: allPermissions } = await supabaseAdmin.from('user_permissions').select('*');
 
+      // Latest UNUSED reset link per user (for "Link enviado" badge)
+      const { data: resetLinks } = await supabaseAdmin
+        .from('password_reset_links')
+        .select('user_id, created_at, expires_at, used_at, email_sent')
+        .is('used_at', null)
+        .order('created_at', { ascending: false });
+      const latestResetByUser = new Map<string, any>();
+      (resetLinks || []).forEach((l: any) => {
+        if (!latestResetByUser.has(l.user_id) && new Date(l.expires_at) > new Date()) {
+          latestResetByUser.set(l.user_id, l);
+        }
+      });
+
       const enrichedUsers = await Promise.all(users.users.map(async (user) => {
         const profile = profiles?.find(p => p.user_id === user.id);
         const role = roles?.find(r => r.user_id === user.id);
         const userPerms = allPermissions?.filter(p => p.user_id === user.id).map(p => p.permission) || [];
-        
+
         // Check MFA factors
         let mfaEnabled = false;
         try {
@@ -335,6 +510,8 @@ Deno.serve(async (req) => {
           }
         } catch { /* ignore */ }
 
+        const link = latestResetByUser.get(user.id);
+
         return {
           id: user.id,
           email: user.email,
@@ -345,6 +522,13 @@ Deno.serve(async (req) => {
           lastSignIn: user.last_sign_in_at,
           emailConfirmed: user.email_confirmed_at !== null,
           mfaEnabled,
+          mustChangePassword: profile?.must_change_password === true,
+          tempPassword: profile?.temp_password_plaintext || null,
+          tempPasswordSetAt: profile?.temp_password_set_at || null,
+          firstLoginAt: profile?.first_login_at || null,
+          activeResetLinkSentAt: link?.created_at || null,
+          activeResetLinkExpiresAt: link?.expires_at || null,
+          activeResetLinkEmailSent: link?.email_sent || false,
         };
       }));
 

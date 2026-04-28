@@ -16,6 +16,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { UserPlus, Mail, Key, Pencil, Trash2, Loader2, Users, Shield, Crown, FolderOpen, FileEdit, KeyRound, BarChart3, ShieldCheck, UserCheck, ShieldOff, Send, Filter, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import { CollaboratorProjectsDialog } from '@/components/CollaboratorProjectsDialog';
 import { UserPermissionsDialog } from '@/components/UserPermissionsDialog';
+import { UserPasswordActionsMenu } from '@/components/UserPasswordActionsMenu';
+import { Eye, EyeOff, Copy, Check, MessageCircle, Link2, MailWarning } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Navigate } from 'react-router-dom';
@@ -42,7 +45,7 @@ interface ReminderRecord {
 export const UserManagement: React.FC = () => {
   const { role } = useAuth();
   const { toast } = useToast();
-  const { users, isLoading, fetchUsers, createUser, updateUser, deleteUser, disableMfa } = useAdminUsers();
+  const { users, isLoading, fetchUsers, createUser, updateUser, deleteUser, disableMfa, generateResetLink, forceChangePassword } = useAdminUsers();
   
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -63,6 +66,57 @@ export const UserManagement: React.FC = () => {
   const [selectedForReminder, setSelectedForReminder] = useState<Set<string>>(new Set());
   const [isSendingReminder, setIsSendingReminder] = useState(false);
   const [reminderRecords, setReminderRecords] = useState<ReminderRecord[]>([]);
+
+  // Bulk password actions
+  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [revealedTemp, setRevealedTemp] = useState<Set<string>>(new Set());
+  const [copiedTemp, setCopiedTemp] = useState<string | null>(null);
+
+  const toggleBulk = (id: string) => {
+    setSelectedForBulk(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const toggleRevealTemp = (id: string) => {
+    setRevealedTemp(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id); else n.add(id);
+      return n;
+    });
+  };
+
+  const copyTempPassword = async (id: string, value: string) => {
+    await navigator.clipboard.writeText(value);
+    setCopiedTemp(id);
+    setTimeout(() => setCopiedTemp(null), 1500);
+  };
+
+  const handleBulkResetLink = async () => {
+    const ids = Array.from(selectedForBulk);
+    if (ids.length === 0) return;
+    const r = await generateResetLink({ userIds: ids, sendEmail: true });
+    if (r.success) {
+      const sent = r.results.filter(x => x.emailSent).length;
+      toast({ title: 'Links de reset gerados', description: `${ids.length} link(s) gerado(s). ${sent} e-mail(s) enviado(s).` });
+      setSelectedForBulk(new Set());
+      setIsBulkOpen(false);
+    }
+  };
+
+  const handleBulkForceChange = async () => {
+    const ids = Array.from(selectedForBulk);
+    if (ids.length === 0) return;
+    const r = await forceChangePassword({ userIds: ids });
+    if (r.success) {
+      setSelectedForBulk(new Set());
+      setIsBulkOpen(false);
+    }
+  };
+
   
   // Form state
   const [email, setEmail] = useState('');
@@ -624,9 +678,7 @@ export const UserManagement: React.FC = () => {
                             <ShieldCheck className="w-4 h-4" />
                           </Button>
                         )}
-                         <Button variant="ghost" size="icon" title="Resetar senha" onClick={() => { setResetPasswordUser(user); setNewPassword(''); setIsResetPasswordOpen(true); }}>
-                           <KeyRound className="w-4 h-4" />
-                         </Button>
+                         <UserPasswordActionsMenu user={user} />
                          {role === 'SUPER_ADMIN' && (
                            user.mfaEnabled ? (
                              <AlertDialog>
