@@ -102,6 +102,7 @@ export const FORMS_ONLY_ALLOWED_PREFIXES = [
   '/consentimento',
   '/change-password',
   '/mfa-verify',
+  '/diario',              // Diário de Bordo (login + app autenticado)
 ];
 
 export function isPathAllowedInFormsOnly(pathname: string): boolean {
