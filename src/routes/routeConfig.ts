@@ -19,6 +19,7 @@ const ReportV2Page = lazy(() => import('@/modules/reports-v2/ReportV2Page'));
 const ReportObjetoIIPage = lazy(() => import('@/modules/report-objeto-ii/ReportObjetoIIPage'));
 const FormsListPage = lazy(() => import('@/modules/gira-forms/FormsListPage'));
 const FormBuilderPage = lazy(() => import('@/modules/gira-forms/FormBuilderPage'));
+const VolunteerTermsAdminPage = lazy(() => import('@/modules/gira-forms/volunteer-term/VolunteerTermsAdminPage'));
 const EventsListPage = lazy(() => import('@/modules/gira-eventos/EventsListPage'));
 const EventDetailPage = lazy(() => import('@/modules/gira-eventos/EventDetailPage'));
 const AutomatoDashboard = lazy(() => import('@/pages/AutomatoDashboard'));
