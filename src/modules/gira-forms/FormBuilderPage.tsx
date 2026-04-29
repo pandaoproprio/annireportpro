@@ -275,7 +275,7 @@ export default function FormBuilderPage() {
                   disabled={shortening}
                   onClick={async () => {
                     const originalUrl = `${window.location.origin}/form-checkin/${id}`;
-                    const suggested = (form.slug || form.title || 'painel')
+                    const suggested = ((form as any).slug || form.title || 'painel')
                       .toLowerCase()
                       .normalize('NFD')
                       .replace(/[\u0300-\u036f]/g, '')
