@@ -24,6 +24,7 @@ const FormCheckinPanel = lazy(() => import('@/modules/gira-forms/components/Form
 const PublicCheckinPage = lazy(() => import('@/modules/gira-forms/PublicCheckinPage'));
 const VerifyJustificationPage = lazy(() => import('@/pages/VerifyJustificationPage'));
 const PublicSignJustificationPage = lazy(() => import('@/pages/PublicSignJustificationPage'));
+const ShortLinkRedirect = lazy(() => import('@/pages/ShortLinkRedirect'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
@@ -54,6 +55,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/c" element={<Suspense fallback={<PageFallback />}><PublicCheckinPage /></Suspense>} />
         <Route path="/verificar/:hash" element={<Suspense fallback={<PageFallback />}><VerifyJustificationPage /></Suspense>} />
         <Route path="/assinar/:token" element={<Suspense fallback={<PageFallback />}><PublicSignJustificationPage /></Suspense>} />
+        <Route path="/s/:slug" element={<Suspense fallback={<PageFallback />}><ShortLinkRedirect /></Suspense>} />
 
         {/* Protected routes */}
         <Route path="/consentimento" element={<ProtectedRoute><LgpdConsent /></ProtectedRoute>} />

@@ -20,17 +20,19 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink, Download } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink, Download, Link2 } from 'lucide-react';
 import { FIELD_TYPE_LABELS, CATEGORIES, type Form, type FormField, type FieldType, type FormDesignSettings, type FormStatus } from './types';
 import { motion, Reorder } from 'framer-motion';
 import { toast } from 'sonner';
 import { FORMS_CANONICAL_HOST } from '@/lib/hostMode';
+import { useShortLinks } from '@/hooks/useShortLinks';
 
 export default function FormBuilderPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { updateForm } = useForms();
   const { fields, upsertField, deleteField, reorderFields } = useFormFields(id);
+  const { shortenUrl, shortening } = useShortLinks();
 
   const formQuery = useQuery({
     queryKey: ['gira-form', id],
@@ -256,14 +258,51 @@ export default function FormBuilderPage() {
               }}
             />
             {(form.settings as any)?.enableCheckin && (
-              <a
-                href={`/form-checkin/${id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline ml-1"
-              >
-                Abrir painel →
-              </a>
+              <>
+                <a
+                  href={`/form-checkin/${id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline ml-1"
+                >
+                  Abrir painel →
+                </a>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1"
+                  disabled={shortening}
+                  onClick={async () => {
+                    const originalUrl = `${window.location.origin}/form-checkin/${id}`;
+                    const suggested = ((form as any).slug || form.title || 'painel')
+                      .toLowerCase()
+                      .normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '')
+                      .replace(/[^a-z0-9-]+/g, '-')
+                      .replace(/^-+|-+$/g, '')
+                      .slice(0, 30);
+                    const input = window.prompt(
+                      'Nome amigável para o link (deixe em branco para gerar automaticamente):',
+                      `painel-${suggested}`,
+                    );
+                    if (input === null) return; // cancelado
+                    const custom = input.trim() || undefined;
+                    const shortUrl = await shortenUrl(originalUrl, custom);
+                    if (shortUrl) {
+                      try {
+                        await navigator.clipboard.writeText(shortUrl);
+                        toast.success('Link copiado!', { description: shortUrl });
+                      } catch {
+                        toast.success('Link gerado', { description: shortUrl });
+                      }
+                    }
+                  }}
+                >
+                  <Link2 className="w-3 h-3" />
+                  {shortening ? 'Encurtando…' : 'Encurtar link'}
+                </Button>
+              </>
             )}
           </div>
           <div className="flex items-center gap-2">
