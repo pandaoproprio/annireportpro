@@ -179,7 +179,7 @@ const SortableOptionRow: React.FC<SortableOptionRowProps> = ({
   );
 };
 
-export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdit, onUpdate, onDelete, allFields = [] }) => {
+export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdit, onUpdate, onDelete, onDuplicate, allFields = [] }) => {
   const [label, setLabel] = useState(field.label);
   const [description, setDescription] = useState(field.description);
   const [required, setRequired] = useState(field.required);
