@@ -20,11 +20,12 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink, Download } from 'lucide-react';
+import { ArrowLeft, PlusCircle, Save, Eye, EyeOff, Share2, Copy, ExternalLink, Download, Link2 } from 'lucide-react';
 import { FIELD_TYPE_LABELS, CATEGORIES, type Form, type FormField, type FieldType, type FormDesignSettings, type FormStatus } from './types';
 import { motion, Reorder } from 'framer-motion';
 import { toast } from 'sonner';
 import { FORMS_CANONICAL_HOST } from '@/lib/hostMode';
+import { useShortLinks } from '@/hooks/useShortLinks';
 
 export default function FormBuilderPage() {
   const { id } = useParams<{ id: string }>();
