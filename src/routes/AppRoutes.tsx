@@ -24,6 +24,7 @@ const FormCheckinPanel = lazy(() => import('@/modules/gira-forms/components/Form
 const PublicCheckinPage = lazy(() => import('@/modules/gira-forms/PublicCheckinPage'));
 const VerifyJustificationPage = lazy(() => import('@/pages/VerifyJustificationPage'));
 const PublicSignJustificationPage = lazy(() => import('@/pages/PublicSignJustificationPage'));
+const ShortLinkRedirect = lazy(() => import('@/pages/ShortLinkRedirect'));
 
 const PageFallback = () => (
   <div className="space-y-4 p-4">
