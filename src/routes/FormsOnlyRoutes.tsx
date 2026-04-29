@@ -55,6 +55,7 @@ export const FormsOnlyRoutes: React.FC = () => {
         <Route path="/checkin/:id" element={<CheckinPage />} />
         <Route path="/certificado/:hash" element={<CertificateVerifyPage />} />
         <Route path="/voluntario/termo/:token" element={<VolunteerTermVerifyPage />} />
+        <Route path="/s/:slug" element={<ShortLinkRedirect />} />
 
         {/* Fluxos auth obrigatórios */}
         <Route path="/consentimento" element={<ProtectedRoute><LgpdConsent /></ProtectedRoute>} />
