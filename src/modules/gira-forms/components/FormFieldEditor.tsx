@@ -6,7 +6,7 @@ import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GripVertical, Trash2, ChevronDown, ChevronUp, PlusCircle, X, SeparatorHorizontal, Info, GitBranch, ArrowUp, ArrowDown, Sparkles } from 'lucide-react';
+import { GripVertical, Trash2, ChevronDown, ChevronUp, PlusCircle, X, SeparatorHorizontal, Info, GitBranch, ArrowUp, ArrowDown, Sparkles, Copy } from 'lucide-react';
 import { FIELD_TYPE_LABELS, type FormField, type FieldType, type FieldCondition, type FieldConditionGroup } from '../types';
 import {
   DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors,
@@ -23,6 +23,7 @@ interface Props {
   onToggleEdit: () => void;
   onUpdate: (updates: Partial<FormField>) => Promise<void>;
   onDelete: () => void;
+  onDuplicate?: () => void;
   allFields?: FormField[];
 }
 
@@ -178,7 +179,7 @@ const SortableOptionRow: React.FC<SortableOptionRowProps> = ({
   );
 };
 
-export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdit, onUpdate, onDelete, allFields = [] }) => {
+export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdit, onUpdate, onDelete, onDuplicate, allFields = [] }) => {
   const [label, setLabel] = useState(field.label);
   const [description, setDescription] = useState(field.description);
   const [required, setRequired] = useState(field.required);
@@ -557,7 +558,12 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onToggleEdit}>
               {isEditing ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={onDelete}>
+            {onDuplicate && (
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onDuplicate} title="Duplicar campo">
+                <Copy className="w-3.5 h-3.5" />
+              </Button>
+            )}
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={onDelete} title="Remover campo">
               <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
