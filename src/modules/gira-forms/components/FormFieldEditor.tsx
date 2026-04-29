@@ -23,6 +23,7 @@ interface Props {
   onToggleEdit: () => void;
   onUpdate: (updates: Partial<FormField>) => Promise<void>;
   onDelete: () => void;
+  onDuplicate?: () => void;
   allFields?: FormField[];
 }
 
