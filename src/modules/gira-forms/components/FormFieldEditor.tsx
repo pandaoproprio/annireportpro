@@ -558,7 +558,12 @@ export const FormFieldEditor: React.FC<Props> = ({ field, isEditing, onToggleEdi
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onToggleEdit}>
               {isEditing ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
             </Button>
-            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={onDelete}>
+            {onDuplicate && (
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onDuplicate} title="Duplicar campo">
+                <Copy className="w-3.5 h-3.5" />
+              </Button>
+            )}
+            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={onDelete} title="Remover campo">
               <Trash2 className="w-3.5 h-3.5" />
             </Button>
           </div>
