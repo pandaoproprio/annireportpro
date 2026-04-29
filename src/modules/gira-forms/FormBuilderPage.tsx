@@ -32,6 +32,7 @@ export default function FormBuilderPage() {
   const navigate = useNavigate();
   const { updateForm } = useForms();
   const { fields, upsertField, deleteField, reorderFields } = useFormFields(id);
+  const { shortenUrl, shortening } = useShortLinks();
 
   const formQuery = useQuery({
     queryKey: ['gira-form', id],
