@@ -520,7 +520,7 @@ export default function FormCheckinPanel() {
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="flex-1 p-4">
+          <div className="flex-1 overflow-y-auto p-4 min-h-0">
             <div className="space-y-2">
               {openCard === 'convidados' && responses.map(r => (
                 <RowItem key={r.id} name={r.respondent_name} email={r.respondent_email} timestamp={r.submitted_at} timestampLabel="Inscrito" />
