@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { response_id, admin_name, action } = body ?? {};
+    const { response_id, admin_name, admin_user_id, action } = body ?? {};
 
     if (!response_id) {
       return new Response(
@@ -78,7 +78,7 @@ Deno.serve(async (req) => {
       .from('form_responses')
       .update({
         checked_in_at: new Date().toISOString(),
-        checked_in_by: admin_name && String(admin_name).trim() ? `manual:${String(admin_name).trim()}` : 'manual',
+        checked_in_by: admin_user_id && /^[0-9a-f-]{36}$/i.test(String(admin_user_id)) ? String(admin_user_id) : null,
       })
       .eq('id', response_id);
 

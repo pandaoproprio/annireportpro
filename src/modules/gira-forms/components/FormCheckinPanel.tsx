@@ -107,10 +107,12 @@ export default function FormCheckinPanel() {
 
   const checkinMutation = useMutation({
     mutationFn: async ({ responseId, name, manual }: { responseId: string; name: string; manual?: boolean }) => {
+      const { data: sess } = await supabase.auth.getUser();
       const { data, error } = await supabase.functions.invoke('manual-form-checkin', {
         body: {
           response_id: responseId,
           admin_name: manual ? (profile?.name || 'Administrador') : undefined,
+          admin_user_id: sess?.user?.id,
         },
       });
       if (error) throw error;
