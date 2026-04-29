@@ -579,7 +579,7 @@ export default function FormCheckinPanel() {
                 />
               )))}
             </div>
-          </ScrollArea>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
