@@ -78,7 +78,13 @@ export default function FormCheckinPanel() {
 
   useEffect(() => { if (dataQuery.dataUpdatedAt) setLastUpdate(new Date(dataQuery.dataUpdatedAt)); }, [dataQuery.dataUpdatedAt]);
 
-  const formData = dataQuery.data?.form;
+  const formData = dataQuery.data?.form as (Form & {
+    geofence_lat?: number | null;
+    geofence_lng?: number | null;
+    geofence_radius_meters?: number | null;
+    event_starts_at?: string | null;
+    event_ends_at?: string | null;
+  }) | undefined;
   const responses = useMemo(() => dataQuery.data?.responses ?? [], [dataQuery.data]);
 
   // Realtime subscription
