@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { response_id } = body ?? {};
+    const { response_id, admin_name, action } = body ?? {};
 
     if (!response_id) {
       return new Response(
@@ -37,6 +37,30 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Revert checkin
+    if (action === 'revert') {
+      if (!response.checked_in_at) {
+        return new Response(
+          JSON.stringify({ ok: true, reverted: false, message: 'Esta pessoa ainda não fez check-in.' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      const { error: revErr } = await supabase
+        .from('form_responses')
+        .update({ checked_in_at: null, checked_in_by: null })
+        .eq('id', response_id);
+      if (revErr) {
+        return new Response(
+          JSON.stringify({ ok: false, error: 'Falha ao reverter check-in.' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(
+        JSON.stringify({ ok: true, reverted: true, respondent_name: response.respondent_name }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     if (response.checked_in_at) {
       return new Response(
         JSON.stringify({
@@ -52,7 +76,10 @@ Deno.serve(async (req) => {
 
     const { error: updErr } = await supabase
       .from('form_responses')
-      .update({ checked_in_at: new Date().toISOString() })
+      .update({
+        checked_in_at: new Date().toISOString(),
+        checked_in_by: admin_name && String(admin_name).trim() ? `manual:${String(admin_name).trim()}` : 'manual',
+      })
       .eq('id', response_id);
 
     if (updErr) {

@@ -1,20 +1,23 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { BrowserMultiFormatReader, IScannerControls } from '@zxing/browser';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
-  CheckCircle2, AlertCircle, Search, Users, UserCheck,
-  Lock, Camera, X, HelpCircle, ScanLine, Keyboard
+  CheckCircle2, Search, Users, UserCheck, Clock, UserPlus,
+  X, HelpCircle, ScanLine, Keyboard, RotateCcw, Sparkles, MapPin,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useAuth } from '@/hooks/useAuth';
 import type { Form } from '../types';
 import { useEventPreCheckins } from '@/modules/gira-eventos/hooks/useEventPreCheckins';
 
@@ -31,23 +34,33 @@ interface FormResponseRow {
   checked_in_by: string | null;
 }
 
+type CardKey = 'convidados' | 'pre_checkin' | 'presentes' | 'aguardando' | null;
+
+const CARD_STYLES: Record<Exclude<CardKey, null>, { bg: string; ring: string; icon: string; label: string }> = {
+  convidados: { bg: 'bg-[#3B82F6]', ring: 'ring-[#3B82F6]', icon: 'text-[#3B82F6]', label: 'Convidados' },
+  pre_checkin: { bg: 'bg-[#8B5CF6]', ring: 'ring-[#8B5CF6]', icon: 'text-[#8B5CF6]', label: 'Pré-checkin' },
+  presentes: { bg: 'bg-[#10B981]', ring: 'ring-[#10B981]', icon: 'text-[#10B981]', label: 'Presentes' },
+  aguardando: { bg: 'bg-[#F59E0B]', ring: 'ring-[#F59E0B]', icon: 'text-[#F59E0B]', label: 'Aguardando' },
+};
+
 export default function FormCheckinPanel() {
   const { id: formId } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const qrToken = searchParams.get('token');
   const queryClient = useQueryClient();
+  const { profile } = useAuth();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [scannerActive, setScannerActive] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [openCard, setOpenCard] = useState<CardKey>(null);
   const [lastCheckedIn, setLastCheckedIn] = useState<{ name: string; time: string } | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const readerControlsRef = useRef<IScannerControls | null>(null);
   const lastScannedRef = useRef<{ value: string; at: number } | null>(null);
 
-  // Public access via edge functions (service role). The form_id in the URL
-  // acts as the access credential for organizers — no login required.
   const dataQuery = useQuery({
     queryKey: ['public-checkin-data', formId],
     queryFn: async () => {
@@ -60,12 +73,21 @@ export default function FormCheckinPanel() {
       return { form: result.form as Form, responses: (result.responses ?? []) as FormResponseRow[] };
     },
     enabled: !!formId,
-    refetchInterval: 5000,
+    refetchInterval: 15000,
   });
 
-  const formQuery = { data: dataQuery.data?.form, isLoading: dataQuery.isLoading };
-  const responsesQuery = { data: dataQuery.data?.responses };
+  useEffect(() => { if (dataQuery.dataUpdatedAt) setLastUpdate(new Date(dataQuery.dataUpdatedAt)); }, [dataQuery.dataUpdatedAt]);
 
+  const formData = dataQuery.data?.form as (Form & {
+    geofence_lat?: number | null;
+    geofence_lng?: number | null;
+    geofence_radius_meters?: number | null;
+    event_starts_at?: string | null;
+    event_ends_at?: string | null;
+  }) | undefined;
+  const responses = useMemo(() => dataQuery.data?.responses ?? [], [dataQuery.data]);
+
+  // Realtime subscription
   useEffect(() => {
     if (!formId) return;
     const channel = supabase
@@ -77,16 +99,19 @@ export default function FormCheckinPanel() {
         filter: `form_id=eq.${formId}`,
       }, () => {
         queryClient.invalidateQueries({ queryKey: ['public-checkin-data', formId] });
+        setLastUpdate(new Date());
       })
       .subscribe();
-
     return () => { supabase.removeChannel(channel); };
   }, [formId, queryClient]);
 
   const checkinMutation = useMutation({
-    mutationFn: async ({ responseId, name }: { responseId: string; name: string }) => {
+    mutationFn: async ({ responseId, name, manual }: { responseId: string; name: string; manual?: boolean }) => {
       const { data, error } = await supabase.functions.invoke('manual-form-checkin', {
-        body: { response_id: responseId },
+        body: {
+          response_id: responseId,
+          admin_name: manual ? (profile?.name || 'Administrador') : undefined,
+        },
       });
       if (error) throw error;
       const result = data as { ok: boolean; alreadyCheckedIn?: boolean; respondent_name?: string; error?: string };
@@ -100,53 +125,59 @@ export default function FormCheckinPanel() {
     onSuccess: (name) => {
       queryClient.invalidateQueries({ queryKey: ['public-checkin-data', formId] });
       if (name) {
-        setLastCheckedIn({ name, time: format(new Date(), "HH:mm", { locale: ptBR }) });
+        setLastCheckedIn({ name, time: format(new Date(), 'HH:mm', { locale: ptBR }) });
         setTimeout(() => setLastCheckedIn(null), 6000);
       }
     },
     onError: (err: Error) => toast.error(err.message || 'Erro ao registrar check-in'),
   });
 
+  const revertMutation = useMutation({
+    mutationFn: async ({ responseId, name }: { responseId: string; name: string }) => {
+      const { data, error } = await supabase.functions.invoke('manual-form-checkin', {
+        body: { response_id: responseId, action: 'revert' },
+      });
+      if (error) throw error;
+      const result = data as { ok: boolean; reverted?: boolean; error?: string };
+      if (!result.ok) throw new Error(result.error || 'Falha ao reverter.');
+      return name;
+    },
+    onSuccess: (name) => {
+      toast.success(`Check-in de ${name} revertido. Voltou para "Aguardando".`);
+      queryClient.invalidateQueries({ queryKey: ['public-checkin-data', formId] });
+    },
+    onError: (err: Error) => toast.error(err.message || 'Erro ao reverter check-in'),
+  });
+
+  // Auto-handle QR token URL
   useEffect(() => {
-    if (!qrToken || !responsesQuery.data) return;
-    const match = responsesQuery.data.find(r => r.qr_token === qrToken);
+    if (!qrToken || responses.length === 0) return;
+    const match = responses.find(r => r.qr_token === qrToken);
     if (match) {
-      if (match.checked_in_at) {
-        toast.info(`${match.respondent_name || 'Participante'} já fez check-in.`);
-      } else {
-        checkinMutation.mutate({ responseId: match.id, name: match.respondent_name || 'Participante' });
-      }
+      if (match.checked_in_at) toast.info(`${match.respondent_name || 'Participante'} já fez check-in.`);
+      else checkinMutation.mutate({ responseId: match.id, name: match.respondent_name || 'Participante', manual: true });
       window.history.replaceState({}, '', window.location.pathname);
     }
-  }, [qrToken, responsesQuery.data]);
+  }, [qrToken, responses]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleScannedText = useCallback(async (text: string) => {
     if (!text) return;
-    // Debounce: ignore same code within 3s
     const now = Date.now();
-    if (lastScannedRef.current && lastScannedRef.current.value === text && now - lastScannedRef.current.at < 3000) {
-      return;
-    }
+    if (lastScannedRef.current && lastScannedRef.current.value === text && now - lastScannedRef.current.at < 3000) return;
     lastScannedRef.current = { value: text, at: now };
 
-    const responses = responsesQuery.data ?? [];
     let match: FormResponseRow | undefined;
     let scannedToken: string | null = null;
     let isEventCheckinUrl = false;
 
-    // Try URL with token param
     try {
       const url = new URL(text);
       scannedToken = url.searchParams.get('token');
-      // Detect /checkin/{eventId} (event registration QR generated for forms linked to events)
       isEventCheckinUrl = /\/checkin\/[0-9a-f-]{36}/i.test(url.pathname);
       if (scannedToken) match = responses.find(r => r.qr_token === scannedToken);
-    } catch {
-      // not a URL
-    }
-    // Try raw token (UUID)
+    } catch { /* not a URL */ }
+
     if (!match) match = responses.find(r => r.qr_token === text);
-    // Try 6-letter check-in code
     if (!match) {
       const code = text.trim().toUpperCase();
       if (/^[A-Z0-9]{6}$/.test(code)) {
@@ -154,9 +185,6 @@ export default function FormCheckinPanel() {
       }
     }
 
-    // Fallback: QR aponta para event_registrations (form vinculado a evento).
-    // Buscamos a inscrição do evento pelo token e tentamos casar com a resposta
-    // do formulário pelo email/documento/nome.
     if (!match && scannedToken && isEventCheckinUrl) {
       try {
         const { data: eventReg } = await supabase
@@ -171,8 +199,7 @@ export default function FormCheckinPanel() {
           match = responses.find(r => {
             if (emailLc && (r.respondent_email || '').toLowerCase().trim() === emailLc) return true;
             if (docDigits) {
-              const ans = r.answers || {};
-              for (const v of Object.values(ans)) {
+              for (const v of Object.values(r.answers || {})) {
                 if (typeof v === 'string' && v.replace(/\D/g, '') === docDigits && docDigits.length >= 11) return true;
               }
             }
@@ -180,77 +207,39 @@ export default function FormCheckinPanel() {
             return false;
           });
         }
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }
 
-    if (!match) {
-      toast.error('QR Code não corresponde a nenhuma inscrição deste evento.');
-      return;
-    }
-
-    if (match.checked_in_at) {
-      toast.info(`${match.respondent_name || 'Participante'} já fez check-in.`);
-      return;
-    }
-    checkinMutation.mutate({ responseId: match.id, name: match.respondent_name || 'Participante' });
-  }, [responsesQuery.data, checkinMutation]);
+    if (!match) { toast.error('QR Code não corresponde a nenhuma inscrição deste evento.'); return; }
+    if (match.checked_in_at) { toast.info(`${match.respondent_name || 'Participante'} já fez check-in.`); return; }
+    checkinMutation.mutate({ responseId: match.id, name: match.respondent_name || 'Participante', manual: true });
+  }, [responses, checkinMutation]);
 
   const startScanner = useCallback(async () => {
     setScannerActive(true);
-    // Wait next tick so <video> element is mounted
-    await new Promise(resolve => setTimeout(resolve, 50));
-    if (!videoRef.current) {
-      toast.error('Falha ao iniciar a câmera.');
-      setScannerActive(false);
-      return;
-    }
+    await new Promise(r => setTimeout(r, 50));
+    if (!videoRef.current) { toast.error('Falha ao iniciar a câmera.'); setScannerActive(false); return; }
     try {
-      // Prefer rear camera on mobile devices
       let deviceId: string | undefined;
       try {
-        // Request permission first to get labeled devices
-        const tmpStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'environment' } },
-        });
-        // Stop the temp stream — zxing will reopen with the chosen device
-        tmpStream.getTracks().forEach(t => t.stop());
-
+        const tmp = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } } });
+        tmp.getTracks().forEach(t => t.stop());
         const devices = await navigator.mediaDevices.enumerateDevices();
         const videoDevices = devices.filter(d => d.kind === 'videoinput');
-        // Try to find a rear/back camera by label heuristics
         const rear = videoDevices.find(d => /back|rear|environment|traseira|trás/i.test(d.label));
         deviceId = rear?.deviceId ?? videoDevices[videoDevices.length - 1]?.deviceId;
-      } catch (permErr) {
-        // If facingMode failed, fall back to default device selection
-        console.warn('[Scanner] Could not pre-select rear camera:', permErr);
-      }
+      } catch { /* fallback to default */ }
 
       const reader = new BrowserMultiFormatReader();
-      const controls = await reader.decodeFromVideoDevice(
-        deviceId,
-        videoRef.current,
-        (result, err, ctrl) => {
-          if (result) {
-            handleScannedText(result.getText());
-          }
-          // Ignore NotFoundException (normal — no QR in frame yet)
-        },
-      );
+      const controls = await reader.decodeFromVideoDevice(deviceId, videoRef.current, (result) => {
+        if (result) handleScannedText(result.getText());
+      });
       readerControlsRef.current = controls;
     } catch (err: any) {
       const msg = String(err?.message || err || '');
-      console.error('[Scanner] Camera error:', err);
-      if (/Permission|NotAllowed/i.test(msg)) {
-        toast.error('Permissão de câmera negada. Habilite nas configurações do navegador.');
-      } else if (/NotFound|Requested device not found/i.test(msg)) {
-        toast.error('Nenhuma câmera encontrada neste dispositivo.');
-      } else if (/Secure|https/i.test(msg)) {
-        toast.error('A câmera só funciona em conexões HTTPS.');
-      } else {
-        toast.error('Não foi possível acessar a câmera. Tente recarregar a página.');
-      }
+      if (/Permission|NotAllowed/i.test(msg)) toast.error('Permissão de câmera negada.');
+      else if (/NotFound/i.test(msg)) toast.error('Nenhuma câmera encontrada.');
+      else toast.error('Não foi possível acessar a câmera.');
       setScannerActive(false);
     }
   }, [handleScannedText]);
@@ -260,65 +249,65 @@ export default function FormCheckinPanel() {
     readerControlsRef.current = null;
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
+    if (videoRef.current) videoRef.current.srcObject = null;
     setScannerActive(false);
   }, []);
 
-  useEffect(() => {
-    return () => {
-      readerControlsRef.current?.stop();
-      streamRef.current?.getTracks().forEach(t => t.stop());
-    };
+  useEffect(() => () => {
+    readerControlsRef.current?.stop();
+    streamRef.current?.getTracks().forEach(t => t.stop());
   }, []);
 
   const { preCheckins } = useEventPreCheckins({ formId: formId ?? null });
 
-  const responses = responsesQuery.data ?? [];
   const total = responses.length;
-  const checkedIn = responses.filter(r => r.checked_in_at).length;
-  const pending = total - checkedIn;
+  const present = responses.filter(r => r.checked_in_at);
+  const checkedIn = present.length;
+  const pending = responses.filter(r => !r.checked_in_at);
+  const pendingCount = pending.length;
   const preCheckinCount = preCheckins.length;
   const percentage = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
 
-  const filtered = searchTerm.trim()
-    ? responses.filter(r => {
-        const term = searchTerm.trim().toLowerCase();
-        const name = (r.respondent_name || '').toLowerCase();
-        const email = (r.respondent_email || '').toLowerCase();
-        const code = (r.checkin_code || '').toLowerCase();
-        const answersStr = JSON.stringify(r.answers || {}).toLowerCase();
-        return name.includes(term) || email.includes(term) || code.includes(term) || answersStr.includes(term);
-      })
-    : responses;
+  // Match pre-checkins to responses
+  const preCheckinRows = useMemo(() => {
+    return preCheckins.map(pc => {
+      const r = responses.find(x =>
+        (pc.response_id && x.id === pc.response_id) ||
+        ((x.respondent_email || '').toLowerCase().trim() === pc.user_identifier.toLowerCase()),
+      );
+      return {
+        id: pc.id,
+        name: pc.full_name || r?.respondent_name || pc.user_identifier,
+        email: r?.respondent_email || pc.user_identifier,
+        confirmed_at: pc.confirmed_at,
+      };
+    });
+  }, [preCheckins, responses]);
 
-  const handleCheckin = (response: FormResponseRow) => {
-    if (response.checked_in_at) {
-      toast.error('⚠️ Essa pessoa já passou pelo check-in!', {
-        description: `Presença registrada em ${format(new Date(response.checked_in_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`,
-      });
-      return;
-    }
-    checkinMutation.mutate({ responseId: response.id, name: response.respondent_name || 'Participante' });
-  };
+  const progressColor = percentage < 30 ? 'bg-red-500' : percentage < 70 ? 'bg-yellow-500' : 'bg-green-500';
 
-  if (formQuery.isLoading) {
-    return (
-      <div className="min-h-screen bg-muted p-4">
-        <Skeleton className="h-96 w-full max-w-2xl mx-auto" />
-      </div>
-    );
+  const filteredForSearch = useMemo(() => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return [];
+    return responses.filter(r => {
+      const name = (r.respondent_name || '').toLowerCase();
+      const email = (r.respondent_email || '').toLowerCase();
+      const code = (r.checkin_code || '').toLowerCase();
+      return name.includes(term) || email.includes(term) || code.includes(term);
+    }).slice(0, 20);
+  }, [responses, searchTerm]);
+
+  if (dataQuery.isLoading) {
+    return <div className="min-h-screen bg-muted p-4"><Skeleton className="h-96 w-full max-w-2xl mx-auto" /></div>;
   }
 
-  // ─── Main Panel ─────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-muted">
       {/* Header */}
       <div className="bg-primary text-primary-foreground p-4 pb-5 sticky top-0 z-10 shadow-md">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-3xl mx-auto">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold truncate">{formQuery.data?.title || 'Check-in'}</h1>
+            <h1 className="text-lg font-bold truncate">{formData?.title || 'Check-in'}</h1>
             <Button
               variant="ghost"
               size="icon"
@@ -329,77 +318,70 @@ export default function FormCheckinPanel() {
             </Button>
           </div>
 
-          {/* Stats Row */}
-          <div className="grid grid-cols-4 gap-2 mt-3">
-            <div className="bg-primary-foreground/10 rounded-lg p-2 text-center">
-              <div className="text-xl font-bold">{total}</div>
-              <div className="text-[10px] opacity-80 flex items-center justify-center gap-1">
-                <Users className="w-3 h-3" /> Convidados
-              </div>
-            </div>
-            <div className="bg-primary-foreground/10 rounded-lg p-2 text-center">
-              <div className="text-xl font-bold">{preCheckinCount}</div>
-              <div className="text-[10px] opacity-80">Pré-checkin</div>
-            </div>
-            <div className="bg-primary-foreground/10 rounded-lg p-2 text-center">
-              <div className="text-xl font-bold">{checkedIn}</div>
-              <div className="text-[10px] opacity-80 flex items-center justify-center gap-1">
-                <UserCheck className="w-3 h-3" /> Presentes
-              </div>
-            </div>
-            <div className="bg-primary-foreground/10 rounded-lg p-2 text-center">
-              <div className="text-xl font-bold">{pending}</div>
-              <div className="text-[10px] opacity-80">Aguardando</div>
-            </div>
+          {/* Colored, clickable cards */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+            <button
+              onClick={() => setOpenCard('convidados')}
+              className="rounded-lg p-3 text-left text-white shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              style={{ backgroundColor: '#3B82F6' }}
+            >
+              <div className="flex items-center gap-1.5 text-[11px] opacity-90"><Users className="w-3 h-3" /> Convidados</div>
+              <div className="text-2xl font-bold mt-0.5">{total}</div>
+            </button>
+            <button
+              onClick={() => setOpenCard('pre_checkin')}
+              className="rounded-lg p-3 text-left text-white shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              style={{ backgroundColor: '#8B5CF6' }}
+            >
+              <div className="flex items-center gap-1.5 text-[11px] opacity-90"><Sparkles className="w-3 h-3" /> Pré-checkin</div>
+              <div className="text-2xl font-bold mt-0.5">{preCheckinCount}</div>
+            </button>
+            <button
+              onClick={() => setOpenCard('presentes')}
+              className="rounded-lg p-3 text-left text-white shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              style={{ backgroundColor: '#10B981' }}
+            >
+              <div className="flex items-center gap-1.5 text-[11px] opacity-90"><UserCheck className="w-3 h-3" /> Presentes</div>
+              <div className="text-2xl font-bold mt-0.5">{checkedIn}</div>
+            </button>
+            <button
+              onClick={() => setOpenCard('aguardando')}
+              className="rounded-lg p-3 text-left text-white shadow-sm transition-transform hover:scale-[1.02] active:scale-[0.98]"
+              style={{ backgroundColor: '#F59E0B' }}
+            >
+              <div className="flex items-center gap-1.5 text-[11px] opacity-90"><Clock className="w-3 h-3" /> Aguardando</div>
+              <div className="text-2xl font-bold mt-0.5">{pendingCount}</div>
+            </button>
           </div>
 
-          {/* Progress bar */}
+          {/* Smart progress bar */}
           <div className="mt-3 flex items-center gap-2">
             <div className="flex-1 h-2.5 bg-primary-foreground/20 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-primary-foreground/70 rounded-full transition-all duration-500"
-                style={{ width: `${percentage}%` }}
-              />
+              <div className={`h-full ${progressColor} rounded-full transition-all duration-500`} style={{ width: `${percentage}%` }} />
             </div>
             <span className="text-sm font-bold min-w-[3ch] text-right">{percentage}%</span>
           </div>
+          <p className="text-[11px] opacity-80 mt-1.5 text-right">
+            Atualizado às {format(lastUpdate, 'HH:mm:ss', { locale: ptBR })} • atualização em tempo real
+          </p>
         </div>
       </div>
 
       {/* Help banner */}
       {showHelp && (
         <div className="bg-accent border-b border-border">
-          <div className="max-w-2xl mx-auto p-4">
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-semibold text-sm text-accent-foreground">📖 Como usar este painel</h3>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowHelp(false)}>
-                <X className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-            <div className="space-y-2.5 text-sm text-accent-foreground/80">
-              <div className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xs font-bold">1</div>
-                <p><strong>Busca rápida:</strong> Digite o nome, CPF ou o código de 6 letras que o participante recebeu por e-mail.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xs font-bold">2</div>
-                <p><strong>Câmera QR Code:</strong> Toque no ícone 📷 para ler o QR Code do e-mail do participante.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xs font-bold">3</div>
-                <p><strong>Confirmar presença:</strong> Encontre a pessoa na lista e toque no botão <strong>"Confirmar presença"</strong>.</p>
-              </div>
-              <div className="flex items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-xs font-bold">4</div>
-                <p><strong>Já confirmado?</strong> Se a pessoa já passou, aparecerá com um ✅ verde. Nenhuma ação necessária.</p>
-              </div>
-            </div>
+          <div className="max-w-3xl mx-auto p-4 text-sm text-accent-foreground/90 space-y-2">
+            <p><strong>Como usar:</strong></p>
+            <p>• Clique em qualquer card acima para abrir a lista correspondente.</p>
+            <p>• Use a busca para localizar alguém e fazer <strong>check-in manual</strong> (sem geolocalização — exceção administrativa).</p>
+            <p>• A câmera lê o QR Code recebido por e-mail. O auto check-in público exige geolocalização válida e horário do evento.</p>
+            <p>• Toque em <RotateCcw className="inline w-3 h-3" /> para reverter um check-in lançado por engano.</p>
           </div>
         </div>
       )}
 
-      <div className="max-w-2xl mx-auto p-4 space-y-4">
-        {/* Success Banner */}
+      <div className="max-w-3xl mx-auto p-4 space-y-4">
+        {/* Success banner */}
         {lastCheckedIn && (
           <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
             <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/50 flex items-center justify-center shrink-0">
@@ -417,39 +399,73 @@ export default function FormCheckinPanel() {
           </div>
         )}
 
-        {/* Search + QR Scanner Button */}
+        {/* Quick search for manual check-in */}
         <Card className="shadow-sm">
           <CardContent className="p-3 space-y-2.5">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
-                placeholder="Nome, CPF ou código de 6 letras..."
+                placeholder="Busca rápida por nome, e-mail ou código..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="pl-10 h-12 text-base"
-                autoFocus
               />
+              {searchTerm && (
+                <button
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
+                  onClick={() => setSearchTerm('')}
+                  aria-label="Limpar busca"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
+
+            {/* Inline search results */}
+            {searchTerm.trim() && (
+              <div className="border rounded-lg divide-y max-h-72 overflow-auto">
+                {filteredForSearch.length === 0 ? (
+                  <div className="p-4 text-center text-sm text-muted-foreground">Nenhum resultado para "{searchTerm}".</div>
+                ) : (
+                  filteredForSearch.map(r => {
+                    const isCheckedIn = !!r.checked_in_at;
+                    return (
+                      <div key={r.id} className="p-2.5 flex items-center gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{r.respondent_name || 'Sem nome'}</p>
+                          <p className="text-xs text-muted-foreground truncate">{r.respondent_email}</p>
+                        </div>
+                        {isCheckedIn ? (
+                          <Badge style={{ backgroundColor: '#10B981' }} className="text-white border-0 text-[11px]">Presente</Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            disabled={checkinMutation.isPending}
+                            onClick={() => checkinMutation.mutate({ responseId: r.id, name: r.respondent_name || 'Participante', manual: true })}
+                            className="shrink-0 gap-1.5"
+                            style={{ backgroundColor: '#F59E0B' }}
+                          >
+                            <UserPlus className="w-4 h-4" />
+                            Check-in manual
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
             <Button
               variant={scannerActive ? 'destructive' : 'outline'}
               className="w-full h-11 gap-2 text-sm font-medium"
               onClick={scannerActive ? stopScanner : startScanner}
             >
-              {scannerActive ? (
-                <>
-                  <X className="w-4 h-4" />
-                  Fechar câmera
-                </>
-              ) : (
-                <>
-                  <ScanLine className="w-4 h-4" />
-                  Escanear QR Code do participante
-                </>
-              )}
+              {scannerActive ? (<><X className="w-4 h-4" /> Fechar câmera</>) : (<><ScanLine className="w-4 h-4" /> Escanear QR Code do participante</>)}
             </Button>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <Keyboard className="w-3 h-3" />
-              Dica: se não conseguir escanear, peça o código de 6 letras que o participante recebeu por e-mail
+              Check-in manual (pelo administrador) é exceção e dispensa geolocalização — sempre fica registrado quem confirmou.
             </p>
           </CardContent>
         </Card>
@@ -462,117 +478,144 @@ export default function FormCheckinPanel() {
                 <div className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
                 <span className="text-sm font-medium">Câmera ativa — aponte para o QR Code</span>
               </div>
-              <video
-                ref={videoRef}
-                className="w-full rounded-lg bg-black"
-                style={{ maxHeight: 300 }}
-                playsInline
-                muted
-                autoPlay
-              />
-              <p className="text-xs text-muted-foreground text-center mt-2">
-                O participante encontra o QR Code no e-mail de confirmação da inscrição
-              </p>
+              <video ref={videoRef} className="w-full rounded-lg bg-black" style={{ maxHeight: 300 }} playsInline muted autoPlay />
             </CardContent>
           </Card>
         )}
 
-        {/* Participant List */}
-        {total === 0 ? (
+        {/* Geofence info */}
+        {formData?.geofence_lat != null && (
           <Card>
-            <CardContent className="p-8 text-center">
-              <Users className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-              <p className="font-medium text-muted-foreground">Nenhuma inscrição ainda</p>
-              <p className="text-sm text-muted-foreground/70 mt-1">
-                Quando alguém se inscrever, aparecerá aqui automaticamente.
+            <CardContent className="p-3 flex items-start gap-2 text-xs text-muted-foreground">
+              <MapPin className="w-4 h-4 text-primary shrink-0 mt-0.5" />
+              <p>
+                Check-in público exige estar dentro de <strong>{formData.geofence_radius_meters ?? 200} m</strong> do local
+                {formData.event_starts_at && formData.event_ends_at && (
+                  <> e dentro do horário <strong>{format(new Date(formData.event_starts_at), "dd/MM HH:mm", { locale: ptBR })}–{format(new Date(formData.event_ends_at), 'HH:mm', { locale: ptBR })}</strong></>
+                )}.
               </p>
             </CardContent>
           </Card>
-        ) : (
-          <div className="space-y-2">
-            {filtered.length === 0 && searchTerm.trim() && (
-              <Card>
-                <CardContent className="p-6 text-center">
-                  <Search className="w-8 h-8 text-muted-foreground/40 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Nenhum resultado para "{searchTerm}"
-                  </p>
-                  <p className="text-xs text-muted-foreground/70 mt-1">
-                    Verifique se o nome ou código está correto
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {filtered.map(response => {
-              const isCheckedIn = !!response.checked_in_at;
-              return (
-                <Card
-                  key={response.id}
-                  className={`transition-all ${isCheckedIn ? 'bg-primary/5 border-primary/20' : 'hover:shadow-md'}`}
-                >
-                  <CardContent className="p-3.5 flex items-center gap-3">
-                    {/* Status indicator */}
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                      isCheckedIn
-                        ? 'bg-primary/15 text-primary'
-                        : 'bg-muted text-muted-foreground'
-                    }`}>
-                      {isCheckedIn ? (
-                        <CheckCircle2 className="w-5 h-5" />
-                      ) : (
-                        <span className="text-sm font-bold">
-                          {(response.respondent_name || '?')[0].toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-medium text-sm truncate ${isCheckedIn ? 'text-primary' : ''}`}>
-                        {response.respondent_name || 'Sem nome'}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
-                        {response.checkin_code && (
-                          <Badge variant="outline" className="text-[10px] font-mono px-1.5">
-                            {response.checkin_code}
-                          </Badge>
-                        )}
-                        {response.respondent_email && (
-                          <span className="truncate">{response.respondent_email}</span>
-                        )}
-                      </div>
-                      {isCheckedIn && (
-                        <p className="text-[11px] text-primary/70 mt-0.5">
-                          ✅ Presença confirmada em {format(new Date(response.checked_in_at!), "dd/MM 'às' HH:mm", { locale: ptBR })}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Action button */}
-                    {isCheckedIn ? (
-                      <Badge className="bg-primary/10 text-primary border-primary/20 shrink-0 text-[11px]">
-                        Presente
-                      </Badge>
-                    ) : (
-                      <Button
-                        size="sm"
-                        disabled={checkinMutation.isPending}
-                        onClick={() => handleCheckin(response)}
-                        className="shrink-0 gap-1.5"
-                      >
-                        <UserCheck className="w-4 h-4" />
-                        <span className="hidden sm:inline">Confirmar presença</span>
-                        <span className="sm:hidden">Confirmar</span>
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
         )}
       </div>
+
+      {/* Modal: lista por card */}
+      <Dialog open={openCard !== null} onOpenChange={(o) => !o && setOpenCard(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0">
+          <DialogHeader className="p-4 pb-2 border-b">
+            <DialogTitle className="flex items-center gap-2">
+              {openCard && (
+                <span className="inline-block w-3 h-3 rounded-full" style={{ backgroundColor: openCard === 'convidados' ? '#3B82F6' : openCard === 'pre_checkin' ? '#8B5CF6' : openCard === 'presentes' ? '#10B981' : '#F59E0B' }} />
+              )}
+              {openCard === 'convidados' && `Convidados (${total})`}
+              {openCard === 'pre_checkin' && `Pré-checkin (${preCheckinCount})`}
+              {openCard === 'presentes' && `Presentes (${checkedIn})`}
+              {openCard === 'aguardando' && `Aguardando (${pendingCount})`}
+            </DialogTitle>
+            <DialogDescription>
+              {openCard === 'aguardando' && 'Use o botão para fazer check-in manual.'}
+              {openCard === 'presentes' && 'Use o botão para reverter um check-in.'}
+              {openCard === 'pre_checkin' && 'Pessoas que confirmaram presença antecipada.'}
+              {openCard === 'convidados' && 'Todas as inscrições confirmadas.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 p-4">
+            <div className="space-y-2">
+              {openCard === 'convidados' && responses.map(r => (
+                <RowItem key={r.id} name={r.respondent_name} email={r.respondent_email} timestamp={r.submitted_at} timestampLabel="Inscrito" />
+              ))}
+
+              {openCard === 'pre_checkin' && (preCheckinRows.length === 0 ? (
+                <EmptyState text="Nenhum pré-checkin registrado." />
+              ) : preCheckinRows.map(p => (
+                <RowItem key={p.id} name={p.name} email={p.email} timestamp={p.confirmed_at} timestampLabel="Pré-checkin" />
+              )))}
+
+              {openCard === 'presentes' && (present.length === 0 ? (
+                <EmptyState text="Ninguém confirmou presença ainda." />
+              ) : present.map(r => (
+                <RowItem
+                  key={r.id}
+                  name={r.respondent_name}
+                  email={r.respondent_email}
+                  timestamp={r.checked_in_at}
+                  timestampLabel="Check-in"
+                  badge={r.checked_in_by?.startsWith('manual') ? `Manual${r.checked_in_by.includes(':') ? ` • ${r.checked_in_by.split(':')[1]}` : ''}` : null}
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={revertMutation.isPending}
+                      onClick={() => revertMutation.mutate({ responseId: r.id, name: r.respondent_name || 'Participante' })}
+                      className="gap-1.5"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" /> Reverter
+                    </Button>
+                  }
+                />
+              )))}
+
+              {openCard === 'aguardando' && (pending.length === 0 ? (
+                <EmptyState text="Todos os convidados já fizeram check-in!" />
+              ) : pending.map(r => (
+                <RowItem
+                  key={r.id}
+                  name={r.respondent_name}
+                  email={r.respondent_email}
+                  timestamp={r.submitted_at}
+                  timestampLabel="Inscrito"
+                  action={
+                    <Button
+                      size="sm"
+                      disabled={checkinMutation.isPending}
+                      onClick={() => checkinMutation.mutate({ responseId: r.id, name: r.respondent_name || 'Participante', manual: true })}
+                      className="gap-1.5 text-white"
+                      style={{ backgroundColor: '#F59E0B' }}
+                    >
+                      <UserPlus className="w-3.5 h-3.5" /> Check-in manual
+                    </Button>
+                  }
+                />
+              )))}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function RowItem({
+  name, email, timestamp, timestampLabel, badge, action,
+}: {
+  name: string | null;
+  email: string | null;
+  timestamp: string | null;
+  timestampLabel: string;
+  badge?: string | null;
+  action?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 p-3 border rounded-lg bg-card">
+      <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center shrink-0 text-sm font-bold text-muted-foreground">
+        {(name || '?')[0].toUpperCase()}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm truncate">{name || 'Sem nome'}</p>
+        {email && <p className="text-xs text-muted-foreground truncate">{email}</p>}
+        {timestamp && (
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            {timestampLabel}: {format(new Date(timestamp), "dd/MM 'às' HH:mm", { locale: ptBR })}
+          </p>
+        )}
+        {badge && <Badge variant="outline" className="mt-1 text-[10px]">{badge}</Badge>}
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <div className="p-8 text-center text-sm text-muted-foreground">{text}</div>;
 }

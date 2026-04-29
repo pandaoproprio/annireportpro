@@ -65,10 +65,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Load form geofence
+    // Load form geofence + event window
     const { data: form } = await supabase
       .from('forms')
-      .select('id, title, geofence_lat, geofence_lng, geofence_radius_meters, status')
+      .select('id, title, geofence_lat, geofence_lng, geofence_radius_meters, status, event_starts_at, event_ends_at')
       .eq('id', response.form_id)
       .maybeSingle();
 
@@ -84,6 +84,30 @@ Deno.serve(async (req) => {
         JSON.stringify({ ok: false, error: 'Este evento não está mais aceitando check-in.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
+    }
+
+    // Validate event time window (if configured)
+    if (form.event_starts_at && form.event_ends_at) {
+      const now = new Date();
+      const starts = new Date(form.event_starts_at);
+      const ends = new Date(form.event_ends_at);
+      if (now < starts || now > ends) {
+        const fmt = new Intl.DateTimeFormat('pt-BR', {
+          timeZone: 'America/Sao_Paulo',
+          day: '2-digit', month: '2-digit',
+          hour: '2-digit', minute: '2-digit',
+        });
+        const startStr = fmt.format(starts);
+        const endStr = fmt.format(ends);
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            outOfWindow: true,
+            error: `O check-in está disponível apenas entre ${startStr} e ${endStr} (horário de Brasília).`,
+          }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
     }
 
     // Geofence validation
