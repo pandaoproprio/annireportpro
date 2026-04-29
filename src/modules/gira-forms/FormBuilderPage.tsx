@@ -327,6 +327,20 @@ export default function FormBuilderPage() {
                         onDelete={() => {
                           if (confirm('Remover este campo?')) deleteField.mutate(field.id);
                         }}
+                        onDuplicate={async () => {
+                          const maxOrder = localFields.length > 0 ? Math.max(...localFields.map(f => f.sort_order)) : -1;
+                          await upsertField.mutateAsync({
+                            form_id: id!,
+                            type: field.type,
+                            label: `${field.label} (cópia)`,
+                            description: field.description,
+                            required: field.required,
+                            options: field.options,
+                            settings: field.settings,
+                            sort_order: maxOrder + 1,
+                          } as any);
+                          toast.success('Campo duplicado!');
+                        }}
                         allFields={localFields}
                       />
                     </Reorder.Item>
