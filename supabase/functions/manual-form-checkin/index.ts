@@ -10,7 +10,7 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { response_id } = body ?? {};
+    const { response_id, admin_name } = body ?? {};
 
     if (!response_id) {
       return new Response(
@@ -52,7 +52,10 @@ Deno.serve(async (req) => {
 
     const { error: updErr } = await supabase
       .from('form_responses')
-      .update({ checked_in_at: new Date().toISOString() })
+      .update({
+        checked_in_at: new Date().toISOString(),
+        checked_in_by: admin_name && String(admin_name).trim() ? `manual:${String(admin_name).trim()}` : 'manual',
+      })
       .eq('id', response_id);
 
     if (updErr) {
