@@ -258,14 +258,51 @@ export default function FormBuilderPage() {
               }}
             />
             {(form.settings as any)?.enableCheckin && (
-              <a
-                href={`/form-checkin/${id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary hover:underline ml-1"
-              >
-                Abrir painel →
-              </a>
+              <>
+                <a
+                  href={`/form-checkin/${id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline ml-1"
+                >
+                  Abrir painel →
+                </a>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-xs gap-1"
+                  disabled={shortening}
+                  onClick={async () => {
+                    const originalUrl = `${window.location.origin}/form-checkin/${id}`;
+                    const suggested = (form.slug || form.title || 'painel')
+                      .toLowerCase()
+                      .normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '')
+                      .replace(/[^a-z0-9-]+/g, '-')
+                      .replace(/^-+|-+$/g, '')
+                      .slice(0, 30);
+                    const input = window.prompt(
+                      'Nome amigável para o link (deixe em branco para gerar automaticamente):',
+                      `painel-${suggested}`,
+                    );
+                    if (input === null) return; // cancelado
+                    const custom = input.trim() || undefined;
+                    const shortUrl = await shortenUrl(originalUrl, custom);
+                    if (shortUrl) {
+                      try {
+                        await navigator.clipboard.writeText(shortUrl);
+                        toast.success('Link copiado!', { description: shortUrl });
+                      } catch {
+                        toast.success('Link gerado', { description: shortUrl });
+                      }
+                    }
+                  }}
+                >
+                  <Link2 className="w-3 h-3" />
+                  {shortening ? 'Encurtando…' : 'Encurtar link'}
+                </Button>
+              </>
             )}
           </div>
           <div className="flex items-center gap-2">
