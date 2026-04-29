@@ -55,6 +55,7 @@ export const AppRoutes: React.FC = () => {
         <Route path="/c" element={<Suspense fallback={<PageFallback />}><PublicCheckinPage /></Suspense>} />
         <Route path="/verificar/:hash" element={<Suspense fallback={<PageFallback />}><VerifyJustificationPage /></Suspense>} />
         <Route path="/assinar/:token" element={<Suspense fallback={<PageFallback />}><PublicSignJustificationPage /></Suspense>} />
+        <Route path="/s/:slug" element={<Suspense fallback={<PageFallback />}><ShortLinkRedirect /></Suspense>} />
 
         {/* Protected routes */}
         <Route path="/consentimento" element={<ProtectedRoute><LgpdConsent /></ProtectedRoute>} />
