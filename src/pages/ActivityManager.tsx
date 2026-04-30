@@ -204,6 +204,7 @@ export const ActivityManager: React.FC = () => {
     });
     setEditingId(null);
     setIsFormOpen(false);
+    setTargetUserId('');
   };
 
   const handleEdit = (activity: Activity) => {
