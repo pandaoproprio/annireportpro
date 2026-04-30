@@ -10,7 +10,7 @@ interface ActivityContextType {
   goToPage: (page: number) => void;
   nextPage: () => void;
   prevPage: () => void;
-  addActivity: (activity: Omit<Activity, 'id'>) => Promise<Activity | null>;
+  addActivity: (activity: Omit<Activity, 'id'> & { targetUserId?: string }) => Promise<Activity | null>;
   updateActivity: (activity: Activity) => Promise<void>;
   deleteActivity: (id: string) => Promise<void>;
 }

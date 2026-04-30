@@ -41,12 +41,17 @@ import { ActivityDetailDialog } from '@/components/activity/ActivityDetailDialog
 import { ActivityKanbanBoard, type KanbanStatus } from '@/components/activity/ActivityKanbanBoard';
 import { KanbanFilters } from '@/components/activity/KanbanFilters';
 import { OcrAttendanceButton } from '@/components/activity/OcrAttendanceButton';
+import { QuickCreateOficineiroDialog, type QuickCreatedUser } from '@/components/activity/QuickCreateOficineiroDialog';
+import { UserPlus } from 'lucide-react';
 
 export const ActivityManager: React.FC = () => {
   const { activeProject: project } = useProjectData();
   const { activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useActivityData();
-  const { profile, role } = useAuth();
+  const { profile, role, user } = useAuth();
   const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const isCoordinator = role === 'COORDENADOR';
+  const canRegisterForOthers = isAdmin || isCoordinator;
+  const canQuickCreate = isAdmin || isCoordinator;
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -70,6 +75,23 @@ export const ActivityManager: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [kanbanTypeFilters, setKanbanTypeFilters] = useState<string[]>([]);
   const [kanbanAuthorFilter, setKanbanAuthorFilter] = useState<string | null>(null);
+
+  // "Registrar para" — alvo do registro (próprio usuário ou um oficineiro)
+  const [registerTargets, setRegisterTargets] = useState<Array<{ user_id: string; name: string; email: string; role: string | null }>>([]);
+  const [targetUserId, setTargetUserId] = useState<string>(''); // '' = self
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+
+  useEffect(() => {
+    if (!canRegisterForOthers || !user) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await (supabase as any).rpc('list_register_targets');
+      if (!cancelled && !error && Array.isArray(data)) {
+        setRegisterTargets(data.filter((u: any) => u.user_id !== user.id));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [canRegisterForOthers, user?.id]);
 
   useEffect(() => {
     if (prevActivityCount.current === 0 && activities.length === 1) {
@@ -182,6 +204,7 @@ export const ActivityManager: React.FC = () => {
     });
     setEditingId(null);
     setIsFormOpen(false);
+    setTargetUserId('');
   };
 
   const handleEdit = (activity: Activity) => {
@@ -239,6 +262,7 @@ export const ActivityManager: React.FC = () => {
       await updateActivity(updatedActivity);
       toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade atualizada!');
     } else {
+      const effectiveTarget = targetUserId && targetUserId !== user?.id ? targetUserId : undefined;
       await addActivity({
         projectId: project.id, date: newActivity.date || '', endDate: newActivity.endDate,
         location: newActivity.location || '', type: newActivity.type || ActivityType.EXECUCAO,
@@ -249,8 +273,16 @@ export const ActivityManager: React.FC = () => {
         isDraft: asDraft, photoCaptions: newActivity.photoCaptions || {},
         attendanceFiles: newActivity.attendanceFiles || [], expenseRecords: newActivity.expenseRecords || [],
         setorResponsavel: deriveSetor(role),
+        targetUserId: effectiveTarget,
       });
-      toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade registrada!');
+      const targetName = effectiveTarget
+        ? registerTargets.find(t => t.user_id === effectiveTarget)?.name
+        : null;
+      toast.success(
+        asDraft
+          ? (targetName ? `Rascunho salvo em nome de ${targetName}!` : 'Rascunho salvo!')
+          : (targetName ? `Atividade registrada em nome de ${targetName}!` : 'Atividade registrada!')
+      );
       // Celebração para perfis de execução (oficineiro, voluntário, analista, coordenador, usuário) — exclui admin/super_admin
       if (!isAdmin) {
         setRegisterCelebration({ open: true, isDraft: asDraft });
@@ -364,6 +396,50 @@ export const ActivityManager: React.FC = () => {
                         <Input value={project?.name || 'Projeto não identificado'} disabled className="pl-10 bg-accent text-accent-foreground font-semibold cursor-not-allowed opacity-100" />
                       </div>
                     </div>
+
+                    {canRegisterForOthers && !editingId && (
+                      <div className="md:col-span-2 lg:col-span-3 space-y-2">
+                        <Label>Registrar para</Label>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Select
+                            value={targetUserId || '__self__'}
+                            onValueChange={(v) => setTargetUserId(v === '__self__' ? '' : v)}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Selecione o autor do registro" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__self__">
+                                Eu mesmo ({profile?.name || 'meu usuário'})
+                              </SelectItem>
+                              {registerTargets.length > 0 && (
+                                <div className="px-2 py-1 text-xs text-muted-foreground">
+                                  {isAdmin ? 'Toda a equipe' : 'Oficineiros / Voluntários / Usuários'}
+                                </div>
+                              )}
+                              {registerTargets.map((t) => (
+                                <SelectItem key={t.user_id} value={t.user_id}>
+                                  {t.name} {t.email ? `· ${t.email}` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {canQuickCreate && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setQuickCreateOpen(true)}
+                              className="shrink-0"
+                            >
+                              <UserPlus className="w-4 h-4 mr-2" /> Cadastrar oficineiro
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          O registro será atribuído ao usuário selecionado como autor.
+                        </p>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label>Data Início</Label>
                       <Input type="date" required value={newActivity.date} onChange={e => setNewActivity({...newActivity, date: e.target.value})} />
@@ -649,6 +725,20 @@ export const ActivityManager: React.FC = () => {
               )}
             </DialogContent>
           </Dialog>
+
+          {canQuickCreate && (
+            <QuickCreateOficineiroDialog
+              open={quickCreateOpen}
+              onOpenChange={setQuickCreateOpen}
+              onCreated={(u) => {
+                setRegisterTargets((prev) => {
+                  if (prev.some(p => p.user_id === u.user_id)) return prev;
+                  return [...prev, { user_id: u.user_id, name: u.name, email: u.email, role: u.role || 'oficineiro' }];
+                });
+                setTargetUserId(u.user_id);
+              }}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
