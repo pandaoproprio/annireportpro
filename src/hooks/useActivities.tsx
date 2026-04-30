@@ -367,7 +367,7 @@ export const useActivities = (projectId: string | null) => {
     goToPage,
     nextPage,
     prevPage,
-    addActivity: async (activity: Omit<Activity, 'id'>) => {
+    addActivity: async (activity: Omit<Activity, 'id'> & { targetUserId?: string }) => {
       try { return await addActivityMutation.mutateAsync(activity); } catch { return null; }
     },
     updateActivity: async (activity: Activity) => {
