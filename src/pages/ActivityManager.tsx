@@ -396,6 +396,50 @@ export const ActivityManager: React.FC = () => {
                         <Input value={project?.name || 'Projeto não identificado'} disabled className="pl-10 bg-accent text-accent-foreground font-semibold cursor-not-allowed opacity-100" />
                       </div>
                     </div>
+
+                    {canRegisterForOthers && !editingId && (
+                      <div className="md:col-span-2 lg:col-span-3 space-y-2">
+                        <Label>Registrar para</Label>
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Select
+                            value={targetUserId || '__self__'}
+                            onValueChange={(v) => setTargetUserId(v === '__self__' ? '' : v)}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Selecione o autor do registro" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__self__">
+                                Eu mesmo ({profile?.name || 'meu usuário'})
+                              </SelectItem>
+                              {registerTargets.length > 0 && (
+                                <div className="px-2 py-1 text-xs text-muted-foreground">
+                                  {isAdmin ? 'Toda a equipe' : 'Oficineiros / Voluntários / Usuários'}
+                                </div>
+                              )}
+                              {registerTargets.map((t) => (
+                                <SelectItem key={t.user_id} value={t.user_id}>
+                                  {t.name} {t.email ? `· ${t.email}` : ''}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {canQuickCreate && (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => setQuickCreateOpen(true)}
+                              className="shrink-0"
+                            >
+                              <UserPlus className="w-4 h-4 mr-2" /> Cadastrar oficineiro
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          O registro será atribuído ao usuário selecionado como autor.
+                        </p>
+                      </div>
+                    )}
                     <div className="space-y-2">
                       <Label>Data Início</Label>
                       <Input type="date" required value={newActivity.date} onChange={e => setNewActivity({...newActivity, date: e.target.value})} />
