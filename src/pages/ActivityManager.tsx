@@ -725,6 +725,20 @@ export const ActivityManager: React.FC = () => {
               )}
             </DialogContent>
           </Dialog>
+
+          {canQuickCreate && (
+            <QuickCreateOficineiroDialog
+              open={quickCreateOpen}
+              onOpenChange={setQuickCreateOpen}
+              onCreated={(u) => {
+                setRegisterTargets((prev) => {
+                  if (prev.some(p => p.user_id === u.user_id)) return prev;
+                  return [...prev, { user_id: u.user_id, name: u.name, email: u.email, role: u.role || 'oficineiro' }];
+                });
+                setTargetUserId(u.user_id);
+              }}
+            />
+          )}
         </TabsContent>
       </Tabs>
     </div>
