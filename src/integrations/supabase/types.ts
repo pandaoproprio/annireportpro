@@ -4726,6 +4726,15 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
+      list_register_targets: {
+        Args: never
+        Returns: {
+          email: string
+          name: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }[]
+      }
       move_to_dlq: {
         Args: {
           dlq_name: string
@@ -4754,6 +4763,31 @@ export type Database = {
       recalc_user_gamification: {
         Args: { _user_id: string }
         Returns: undefined
+      }
+      register_activity_for_user: {
+        Args: {
+          _attachments: string[]
+          _attendance_files: Json
+          _attendees_count: number
+          _challenges: string
+          _cost_evidence: string
+          _date: string
+          _description: string
+          _end_date: string
+          _expense_records: Json
+          _goal_id: string
+          _is_draft: boolean
+          _location: string
+          _photo_captions: Json
+          _photos: string[]
+          _project_id: string
+          _results: string
+          _setor_responsavel: string
+          _target_user_id: string
+          _team_involved: string[]
+          _type: Database["public"]["Enums"]["activity_type"]
+        }
+        Returns: string
       }
       validate_workflow_transition: {
         Args: {
