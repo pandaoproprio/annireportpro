@@ -261,6 +261,7 @@ export const ActivityManager: React.FC = () => {
       await updateActivity(updatedActivity);
       toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade atualizada!');
     } else {
+      const effectiveTarget = targetUserId && targetUserId !== user?.id ? targetUserId : undefined;
       await addActivity({
         projectId: project.id, date: newActivity.date || '', endDate: newActivity.endDate,
         location: newActivity.location || '', type: newActivity.type || ActivityType.EXECUCAO,
@@ -271,8 +272,16 @@ export const ActivityManager: React.FC = () => {
         isDraft: asDraft, photoCaptions: newActivity.photoCaptions || {},
         attendanceFiles: newActivity.attendanceFiles || [], expenseRecords: newActivity.expenseRecords || [],
         setorResponsavel: deriveSetor(role),
+        targetUserId: effectiveTarget,
       });
-      toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade registrada!');
+      const targetName = effectiveTarget
+        ? registerTargets.find(t => t.user_id === effectiveTarget)?.name
+        : null;
+      toast.success(
+        asDraft
+          ? (targetName ? `Rascunho salvo em nome de ${targetName}!` : 'Rascunho salvo!')
+          : (targetName ? `Atividade registrada em nome de ${targetName}!` : 'Atividade registrada!')
+      );
       // Celebração para perfis de execução (oficineiro, voluntário, analista, coordenador, usuário) — exclui admin/super_admin
       if (!isAdmin) {
         setRegisterCelebration({ open: true, isDraft: asDraft });
