@@ -41,6 +41,8 @@ import { ActivityDetailDialog } from '@/components/activity/ActivityDetailDialog
 import { ActivityKanbanBoard, type KanbanStatus } from '@/components/activity/ActivityKanbanBoard';
 import { KanbanFilters } from '@/components/activity/KanbanFilters';
 import { OcrAttendanceButton } from '@/components/activity/OcrAttendanceButton';
+import { QuickCreateOficineiroDialog, type QuickCreatedUser } from '@/components/activity/QuickCreateOficineiroDialog';
+import { UserPlus } from 'lucide-react';
 
 export const ActivityManager: React.FC = () => {
   const { activeProject: project } = useProjectData();
