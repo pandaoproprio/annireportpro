@@ -47,8 +47,11 @@ import { UserPlus } from 'lucide-react';
 export const ActivityManager: React.FC = () => {
   const { activeProject: project } = useProjectData();
   const { activities, addActivity, deleteActivity, updateActivity, isLoadingActivities: isLoading } = useActivityData();
-  const { profile, role } = useAuth();
+  const { profile, role, user } = useAuth();
   const isAdmin = role === 'ADMIN' || role === 'SUPER_ADMIN';
+  const isCoordinator = role === 'COORDENADOR';
+  const canRegisterForOthers = isAdmin || isCoordinator;
+  const canQuickCreate = isAdmin || isCoordinator;
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
