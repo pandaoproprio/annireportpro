@@ -76,6 +76,23 @@ export const ActivityManager: React.FC = () => {
   const [kanbanTypeFilters, setKanbanTypeFilters] = useState<string[]>([]);
   const [kanbanAuthorFilter, setKanbanAuthorFilter] = useState<string | null>(null);
 
+  // "Registrar para" — alvo do registro (próprio usuário ou um oficineiro)
+  const [registerTargets, setRegisterTargets] = useState<Array<{ user_id: string; name: string; email: string; role: string | null }>>([]);
+  const [targetUserId, setTargetUserId] = useState<string>(''); // '' = self
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+
+  useEffect(() => {
+    if (!canRegisterForOthers || !user) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await (supabase as any).rpc('list_register_targets');
+      if (!cancelled && !error && Array.isArray(data)) {
+        setRegisterTargets(data.filter((u: any) => u.user_id !== user.id));
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [canRegisterForOthers, user?.id]);
+
   useEffect(() => {
     if (prevActivityCount.current === 0 && activities.length === 1) {
       setShowCelebration(true);
