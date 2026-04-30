@@ -164,8 +164,40 @@ export const useActivities = (projectId: string | null) => {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['activities'] });
 
   const addActivityMutation = useMutation({
-    mutationFn: async (activity: Omit<Activity, 'id'>) => {
+    mutationFn: async (activity: Omit<Activity, 'id'> & { targetUserId?: string }) => {
       if (!user) throw new Error('Not authenticated');
+
+      // Se o registro é em nome de outro usuário, usar a RPC SECURITY DEFINER
+      if (activity.targetUserId && activity.targetUserId !== user.id) {
+        const { data: newId, error: rpcErr } = await (supabase as any).rpc('register_activity_for_user', {
+          _target_user_id: activity.targetUserId,
+          _project_id: activity.projectId,
+          _date: activity.date,
+          _end_date: activity.endDate || null,
+          _location: activity.location || '',
+          _type: enumToDbType[activity.type],
+          _description: activity.description,
+          _results: activity.results || '',
+          _challenges: activity.challenges || '',
+          _attendees_count: activity.attendeesCount || 0,
+          _team_involved: activity.teamInvolved || [],
+          _photos: activity.photos || [],
+          _attachments: activity.attachments || [],
+          _goal_id: activity.goalId || null,
+          _cost_evidence: activity.costEvidence || null,
+          _is_draft: activity.isDraft ?? false,
+          _photo_captions: activity.photoCaptions || {},
+          _attendance_files: activity.attendanceFiles || [],
+          _expense_records: activity.expenseRecords || [],
+          _setor_responsavel: activity.setorResponsavel || null,
+        });
+        if (rpcErr) throw rpcErr;
+        const { data: row, error: fetchErr } = await supabase
+          .from('activities').select('*').eq('id', newId as string).single();
+        if (fetchErr) throw fetchErr;
+        return mapDbToActivity(row as DbActivity);
+      }
+
       const { data, error } = await supabase
         .from('activities')
         .insert({
