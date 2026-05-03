@@ -213,6 +213,7 @@ export const useReportState = () => {
     if (rd.selectedVideoUrls) setSelectedVideoUrls(rd.selectedVideoUrls);
     if (rd.activityOverrides) setActivityOverrides(rd.activityOverrides);
     if (rd.hideActivitiesBySection) setHideActivitiesBySection(rd.hideActivitiesBySection);
+    if (rd.goalTitleOverrides) setGoalTitleOverrides(rd.goalTitleOverrides);
   }, []);
 
   // Auto-save: debounce 3s after any content change
