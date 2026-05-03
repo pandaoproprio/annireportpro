@@ -290,8 +290,9 @@ function renderRichContent(content: string | undefined, fallback: string): strin
   return sanitizeRichHtml(trimmed);
 }
 
-function renderPlainActivityList(activities: Activity[]): string {
+function renderPlainActivityList(activities: Activity[], options?: { hideDescription?: boolean }): string {
   if (activities.length === 0) return "";
+  const hideDescription = options?.hideDescription === true;
   return `
     <div class="activity-list">
       <p class="subheading">Atividades realizadas:</p>
@@ -300,7 +301,7 @@ function renderPlainActivityList(activities: Activity[]): string {
           const dateText = formatActivityDate(activity.date, activity.endDate);
           const locationText = isNonEmptyString(activity.location) ? ` – ${escapeHtml(activity.location.trim())}` : "";
           const attendeesText = activity.attendeesCount && activity.attendeesCount > 0 ? ` – ${activity.attendeesCount} participantes` : "";
-          const description = isNonEmptyString(activity.description) ? `<p class="activity-description">${escapeHtml(activity.description.trim())}</p>` : "";
+          const description = !hideDescription && isNonEmptyString(activity.description) ? `<p class="activity-description">${escapeHtml(activity.description.trim())}</p>` : "";
           return `
             <li class="activity-item">
               <div class="activity-meta"><strong>${escapeHtml(dateText)}</strong>${locationText}${attendeesText}</div>
