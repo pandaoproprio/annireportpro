@@ -159,6 +159,23 @@ const PreviewPhotoGrid: React.FC<{ photos: string[]; metas?: ReportPhotoMeta[]; 
   );
 };
 
+const EditActivityBtn: React.FC<{ activityId: string; onEdit?: (id: string) => void; overridden?: boolean }> = ({ activityId, onEdit, overridden }) => {
+  if (!onEdit) return null;
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      onClick={() => onEdit(activityId)}
+      className="h-6 px-2 text-xs ml-2 print:hidden"
+      title={overridden ? 'Atividade ajustada para este relatório' : 'Editar nesta camada do relatório'}
+    >
+      <Pencil className="w-3 h-3 mr-1" />
+      {overridden ? 'Ajustada' : 'Editar'}
+    </Button>
+  );
+};
+
 export const ReportPreviewSection: React.FC<Props> = (props) => {
   const { section } = props;
   if (!section.isVisible) return null;
