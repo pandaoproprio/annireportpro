@@ -232,7 +232,7 @@ const SummaryPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }>
   </section>
 );
 
-const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, sectionPhotoGroups, getActivitiesByGoal, formatActivityDate, activityOverrides, onEditActivity, hideActivitiesBySection }) => (
+const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, sectionPhotoGroups, getActivitiesByGoal, formatActivityDate, activityOverrides, onEditActivity, hideActivitiesBySection, goalTitleOverrides }) => (
   <section className="mb-8 page-break">
     <h3 className={`${sectionTitleClass} mb-6`} style={{ textAlign: 'left' }}>{section.title}</h3>
     {goals.map((goal, idx) => {
@@ -243,6 +243,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
       const goalMetas = photoMetadata?.[goal.id] || [];
       const hasNarrative = !!(goalNarratives[goal.id] && goalNarratives[goal.id].trim());
       const hideActs = !!hideActivitiesBySection?.[goal.id];
+      const photoTitle = formatGoalPhotoTitle(idx, goal.title, goalTitleOverrides?.[goal.id]);
 
       return (
         <div key={goal.id} className="mb-10">
@@ -268,7 +269,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
               })}
             </div>
           )}
-          <PreviewPhotoGrid photos={allGoalPhotos} metas={goalMetas} title={`Registros Fotográficos – Meta ${idx + 1}`} groups={sectionPhotoGroups?.[goal.id]} />
+          <PreviewPhotoGrid photos={allGoalPhotos} metas={goalMetas} title={photoTitle} groups={sectionPhotoGroups?.[goal.id]} />
         </div>
       );
     })}
