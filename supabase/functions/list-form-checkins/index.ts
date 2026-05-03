@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
 
     const { data: form, error: formErr } = await supabase
       .from('forms')
-      .select('id, title, geofence_lat, geofence_lng, geofence_radius_meters, status, created_by')
+      .select('id, title, geofence_lat, geofence_lng, geofence_radius_meters, status, user_id')
       .eq('id', form_id)
       .maybeSingle();
 
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     }
 
     // Authorization: form owner OR admin/super_admin OR forms_view permission
-    let authorized = form.created_by === userId;
+    let authorized = form.user_id === userId;
 
     if (!authorized) {
       const { data: roles } = await supabase
@@ -104,8 +104,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Don't expose created_by in response
-    const { created_by: _omit, ...formPublic } = form as any;
+    // Don't expose user_id in response
+    const { user_id: _omit, ...formPublic } = form as any;
 
     return new Response(
       JSON.stringify({ ok: true, form: formPublic, responses: responses ?? [] }),
