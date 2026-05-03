@@ -120,6 +120,7 @@ interface ReportPayload {
   sectionPhotoGroups?: Record<string, PhotoGroup[]>;
   visualConfig?: VisualConfig;
   selectedVideoUrls?: string[];
+  hideActivitiesBySection?: Record<string, boolean>;
 }
 
 const FALLBACK_LINK_LABELS: Record<ReportLinkKey, string> = {
