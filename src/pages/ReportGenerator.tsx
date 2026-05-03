@@ -370,6 +370,7 @@ export const ReportGenerator: React.FC = () => {
     rawActivities: activities,
     activityOverrides,
     onEditActivity: (id: string) => setEditingActivityId(id),
+    hideActivitiesBySection,
   };
 
   return (
