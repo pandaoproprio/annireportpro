@@ -21,6 +21,7 @@ import {
 import { saveAs } from 'file-saver';
 import { Project, Activity, ActivityType, ExpenseItem, ReportSection, PhotoGroup, ReportPhotoMeta } from '@/types';
 import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
+import { formatGoalTitle } from '@/lib/goalTitle';
 
 interface ExportData {
   project: Project;
@@ -616,7 +617,7 @@ export const exportToDocx = async (data: ExportData) => {
 
           docSections.push(
             new Paragraph({
-              text: goal.title,
+              text: formatGoalTitle(idx, goal.title),
               heading: HeadingLevel.HEADING_3,
               spacing: { before: 300, after: 200 },
             })

@@ -13,6 +13,7 @@ interface ActivityContextType {
   addActivity: (activity: Omit<Activity, 'id'> & { targetUserId?: string }) => Promise<Activity | null>;
   updateActivity: (activity: Activity) => Promise<void>;
   deleteActivity: (id: string) => Promise<void>;
+  linkActivitiesToGoal: (goalId: string | null, activityIds: string[]) => Promise<boolean>;
 }
 
 const ActivityContext = createContext<ActivityContextType | undefined>(undefined);
@@ -31,6 +32,7 @@ export const ActivityProvider = ({ children }: { children: ReactNode }) => {
     addActivity: activitiesData.addActivity,
     updateActivity: activitiesData.updateActivity,
     deleteActivity: activitiesData.deleteActivity,
+    linkActivitiesToGoal: activitiesData.linkActivitiesToGoal,
   }), [activitiesData]);
 
   return (

@@ -3,6 +3,7 @@ import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta } from '@/types';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 import { INDENT } from '@/lib/previewConstants';
+import { formatGoalTitle } from '@/lib/goalTitle';
 
 // Renders rich-text HTML content safely (from Tiptap editor)
 const RichContent: React.FC<{ html: string; className?: string; style?: React.CSSProperties }> = ({ html, className, style }) => {
@@ -215,7 +216,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
 
       return (
         <div key={goal.id} className="mb-10">
-          <h4 className="font-bold mb-3" style={{ textAlign: 'left', color: '#000' }}>{goal.title}</h4>
+          <h4 className="font-bold mb-3" style={{ textAlign: 'left', color: '#000' }}>{formatGoalTitle(idx, goal.title)}</h4>
           <RichContent html={goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'} className="text-justify mb-4 leading-relaxed" style={indentStyle} />
           {goalActs.length > 0 && (
             <div className="mt-4 text-sm">

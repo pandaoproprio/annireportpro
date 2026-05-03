@@ -468,14 +468,22 @@ export const ActivityManager: React.FC = () => {
                       <Input value={newActivity.location} onChange={e => setNewActivity({...newActivity, location: e.target.value})} placeholder="Local da atividade" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Vincular a Meta (Opcional)</Label>
+                      <Label className="flex items-center gap-2">
+                        Vincular a Meta
+                        {project.goals.length > 0 && (
+                          <span className="text-[10px] uppercase bg-primary/10 text-primary px-1.5 py-0.5 rounded">Recomendado</span>
+                        )}
+                      </Label>
                       <Select value={newActivity.goalId || '__none__'} onValueChange={(value) => setNewActivity({...newActivity, goalId: value === '__none__' ? undefined : value})}>
-                        <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Selecione a meta correspondente..." /></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="__none__">Nenhuma</SelectItem>
-                          {project.goals.map(g => (<SelectItem key={g.id} value={g.id}>{g.title}</SelectItem>))}
+                          {project.goals.map((g, i) => (<SelectItem key={g.id} value={g.id}>{/^meta\s*\d+/i.test(g.title) ? g.title : `META ${i + 1}: ${g.title}`}</SelectItem>))}
                         </SelectContent>
                       </Select>
+                      {project.goals.length > 0 && !newActivity.goalId && (
+                        <p className="text-xs text-amber-700">Vincular este registro a uma meta facilita a geração do Relatório.</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label>Nº Participantes</Label>
