@@ -350,10 +350,7 @@ export const ReportGenerator: React.FC = () => {
     onEditActivity: (id: string) => setEditingActivityId(id),
   };
 
-  const activityOverrides = (state as any).activityOverrides as Record<string, import('@/types').ActivityOverride>;
-  const upsertActivityOverride = (state as any).upsertActivityOverride as (id: string, patch: Partial<import('@/types').ActivityOverride>) => void;
-  const restoreActivityOverride = (state as any).restoreActivityOverride as (id: string) => void;
-  const uploadActivityOverridePhoto = (state as any).uploadActivityOverridePhoto as (id: string, file: File) => Promise<string | null>;
+
 
   const previewSectionProps = {
     objectText, summary, goalNarratives, goalPhotos,
