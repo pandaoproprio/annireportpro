@@ -374,6 +374,7 @@ export const ReportGenerator: React.FC = () => {
     activityOverrides,
     onEditActivity: (id: string) => setEditingActivityId(id),
     hideActivitiesBySection,
+    goalTitleOverrides,
   };
 
   return (
