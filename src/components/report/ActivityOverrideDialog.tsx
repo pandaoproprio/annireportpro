@@ -109,13 +109,28 @@ export const ActivityOverrideDialog: React.FC<Props> = ({
             </div>
 
             <div>
-              <Label>Descrição / relato</Label>
-              <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={6} className="mt-1" />
+              <div className="flex items-center justify-between mb-1">
+                <Label>Descrição / relato</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Ocultar do relatório</span>
+                  <Switch checked={hideDescription} onCheckedChange={setHideDescription} disabled={hidden} />
+                </div>
+              </div>
+              <Textarea value={description} onChange={e => setDescription(e.target.value)} rows={6} className="mt-1" disabled={hidden || hideDescription} />
+              {hideDescription && !hidden && (
+                <p className="text-xs text-muted-foreground italic mt-1">Texto oculto — apenas as fotos desta atividade aparecerão no relatório.</p>
+              )}
             </div>
 
             <div>
-              <Label>Resultados</Label>
-              <Textarea value={results} onChange={e => setResults(e.target.value)} rows={3} className="mt-1" />
+              <div className="flex items-center justify-between mb-1">
+                <Label>Resultados</Label>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Ocultar do relatório</span>
+                  <Switch checked={hideResults} onCheckedChange={setHideResults} disabled={hidden} />
+                </div>
+              </div>
+              <Textarea value={results} onChange={e => setResults(e.target.value)} rows={3} className="mt-1" disabled={hidden || hideResults} />
             </div>
 
             <div>
