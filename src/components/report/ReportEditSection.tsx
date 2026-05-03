@@ -112,6 +112,9 @@ interface Props {
   removeSectionDoc: (sectionKey: string, index: number) => void;
   insertDiaryPhotos: (sectionKey: string, urls: string[], captions: Record<string, string>) => void;
   reorderGoalPhotos: (goalId: string, oldIndex: number, newIndex: number) => void;
+  // Per-report activity overrides layer
+  activityOverrides?: Record<string, import('@/types').ActivityOverride>;
+  onEditActivity?: (id: string) => void;
 }
 
 // ── Photo card with caption, width slider, and edit button ──
