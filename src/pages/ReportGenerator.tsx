@@ -138,6 +138,23 @@ export const ReportGenerator: React.FC = () => {
 
   if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
 
+  const buildMergedActivities = () => {
+    const ovs = (state as any).activityOverrides as Record<string, import('@/types').ActivityOverride> || {};
+    return activities
+      .filter(a => !ovs[a.id]?.hidden)
+      .map(a => {
+        const ov = ovs[a.id];
+        if (!ov) return a;
+        return {
+          ...a,
+          description: ov.description !== undefined ? ov.description : a.description,
+          results: ov.results !== undefined ? ov.results : a.results,
+          photos: ov.photos !== undefined ? ov.photos : a.photos,
+          photoCaptions: ov.photoCaptions !== undefined ? { ...(a.photoCaptions || {}), ...ov.photoCaptions } : a.photoCaptions,
+        };
+      });
+  };
+
   const exportToPdf = async () => {
     setIsExporting(true);
     setExportType('pdf');
@@ -145,7 +162,7 @@ export const ReportGenerator: React.FC = () => {
       if (!project) throw new Error('Projeto não carregado');
       await exportReportToPdf({
         project,
-        activities,
+        activities: buildMergedActivities(),
         sections,
         objectText,
         summary,
