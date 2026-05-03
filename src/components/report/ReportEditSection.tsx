@@ -76,6 +76,9 @@ interface Props {
   photoMetadata: Record<string, ReportPhotoMeta[]>;
   updatePhotoCaption: (key: string, index: number, caption: string) => void;
   updatePhotoSize: (key: string, index: number, size: PhotoSize, widthPercent?: number) => void;
+  updatePhotoAlignment?: (key: string, index: number, alignment: 'left' | 'center' | 'right') => void;
+  hideActivitiesBySection?: Record<string, boolean>;
+  toggleSectionActivitiesVisibility?: (key: string, hidden: boolean) => void;
   replacePhotoUrl: (key: string, index: number, newUrl: string, setter: React.Dispatch<React.SetStateAction<string[]>> | null, goalId?: string) => void;
   pageLayouts: Record<string, PageLayout>;
   setPageLayouts: React.Dispatch<React.SetStateAction<Record<string, PageLayout>>>;
