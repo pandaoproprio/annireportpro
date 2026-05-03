@@ -120,17 +120,6 @@ interface Props {
   onEditActivity?: (id: string) => void;
 }
 
-// ── Photo card with caption, width slider, and edit button ──
-const PhotoCard: React.FC<{
-  photo: string;
-  index: number;
-  metaKey: string;
-  meta?: ReportPhotoMeta;
-  projectId: string;
-  updatePhotoCaption: Props['updatePhotoCaption'];
-  updatePhotoSize: Props['updatePhotoSize'];
-  onReplace: (newUrl: string) => void;
-  onRemove: () => void;
 // ── Photo card with caption, width, alignment, presets and edit button ──
 const SIZE_PRESETS: Array<{ id: PhotoSize; label: string; width: number }> = [
   { id: 'small', label: 'Pequena', width: 30 },
