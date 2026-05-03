@@ -1,84 +1,64 @@
-
-
 ## Diagnóstico
 
-**Bug**: Em `https://forms.giraerp.com.br/f/nossa-gente`, ao clicar no botão de check-in, o sistema pede login. O check-in deveria ser público (via QR code do participante), validado por geolocalização.
+### Bug 1 — "META 1: META 1"
+- Render: `src/components/report/ReportEditSection.tsx:662` → `META {idx + 1}: {goal.title}`.
+- Banco (`projects.goals` jsonb) confirma a causa: alguns projetos têm `title` salvo literalmente como `"META 1"`, `"META 2"`... (ex.: JPA Afrocultural, Didáticas Urbanas de Matrizes do Samba II). Outros projetos (ex.: Ubuntu Carioca) têm `title` com o objetivo descritivo correto e funcionam normalmente.
+- Conclusão: o template está correto; o problema é o **dado** salvo. Precisa de fallback no render + correção pontual dos títulos no banco.
 
-### Causas raiz
+### Bug 2 — Painel de registros do Diário de Bordo não aparece por meta
+- Componente já existe: `ActivitiesPanel` em `ReportEditSection.tsx:666`, alimentado por `getActivitiesByGoal(goal.id)` (`src/hooks/useReportState.tsx:326`), que filtra `activities.filter(a => a.goalId === goalId)`.
+- `ActivitiesPanel` retorna `null` quando a lista está vazia (linha 533).
+- Banco: a maioria dos registros tem `goal_id = NULL`. Dos 29 registros do projeto, apenas 2 estão vinculados a meta. Por isso o painel não aparece — não há vínculo, não há registros para listar.
+- O campo `goal_id` (text) **existe** em `activities` e o Activity Manager já tem seletor de meta (`ActivityManager.tsx:472`), mas usuários não estão preenchendo.
 
-1. **Rota de check-in protegida ou inexistente no domínio público**
-   - O componente `CheckinPage.tsx` existe em `src/modules/gira-eventos/components/CheckinPage.tsx`, mas é da arquitetura **Eventos** (`event_id` + `event_registrations`), não de **Forms** (`form_id` + `form_responses`).
-   - O domínio `forms.giraerp.com.br` usa `FormsOnlyRoutes.tsx`, que **provavelmente não inclui** uma rota pública `/checkin/:formResponseId`. Quando o link de check-in é aberto, cai numa rota protegida → redireciona para login.
-
-2. **Edge function `validate-checkin-geofence` só lê de `events`/`forms`, não de `form_responses`**
-   - O formulário "Nossa Gente" tem `geofence_lat = null` no banco — a coordenada do local (R. Souza e Silva, 112) **nunca foi configurada**.
-   - Sem geofence configurada, mesmo se a rota existir, a validação falha.
-
-3. **Não existe lista pública de quem fez check-in no painel admin**
-   - O painel `FormCheckinPanel.tsx` existe mas precisa exibir contador + lista em tempo real.
-
----
-
-## Plano de Correção
-
-### 1. Configurar geofence do formulário "Nossa Gente"
-Geocodificar o endereço **R. Souza e Silva, 112 - Saúde/Gamboa, Rio de Janeiro** → aproximadamente `lat: -22.8989, lng: -43.1869`. Salvar em `forms`:
-```sql
-UPDATE forms SET 
-  geofence_lat = -22.8989, 
-  geofence_lng = -43.1869, 
-  geofence_radius_meters = 150,
-  pre_checkin_enabled = true
-WHERE id = '5e1aeab8-ebf1-42a4-a7fd-75721b8d3aad';
-```
-
-### 2. Criar rota pública de check-in para Forms
-Criar **`src/modules/gira-forms/PublicCheckinPage.tsx`** (análogo ao `CheckinPage.tsx` de eventos, mas operando em `form_responses` + `form_checkins`).
-
-Fluxo:
-- URL: `/c/:checkinCode` (ex: `forms.giraerp.com.br/c/A3B7K9`)
-- Busca `form_responses` por `checkin_code` → obtém `form_id`
-- Carrega geofence do `forms`
-- Solicita geolocalização → chama `validate-checkin-geofence` com `form_id`
-- Registra em `form_checkins` (1 por `form_response_id` — UNIQUE constraint)
-
-Adicionar rota em **`FormsOnlyRoutes.tsx`** e **`AppRoutes.tsx`** como **rota pública** (fora de `ProtectedRoute`).
-
-### 3. Permitir check-in manual pelo organizador
-No painel admin (`FormCheckinPanel.tsx`):
-- Botão "Marcar presença" ao lado de cada inscrito (cria `form_checkins` com `is_manual=true`).
-- Lista em tempo real via Supabase Realtime mostrando: nome, hora do check-in, método (QR/manual), distância.
-- Contador "X de Y confirmaram presença".
-
-### 4. Garantir UNIQUE em `form_checkins`
-Migration:
-```sql
-ALTER TABLE form_checkins 
-ADD CONSTRAINT unique_response_checkin UNIQUE (form_response_id);
-```
-(Se já existir, pular.)
-
-### 5. RLS pública para check-in
-- `form_checkins` deve permitir INSERT anônimo quando o `form_response_id` existir (validado via edge function).
-- SELECT restrito ao dono do form + colaboradores.
+### Resumo das causas
+1. Título duplicado = dado ruim em `projects.goals[].title`.
+2. Painel ausente = registros sem `goal_id` no banco; nenhuma UI para vincular registros existentes a uma meta a partir do Gerador de Relatório.
 
 ---
 
-## Arquivos a tocar
+## Correções
 
-| Arquivo | Ação |
-|---|---|
-| `src/modules/gira-forms/PublicCheckinPage.tsx` | **Criar** — página pública de check-in |
-| `src/routes/FormsOnlyRoutes.tsx` | Adicionar rota `/c/:code` pública |
-| `src/routes/AppRoutes.tsx` | Adicionar rota `/c/:code` pública |
-| `src/modules/gira-forms/components/FormCheckinPanel.tsx` | Adicionar lista realtime + botão check-in manual |
-| `supabase/functions/validate-checkin-geofence/index.ts` | Já lê de `forms` — **OK** |
-| Migration SQL | UNIQUE em `form_checkins`, RLS pública para INSERT |
-| Update SQL | Definir `geofence_lat/lng` em "Nossa Gente" |
+### 1. Bug 1 — render à prova de duplicação
+Em `ReportEditSection.tsx:662` (e também no badge da linha 663 e em `ReportPreviewSection.tsx` GoalsPreview):
+- Detectar quando `goal.title` já começa com `META` (regex `/^\s*META\s*\d+/i`) e, nesse caso, exibir só `goal.title`. Caso contrário manter `META {idx+1}: {goal.title}`.
+- Mesma normalização aplicada em `src/lib/docxExport.ts` (linha ~615) para o export.
 
-## Observações
+Migração de dados pontual (insert/update via tool de dados) para os projetos identificados: substituir `title` `"META N"` pelo texto da `description` correspondente, preservando o restante. Será feita só onde `title ~ /^META\s*\d+$/`, usando `description` como novo título.
 
-- **Cache do Service Worker**: após deploy, testar em janela anônima.
-- **Endereço Saúde vs Gamboa**: o CEP 20220-560 é oficialmente Saúde, mas Maps às vezes retorna Gamboa — coordenadas são as mesmas, raio de 150m cobre ambos.
-- **Sem login**: a página `/c/:code` será 100% pública; a única "credencial" é o `checkin_code` único (6 chars) gerado em `form_responses`.
+### 2. Bug 2 — Painel de registros por meta + vínculo
 
+**2a. Tornar o painel sempre visível por meta (mesmo vazio)**
+- Em `ActivitiesPanel`: remover o `return null` quando `onInsert` está presente; renderizar estado vazio com mensagem "Nenhum registro vinculado a esta meta" e botão **"Vincular registros existentes"**.
+
+**2b. Diálogo "Vincular registros à meta"**
+- Novo componente `LinkActivitiesToGoalDialog.tsx` aberto pelo botão acima. Lista todos os `activities` do projeto **sem** `goalId` (ou vinculados a outra meta), com checkbox, data, descrição resumida, participantes. Salva via novo helper `linkActivitiesToGoal(goalId, activityIds[])` em `useActivities.tsx` que faz `UPDATE activities SET goal_id = $1 WHERE id = ANY($2)` respeitando RLS atual (autor, admin, coord, super_admin).
+- Após salvar, refresh do contexto de atividades — `getActivitiesByGoal` passa a retornar e o painel exibe normalmente, com checkboxes "Selecionar tudo" e "Inserir selecionados" que já existem.
+
+**2c. Vínculo no momento do registro**
+- Já existe seletor de meta em `ActivityManager.tsx`. Adicionar **destaque visual** ("Recomendado") e tornar o campo obrigatório quando o projeto tem metas — para evitar acúmulo futuro de registros sem meta.
+
+**2d. "Sugerir com IA" por meta usa registros reais**
+- O `AiTextToolbar` já recebe `activities={goalActs}` e `goalTitle/goalAudience`. Garantir que a edge function `generate-narrative` use exclusivamente `activities` recebido (filtrado por meta) e cite datas/descrições reais.
+- Se `goalActs.length === 0`: a IA deve retornar mensagem orientando a vincular registros (sem inventar conteúdo) — alterar prompt da função.
+
+**2e. Os 29 registros visíveis na imagem**
+- Não fazemos auto-classificação por palavras-chave (sem regra de negócio explícita). O fluxo correto é: usuário/admin/coord usa o diálogo "Vincular registros existentes" em cada meta para distribuir os registros. Cada registro fica em apenas uma meta (campo único `goal_id`).
+
+---
+
+## Arquivos a alterar
+
+- `src/components/report/ReportEditSection.tsx` — fallback de título; painel sempre visível; botão/dialog de vínculo.
+- `src/components/report/ReportPreviewSection.tsx` — fallback de título no preview.
+- `src/lib/docxExport.ts` — fallback de título no export DOCX.
+- `src/hooks/useActivities.tsx` — função `linkActivitiesToGoal`.
+- `src/components/activity/LinkActivitiesToGoalDialog.tsx` — novo.
+- `src/pages/ActivityManager.tsx` — destacar/forçar meta no formulário.
+- `supabase/functions/generate-narrative/index.ts` — prompt usar somente atividades passadas, não inventar.
+- Operação de dados pontual: normalizar `projects.goals[].title` "META N" → usar `description`.
+
+## Garantias
+- Nada além do título e do painel por meta é alterado no Gerador de Relatório.
+- Render usa fallback para o caso de o dado ainda estar duplicado em outros projetos.
+- Vínculo só por ação explícita do usuário; nenhum registro é classificado automaticamente.
