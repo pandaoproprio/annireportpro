@@ -396,6 +396,8 @@ export const useReportState = () => {
   const toggleSectionActivitiesVisibility = (key: string, hidden: boolean) => {
     setHideActivitiesBySection(prev => ({ ...prev, [key]: hidden }));
   };
+
+  const replacePhotoUrl = (key: string, index: number, newUrl: string,
     photosSetter: React.Dispatch<React.SetStateAction<string[]>> | null,
     goalId?: string
   ) => {
