@@ -1173,10 +1173,11 @@ function buildHtml(payload: ReportPayload): string {
           display: block;
           width: 100%;
           height: 200px;
-          object-fit: cover;
+          object-fit: contain;
+          object-position: center;
           background: #f8f8f8;
         }
-        .rich-photo-item img { height: 200px; }
+        .rich-photo-item img { height: 200px; object-fit: contain; }
 
         .caption {
           padding: 6px 8px;
