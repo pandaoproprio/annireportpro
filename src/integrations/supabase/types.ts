@@ -2680,6 +2680,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          area_setor: string | null
+          cargo: string | null
           created_at: string
           email: string
           first_login_at: string | null
@@ -2699,6 +2701,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          area_setor?: string | null
+          cargo?: string | null
           created_at?: string
           email: string
           first_login_at?: string | null
@@ -2718,6 +2722,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          area_setor?: string | null
+          cargo?: string | null
           created_at?: string
           email?: string
           first_login_at?: string | null
