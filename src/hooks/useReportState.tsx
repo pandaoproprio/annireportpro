@@ -384,7 +384,18 @@ export const useReportState = () => {
     });
   };
 
-  const replacePhotoUrl = (key: string, index: number, newUrl: string,
+  const updatePhotoAlignment = (key: string, index: number, alignment: 'left' | 'center' | 'right') => {
+    setPhotoMetadata(prev => {
+      const metas = [...(prev[key] || [])];
+      while (metas.length <= index) metas.push({ caption: '', size: 'medium' });
+      metas[index] = { ...metas[index], alignment };
+      return { ...prev, [key]: metas };
+    });
+  };
+
+  const toggleSectionActivitiesVisibility = (key: string, hidden: boolean) => {
+    setHideActivitiesBySection(prev => ({ ...prev, [key]: hidden }));
+  };
     photosSetter: React.Dispatch<React.SetStateAction<string[]>> | null,
     goalId?: string
   ) => {
