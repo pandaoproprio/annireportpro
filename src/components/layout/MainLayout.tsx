@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
-import { useAppData } from '@/contexts/AppDataContext';
+import { useProjectData } from '@/contexts/ProjectContext';
 import { PermissionGuard } from '@/components/PermissionGuard';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { AiChatBot } from '@/components/AiChatBot';
@@ -24,7 +24,7 @@ const PageFallback = () => (
 export const MainLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { signOut } = useAuth();
-  const { isLoadingProjects: projectsLoading, switchProject } = useAppData();
+  const { isLoadingProjects: projectsLoading, switchProject } = useProjectData();
   const navigate = useNavigate();
   const location = useLocation();
 

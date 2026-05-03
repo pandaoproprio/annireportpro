@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useAppData } from '@/contexts/AppDataContext';
+import { useProjectData } from '@/contexts/ProjectContext';
 import { SidebarLink } from '@/components/SidebarLink';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { NotificationBell } from '@/components/NotificationBell';
@@ -45,7 +45,7 @@ interface SidebarProps {
 export const Sidebar: React.FC<SidebarProps> = ({ open, onClose, onLogout, onProjectChange }) => {
   const { profile, role } = useAuth();
   const { hasPermission, isAdmin, permissions } = usePermissions();
-  const { projects, activeProjectId } = useAppData();
+  const { projects, activeProjectId } = useProjectData();
   const isPrivileged = isAdmin || role === 'SUPER_ADMIN' || role === 'ADMIN';
 
   const shouldShowItem = (item: SidebarItemType): boolean => {
