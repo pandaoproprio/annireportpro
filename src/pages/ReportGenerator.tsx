@@ -319,6 +319,11 @@ export const ReportGenerator: React.FC = () => {
   });
   ReportFooter.displayName = 'ReportFooter';
 
+  const activityOverrides = (state as any).activityOverrides as Record<string, import('@/types').ActivityOverride>;
+  const upsertActivityOverride = (state as any).upsertActivityOverride as (id: string, patch: Partial<import('@/types').ActivityOverride>) => void;
+  const restoreActivityOverride = (state as any).restoreActivityOverride as (id: string) => void;
+  const uploadActivityOverridePhoto = (state as any).uploadActivityOverridePhoto as (id: string, file: File) => Promise<string | null>;
+
   const editSectionProps = {
     objectText, setObjectText, summary, setSummary,
     goalNarratives, setGoalNarratives, goalPhotos,
@@ -341,6 +346,8 @@ export const ReportGenerator: React.FC = () => {
     handleSectionDocUpload, removeSectionDoc,
     insertDiaryPhotos,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
+    activityOverrides,
+    onEditActivity: (id: string) => setEditingActivityId(id),
   };
 
   const activityOverrides = (state as any).activityOverrides as Record<string, import('@/types').ActivityOverride>;
