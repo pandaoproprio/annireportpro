@@ -722,6 +722,7 @@ const GoalsSection: React.FC<ExtProps> = ({
   photoMetadata, updatePhotoCaption, updatePhotoSize, updatePhotoAlignment, replacePhotoUrl,
   activitiesExpanded, activities,
   activityOverrides, onEditActivity, hideActivitiesBySection, toggleSectionActivitiesVisibility,
+  goalTitleOverrides, setGoalTitleDescription, setGoalTitleHidden,
 }) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
