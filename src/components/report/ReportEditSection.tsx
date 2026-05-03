@@ -35,6 +35,9 @@ import { DiaryImagePickerDialog } from '@/components/report/DiaryImagePickerDial
 import { SectionDoc } from '@/hooks/useReportState';
 import { toast } from 'sonner';
 import { ActivitiesByMonthInline, ActivityTypesInline, AttendeesByGoalInline, GoalProgressInline } from '@/components/report/ReportCharts';
+import { formatGoalTitle } from '@/lib/goalTitle';
+import { LinkActivitiesToGoalDialog } from '@/components/activity/LinkActivitiesToGoalDialog';
+import { Link2 } from 'lucide-react';
 
 interface Props {
   section: ReportSection;
