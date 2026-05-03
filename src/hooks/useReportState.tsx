@@ -542,5 +542,6 @@ export const useReportState = () => {
     removeSectionDoc: fileUploader.removeSectionDoc,
     insertDiaryPhotos,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
+    activityOverrides, upsertActivityOverride, restoreActivityOverride, setActivityHidden, uploadActivityOverridePhoto,
   };
 };
