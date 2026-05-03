@@ -148,10 +148,11 @@ export const useReportState = () => {
     sectionPhotoGroups,
     selectedVideoUrls,
     activityOverrides,
+    hideActivitiesBySection,
   }), [objectText, summary, goalNarratives, goalPhotos, otherActionsNarrative, otherActionsPhotos,
     communicationNarrative, communicationPhotos, satisfaction, futureActions, expenses,
     links, linkFileNames, linkDisplayNames, sectionManager.sections, fileUploader.sectionPhotos,
-    fileUploader.sectionDocs, photoMetadata, pageLayouts, sectionPhotoGroups, selectedVideoUrls, activityOverrides]);
+    fileUploader.sectionDocs, photoMetadata, pageLayouts, sectionPhotoGroups, selectedVideoUrls, activityOverrides, hideActivitiesBySection]);
 
   const saveReportData = async (showToast = true) => {
     try {
