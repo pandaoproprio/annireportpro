@@ -326,15 +326,33 @@ export const useReportState = () => {
     }
   };
 
-  // Activity helpers
+  // Activity helpers — apply per-report overrides without touching diary data
+  const applyOverride = (a: Activity): Activity => {
+    const ov = activityOverrides[a.id];
+    if (!ov) return a;
+    return {
+      ...a,
+      description: ov.description !== undefined ? ov.description : a.description,
+      results: ov.results !== undefined ? ov.results : a.results,
+      photos: ov.photos !== undefined ? ov.photos : a.photos,
+      photoCaptions: ov.photoCaptions !== undefined ? { ...(a.photoCaptions || {}), ...ov.photoCaptions } : a.photoCaptions,
+    };
+  };
+  const isHidden = (a: Activity) => !!activityOverrides[a.id]?.hidden;
+
   const getActivitiesByGoal = (goalId: string) =>
-    activities.filter(a => a.goalId === goalId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    activities.filter(a => a.goalId === goalId && !isHidden(a))
+      .map(applyOverride)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const getCommunicationActivities = () =>
-    activities.filter(a => a.type === ActivityType.COMUNICACAO).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    activities.filter(a => a.type === ActivityType.COMUNICACAO && !isHidden(a))
+      .map(applyOverride)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const getOtherActivities = () =>
-    activities.filter(a => a.type === ActivityType.OUTROS || a.type === ActivityType.ADMINISTRATIVO || a.type === ActivityType.OCORRENCIA)
+    activities.filter(a => (a.type === ActivityType.OUTROS || a.type === ActivityType.ADMINISTRATIVO || a.type === ActivityType.OCORRENCIA) && !isHidden(a))
+      .map(applyOverride)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const formatActivityDate = (date: string, endDate?: string) => {
