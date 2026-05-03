@@ -27,6 +27,7 @@ export interface ReportPdfExportData {
   pageLayouts?: Record<string, PageLayout>;
   sectionPhotoGroups?: Record<string, PhotoGroup[]>;
   selectedVideoUrls?: string[];
+  hideActivitiesBySection?: Record<string, boolean>;
 }
 
 const base64ToBlob = (base64: string): Blob => {
