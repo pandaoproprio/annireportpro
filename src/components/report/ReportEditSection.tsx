@@ -601,7 +601,22 @@ const ActivitiesPanel: React.FC<{
                 <div className="flex-1 min-w-0">
                   <strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 100)}{act.description.length > 100 ? '...' : ''}
                   {act.attendeesCount > 0 && <span className="text-muted-foreground ml-1">({act.attendeesCount} participantes)</span>}
+                  {activityOverrides?.[act.id] && (
+                    <span className="ml-2 text-[10px] uppercase tracking-wide text-primary">• ajustada{activityOverrides[act.id].hidden ? ' / oculta' : ''}</span>
+                  )}
                 </div>
+                {onEditActivity && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs shrink-0"
+                    onClick={(e) => { e.stopPropagation(); onEditActivity(act.id); }}
+                    title="Editar nesta camada do relatório (não altera o Diário)"
+                  >
+                    <Pencil className="w-3 h-3 mr-1" />
+                    Editar
+                  </Button>
+                )}
                 {selected.has(act.id) && <Check className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />}
               </div>
             ))}
