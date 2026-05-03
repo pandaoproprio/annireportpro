@@ -150,8 +150,8 @@ export const ReportGenerator: React.FC = () => {
         if (!ov) return a;
         return {
           ...a,
-          description: ov.description !== undefined ? ov.description : a.description,
-          results: ov.results !== undefined ? ov.results : a.results,
+          description: ov.hideDescription ? '' : (ov.description !== undefined ? ov.description : a.description),
+          results: ov.hideResults ? '' : (ov.results !== undefined ? ov.results : a.results),
           photos: ov.photos !== undefined ? ov.photos : a.photos,
           photoCaptions: ov.photoCaptions !== undefined ? { ...(a.photoCaptions || {}), ...ov.photoCaptions } : a.photoCaptions,
         };
