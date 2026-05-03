@@ -28,6 +28,8 @@ export const ActivityOverrideDialog: React.FC<Props> = ({
   const [photos, setPhotos] = useState<string[]>([]);
   const [captions, setCaptions] = useState<Record<string, string>>({});
   const [hidden, setHidden] = useState(false);
+  const [hideDescription, setHideDescription] = useState(false);
+  const [hideResults, setHideResults] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -37,6 +39,8 @@ export const ActivityOverrideDialog: React.FC<Props> = ({
     setPhotos(override?.photos ?? activity.photos ?? []);
     setCaptions({ ...(activity.photoCaptions || {}), ...(override?.photoCaptions || {}) });
     setHidden(!!override?.hidden);
+    setHideDescription(!!override?.hideDescription);
+    setHideResults(!!override?.hideResults);
   }, [activity, override, open]);
 
   if (!activity) return null;
@@ -48,6 +52,8 @@ export const ActivityOverrideDialog: React.FC<Props> = ({
       photos,
       photoCaptions: captions,
       hidden,
+      hideDescription,
+      hideResults,
     });
     onOpenChange(false);
     toast.success('Ajustes do relatório salvos. O Diário de Bordo permanece inalterado.');

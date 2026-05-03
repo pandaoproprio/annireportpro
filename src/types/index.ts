@@ -108,6 +108,10 @@ export interface ActivityOverride {
   photos?: string[];
   photoCaptions?: Record<string, string>;
   hidden?: boolean;
+  /** Oculta apenas o texto de descrição/relato — mantém fotos visíveis */
+  hideDescription?: boolean;
+  /** Oculta apenas o texto de resultados — mantém fotos visíveis */
+  hideResults?: boolean;
 }
 
 export interface AttendanceFile {
