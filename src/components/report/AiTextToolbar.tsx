@@ -7,6 +7,14 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Loader2, Sparkles, CheckCheck, PenLine, Expand, Wand2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -47,6 +55,23 @@ export const AiTextToolbar: React.FC<AiTextToolbarProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentMode, setCurrentMode] = useState<AiMode | null>(null);
+  const [pendingNarrative, setPendingNarrative] = useState<{ generated: string; original: string } | null>(null);
+
+  const combineNarratives = (generated: string, original: string) => {
+    const cleanGenerated = generated.trim();
+    const cleanOriginal = original.trim();
+    return cleanOriginal ? `${cleanGenerated}\n\n${cleanOriginal}` : cleanGenerated;
+  };
+
+  const handleNarrativeChoice = (choice: 'replace' | 'keep-both') => {
+    if (!pendingNarrative) return;
+    const result = choice === 'replace'
+      ? pendingNarrative.generated.trim()
+      : combineNarratives(pendingNarrative.generated, pendingNarrative.original);
+    onResult(result);
+    setPendingNarrative(null);
+    toast.success('Narrativa aplicada com sucesso!');
+  };
 
   const handleAiAction = async (mode: AiMode) => {
     if (mode !== 'generate' && (!text || text.trim().length < 10)) {
@@ -103,6 +128,12 @@ export const AiTextToolbar: React.FC<AiTextToolbarProps> = ({
       }
 
       if (data?.text) {
+        if (mode === 'generate') {
+          setPendingNarrative({ generated: data.text, original: text || '' });
+          toast.success('Narrativa gerada. Escolha como aplicar.');
+          return;
+        }
+
         onResult(data.text);
         const labels: Record<AiMode, string> = {
           generate: 'Narrativa gerada',
@@ -127,54 +158,78 @@ export const AiTextToolbar: React.FC<AiTextToolbarProps> = ({
   const canGenerate = !hideGenerate && ((activities && activities.length > 0) || hasText);
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={isProcessing || disabled}
-          className="gap-2 text-sm font-medium whitespace-nowrap border-primary/40 bg-primary/5 text-primary hover:bg-primary/10"
-        >
-          {isProcessing ? (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isProcessing || disabled}
+            className="gap-2 text-sm font-medium whitespace-nowrap border-primary/40 bg-primary/5 text-primary hover:bg-primary/10"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {currentMode === 'correct' ? 'Corrigindo...' :
+                 currentMode === 'rewrite' ? 'Reescrevendo...' :
+                 currentMode === 'expand' ? 'Expandindo...' :
+                 'Gerando...'}
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                💡 Sugerir com IA
+              </>
+            )}
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          {canGenerate && (
             <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              {currentMode === 'correct' ? 'Corrigindo...' :
-               currentMode === 'rewrite' ? 'Reescrevendo...' :
-               currentMode === 'expand' ? 'Expandindo...' :
-               'Gerando...'}
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4" />
-              💡 Sugerir com IA
+              <DropdownMenuItem onClick={() => handleAiAction('generate')} disabled={isProcessing}>
+                <Wand2 className="w-4 h-4 mr-2" />
+                Gerar narrativa
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
             </>
           )}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        {canGenerate && (
-          <>
-            <DropdownMenuItem onClick={() => handleAiAction('generate')} disabled={isProcessing}>
-              <Wand2 className="w-4 h-4 mr-2" />
-              Gerar narrativa
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        )}
-        <DropdownMenuItem onClick={() => handleAiAction('correct')} disabled={isProcessing || !hasText}>
-          <CheckCheck className="w-4 h-4 mr-2" />
-          Corrigir gramática
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleAiAction('rewrite')} disabled={isProcessing || !hasText}>
-          <PenLine className="w-4 h-4 mr-2" />
-          Reescrever formal
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleAiAction('expand')} disabled={isProcessing || !hasText}>
-          <Expand className="w-4 h-4 mr-2" />
-          Expandir texto
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+          <DropdownMenuItem onClick={() => handleAiAction('correct')} disabled={isProcessing || !hasText}>
+            <CheckCheck className="w-4 h-4 mr-2" />
+            Corrigir gramática
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleAiAction('rewrite')} disabled={isProcessing || !hasText}>
+            <PenLine className="w-4 h-4 mr-2" />
+            Reescrever formal
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => handleAiAction('expand')} disabled={isProcessing || !hasText}>
+            <Expand className="w-4 h-4 mr-2" />
+            Expandir texto
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <Dialog open={!!pendingNarrative} onOpenChange={(open) => !open && setPendingNarrative(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Como aplicar a narrativa?</DialogTitle>
+            <DialogDescription>
+              Escolha uma opção antes de salvar a narrativa gerada.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-56 overflow-y-auto rounded-md border bg-muted/30 p-3 text-sm leading-relaxed whitespace-pre-wrap">
+            {pendingNarrative?.generated}
+          </div>
+          <DialogFooter className="gap-2 sm:justify-end">
+            <Button type="button" variant="outline" onClick={() => handleNarrativeChoice('replace')}>
+              Substituir
+            </Button>
+            <Button type="button" onClick={() => handleNarrativeChoice('keep-both')}>
+              Manter os dois
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
