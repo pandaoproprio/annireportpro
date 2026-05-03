@@ -110,6 +110,7 @@ export const useReportState = () => {
       setSelectedVideoUrls((rd as any).selectedVideoUrls || []);
       setActivityOverrides((rd as any).activityOverrides || {});
       setHideActivitiesBySection((rd as any).hideActivitiesBySection || {});
+      setGoalTitleOverrides((rd as any).goalTitleOverrides || {});
     }
   }, [project]);
 
