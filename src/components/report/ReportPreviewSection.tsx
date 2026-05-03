@@ -231,7 +231,7 @@ const SummaryPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }>
   </section>
 );
 
-const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, sectionPhotoGroups, getActivitiesByGoal, formatActivityDate, activityOverrides, onEditActivity }) => (
+const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, sectionPhotoGroups, getActivitiesByGoal, formatActivityDate, activityOverrides, onEditActivity, hideActivitiesBySection }) => (
   <section className="mb-8 page-break">
     <h3 className={`${sectionTitleClass} mb-6`} style={{ textAlign: 'left' }}>{section.title}</h3>
     {goals.map((goal, idx) => {
@@ -241,12 +241,13 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
       const allGoalPhotos = [...manualPhotos, ...activityPhotos];
       const goalMetas = photoMetadata?.[goal.id] || [];
       const hasNarrative = !!(goalNarratives[goal.id] && goalNarratives[goal.id].trim());
+      const hideActs = !!hideActivitiesBySection?.[goal.id];
 
       return (
         <div key={goal.id} className="mb-10">
           <h4 className="font-bold mb-3" style={{ textAlign: 'left', color: '#000' }}>{formatGoalTitle(idx, goal.title)}</h4>
           <RichContent html={goalNarratives[goal.id] || '[Descreva as realizações da meta e das etapas, tendo como foco o que foi previsto]'} className="text-justify mb-4 leading-relaxed" style={indentStyle} />
-          {goalActs.length > 0 && (
+          {goalActs.length > 0 && !hideActs && (
             <div className="mt-4 text-sm">
               <p className="font-medium mb-2">Atividades realizadas:</p>
               {goalActs.map(act => (
