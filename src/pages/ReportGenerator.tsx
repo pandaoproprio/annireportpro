@@ -207,7 +207,7 @@ export const ReportGenerator: React.FC = () => {
     setExportType('docx');
     try {
       await exportToDocx({
-        project, activities, sections, objectText, summary,
+        project, activities: buildMergedActivities(), sections, objectText, summary,
         goalNarratives, otherActionsNarrative,
         communicationNarrative, satisfaction, futureActions, expenses, links, linkDisplayNames,
         visualConfig: vc.config,
