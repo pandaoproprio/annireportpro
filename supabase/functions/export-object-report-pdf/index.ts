@@ -718,11 +718,12 @@ function buildGoalSections(payload: ReportPayload, renderedPhotoKeys: Set<string
     renderedPhotoKeys.add(goal.id);
     const displayTitle = formatGoalTitle(idx, goal.title);
 
+    const hasNarrative = isNonEmptyString(payload.goalNarratives[goal.id]);
     return `
       <div class="goal-block">
         <h3 class="subsection-title">${escapeHtml(displayTitle)}</h3>
         ${renderRichContent(payload.goalNarratives[goal.id], "[Descreva as realizações da meta]")}
-        ${renderPlainActivityList(goalActivities)}
+        ${renderPlainActivityList(goalActivities, { hideDescription: hasNarrative })}
         ${photos.length > 0 ? renderGroupedPhotoBlocks(
           photos,
           metas,
