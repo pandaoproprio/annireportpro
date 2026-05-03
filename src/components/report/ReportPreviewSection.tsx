@@ -3,6 +3,7 @@ import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta } from '@/types';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 import { INDENT } from '@/lib/previewConstants';
+import { formatGoalTitle } from '@/lib/goalTitle';
 
 // Renders rich-text HTML content safely (from Tiptap editor)
 const RichContent: React.FC<{ html: string; className?: string; style?: React.CSSProperties }> = ({ html, className, style }) => {
