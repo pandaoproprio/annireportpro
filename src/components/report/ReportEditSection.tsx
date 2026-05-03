@@ -781,7 +781,7 @@ const OtherSection: React.FC<ExtProps> = ({
 const CommunicationSection: React.FC<ExtProps> = ({
   communicationNarrative, setCommunicationNarrative,
   projectName, projectObject, getCommunicationActivities, formatActivityDate,
-  activitiesExpanded,
+  activitiesExpanded, activityOverrides, onEditActivity,
 }) => {
   const commActs = getCommunicationActivities();
   return (
@@ -792,6 +792,8 @@ const CommunicationSection: React.FC<ExtProps> = ({
         formatActivityDate={formatActivityDate}
         label="atividade(s) de divulgação"
         onInsert={(text) => setCommunicationNarrative(communicationNarrative ? communicationNarrative + '\n' + text : text)}
+        onEditActivity={onEditActivity}
+        activityOverrides={activityOverrides}
       />
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
