@@ -71,6 +71,8 @@ export interface ReportVisualConfig {
   footerLine3FontSize: number; // pt (default 7)
   footerLineSpacing: number; // mm between lines (default 3)
   footerTopSpacing: number; // mm above footer (default 4)
+  // Page margins preset
+  pageMarginPreset: 'abnt' | 'custom'; // default 'abnt'
 }
 
 const DEFAULT_CONFIG: ReportVisualConfig = {
