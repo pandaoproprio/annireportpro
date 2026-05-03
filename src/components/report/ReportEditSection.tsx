@@ -118,6 +118,10 @@ interface Props {
   // Per-report activity overrides layer
   activityOverrides?: Record<string, import('@/types').ActivityOverride>;
   onEditActivity?: (id: string) => void;
+  // Per-goal photo gallery title overrides
+  goalTitleOverrides?: Record<string, { description?: string; hide?: boolean }>;
+  setGoalTitleDescription?: (goalId: string, description: string | undefined) => void;
+  setGoalTitleHidden?: (goalId: string, hide: boolean) => void;
 }
 
 // ── Photo card with caption, width, alignment, presets and edit button ──
