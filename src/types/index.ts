@@ -94,6 +94,16 @@ export interface ReportData {
   links?: ReportLinks;
   sections?: ReportSection[];
   photoMetadata?: Record<string, ReportPhotoMeta[]>;
+  /** Per-activity overrides applied only at the report layer (does NOT modify Diário) */
+  activityOverrides?: Record<string, ActivityOverride>;
+}
+
+export interface ActivityOverride {
+  description?: string;
+  results?: string;
+  photos?: string[];
+  photoCaptions?: Record<string, string>;
+  hidden?: boolean;
 }
 
 export interface AttendanceFile {
