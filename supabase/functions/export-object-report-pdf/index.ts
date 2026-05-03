@@ -290,8 +290,9 @@ function renderRichContent(content: string | undefined, fallback: string): strin
   return sanitizeRichHtml(trimmed);
 }
 
-function renderPlainActivityList(activities: Activity[]): string {
+function renderPlainActivityList(activities: Activity[], options?: { hideDescription?: boolean }): string {
   if (activities.length === 0) return "";
+  const hideDescription = options?.hideDescription === true;
   return `
     <div class="activity-list">
       <p class="subheading">Atividades realizadas:</p>
@@ -300,7 +301,7 @@ function renderPlainActivityList(activities: Activity[]): string {
           const dateText = formatActivityDate(activity.date, activity.endDate);
           const locationText = isNonEmptyString(activity.location) ? ` – ${escapeHtml(activity.location.trim())}` : "";
           const attendeesText = activity.attendeesCount && activity.attendeesCount > 0 ? ` – ${activity.attendeesCount} participantes` : "";
-          const description = isNonEmptyString(activity.description) ? `<p class="activity-description">${escapeHtml(activity.description.trim())}</p>` : "";
+          const description = !hideDescription && isNonEmptyString(activity.description) ? `<p class="activity-description">${escapeHtml(activity.description.trim())}</p>` : "";
           return `
             <li class="activity-item">
               <div class="activity-meta"><strong>${escapeHtml(dateText)}</strong>${locationText}${attendeesText}</div>
@@ -717,11 +718,12 @@ function buildGoalSections(payload: ReportPayload, renderedPhotoKeys: Set<string
     renderedPhotoKeys.add(goal.id);
     const displayTitle = formatGoalTitle(idx, goal.title);
 
+    const hasNarrative = isNonEmptyString(payload.goalNarratives[goal.id]);
     return `
       <div class="goal-block">
         <h3 class="subsection-title">${escapeHtml(displayTitle)}</h3>
         ${renderRichContent(payload.goalNarratives[goal.id], "[Descreva as realizações da meta]")}
-        ${renderPlainActivityList(goalActivities)}
+        ${renderPlainActivityList(goalActivities, { hideDescription: hasNarrative })}
         ${photos.length > 0 ? renderGroupedPhotoBlocks(
           photos,
           metas,
@@ -756,7 +758,7 @@ function buildStandardSection(payload: ReportPayload, section: ReportSection, re
       <section class="section">
         <h2 class="section-title">${escapeHtml(section.title)}</h2>
         ${renderRichContent(payload.otherActionsNarrative, "[Outras informações sobre as ações desenvolvidas]")}
-        ${renderPlainActivityList(activities)}
+        ${renderPlainActivityList(activities, { hideDescription: isNonEmptyString(payload.otherActionsNarrative) })}
       </section>
       ${photos.length > 0 ? renderGroupedPhotoBlocks(
         photos,
@@ -778,7 +780,7 @@ function buildStandardSection(payload: ReportPayload, section: ReportSection, re
       <section class="section">
         <h2 class="section-title">${escapeHtml(section.title)}</h2>
         ${renderRichContent(payload.communicationNarrative, "[Publicações e ações de divulgação]")}
-        ${renderPlainActivityList(activities)}
+        ${renderPlainActivityList(activities, { hideDescription: isNonEmptyString(payload.communicationNarrative) })}
       </section>
       ${photos.length > 0 ? renderGroupedPhotoBlocks(
         photos,
