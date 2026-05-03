@@ -125,11 +125,11 @@ export const PhotoGallerySection: React.FC<PhotoGallerySectionProps> = ({
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {group.photos.slice(6, 12).map((photo, photoIdx) => (
-                  <div key={photoIdx} className="aspect-[4/3] overflow-hidden rounded-lg border shadow-sm bg-muted flex items-center justify-center">
+                  <div key={photoIdx} className="overflow-hidden rounded-lg border shadow-sm bg-muted flex items-center justify-center" style={{ minHeight: '280px' }}>
                     <img 
                       src={photo} 
                       alt={`Registro ${photoIdx + 7}`} 
-                      className="max-w-full max-h-full object-contain"
+                      className="w-full h-auto max-h-[420px] object-contain"
                     />
                   </div>
                 ))}
