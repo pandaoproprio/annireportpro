@@ -565,5 +565,10 @@ export const useReportState = () => {
     insertDiaryPhotos,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
     activityOverrides, upsertActivityOverride, restoreActivityOverride, setActivityHidden, uploadActivityOverridePhoto,
+    goalTitleOverrides,
+    setGoalTitleDescription: (goalId: string, description: string | undefined) =>
+      setGoalTitleOverrides(prev => ({ ...prev, [goalId]: { ...(prev[goalId] || {}), description } })),
+    setGoalTitleHidden: (goalId: string, hide: boolean) =>
+      setGoalTitleOverrides(prev => ({ ...prev, [goalId]: { ...(prev[goalId] || {}), hide } })),
   };
 };
