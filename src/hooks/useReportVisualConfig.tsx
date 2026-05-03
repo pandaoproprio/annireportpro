@@ -128,6 +128,7 @@ const DEFAULT_CONFIG: ReportVisualConfig = {
   footerLine3FontSize: 7,
   footerLineSpacing: 3,
   footerTopSpacing: 4,
+  pageMarginPreset: 'abnt',
 };
 
 const LEGACY_LOGO_WIDTH_MM = 12;
