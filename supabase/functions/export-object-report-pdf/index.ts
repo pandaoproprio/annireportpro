@@ -696,9 +696,16 @@ function buildLinksSection(payload: ReportPayload, section: ReportSection): stri
   `;
 }
 
+function formatGoalTitle(idx: number, title: string | undefined | null): string {
+  const t = (title ?? "").trim();
+  if (!t) return `META ${idx + 1}`;
+  if (/^meta\s*\d+/i.test(t)) return t;
+  return `META ${idx + 1}: ${t}`;
+}
+
 function buildGoalSections(payload: ReportPayload, renderedPhotoKeys: Set<string>): string {
   const activeActivities = getActiveActivities(payload.activities);
-  return payload.project.goals.map((goal) => {
+  return payload.project.goals.map((goal, idx) => {
     const goalActivities = activeActivities
       .filter((activity) => activity.goalId === goal.id)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -708,17 +715,18 @@ function buildGoalSections(payload: ReportPayload, renderedPhotoKeys: Set<string
     ];
     const metas = payload.photoMetadata?.[goal.id] || [];
     renderedPhotoKeys.add(goal.id);
+    const displayTitle = formatGoalTitle(idx, goal.title);
 
     return `
       <div class="goal-block">
-        <h3 class="subsection-title">${escapeHtml(goal.title)}</h3>
+        <h3 class="subsection-title">${escapeHtml(displayTitle)}</h3>
         ${renderRichContent(payload.goalNarratives[goal.id], "[Descreva as realizações da meta]")}
         ${renderPlainActivityList(goalActivities)}
         ${photos.length > 0 ? renderGroupedPhotoBlocks(
           photos,
           metas,
           payload.sectionPhotoGroups?.[goal.id] || [],
-          `REGISTROS FOTOGRÁFICOS – ${goal.title}`,
+          `REGISTROS FOTOGRÁFICOS – ${displayTitle}`,
         ) : ""}
       </div>
     `;
