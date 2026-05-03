@@ -98,6 +98,8 @@ export interface ReportData {
   photoMetadata?: Record<string, ReportPhotoMeta[]>;
   /** Per-activity overrides applied only at the report layer (does NOT modify Diário) */
   activityOverrides?: Record<string, ActivityOverride>;
+  /** Hide the "Atividades realizadas" block (and dates/local/participantes) for a given section/goal key */
+  hideActivitiesBySection?: Record<string, boolean>;
 }
 
 export interface ActivityOverride {
