@@ -108,6 +108,7 @@ export const useReportState = () => {
       setSectionPhotoGroups((rd as any).sectionPhotoGroups || {});
       setSelectedVideoUrls((rd as any).selectedVideoUrls || []);
       setActivityOverrides((rd as any).activityOverrides || {});
+      setHideActivitiesBySection((rd as any).hideActivitiesBySection || {});
     }
   }, [project]);
 
