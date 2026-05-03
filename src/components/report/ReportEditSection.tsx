@@ -802,6 +802,46 @@ const GoalsSection: React.FC<ExtProps> = ({
           <RichTextEditor value={goalNarratives[goal.id] || ''} onChange={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: text })}
             enableImages placeholder="Descreva as realizações, metodologia, resultados alcançados..." />
           <Label className="flex items-center gap-2 mt-4"><ImageIcon className="w-4 h-4" /> Fotos da Meta</Label>
+          {/* Editor do título da galeria de fotos da meta — afeta só este relatório */}
+          {(setGoalTitleDescription || setGoalTitleHidden) && (() => {
+            const ov = goalTitleOverrides?.[goal.id];
+            const currentDesc = ov?.description !== undefined ? ov.description : extractGoalDescription(goal.title);
+            const previewTitle = formatGoalPhotoTitle(idx, goal.title, ov);
+            return (
+              <div className="mb-3 p-3 border rounded-md bg-background space-y-2">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <Label className="text-xs font-semibold uppercase text-muted-foreground">
+                    Título da galeria de fotos
+                  </Label>
+                  <div className="flex items-center gap-1">
+                    <Button type="button" size="sm" variant={ov?.hide ? 'outline' : 'default'}
+                      className="h-6 px-2 text-[10px]"
+                      onClick={() => setGoalTitleHidden?.(goal.id, false)}>
+                      Exibir descrição
+                    </Button>
+                    <Button type="button" size="sm" variant={ov?.hide ? 'default' : 'outline'}
+                      className="h-6 px-2 text-[10px]"
+                      onClick={() => setGoalTitleHidden?.(goal.id, true)}>
+                      Ocultar descrição
+                    </Button>
+                  </div>
+                </div>
+                <Input
+                  value={currentDesc}
+                  disabled={!!ov?.hide}
+                  placeholder="Descrição complementar exibida após META N"
+                  onChange={e => setGoalTitleDescription?.(goal.id, e.target.value)}
+                  className="text-sm"
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Pré-visualização: <span className="font-mono">{previewTitle}</span>
+                </p>
+                <p className="text-[10px] text-muted-foreground italic">
+                  Edição apenas neste relatório — não altera o cadastro original da meta.
+                </p>
+              </div>
+            );
+          })()}
           <Input type="file" accept="image/*" multiple onChange={e => handleGoalPhotoUpload(e, goal.id)} className="mb-2" />
           {photos.length > 0 && (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleGoalDragEnd}>
