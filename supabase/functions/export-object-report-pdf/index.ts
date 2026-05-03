@@ -1255,9 +1255,6 @@ function buildHtml(payload: ReportPayload): string {
         <thead>
           <tr><td class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</td></tr>
         </thead>
-        <tfoot>
-          <tr><td class="pdf-footer-cell">${buildFooterHtml(payload.visualConfig)}</td></tr>
-        </tfoot>
         <tbody>
           <tr><td>
             ${buildTocHtml(payload.sections)}
