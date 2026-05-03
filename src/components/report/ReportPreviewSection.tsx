@@ -228,7 +228,7 @@ const SummaryPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }>
   </section>
 );
 
-const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, sectionPhotoGroups, getActivitiesByGoal, formatActivityDate }) => (
+const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, sectionPhotoGroups, getActivitiesByGoal, formatActivityDate, activityOverrides, onEditActivity }) => (
   <section className="mb-8 page-break">
     <h3 className={`${sectionTitleClass} mb-6`} style={{ textAlign: 'left' }}>{section.title}</h3>
     {goals.map((goal, idx) => {
@@ -248,7 +248,10 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
               <p className="font-medium mb-2">Atividades realizadas:</p>
               {goalActs.map(act => (
                 <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
-                  <p><strong>{formatActivityDate(act.date, act.endDate)}</strong>{act.location && ` – ${act.location}`}{act.attendeesCount > 0 && ` – ${act.attendeesCount} participantes`}</p>
+                  <p>
+                    <strong>{formatActivityDate(act.date, act.endDate)}</strong>{act.location && ` – ${act.location}`}{act.attendeesCount > 0 && ` – ${act.attendeesCount} participantes`}
+                    <EditActivityBtn activityId={act.id} onEdit={onEditActivity} overridden={!!activityOverrides?.[act.id]} />
+                  </p>
                   {!hasNarrative && <p>{act.description}</p>}
                   {!hasNarrative && act.results && <p className="text-muted-foreground">Resultados: {act.results}</p>}
                 </div>
@@ -265,7 +268,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
 const OtherPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({
   section, otherActionsNarrative, otherActionsPhotos, getOtherActivities, formatActivityDate,
   organizationName, organizationAddress, organizationWebsite, organizationEmail, organizationPhone,
-  renderPhotos,
+  renderPhotos, activityOverrides, onEditActivity,
 }) => {
   const otherActs = getOtherActivities();
   const hasPhotos = otherActionsPhotos.length > 0 || otherActs.some(a => a.photos && a.photos.length > 0);
@@ -278,7 +281,10 @@ const OtherPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> =
           <div className="mt-4 text-sm">
             {otherActs.map(act => (
               <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
-                <p><strong>{formatActivityDate(act.date)}</strong>{(!otherActionsNarrative || !otherActionsNarrative.trim()) && `: ${act.description}`}</p>
+                <p>
+                  <strong>{formatActivityDate(act.date)}</strong>{(!otherActionsNarrative || !otherActionsNarrative.trim()) && `: ${act.description}`}
+                  <EditActivityBtn activityId={act.id} onEdit={onEditActivity} overridden={!!activityOverrides?.[act.id]} />
+                </p>
               </div>
             ))}
           </div>
