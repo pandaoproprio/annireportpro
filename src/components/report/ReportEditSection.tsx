@@ -112,6 +112,9 @@ interface Props {
   removeSectionDoc: (sectionKey: string, index: number) => void;
   insertDiaryPhotos: (sectionKey: string, urls: string[], captions: Record<string, string>) => void;
   reorderGoalPhotos: (goalId: string, oldIndex: number, newIndex: number) => void;
+  // Per-report activity overrides layer
+  activityOverrides?: Record<string, import('@/types').ActivityOverride>;
+  onEditActivity?: (id: string) => void;
 }
 
 // ── Photo card with caption, width slider, and edit button ──
@@ -523,7 +526,9 @@ const ActivitiesPanel: React.FC<{
   formatActivityDate: (d: string, e?: string) => string;
   label: string;
   onInsert?: (text: string) => void;
-}> = ({ activities, expanded, formatActivityDate, label, onInsert }) => {
+  onEditActivity?: (id: string) => void;
+  activityOverrides?: Record<string, { hidden?: boolean }>;
+}> = ({ activities, expanded, formatActivityDate, label, onInsert, onEditActivity, activityOverrides }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -599,7 +604,22 @@ const ActivitiesPanel: React.FC<{
                 <div className="flex-1 min-w-0">
                   <strong>{formatActivityDate(act.date)}</strong>: {act.description.substring(0, 100)}{act.description.length > 100 ? '...' : ''}
                   {act.attendeesCount > 0 && <span className="text-muted-foreground ml-1">({act.attendeesCount} participantes)</span>}
+                  {activityOverrides?.[act.id] && (
+                    <span className="ml-2 text-[10px] uppercase tracking-wide text-primary">• ajustada{activityOverrides[act.id].hidden ? ' / oculta' : ''}</span>
+                  )}
                 </div>
+                {onEditActivity && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs shrink-0"
+                    onClick={(e) => { e.stopPropagation(); onEditActivity(act.id); }}
+                    title="Editar nesta camada do relatório (não altera o Diário)"
+                  >
+                    <Pencil className="w-3 h-3 mr-1" />
+                    Editar
+                  </Button>
+                )}
                 {selected.has(act.id) && <Check className="w-3.5 h-3.5 text-success shrink-0 mt-0.5" />}
               </div>
             ))}
@@ -636,6 +656,7 @@ const GoalsSection: React.FC<ExtProps> = ({
   handleGoalPhotoUpload, removeGoalPhoto, reorderGoalPhotos, getActivitiesByGoal, formatActivityDate,
   photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
   activitiesExpanded, activities,
+  activityOverrides, onEditActivity,
 }) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -684,6 +705,8 @@ const GoalsSection: React.FC<ExtProps> = ({
               formatActivityDate={formatActivityDate}
               label="atividade(s) do Diário de Bordo vinculadas"
               onInsert={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: (goalNarratives[goal.id] || '') + '\n' + text })}
+              onEditActivity={onEditActivity}
+              activityOverrides={activityOverrides}
             />
           )}
           <div className="flex items-center justify-between">
@@ -732,7 +755,7 @@ const GoalsSection: React.FC<ExtProps> = ({
 const OtherSection: React.FC<ExtProps> = ({
   otherActionsNarrative, setOtherActionsNarrative,
   projectName, projectObject, getOtherActivities, formatActivityDate,
-  activitiesExpanded,
+  activitiesExpanded, activityOverrides, onEditActivity,
 }) => {
   const otherActs = getOtherActivities();
   return (
@@ -743,6 +766,8 @@ const OtherSection: React.FC<ExtProps> = ({
         formatActivityDate={formatActivityDate}
         label="atividade(s) relacionadas"
         onInsert={(text) => setOtherActionsNarrative(otherActionsNarrative ? otherActionsNarrative + '\n' + text : text)}
+        onEditActivity={onEditActivity}
+        activityOverrides={activityOverrides}
       />
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
@@ -756,7 +781,7 @@ const OtherSection: React.FC<ExtProps> = ({
 const CommunicationSection: React.FC<ExtProps> = ({
   communicationNarrative, setCommunicationNarrative,
   projectName, projectObject, getCommunicationActivities, formatActivityDate,
-  activitiesExpanded,
+  activitiesExpanded, activityOverrides, onEditActivity,
 }) => {
   const commActs = getCommunicationActivities();
   return (
@@ -767,6 +792,8 @@ const CommunicationSection: React.FC<ExtProps> = ({
         formatActivityDate={formatActivityDate}
         label="atividade(s) de divulgação"
         onInsert={(text) => setCommunicationNarrative(communicationNarrative ? communicationNarrative + '\n' + text : text)}
+        onEditActivity={onEditActivity}
+        activityOverrides={activityOverrides}
       />
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
