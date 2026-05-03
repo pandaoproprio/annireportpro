@@ -120,8 +120,10 @@ interface Props {
 const PreviewPhoto: React.FC<{ photo: string; meta?: ReportPhotoMeta; index: number }> = ({ photo, meta, index }) => {
   const widthPercent = meta?.widthPercent || 100;
   const caption = meta?.caption || '';
+  const alignment = meta?.alignment || 'center';
+  const alignClass = alignment === 'left' ? 'mr-auto' : alignment === 'right' ? 'ml-auto' : 'mx-auto';
   return (
-    <div className="break-inside-avoid mb-4" style={{ width: `${widthPercent}%`, maxWidth: '100%' }}>
+    <div className={`break-inside-avoid mb-4 ${alignClass}`} style={{ width: `${widthPercent}%`, maxWidth: '100%' }}>
       <div className="overflow-hidden rounded-lg border shadow-sm aspect-[4/3] bg-muted">
         <img src={photo} alt={caption || `Registro ${index + 1}`} className="w-full h-full object-cover" />
       </div>
