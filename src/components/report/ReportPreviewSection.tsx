@@ -124,8 +124,8 @@ const PreviewPhoto: React.FC<{ photo: string; meta?: ReportPhotoMeta; index: num
   const alignClass = alignment === 'left' ? 'mr-auto' : alignment === 'right' ? 'ml-auto' : 'mx-auto';
   return (
     <div className={`break-inside-avoid mb-4 ${alignClass}`} style={{ width: `${widthPercent}%`, maxWidth: '100%' }}>
-      <div className="overflow-hidden rounded-lg border shadow-sm aspect-[4/3] bg-muted">
-        <img src={photo} alt={caption || `Registro ${index + 1}`} className="w-full h-full object-cover" />
+      <div className="overflow-hidden rounded-lg border shadow-sm aspect-[4/3] bg-muted flex items-center justify-center">
+        <img src={photo} alt={caption || `Registro ${index + 1}`} className="max-w-full max-h-full object-contain" loading="lazy" />
       </div>
       {caption && (
         <p className="text-xs text-muted-foreground text-center mt-1 italic">{caption}</p>
