@@ -715,9 +715,9 @@ const SummarySection: React.FC<ExtProps> = ({ summary, setSummary, activities, p
 const GoalsSection: React.FC<ExtProps> = ({
   goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject, projectId,
   handleGoalPhotoUpload, removeGoalPhoto, reorderGoalPhotos, getActivitiesByGoal, formatActivityDate,
-  photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
+  photoMetadata, updatePhotoCaption, updatePhotoSize, updatePhotoAlignment, replacePhotoUrl,
   activitiesExpanded, activities,
-  activityOverrides, onEditActivity,
+  activityOverrides, onEditActivity, hideActivitiesBySection, toggleSectionActivitiesVisibility,
 }) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
