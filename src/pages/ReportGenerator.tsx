@@ -19,6 +19,7 @@ import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfig
 import { ReportEditSection } from '@/components/report/ReportEditSection';
 import { ReportPreviewSection } from '@/components/report/ReportPreviewSection';
 import { DiaryReportLinkDialog } from '@/components/report/DiaryReportLinkDialog';
+import { ActivityOverrideDialog } from '@/components/report/ActivityOverrideDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { WorkflowPanel } from '@/components/workflow/WorkflowPanel';
 import { toast } from 'sonner';
