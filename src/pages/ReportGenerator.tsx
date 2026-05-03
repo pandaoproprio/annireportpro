@@ -188,6 +188,7 @@ export const ReportGenerator: React.FC = () => {
         sectionPhotoGroups,
         selectedVideoUrls: (state as any).selectedVideoUrls,
         hideActivitiesBySection,
+        goalTitleOverrides,
       });
       if (project?.id) {
         createAsanaTaskOnPublish({
