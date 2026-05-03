@@ -286,7 +286,7 @@ const CommunicationPreview: React.FC<Props & { renderPhotos?: () => React.ReactN
           <div className="mt-4 text-sm">
             {commActs.map(act => (
               <div key={act.id} className="mb-3">
-                <p><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
+                <p><strong>{formatActivityDate(act.date)}</strong>{(!communicationNarrative || !communicationNarrative.trim()) && `: ${act.description}`}</p>
               </div>
             ))}
           </div>
