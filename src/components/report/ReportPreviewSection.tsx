@@ -254,7 +254,7 @@ const OtherPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> =
           <div className="mt-4 text-sm">
             {otherActs.map(act => (
               <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
-                <p><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
+                <p><strong>{formatActivityDate(act.date)}</strong>{(!otherActionsNarrative || !otherActionsNarrative.trim()) && `: ${act.description}`}</p>
               </div>
             ))}
           </div>
