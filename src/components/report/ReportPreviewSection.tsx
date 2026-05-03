@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { sanitizeHtml } from '@/lib/sanitizeHtml';
-import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta } from '@/types';
+import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, ActivityOverride } from '@/types';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 import { INDENT } from '@/lib/previewConstants';
 import { formatGoalTitle } from '@/lib/goalTitle';
+import { Button } from '@/components/ui/button';
+import { Pencil } from 'lucide-react';
+import { ActivityOverrideDialog } from '@/components/report/ActivityOverrideDialog';
 
 // Renders rich-text HTML content safely (from Tiptap editor)
 const RichContent: React.FC<{ html: string; className?: string; style?: React.CSSProperties }> = ({ html, className, style }) => {
