@@ -48,6 +48,7 @@ export const useReportState = () => {
   const [selectedVideoUrls, setSelectedVideoUrls] = useState<string[]>([]);
   const [activityOverrides, setActivityOverrides] = useState<Record<string, ActivityOverride>>({});
   const [hideActivitiesBySection, setHideActivitiesBySection] = useState<Record<string, boolean>>({});
+  const [goalTitleOverrides, setGoalTitleOverrides] = useState<Record<string, { description?: string; hide?: boolean }>>({});
 
   // ── Shared section manager ──
   const sectionManager = useSectionManager({ defaultSections: DEFAULT_SECTIONS, insertBeforeKey: 'expenses' });
