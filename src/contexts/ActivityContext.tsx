@@ -32,6 +32,7 @@ export const ActivityProvider = ({ children }: { children: ReactNode }) => {
     addActivity: activitiesData.addActivity,
     updateActivity: activitiesData.updateActivity,
     deleteActivity: activitiesData.deleteActivity,
+    linkActivitiesToGoal: activitiesData.linkActivitiesToGoal,
   }), [activitiesData]);
 
   return (
