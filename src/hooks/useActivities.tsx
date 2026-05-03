@@ -393,6 +393,10 @@ export const useActivities = (projectId: string | null) => {
     deleteActivity: async (id: string) => {
       try { await deleteActivityMutation.mutateAsync(id); } catch { /* handled */ }
     },
+    linkActivitiesToGoal: async (goalId: string | null, activityIds: string[]) => {
+      try { await linkActivitiesToGoalMutation.mutateAsync({ goalId, activityIds }); return true; }
+      catch { return false; }
+    },
     refetch: () => invalidate(),
   };
 };
