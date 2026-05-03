@@ -19,6 +19,7 @@ import { ReportVisualConfigEditor } from '@/components/report/ReportVisualConfig
 import { ReportEditSection } from '@/components/report/ReportEditSection';
 import { ReportPreviewSection } from '@/components/report/ReportPreviewSection';
 import { DiaryReportLinkDialog } from '@/components/report/DiaryReportLinkDialog';
+import { ActivityOverrideDialog } from '@/components/report/ActivityOverrideDialog';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { WorkflowPanel } from '@/components/workflow/WorkflowPanel';
 import { toast } from 'sonner';
@@ -76,6 +77,7 @@ export const ReportGenerator: React.FC = () => {
   const [showDiaryLinkDialog, setShowDiaryLinkDialog] = useState(false);
   const [isGeneratingFullReport, setIsGeneratingFullReport] = useState(false);
   const [generatingMode, setGeneratingMode] = useState<string | null>(null);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
 
   const handleGenerateFullReport = async (generationMode: 'assisted' | 'hybrid' | 'automatic') => {
     if (!project) return;
@@ -138,6 +140,23 @@ export const ReportGenerator: React.FC = () => {
 
   if (!project) return <div className="p-8 text-center text-muted-foreground">Projeto não encontrado.</div>;
 
+  const buildMergedActivities = () => {
+    const ovs = (state as any).activityOverrides as Record<string, import('@/types').ActivityOverride> || {};
+    return activities
+      .filter(a => !ovs[a.id]?.hidden)
+      .map(a => {
+        const ov = ovs[a.id];
+        if (!ov) return a;
+        return {
+          ...a,
+          description: ov.description !== undefined ? ov.description : a.description,
+          results: ov.results !== undefined ? ov.results : a.results,
+          photos: ov.photos !== undefined ? ov.photos : a.photos,
+          photoCaptions: ov.photoCaptions !== undefined ? { ...(a.photoCaptions || {}), ...ov.photoCaptions } : a.photoCaptions,
+        };
+      });
+  };
+
   const exportToPdf = async () => {
     setIsExporting(true);
     setExportType('pdf');
@@ -145,7 +164,7 @@ export const ReportGenerator: React.FC = () => {
       if (!project) throw new Error('Projeto não carregado');
       await exportReportToPdf({
         project,
-        activities,
+        activities: buildMergedActivities(),
         sections,
         objectText,
         summary,
@@ -190,7 +209,7 @@ export const ReportGenerator: React.FC = () => {
     setExportType('docx');
     try {
       await exportToDocx({
-        project, activities, sections, objectText, summary,
+        project, activities: buildMergedActivities(), sections, objectText, summary,
         goalNarratives, otherActionsNarrative,
         communicationNarrative, satisfaction, futureActions, expenses, links, linkDisplayNames,
         visualConfig: vc.config,
@@ -324,6 +343,11 @@ export const ReportGenerator: React.FC = () => {
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   };
 
+  const activityOverrides = (state as any).activityOverrides as Record<string, import('@/types').ActivityOverride>;
+  const upsertActivityOverride = (state as any).upsertActivityOverride as (id: string, patch: Partial<import('@/types').ActivityOverride>) => void;
+  const restoreActivityOverride = (state as any).restoreActivityOverride as (id: string) => void;
+  const uploadActivityOverridePhoto = (state as any).uploadActivityOverridePhoto as (id: string, file: File) => Promise<string | null>;
+
   const previewSectionProps = {
     objectText, summary, goalNarratives, goalPhotos,
     otherActionsNarrative, otherActionsPhotos, communicationNarrative, communicationPhotos,
@@ -336,6 +360,9 @@ export const ReportGenerator: React.FC = () => {
     organizationEmail: project.organizationEmail,
     organizationPhone: project.organizationPhone,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
+    rawActivities: activities,
+    activityOverrides,
+    onEditActivity: (id: string) => setEditingActivityId(id),
   };
 
   return (
@@ -539,6 +566,16 @@ export const ReportGenerator: React.FC = () => {
           await diaryLinks.linkActivities(ids);
           toast.success(`${ids.length} registro(s) vinculado(s) ao relatório`);
         }}
+      />
+
+      <ActivityOverrideDialog
+        open={!!editingActivityId}
+        onOpenChange={(o) => { if (!o) setEditingActivityId(null); }}
+        activity={editingActivityId ? (activities.find(a => a.id === editingActivityId) || null) : null}
+        override={editingActivityId ? activityOverrides?.[editingActivityId] : undefined}
+        onSave={(patch) => editingActivityId && upsertActivityOverride(editingActivityId, patch)}
+        onRestore={() => editingActivityId && restoreActivityOverride(editingActivityId)}
+        onUploadPhoto={(file) => editingActivityId ? uploadActivityOverridePhoto(editingActivityId, file) : Promise.resolve(null)}
       />
     </div>
   );

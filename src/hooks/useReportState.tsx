@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppData } from '@/contexts/AppDataContext';
-import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta, PhotoGroup } from '@/types';
+import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta, PhotoGroup, ActivityOverride } from '@/types';
 import { PageLayout } from '@/types/imageLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -46,6 +46,7 @@ export const useReportState = () => {
   const [pageLayouts, setPageLayouts] = useState<Record<string, PageLayout>>({});
   const [sectionPhotoGroups, setSectionPhotoGroups] = useState<Record<string, PhotoGroup[]>>({});
   const [selectedVideoUrls, setSelectedVideoUrls] = useState<string[]>([]);
+  const [activityOverrides, setActivityOverrides] = useState<Record<string, ActivityOverride>>({});
 
   // ── Shared section manager ──
   const sectionManager = useSectionManager({ defaultSections: DEFAULT_SECTIONS, insertBeforeKey: 'expenses' });
@@ -105,6 +106,7 @@ export const useReportState = () => {
       setPageLayouts((rd as any).pageLayouts || {});
       setSectionPhotoGroups((rd as any).sectionPhotoGroups || {});
       setSelectedVideoUrls((rd as any).selectedVideoUrls || []);
+      setActivityOverrides((rd as any).activityOverrides || {});
     }
   }, [project]);
 
@@ -143,10 +145,11 @@ export const useReportState = () => {
     pageLayouts,
     sectionPhotoGroups,
     selectedVideoUrls,
+    activityOverrides,
   }), [objectText, summary, goalNarratives, goalPhotos, otherActionsNarrative, otherActionsPhotos,
     communicationNarrative, communicationPhotos, satisfaction, futureActions, expenses,
     links, linkFileNames, linkDisplayNames, sectionManager.sections, fileUploader.sectionPhotos,
-    fileUploader.sectionDocs, photoMetadata, pageLayouts, sectionPhotoGroups, selectedVideoUrls]);
+    fileUploader.sectionDocs, photoMetadata, pageLayouts, sectionPhotoGroups, selectedVideoUrls, activityOverrides]);
 
   const saveReportData = async (showToast = true) => {
     try {
@@ -202,6 +205,7 @@ export const useReportState = () => {
     if (rd.pageLayouts) setPageLayouts(rd.pageLayouts);
     if (rd.sectionPhotoGroups) setSectionPhotoGroups(rd.sectionPhotoGroups);
     if (rd.selectedVideoUrls) setSelectedVideoUrls(rd.selectedVideoUrls);
+    if (rd.activityOverrides) setActivityOverrides(rd.activityOverrides);
   }, []);
 
   // Auto-save: debounce 3s after any content change
@@ -322,15 +326,33 @@ export const useReportState = () => {
     }
   };
 
-  // Activity helpers
+  // Activity helpers — apply per-report overrides without touching diary data
+  const applyOverride = (a: Activity): Activity => {
+    const ov = activityOverrides[a.id];
+    if (!ov) return a;
+    return {
+      ...a,
+      description: ov.description !== undefined ? ov.description : a.description,
+      results: ov.results !== undefined ? ov.results : a.results,
+      photos: ov.photos !== undefined ? ov.photos : a.photos,
+      photoCaptions: ov.photoCaptions !== undefined ? { ...(a.photoCaptions || {}), ...ov.photoCaptions } : a.photoCaptions,
+    };
+  };
+  const isHidden = (a: Activity) => !!activityOverrides[a.id]?.hidden;
+
   const getActivitiesByGoal = (goalId: string) =>
-    activities.filter(a => a.goalId === goalId).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    activities.filter(a => a.goalId === goalId && !isHidden(a))
+      .map(applyOverride)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const getCommunicationActivities = () =>
-    activities.filter(a => a.type === ActivityType.COMUNICACAO).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    activities.filter(a => a.type === ActivityType.COMUNICACAO && !isHidden(a))
+      .map(applyOverride)
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const getOtherActivities = () =>
-    activities.filter(a => a.type === ActivityType.OUTROS || a.type === ActivityType.ADMINISTRATIVO || a.type === ActivityType.OCORRENCIA)
+    activities.filter(a => (a.type === ActivityType.OUTROS || a.type === ActivityType.ADMINISTRATIVO || a.type === ActivityType.OCORRENCIA) && !isHidden(a))
+      .map(applyOverride)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
   const formatActivityDate = (date: string, endDate?: string) => {
@@ -441,6 +463,37 @@ export const useReportState = () => {
     }
   };
 
+  // Activity overrides (per-report layer; does NOT alter the Diário)
+  const upsertActivityOverride = (activityId: string, patch: Partial<ActivityOverride>) => {
+    setActivityOverrides(prev => ({ ...prev, [activityId]: { ...(prev[activityId] || {}), ...patch } }));
+  };
+  const restoreActivityOverride = (activityId: string) => {
+    setActivityOverrides(prev => {
+      const next = { ...prev };
+      delete next[activityId];
+      return next;
+    });
+  };
+  const setActivityHidden = (activityId: string, hidden: boolean) => {
+    upsertActivityOverride(activityId, { hidden });
+  };
+
+  const uploadActivityOverridePhoto = async (activityId: string, rawFile: File): Promise<string | null> => {
+    try {
+      const file = await compressImage(rawFile, { maxWidth: 1920, maxHeight: 1920, quality: 0.8 });
+      const photoId = crypto.randomUUID();
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filePath = `reports/${project?.id}/activity-overrides/${activityId}/${photoId}.${fileExt}`;
+      const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+      if (error) { toast.error(`Erro ao enviar foto: ${rawFile.name}`); return null; }
+      const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
+      return urlData.publicUrl;
+    } catch {
+      toast.error(`Erro ao processar foto: ${rawFile.name}`);
+      return null;
+    }
+  };
+
   return {
     project, activities,
     mode, setMode, isExporting, setIsExporting, exportType, setExportType,
@@ -489,5 +542,6 @@ export const useReportState = () => {
     removeSectionDoc: fileUploader.removeSectionDoc,
     insertDiaryPhotos,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
+    activityOverrides, upsertActivityOverride, restoreActivityOverride, setActivityHidden, uploadActivityOverridePhoto,
   };
 };
