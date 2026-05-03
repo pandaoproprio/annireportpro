@@ -438,6 +438,7 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
                             projectId={projectId}
                             updatePhotoCaption={updatePhotoCaption}
                             updatePhotoSize={updatePhotoSize}
+                            updatePhotoAlignment={updatePhotoAlignment}
                             onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
                             onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
                           />
