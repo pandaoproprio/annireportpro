@@ -1192,12 +1192,12 @@ function buildHtml(payload: ReportPayload): string {
         .photo-item img {
           display: block;
           width: 100%;
-          height: 200px;
+          height: 280px;
           object-fit: contain;
           object-position: center;
           background: #f8f8f8;
         }
-        .rich-photo-item img { height: 200px; object-fit: contain; }
+        .rich-photo-item img { height: 280px; object-fit: contain; }
 
         .caption {
           padding: 6px 8px;
