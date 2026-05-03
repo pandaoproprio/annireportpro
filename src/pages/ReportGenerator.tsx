@@ -41,6 +41,7 @@ export const ReportGenerator: React.FC = () => {
     sectionPhotos, sectionDocs,
     photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     hideActivitiesBySection, toggleSectionActivitiesVisibility,
+    goalTitleOverrides, setGoalTitleDescription, setGoalTitleHidden,
     pageLayouts, setPageLayouts,
     sectionPhotoGroups, setSectionPhotoGroups,
     saveReportData, setBroadcastCallback, applyRemoteData,
@@ -187,6 +188,7 @@ export const ReportGenerator: React.FC = () => {
         sectionPhotoGroups,
         selectedVideoUrls: (state as any).selectedVideoUrls,
         hideActivitiesBySection,
+        goalTitleOverrides,
       });
       if (project?.id) {
         createAsanaTaskOnPublish({
@@ -352,6 +354,7 @@ export const ReportGenerator: React.FC = () => {
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
     activityOverrides,
     onEditActivity: (id: string) => setEditingActivityId(id),
+    goalTitleOverrides, setGoalTitleDescription, setGoalTitleHidden,
   };
 
 
@@ -372,6 +375,7 @@ export const ReportGenerator: React.FC = () => {
     activityOverrides,
     onEditActivity: (id: string) => setEditingActivityId(id),
     hideActivitiesBySection,
+    goalTitleOverrides,
   };
 
   return (

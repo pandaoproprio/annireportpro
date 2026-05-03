@@ -121,6 +121,7 @@ interface ReportPayload {
   visualConfig?: VisualConfig;
   selectedVideoUrls?: string[];
   hideActivitiesBySection?: Record<string, boolean>;
+  goalTitleOverrides?: Record<string, { description?: string; hide?: boolean }>;
 }
 
 const FALLBACK_LINK_LABELS: Record<ReportLinkKey, string> = {
@@ -705,6 +706,24 @@ function formatGoalTitle(idx: number, title: string | undefined | null): string 
   return `META ${idx + 1}: ${t}`;
 }
 
+function extractGoalDescription(title: string | undefined | null): string {
+  const t = (title ?? "").trim();
+  return t.replace(/^meta\s*\d+\s*[:\-–]?\s*/i, "").trim();
+}
+
+function formatGoalPhotoTitle(
+  idx: number,
+  title: string | undefined | null,
+  override?: { description?: string; hide?: boolean },
+): string {
+  const prefix = `REGISTROS FOTOGRÁFICOS – META ${idx + 1}`;
+  if (override?.hide) return prefix;
+  const desc = override?.description !== undefined
+    ? override.description.trim()
+    : extractGoalDescription(title);
+  return desc ? `${prefix}: ${desc}` : prefix;
+}
+
 function buildGoalSections(payload: ReportPayload, renderedPhotoKeys: Set<string>): string {
   const activeActivities = getActiveActivities(payload.activities);
   return payload.project.goals.map((goal, idx) => {
@@ -718,6 +737,7 @@ function buildGoalSections(payload: ReportPayload, renderedPhotoKeys: Set<string
     const metas = payload.photoMetadata?.[goal.id] || [];
     renderedPhotoKeys.add(goal.id);
     const displayTitle = formatGoalTitle(idx, goal.title);
+    const photoTitle = formatGoalPhotoTitle(idx, goal.title, payload.goalTitleOverrides?.[goal.id]);
 
     const hasNarrative = isNonEmptyString(payload.goalNarratives[goal.id]);
     const hideActs = !!payload.hideActivitiesBySection?.[goal.id];
@@ -730,7 +750,7 @@ function buildGoalSections(payload: ReportPayload, renderedPhotoKeys: Set<string
           photos,
           metas,
           payload.sectionPhotoGroups?.[goal.id] || [],
-          `REGISTROS FOTOGRÁFICOS – ${displayTitle}`,
+          photoTitle,
         ) : ""}
       </div>
     `;
@@ -1172,12 +1192,12 @@ function buildHtml(payload: ReportPayload): string {
         .photo-item img {
           display: block;
           width: 100%;
-          height: 200px;
+          height: 280px;
           object-fit: contain;
           object-position: center;
           background: #f8f8f8;
         }
-        .rich-photo-item img { height: 200px; object-fit: contain; }
+        .rich-photo-item img { height: 280px; object-fit: contain; }
 
         .caption {
           padding: 6px 8px;

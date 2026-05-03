@@ -28,6 +28,7 @@ export interface ReportPdfExportData {
   sectionPhotoGroups?: Record<string, PhotoGroup[]>;
   selectedVideoUrls?: string[];
   hideActivitiesBySection?: Record<string, boolean>;
+  goalTitleOverrides?: Record<string, { description?: string; hide?: boolean }>;
 }
 
 const base64ToBlob = (base64: string): Blob => {

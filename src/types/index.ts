@@ -100,6 +100,8 @@ export interface ReportData {
   activityOverrides?: Record<string, ActivityOverride>;
   /** Hide the "Atividades realizadas" block (and dates/local/participantes) for a given section/goal key */
   hideActivitiesBySection?: Record<string, boolean>;
+  /** Per-goal overrides for the photo gallery title ("REGISTROS FOTOGRÁFICOS – META N: ..."). Keyed by goal.id */
+  goalTitleOverrides?: Record<string, { description?: string; hide?: boolean }>;
 }
 
 export interface ActivityOverride {

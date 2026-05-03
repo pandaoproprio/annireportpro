@@ -48,6 +48,7 @@ export const useReportState = () => {
   const [selectedVideoUrls, setSelectedVideoUrls] = useState<string[]>([]);
   const [activityOverrides, setActivityOverrides] = useState<Record<string, ActivityOverride>>({});
   const [hideActivitiesBySection, setHideActivitiesBySection] = useState<Record<string, boolean>>({});
+  const [goalTitleOverrides, setGoalTitleOverrides] = useState<Record<string, { description?: string; hide?: boolean }>>({});
 
   // ── Shared section manager ──
   const sectionManager = useSectionManager({ defaultSections: DEFAULT_SECTIONS, insertBeforeKey: 'expenses' });
@@ -109,6 +110,7 @@ export const useReportState = () => {
       setSelectedVideoUrls((rd as any).selectedVideoUrls || []);
       setActivityOverrides((rd as any).activityOverrides || {});
       setHideActivitiesBySection((rd as any).hideActivitiesBySection || {});
+      setGoalTitleOverrides((rd as any).goalTitleOverrides || {});
     }
   }, [project]);
 
@@ -149,10 +151,11 @@ export const useReportState = () => {
     selectedVideoUrls,
     activityOverrides,
     hideActivitiesBySection,
+    goalTitleOverrides,
   }), [objectText, summary, goalNarratives, goalPhotos, otherActionsNarrative, otherActionsPhotos,
     communicationNarrative, communicationPhotos, satisfaction, futureActions, expenses,
     links, linkFileNames, linkDisplayNames, sectionManager.sections, fileUploader.sectionPhotos,
-    fileUploader.sectionDocs, photoMetadata, pageLayouts, sectionPhotoGroups, selectedVideoUrls, activityOverrides, hideActivitiesBySection]);
+    fileUploader.sectionDocs, photoMetadata, pageLayouts, sectionPhotoGroups, selectedVideoUrls, activityOverrides, hideActivitiesBySection, goalTitleOverrides]);
 
   const saveReportData = async (showToast = true) => {
     try {
@@ -210,6 +213,7 @@ export const useReportState = () => {
     if (rd.selectedVideoUrls) setSelectedVideoUrls(rd.selectedVideoUrls);
     if (rd.activityOverrides) setActivityOverrides(rd.activityOverrides);
     if (rd.hideActivitiesBySection) setHideActivitiesBySection(rd.hideActivitiesBySection);
+    if (rd.goalTitleOverrides) setGoalTitleOverrides(rd.goalTitleOverrides);
   }, []);
 
   // Auto-save: debounce 3s after any content change
@@ -561,5 +565,10 @@ export const useReportState = () => {
     insertDiaryPhotos,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
     activityOverrides, upsertActivityOverride, restoreActivityOverride, setActivityHidden, uploadActivityOverridePhoto,
+    goalTitleOverrides,
+    setGoalTitleDescription: (goalId: string, description: string | undefined) =>
+      setGoalTitleOverrides(prev => ({ ...prev, [goalId]: { ...(prev[goalId] || {}), description } })),
+    setGoalTitleHidden: (goalId: string, hide: boolean) =>
+      setGoalTitleOverrides(prev => ({ ...prev, [goalId]: { ...(prev[goalId] || {}), hide } })),
   };
 };

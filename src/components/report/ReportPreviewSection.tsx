@@ -3,7 +3,7 @@ import { sanitizeHtml } from '@/lib/sanitizeHtml';
 import { ReportSection, Activity, Goal, ExpenseItem, ReportPhotoMeta, ActivityOverride } from '@/types';
 import { PhotoGallerySection } from '@/components/report/PhotoGallerySection';
 import { INDENT } from '@/lib/previewConstants';
-import { formatGoalTitle } from '@/lib/goalTitle';
+import { formatGoalTitle, formatGoalPhotoTitle } from '@/lib/goalTitle';
 import { Button } from '@/components/ui/button';
 import { Pencil } from 'lucide-react';
 import { ActivityOverrideDialog } from '@/components/report/ActivityOverrideDialog';
@@ -114,6 +114,7 @@ interface Props {
   activityOverrides?: Record<string, ActivityOverride>;
   onEditActivity?: (activityId: string) => void;
   hideActivitiesBySection?: Record<string, boolean>;
+  goalTitleOverrides?: Record<string, { description?: string; hide?: boolean }>;
 }
 
 // Renders a single photo with caption and width — uses consistent aspect ratio
@@ -124,8 +125,8 @@ const PreviewPhoto: React.FC<{ photo: string; meta?: ReportPhotoMeta; index: num
   const alignClass = alignment === 'left' ? 'mr-auto' : alignment === 'right' ? 'ml-auto' : 'mx-auto';
   return (
     <div className={`break-inside-avoid mb-4 ${alignClass}`} style={{ width: `${widthPercent}%`, maxWidth: '100%' }}>
-      <div className="overflow-hidden rounded-lg border shadow-sm aspect-[4/3] bg-muted flex items-center justify-center">
-        <img src={photo} alt={caption || `Registro ${index + 1}`} className="max-w-full max-h-full object-contain" loading="lazy" />
+      <div className="overflow-hidden rounded-lg border shadow-sm bg-muted flex items-center justify-center" style={{ minHeight: '280px' }}>
+        <img src={photo} alt={caption || `Registro ${index + 1}`} className="w-full h-auto max-h-[420px] object-contain" loading="lazy" />
       </div>
       {caption && (
         <p className="text-xs text-muted-foreground text-center mt-1 italic">{caption}</p>
@@ -231,7 +232,7 @@ const SummaryPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }>
   </section>
 );
 
-const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, sectionPhotoGroups, getActivitiesByGoal, formatActivityDate, activityOverrides, onEditActivity, hideActivitiesBySection }) => (
+const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPhotos, photoMetadata, sectionPhotoGroups, getActivitiesByGoal, formatActivityDate, activityOverrides, onEditActivity, hideActivitiesBySection, goalTitleOverrides }) => (
   <section className="mb-8 page-break">
     <h3 className={`${sectionTitleClass} mb-6`} style={{ textAlign: 'left' }}>{section.title}</h3>
     {goals.map((goal, idx) => {
@@ -242,6 +243,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
       const goalMetas = photoMetadata?.[goal.id] || [];
       const hasNarrative = !!(goalNarratives[goal.id] && goalNarratives[goal.id].trim());
       const hideActs = !!hideActivitiesBySection?.[goal.id];
+      const photoTitle = formatGoalPhotoTitle(idx, goal.title, goalTitleOverrides?.[goal.id]);
 
       return (
         <div key={goal.id} className="mb-10">
@@ -267,7 +269,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
               })}
             </div>
           )}
-          <PreviewPhotoGrid photos={allGoalPhotos} metas={goalMetas} title={`Registros Fotográficos – Meta ${idx + 1}`} groups={sectionPhotoGroups?.[goal.id]} />
+          <PreviewPhotoGrid photos={allGoalPhotos} metas={goalMetas} title={photoTitle} groups={sectionPhotoGroups?.[goal.id]} />
         </div>
       );
     })}
