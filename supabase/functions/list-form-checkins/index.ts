@@ -9,6 +9,30 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
+    // Require authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Não autorizado.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+
+    const authClient = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_ANON_KEY')!,
+    );
+    const { data: userData, error: userErr } = await authClient.auth.getUser(token);
+    if (userErr || !userData?.user) {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Não autorizado.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    const userId = userData.user.id;
+
     const body = await req.json();
     const { form_id } = body ?? {};
 
@@ -26,7 +50,7 @@ Deno.serve(async (req) => {
 
     const { data: form, error: formErr } = await supabase
       .from('forms')
-      .select('id, title, geofence_lat, geofence_lng, geofence_radius_meters, status')
+      .select('id, title, geofence_lat, geofence_lng, geofence_radius_meters, status, created_by')
       .eq('id', form_id)
       .maybeSingle();
 
@@ -34,6 +58,36 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ ok: false, error: 'Formulário não encontrado.' }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Authorization: form owner OR admin/super_admin OR forms_view permission
+    let authorized = form.created_by === userId;
+
+    if (!authorized) {
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+      const roleList = (roles ?? []).map((r: any) => r.role);
+      if (roleList.includes('admin') || roleList.includes('super_admin') || roleList.includes('coordenador') || roleList.includes('analista')) {
+        authorized = true;
+      }
+    }
+
+    if (!authorized) {
+      const { data: perms } = await supabase
+        .from('user_permissions')
+        .select('permission')
+        .eq('user_id', userId)
+        .in('permission', ['forms_view', 'forms_edit']);
+      if ((perms ?? []).length > 0) authorized = true;
+    }
+
+    if (!authorized) {
+      return new Response(
+        JSON.stringify({ ok: false, error: 'Acesso negado.' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 
@@ -50,8 +104,11 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Don't expose created_by in response
+    const { created_by: _omit, ...formPublic } = form as any;
+
     return new Response(
-      JSON.stringify({ ok: true, form, responses: responses ?? [] }),
+      JSON.stringify({ ok: true, form: formPublic, responses: responses ?? [] }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   } catch (err) {
