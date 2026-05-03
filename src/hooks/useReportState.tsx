@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppData } from '@/contexts/AppDataContext';
-import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta, PhotoGroup } from '@/types';
+import { Activity, ActivityType, ReportSection, ExpenseItem, ReportPhotoMeta, PhotoGroup, ActivityOverride } from '@/types';
 import { PageLayout } from '@/types/imageLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
