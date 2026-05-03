@@ -661,18 +661,31 @@ const GoalsSection: React.FC<ExtProps> = ({
 
       return (
         <div key={goal.id} className="p-4 border rounded-lg bg-muted/50">
-          <div className="flex items-center gap-2 mb-2">
-            <h4 className="font-bold text-primary">META {idx + 1}: {goal.title}</h4>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <h4 className="font-bold text-primary">{formatGoalTitle(idx, goal.title)}</h4>
             {goalActs.length > 0 && <ActivityCountBadge count={goalActs.length} label={`atividade(s) vinculadas à meta "${goal.title}"`} />}
+            <div className="ml-auto">
+              <LinkActivitiesToGoalDialog
+                projectId={projectId}
+                goalId={goal.id}
+                goalTitle={formatGoalTitle(idx, goal.title)}
+              />
+            </div>
           </div>
           <p className="text-sm text-muted-foreground mb-3">Público-alvo: {goal.targetAudience}</p>
-          <ActivitiesPanel
-            activities={goalActs}
-            expanded={activitiesExpanded}
-            formatActivityDate={formatActivityDate}
-            label="atividade(s) do Diário de Bordo vinculadas"
-            onInsert={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: (goalNarratives[goal.id] || '') + '\n' + text })}
-          />
+          {goalActs.length === 0 ? (
+            <div className="mb-4 p-3 border border-dashed rounded text-sm text-muted-foreground bg-background">
+              Nenhum registro do Diário de Bordo vinculado a esta meta. Use o botão <strong>Vincular registros</strong> acima para associar atividades existentes.
+            </div>
+          ) : (
+            <ActivitiesPanel
+              activities={goalActs}
+              expanded
+              formatActivityDate={formatActivityDate}
+              label="atividade(s) do Diário de Bordo vinculadas"
+              onInsert={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: (goalNarratives[goal.id] || '') + '\n' + text })}
+            />
+          )}
           <div className="flex items-center justify-between">
             <Label>Relato Narrativo da Meta</Label>
             <AiTextToolbar
