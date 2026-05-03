@@ -109,6 +109,10 @@ interface Props {
   getCommunicationActivities: () => Activity[];
   getOtherActivities: () => Activity[];
   formatActivityDate: (date: string, endDate?: string) => string;
+  /** All raw activities (without overrides) — used to find the original for the edit dialog */
+  rawActivities?: Activity[];
+  activityOverrides?: Record<string, ActivityOverride>;
+  onEditActivity?: (activityId: string) => void;
 }
 
 // Renders a single photo with caption and width — uses consistent aspect ratio
