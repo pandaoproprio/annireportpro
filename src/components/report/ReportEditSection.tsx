@@ -755,6 +755,21 @@ const GoalsSection: React.FC<ExtProps> = ({
             </div>
           </div>
           <p className="text-sm text-muted-foreground mb-3">Público-alvo: {goal.targetAudience}</p>
+          {toggleSectionActivitiesVisibility && (
+            <div className="mb-3 flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Bloco de atividades (datas · local · participantes):</span>
+              <Button type="button" size="sm" variant={hideActivitiesBySection?.[goal.id] ? 'outline' : 'default'}
+                className="h-6 px-2 text-[10px]"
+                onClick={() => toggleSectionActivitiesVisibility(goal.id, false)}>
+                Exibir atividades
+              </Button>
+              <Button type="button" size="sm" variant={hideActivitiesBySection?.[goal.id] ? 'default' : 'outline'}
+                className="h-6 px-2 text-[10px]"
+                onClick={() => toggleSectionActivitiesVisibility(goal.id, true)}>
+                Ocultar atividades
+              </Button>
+            </div>
+          )}
           {goalActs.length === 0 ? (
             <div className="mb-4 p-3 border border-dashed rounded text-sm text-muted-foreground bg-background">
               Nenhum registro do Diário de Bordo vinculado a esta meta. Use o botão <strong>Vincular registros</strong> acima para associar atividades existentes.
