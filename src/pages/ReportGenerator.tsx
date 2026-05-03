@@ -76,6 +76,7 @@ export const ReportGenerator: React.FC = () => {
   const [showDiaryLinkDialog, setShowDiaryLinkDialog] = useState(false);
   const [isGeneratingFullReport, setIsGeneratingFullReport] = useState(false);
   const [generatingMode, setGeneratingMode] = useState<string | null>(null);
+  const [editingActivityId, setEditingActivityId] = useState<string | null>(null);
 
   const handleGenerateFullReport = async (generationMode: 'assisted' | 'hybrid' | 'automatic') => {
     if (!project) return;
