@@ -250,16 +250,21 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
           {goalActs.length > 0 && !hideActs && (
             <div className="mt-4 text-sm">
               <p className="font-medium mb-2">Atividades realizadas:</p>
-              {goalActs.map(act => (
-                <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
-                  <p>
-                    <strong>{formatActivityDate(act.date, act.endDate)}</strong>{act.location && ` – ${act.location}`}{act.attendeesCount > 0 && ` – ${act.attendeesCount} participantes`}
-                    <EditActivityBtn activityId={act.id} onEdit={onEditActivity} overridden={!!activityOverrides?.[act.id]} />
-                  </p>
-                  {!hasNarrative && <p>{act.description}</p>}
-                  {!hasNarrative && act.results && <p className="text-muted-foreground">Resultados: {act.results}</p>}
-                </div>
-              ))}
+              {goalActs.map(act => {
+                const ov = activityOverrides?.[act.id];
+                const showDesc = !hasNarrative && !ov?.hideDescription;
+                const showRes = !hasNarrative && !ov?.hideResults && act.results;
+                return (
+                  <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
+                    <p>
+                      <strong>{formatActivityDate(act.date, act.endDate)}</strong>{act.location && ` – ${act.location}`}{act.attendeesCount > 0 && ` – ${act.attendeesCount} participantes`}
+                      <EditActivityBtn activityId={act.id} onEdit={onEditActivity} overridden={!!activityOverrides?.[act.id]} />
+                    </p>
+                    {showDesc && <p>{act.description}</p>}
+                    {showRes && <p className="text-muted-foreground">Resultados: {act.results}</p>}
+                  </div>
+                );
+              })}
             </div>
           )}
           <PreviewPhotoGrid photos={allGoalPhotos} metas={goalMetas} title={`Registros Fotográficos – Meta ${idx + 1}`} groups={sectionPhotoGroups?.[goal.id]} />
