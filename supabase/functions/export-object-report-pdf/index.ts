@@ -95,6 +95,7 @@ interface VisualConfig {
   footerLine1Text?: string;
   footerLine2Text?: string;
   footerLine3Text?: string;
+  pageMarginPreset?: "abnt" | "custom";
 }
 
 interface ReportPayload {
