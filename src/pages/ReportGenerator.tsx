@@ -41,6 +41,7 @@ export const ReportGenerator: React.FC = () => {
     sectionPhotos, sectionDocs,
     photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
     hideActivitiesBySection, toggleSectionActivitiesVisibility,
+    goalTitleOverrides, setGoalTitleDescription, setGoalTitleHidden,
     pageLayouts, setPageLayouts,
     sectionPhotoGroups, setSectionPhotoGroups,
     saveReportData, setBroadcastCallback, applyRemoteData,
