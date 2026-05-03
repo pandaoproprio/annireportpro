@@ -6,7 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Link2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { useActivityData } from '@/contexts/ActivityContext';
 import { useActivities } from '@/hooks/useActivities';
 
 interface Props {
