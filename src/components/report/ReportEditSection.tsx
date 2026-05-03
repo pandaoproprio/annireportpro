@@ -797,6 +797,7 @@ const GoalsSection: React.FC<ExtProps> = ({
                         projectId={projectId}
                         updatePhotoCaption={updatePhotoCaption}
                         updatePhotoSize={updatePhotoSize}
+                        updatePhotoAlignment={updatePhotoAlignment}
                         onReplace={(newUrl) => replacePhotoUrl(goal.id, pIdx, newUrl, null, goal.id)}
                         onRemove={() => removeGoalPhoto(goal.id, pIdx)}
                       />
