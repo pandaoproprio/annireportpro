@@ -780,7 +780,7 @@ function buildStandardSection(payload: ReportPayload, section: ReportSection, re
       <section class="section">
         <h2 class="section-title">${escapeHtml(section.title)}</h2>
         ${renderRichContent(payload.communicationNarrative, "[Publicações e ações de divulgação]")}
-        ${renderPlainActivityList(activities)}
+        ${renderPlainActivityList(activities, { hideDescription: isNonEmptyString(payload.communicationNarrative) })}
       </section>
       ${photos.length > 0 ? renderGroupedPhotoBlocks(
         photos,
