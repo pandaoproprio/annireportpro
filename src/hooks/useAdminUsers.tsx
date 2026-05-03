@@ -16,6 +16,8 @@ export interface AdminUser {
   emailConfirmed: boolean;
   mfaEnabled: boolean;
   mustChangePassword?: boolean;
+  cargo?: string | null;
+  areaSetor?: string | null;
   tempPassword?: string | null;
   tempPasswordSetAt?: string | null;
   firstLoginAt?: string | null;
@@ -76,7 +78,7 @@ export const useAdminUsers = () => {
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async ({ userId, ...updates }: { userId: string; name?: string; email?: string; role?: AdminRole; password?: string; permissions?: string[] }) => {
+    mutationFn: async ({ userId, ...updates }: { userId: string; name?: string; email?: string; role?: AdminRole; password?: string; permissions?: string[]; cargo?: string | null; area_setor?: string | null }) => {
       const { data, error } = await supabase.functions.invoke('admin-users', { method: 'PATCH', body: { userId, ...updates } });
       if (error) {
         let friendly = error.message || 'Erro ao atualizar usuário';
@@ -198,7 +200,7 @@ export const useAdminUsers = () => {
         return { success: false, error };
       }
     },
-    updateUser: async (userId: string, updates: { name?: string; role?: AdminRole; password?: string; permissions?: string[] }) => {
+    updateUser: async (userId: string, updates: { name?: string; role?: AdminRole; password?: string; permissions?: string[]; email?: string; cargo?: string | null; area_setor?: string | null }) => {
       try {
         await updateUserMutation.mutateAsync({ userId, ...updates });
         return { success: true };

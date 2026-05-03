@@ -122,6 +122,8 @@ export const UserManagement: React.FC = () => {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState<AdminRole>('usuario');
+  const [editCargo, setEditCargo] = useState('');
+  const [editAreaSetor, setEditAreaSetor] = useState('');
 
   // Fetch team members to show linked member info
   const [teamMembers, setTeamMembers] = useState<Array<{ id: string; name: string; email: string | null; function_role: string }>>([]);
@@ -233,9 +235,11 @@ export const UserManagement: React.FC = () => {
   const handleEdit = async () => {
     if (!editingUser) return;
     
-    const updates: { name: string; role: typeof selectedRole; email?: string } = {
+    const updates: { name: string; role: typeof selectedRole; email?: string; cargo?: string | null; area_setor?: string | null } = {
       name,
-      role: selectedRole
+      role: selectedRole,
+      cargo: editCargo.trim() || null,
+      area_setor: editAreaSetor.trim() || null,
     };
     
     if (editEmail && editEmail !== editingUser.email) {
@@ -261,6 +265,8 @@ export const UserManagement: React.FC = () => {
     setName(user.name);
     setEditEmail(user.email);
     setSelectedRole(user.role);
+    setEditCargo(user.cargo || '');
+    setEditAreaSetor(user.areaSetor || '');
     setIsEditOpen(true);
   };
 
@@ -847,7 +853,7 @@ export const UserManagement: React.FC = () => {
             </div>
             
             <div className="space-y-2">
-              <Label>Papel</Label>
+              <Label>Papel de acesso</Label>
               <Select value={selectedRole} onValueChange={(v) => setSelectedRole(v as any)}>
                 <SelectTrigger>
                   <SelectValue />
@@ -862,6 +868,29 @@ export const UserManagement: React.FC = () => {
                   {role === 'SUPER_ADMIN' && <SelectItem value="super_admin">Super Admin</SelectItem>}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground">
+                O papel define o acesso padrão. O cargo/função abaixo é independente.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-cargo">Cargo / Função</Label>
+              <Input
+                id="edit-cargo"
+                placeholder="Ex.: Assistente de Comunicação, Coordenador Pedagógico"
+                value={editCargo}
+                onChange={(e) => setEditCargo(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-area">Área / Setor</Label>
+              <Input
+                id="edit-area"
+                placeholder="Ex.: Comunicação, Educação, Administrativo"
+                value={editAreaSetor}
+                onChange={(e) => setEditAreaSetor(e.target.value)}
+              />
             </div>
           </div>
           

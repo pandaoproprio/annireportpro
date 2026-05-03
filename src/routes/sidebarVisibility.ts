@@ -48,5 +48,10 @@ export const shouldShowSidebarItem = (
     return context.hasPermission(criticalPermission);
   }
 
+  // Itens sem permission declarada: visíveis para admin e perfis intermediários
+  // (analista, coordenador). Perfis restritos (oficineiro/voluntario/usuario)
+  // só veem itens com permission explicitamente liberada pelo Super Admin.
+  const RESTRICTED_ROLES: UserRole[] = ['OFICINEIRO', 'VOLUNTARIO', 'USUARIO'];
+  if (RESTRICTED_ROLES.includes(context.role)) return false;
   return true;
 };

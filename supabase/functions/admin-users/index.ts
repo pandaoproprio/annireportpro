@@ -54,6 +54,8 @@ interface UpdateUserRequest {
   role?: AppRole;
   password?: string;
   permissions?: string[];
+  cargo?: string | null;
+  area_setor?: string | null;
 }
 
 interface DeleteUserRequest {
@@ -523,6 +525,8 @@ Deno.serve(async (req) => {
           emailConfirmed: user.email_confirmed_at !== null,
           mfaEnabled,
           mustChangePassword: profile?.must_change_password === true,
+          cargo: profile?.cargo || null,
+          areaSetor: profile?.area_setor || null,
           tempPassword: profile?.temp_password_plaintext || null,
           tempPasswordSetAt: profile?.temp_password_set_at || null,
           firstLoginAt: profile?.first_login_at || null,
@@ -711,7 +715,7 @@ Deno.serve(async (req) => {
     // PATCH: Update user
     if (req.method === 'PATCH') {
       const body: UpdateUserRequest = await req.json();
-      const { userId, name, email, role, password, permissions } = body;
+      const { userId, name, email, role, password, permissions, cargo, area_setor } = body;
 
       if (!userId) {
         return new Response(JSON.stringify({ error: 'userId is required' }), {
@@ -741,6 +745,13 @@ Deno.serve(async (req) => {
 
       if (name) {
         await supabaseAdmin.from('profiles').update({ name }).eq('user_id', userId);
+      }
+
+      if (cargo !== undefined || area_setor !== undefined) {
+        const profileUpdates: Record<string, unknown> = {};
+        if (cargo !== undefined) profileUpdates.cargo = cargo;
+        if (area_setor !== undefined) profileUpdates.area_setor = area_setor;
+        await supabaseAdmin.from('profiles').update(profileUpdates).eq('user_id', userId);
       }
 
       if (email) {
