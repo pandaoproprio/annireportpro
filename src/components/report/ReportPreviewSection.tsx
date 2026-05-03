@@ -303,7 +303,7 @@ const OtherPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> =
 const CommunicationPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> = ({
   section, communicationNarrative, communicationPhotos, getCommunicationActivities, formatActivityDate,
   organizationName, organizationAddress, organizationWebsite, organizationEmail, organizationPhone,
-  renderPhotos,
+  renderPhotos, activityOverrides, onEditActivity,
 }) => {
   const commActs = getCommunicationActivities();
   const hasPhotos = communicationPhotos.length > 0 || commActs.some(a => a.photos && a.photos.length > 0);
@@ -316,7 +316,10 @@ const CommunicationPreview: React.FC<Props & { renderPhotos?: () => React.ReactN
           <div className="mt-4 text-sm">
             {commActs.map(act => (
               <div key={act.id} className="mb-3">
-                <p><strong>{formatActivityDate(act.date)}</strong>{(!communicationNarrative || !communicationNarrative.trim()) && `: ${act.description}`}</p>
+                <p>
+                  <strong>{formatActivityDate(act.date)}</strong>{(!communicationNarrative || !communicationNarrative.trim()) && `: ${act.description}`}
+                  <EditActivityBtn activityId={act.id} onEdit={onEditActivity} overridden={!!activityOverrides?.[act.id]} />
+                </p>
               </div>
             ))}
           </div>
