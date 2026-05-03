@@ -567,6 +567,16 @@ export const ReportGenerator: React.FC = () => {
           toast.success(`${ids.length} registro(s) vinculado(s) ao relatório`);
         }}
       />
+
+      <ActivityOverrideDialog
+        open={!!editingActivityId}
+        onOpenChange={(o) => { if (!o) setEditingActivityId(null); }}
+        activity={editingActivityId ? (activities.find(a => a.id === editingActivityId) || null) : null}
+        override={editingActivityId ? activityOverrides?.[editingActivityId] : undefined}
+        onSave={(patch) => editingActivityId && upsertActivityOverride(editingActivityId, patch)}
+        onRestore={() => editingActivityId && restoreActivityOverride(editingActivityId)}
+        onUploadPhoto={(file) => editingActivityId ? uploadActivityOverridePhoto(editingActivityId, file) : Promise.resolve(null)}
+      />
     </div>
   );
 };
