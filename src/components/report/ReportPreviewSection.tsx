@@ -113,6 +113,7 @@ interface Props {
   rawActivities?: Activity[];
   activityOverrides?: Record<string, ActivityOverride>;
   onEditActivity?: (activityId: string) => void;
+  hideActivitiesBySection?: Record<string, boolean>;
 }
 
 // Renders a single photo with caption and width — uses consistent aspect ratio
