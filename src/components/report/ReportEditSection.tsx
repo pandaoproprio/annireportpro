@@ -755,7 +755,7 @@ const GoalsSection: React.FC<ExtProps> = ({
 const OtherSection: React.FC<ExtProps> = ({
   otherActionsNarrative, setOtherActionsNarrative,
   projectName, projectObject, getOtherActivities, formatActivityDate,
-  activitiesExpanded,
+  activitiesExpanded, activityOverrides, onEditActivity,
 }) => {
   const otherActs = getOtherActivities();
   return (
@@ -766,6 +766,8 @@ const OtherSection: React.FC<ExtProps> = ({
         formatActivityDate={formatActivityDate}
         label="atividade(s) relacionadas"
         onInsert={(text) => setOtherActionsNarrative(otherActionsNarrative ? otherActionsNarrative + '\n' + text : text)}
+        onEditActivity={onEditActivity}
+        activityOverrides={activityOverrides}
       />
       <div className="flex items-center justify-between">
         <Label>Narrativa</Label>
