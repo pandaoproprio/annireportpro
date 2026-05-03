@@ -121,6 +121,7 @@ interface ReportPayload {
   visualConfig?: VisualConfig;
   selectedVideoUrls?: string[];
   hideActivitiesBySection?: Record<string, boolean>;
+  goalTitleOverrides?: Record<string, { description?: string; hide?: boolean }>;
 }
 
 const FALLBACK_LINK_LABELS: Record<ReportLinkKey, string> = {
