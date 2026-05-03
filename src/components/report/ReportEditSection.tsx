@@ -76,6 +76,9 @@ interface Props {
   photoMetadata: Record<string, ReportPhotoMeta[]>;
   updatePhotoCaption: (key: string, index: number, caption: string) => void;
   updatePhotoSize: (key: string, index: number, size: PhotoSize, widthPercent?: number) => void;
+  updatePhotoAlignment?: (key: string, index: number, alignment: 'left' | 'center' | 'right') => void;
+  hideActivitiesBySection?: Record<string, boolean>;
+  toggleSectionActivitiesVisibility?: (key: string, hidden: boolean) => void;
   replacePhotoUrl: (key: string, index: number, newUrl: string, setter: React.Dispatch<React.SetStateAction<string[]>> | null, goalId?: string) => void;
   pageLayouts: Record<string, PageLayout>;
   setPageLayouts: React.Dispatch<React.SetStateAction<Record<string, PageLayout>>>;
@@ -117,7 +120,14 @@ interface Props {
   onEditActivity?: (id: string) => void;
 }
 
-// ── Photo card with caption, width slider, and edit button ──
+// ── Photo card with caption, width, alignment, presets and edit button ──
+const SIZE_PRESETS: Array<{ id: PhotoSize; label: string; width: number }> = [
+  { id: 'small', label: 'Pequena', width: 30 },
+  { id: 'medium', label: 'Média', width: 60 },
+  { id: 'large', label: 'Grande', width: 85 },
+  { id: 'full', label: 'Tela cheia', width: 100 },
+];
+
 const PhotoCard: React.FC<{
   photo: string;
   index: number;
@@ -126,26 +136,39 @@ const PhotoCard: React.FC<{
   projectId: string;
   updatePhotoCaption: Props['updatePhotoCaption'];
   updatePhotoSize: Props['updatePhotoSize'];
+  updatePhotoAlignment?: Props['updatePhotoAlignment'];
   onReplace: (newUrl: string) => void;
   onRemove: () => void;
-}> = ({ photo, index, metaKey, meta, projectId, updatePhotoCaption, updatePhotoSize, onReplace, onRemove }) => {
+}> = ({ photo, index, metaKey, meta, projectId, updatePhotoCaption, updatePhotoSize, updatePhotoAlignment, onReplace, onRemove }) => {
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const caption = meta?.caption || '';
   const widthPercent = meta?.widthPercent || 100;
+  const alignment = meta?.alignment || 'center';
+
+  const handlePreset = (p: typeof SIZE_PRESETS[number]) => updatePhotoSize(metaKey, index, p.id, p.width);
+  const handleNumericWidth = (raw: string) => {
+    const n = Math.max(10, Math.min(100, Number(raw) || 0));
+    updatePhotoSize(metaKey, index, meta?.size || 'medium', n);
+  };
+
+  const justify = alignment === 'left' ? 'justify-start' : alignment === 'right' ? 'justify-end' : 'justify-center';
 
   return (
     <div className="border rounded-lg p-2 bg-card space-y-2">
-      <div className="relative group">
-        <img src={photo} alt={caption || `Foto ${index + 1}`} className="w-full h-40 object-contain rounded bg-muted" />
-        <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button type="button" onClick={() => setEditOpen(true)}
-            className="bg-primary text-primary-foreground rounded-full p-1.5 shadow-md" title="Editar imagem">
-            <Pencil className="w-3 h-3" />
-          </button>
-          <button type="button" onClick={onRemove}
-            className="bg-destructive text-destructive-foreground rounded-full p-1.5 shadow-md" title="Remover">
-            <Trash2 className="w-3 h-3" />
-          </button>
+      <div className={`flex w-full ${justify}`}>
+        <div className="relative group" style={{ width: `${widthPercent}%`, maxWidth: '100%' }}>
+          <img src={photo} alt={caption || `Foto ${index + 1}`} className="w-full h-40 object-contain rounded bg-muted" />
+          <div className="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button type="button" onClick={() => setEditOpen(true)}
+              className="bg-primary text-primary-foreground rounded-full p-1.5 shadow-md" title="Editar imagem">
+              <Pencil className="w-3 h-3" />
+            </button>
+            <button type="button" onClick={() => setConfirmOpen(true)}
+              className="bg-destructive text-destructive-foreground rounded-full p-1.5 shadow-md" title="Remover">
+              <Trash2 className="w-3 h-3" />
+            </button>
+          </div>
         </div>
       </div>
       <Input
@@ -154,17 +177,42 @@ const PhotoCard: React.FC<{
         placeholder={`Legenda da foto ${index + 1}...`}
         className="text-xs h-8"
       />
-      <div className="space-y-1">
-        <Label className="text-[10px] text-muted-foreground">Largura: {widthPercent}%</Label>
+      <div className="flex flex-wrap gap-1">
+        {SIZE_PRESETS.map(p => (
+          <Button key={p.id} type="button" size="sm" variant={meta?.size === p.id ? 'default' : 'outline'}
+            className="h-6 px-2 text-[10px]" onClick={() => handlePreset(p)}>
+            {p.label}
+          </Button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <Label className="text-[10px] text-muted-foreground shrink-0">Largura</Label>
         <Slider
           value={[widthPercent]}
-          onValueChange={([v]) => updatePhotoSize(metaKey, index, 'medium', v)}
-          min={20}
+          onValueChange={([v]) => updatePhotoSize(metaKey, index, meta?.size || 'medium', v)}
+          min={10}
           max={100}
           step={5}
-          className="h-4"
+          className="h-4 flex-1"
         />
+        <Input type="number" min={10} max={100} value={widthPercent}
+          onChange={e => handleNumericWidth(e.target.value)}
+          className="h-7 w-16 text-xs" />
+        <span className="text-[10px] text-muted-foreground">%</span>
       </div>
+      {updatePhotoAlignment && (
+        <div className="flex items-center gap-1">
+          <Label className="text-[10px] text-muted-foreground shrink-0 mr-1">Alinhar</Label>
+          {(['left','center','right'] as const).map(a => (
+            <Button key={a} type="button" size="sm"
+              variant={alignment === a ? 'default' : 'outline'}
+              className="h-6 px-2 text-[10px] capitalize"
+              onClick={() => updatePhotoAlignment(metaKey, index, a)}>
+              {a === 'left' ? 'Esquerda' : a === 'right' ? 'Direita' : 'Centro'}
+            </Button>
+          ))}
+        </div>
+      )}
       <ImageEditorDialog
         open={editOpen}
         onOpenChange={setEditOpen}
@@ -172,6 +220,18 @@ const PhotoCard: React.FC<{
         projectId={projectId}
         onSave={onReplace}
       />
+      {confirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80" onClick={() => setConfirmOpen(false)}>
+          <div className="bg-card border rounded-lg p-4 max-w-sm shadow-xl" onClick={e => e.stopPropagation()}>
+            <p className="text-sm font-medium mb-3">Remover esta foto do relatório?</p>
+            <p className="text-xs text-muted-foreground mb-4">A foto não será excluída do Diário de Bordo.</p>
+            <div className="flex gap-2 justify-end">
+              <Button size="sm" variant="outline" onClick={() => setConfirmOpen(false)}>Cancelar</Button>
+              <Button size="sm" variant="destructive" onClick={() => { setConfirmOpen(false); onRemove(); }}>Remover</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -223,7 +283,7 @@ export const ReportEditSection: React.FC<Props> = (props) => {
   );
 };
 
-const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, reorderSectionPhotos, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts, sectionPhotoGroups, setSectionPhotoGroups, activities, insertDiaryPhotos }) => {
+const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, photoMetadata, updatePhotoCaption, updatePhotoSize, updatePhotoAlignment, replacePhotoUrl, projectId, handleSectionPhotoUpload, removeSectionPhoto, reorderSectionPhotos, handleSectionDocUpload, removeSectionDoc, pageLayouts, setPageLayouts, sectionPhotoGroups, setSectionPhotoGroups, activities, insertDiaryPhotos, hideActivitiesBySection, toggleSectionActivitiesVisibility }) => {
   const sectionKey = section.type === 'custom' ? section.id : section.key;
   const photos = sectionPhotos[sectionKey] || [];
   const docs = sectionDocs[sectionKey] || [];
@@ -378,6 +438,7 @@ const SectionUploads: React.FC<Props> = ({ section, sectionPhotos, sectionDocs, 
                             projectId={projectId}
                             updatePhotoCaption={updatePhotoCaption}
                             updatePhotoSize={updatePhotoSize}
+                            updatePhotoAlignment={updatePhotoAlignment}
                             onReplace={(newUrl) => replacePhotoUrl(sectionKey, pIdx, newUrl, null)}
                             onRemove={() => removeSectionPhoto(sectionKey, pIdx)}
                           />
@@ -654,9 +715,9 @@ const SummarySection: React.FC<ExtProps> = ({ summary, setSummary, activities, p
 const GoalsSection: React.FC<ExtProps> = ({
   goals, goalNarratives, setGoalNarratives, goalPhotos, projectName, projectObject, projectId,
   handleGoalPhotoUpload, removeGoalPhoto, reorderGoalPhotos, getActivitiesByGoal, formatActivityDate,
-  photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
+  photoMetadata, updatePhotoCaption, updatePhotoSize, updatePhotoAlignment, replacePhotoUrl,
   activitiesExpanded, activities,
-  activityOverrides, onEditActivity,
+  activityOverrides, onEditActivity, hideActivitiesBySection, toggleSectionActivitiesVisibility,
 }) => {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -694,6 +755,21 @@ const GoalsSection: React.FC<ExtProps> = ({
             </div>
           </div>
           <p className="text-sm text-muted-foreground mb-3">Público-alvo: {goal.targetAudience}</p>
+          {toggleSectionActivitiesVisibility && (
+            <div className="mb-3 flex items-center gap-2 text-xs">
+              <span className="text-muted-foreground">Bloco de atividades (datas · local · participantes):</span>
+              <Button type="button" size="sm" variant={hideActivitiesBySection?.[goal.id] ? 'outline' : 'default'}
+                className="h-6 px-2 text-[10px]"
+                onClick={() => toggleSectionActivitiesVisibility(goal.id, false)}>
+                Exibir atividades
+              </Button>
+              <Button type="button" size="sm" variant={hideActivitiesBySection?.[goal.id] ? 'default' : 'outline'}
+                className="h-6 px-2 text-[10px]"
+                onClick={() => toggleSectionActivitiesVisibility(goal.id, true)}>
+                Ocultar atividades
+              </Button>
+            </div>
+          )}
           {goalActs.length === 0 ? (
             <div className="mb-4 p-3 border border-dashed rounded text-sm text-muted-foreground bg-background">
               Nenhum registro do Diário de Bordo vinculado a esta meta. Use o botão <strong>Vincular registros</strong> acima para associar atividades existentes.
@@ -736,6 +812,7 @@ const GoalsSection: React.FC<ExtProps> = ({
                         projectId={projectId}
                         updatePhotoCaption={updatePhotoCaption}
                         updatePhotoSize={updatePhotoSize}
+                        updatePhotoAlignment={updatePhotoAlignment}
                         onReplace={(newUrl) => replacePhotoUrl(goal.id, pIdx, newUrl, null, goal.id)}
                         onRemove={() => removeGoalPhoto(goal.id, pIdx)}
                       />

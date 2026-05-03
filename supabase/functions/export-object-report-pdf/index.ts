@@ -120,6 +120,7 @@ interface ReportPayload {
   sectionPhotoGroups?: Record<string, PhotoGroup[]>;
   visualConfig?: VisualConfig;
   selectedVideoUrls?: string[];
+  hideActivitiesBySection?: Record<string, boolean>;
 }
 
 const FALLBACK_LINK_LABELS: Record<ReportLinkKey, string> = {
@@ -719,11 +720,12 @@ function buildGoalSections(payload: ReportPayload, renderedPhotoKeys: Set<string
     const displayTitle = formatGoalTitle(idx, goal.title);
 
     const hasNarrative = isNonEmptyString(payload.goalNarratives[goal.id]);
+    const hideActs = !!payload.hideActivitiesBySection?.[goal.id];
     return `
       <div class="goal-block">
         <h3 class="subsection-title">${escapeHtml(displayTitle)}</h3>
         ${renderRichContent(payload.goalNarratives[goal.id], "[Descreva as realizações da meta]")}
-        ${renderPlainActivityList(goalActivities, { hideDescription: hasNarrative })}
+        ${hideActs ? "" : renderPlainActivityList(goalActivities, { hideDescription: hasNarrative })}
         ${photos.length > 0 ? renderGroupedPhotoBlocks(
           photos,
           metas,

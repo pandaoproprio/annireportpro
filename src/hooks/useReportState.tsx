@@ -47,6 +47,7 @@ export const useReportState = () => {
   const [sectionPhotoGroups, setSectionPhotoGroups] = useState<Record<string, PhotoGroup[]>>({});
   const [selectedVideoUrls, setSelectedVideoUrls] = useState<string[]>([]);
   const [activityOverrides, setActivityOverrides] = useState<Record<string, ActivityOverride>>({});
+  const [hideActivitiesBySection, setHideActivitiesBySection] = useState<Record<string, boolean>>({});
 
   // ── Shared section manager ──
   const sectionManager = useSectionManager({ defaultSections: DEFAULT_SECTIONS, insertBeforeKey: 'expenses' });
@@ -107,6 +108,7 @@ export const useReportState = () => {
       setSectionPhotoGroups((rd as any).sectionPhotoGroups || {});
       setSelectedVideoUrls((rd as any).selectedVideoUrls || []);
       setActivityOverrides((rd as any).activityOverrides || {});
+      setHideActivitiesBySection((rd as any).hideActivitiesBySection || {});
     }
   }, [project]);
 
@@ -146,10 +148,11 @@ export const useReportState = () => {
     sectionPhotoGroups,
     selectedVideoUrls,
     activityOverrides,
+    hideActivitiesBySection,
   }), [objectText, summary, goalNarratives, goalPhotos, otherActionsNarrative, otherActionsPhotos,
     communicationNarrative, communicationPhotos, satisfaction, futureActions, expenses,
     links, linkFileNames, linkDisplayNames, sectionManager.sections, fileUploader.sectionPhotos,
-    fileUploader.sectionDocs, photoMetadata, pageLayouts, sectionPhotoGroups, selectedVideoUrls, activityOverrides]);
+    fileUploader.sectionDocs, photoMetadata, pageLayouts, sectionPhotoGroups, selectedVideoUrls, activityOverrides, hideActivitiesBySection]);
 
   const saveReportData = async (showToast = true) => {
     try {
@@ -206,6 +209,7 @@ export const useReportState = () => {
     if (rd.sectionPhotoGroups) setSectionPhotoGroups(rd.sectionPhotoGroups);
     if (rd.selectedVideoUrls) setSelectedVideoUrls(rd.selectedVideoUrls);
     if (rd.activityOverrides) setActivityOverrides(rd.activityOverrides);
+    if (rd.hideActivitiesBySection) setHideActivitiesBySection(rd.hideActivitiesBySection);
   }, []);
 
   // Auto-save: debounce 3s after any content change
@@ -380,6 +384,19 @@ export const useReportState = () => {
     });
   };
 
+  const updatePhotoAlignment = (key: string, index: number, alignment: 'left' | 'center' | 'right') => {
+    setPhotoMetadata(prev => {
+      const metas = [...(prev[key] || [])];
+      while (metas.length <= index) metas.push({ caption: '', size: 'medium' });
+      metas[index] = { ...metas[index], alignment };
+      return { ...prev, [key]: metas };
+    });
+  };
+
+  const toggleSectionActivitiesVisibility = (key: string, hidden: boolean) => {
+    setHideActivitiesBySection(prev => ({ ...prev, [key]: hidden }));
+  };
+
   const replacePhotoUrl = (key: string, index: number, newUrl: string,
     photosSetter: React.Dispatch<React.SetStateAction<string[]>> | null,
     goalId?: string
@@ -506,7 +523,8 @@ export const useReportState = () => {
     sections: sectionManager.sections,
     sectionPhotos: fileUploader.sectionPhotos,
     sectionDocs: fileUploader.sectionDocs,
-    photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
+    photoMetadata, updatePhotoCaption, updatePhotoSize, updatePhotoAlignment, replacePhotoUrl,
+    hideActivitiesBySection, toggleSectionActivitiesVisibility,
     pageLayouts, setPageLayouts,
     sectionPhotoGroups, setSectionPhotoGroups,
     selectedVideoUrls, setSelectedVideoUrls,
