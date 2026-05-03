@@ -46,6 +46,7 @@ export const useReportState = () => {
   const [pageLayouts, setPageLayouts] = useState<Record<string, PageLayout>>({});
   const [sectionPhotoGroups, setSectionPhotoGroups] = useState<Record<string, PhotoGroup[]>>({});
   const [selectedVideoUrls, setSelectedVideoUrls] = useState<string[]>([]);
+  const [activityOverrides, setActivityOverrides] = useState<Record<string, ActivityOverride>>({});
 
   // ── Shared section manager ──
   const sectionManager = useSectionManager({ defaultSections: DEFAULT_SECTIONS, insertBeforeKey: 'expenses' });
