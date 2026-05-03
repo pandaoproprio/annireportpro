@@ -205,6 +205,7 @@ export const useReportState = () => {
     if (rd.pageLayouts) setPageLayouts(rd.pageLayouts);
     if (rd.sectionPhotoGroups) setSectionPhotoGroups(rd.sectionPhotoGroups);
     if (rd.selectedVideoUrls) setSelectedVideoUrls(rd.selectedVideoUrls);
+    if (rd.activityOverrides) setActivityOverrides(rd.activityOverrides);
   }, []);
 
   // Auto-save: debounce 3s after any content change
