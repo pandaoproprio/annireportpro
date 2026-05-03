@@ -463,6 +463,37 @@ export const useReportState = () => {
     }
   };
 
+  // Activity overrides (per-report layer; does NOT alter the Diário)
+  const upsertActivityOverride = (activityId: string, patch: Partial<ActivityOverride>) => {
+    setActivityOverrides(prev => ({ ...prev, [activityId]: { ...(prev[activityId] || {}), ...patch } }));
+  };
+  const restoreActivityOverride = (activityId: string) => {
+    setActivityOverrides(prev => {
+      const next = { ...prev };
+      delete next[activityId];
+      return next;
+    });
+  };
+  const setActivityHidden = (activityId: string, hidden: boolean) => {
+    upsertActivityOverride(activityId, { hidden });
+  };
+
+  const uploadActivityOverridePhoto = async (activityId: string, rawFile: File): Promise<string | null> => {
+    try {
+      const file = await compressImage(rawFile, { maxWidth: 1920, maxHeight: 1920, quality: 0.8 });
+      const photoId = crypto.randomUUID();
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const filePath = `reports/${project?.id}/activity-overrides/${activityId}/${photoId}.${fileExt}`;
+      const { error } = await supabase.storage.from('team-report-photos').upload(filePath, file, { cacheControl: '3600', upsert: false, contentType: file.type });
+      if (error) { toast.error(`Erro ao enviar foto: ${rawFile.name}`); return null; }
+      const { data: urlData } = supabase.storage.from('team-report-photos').getPublicUrl(filePath);
+      return urlData.publicUrl;
+    } catch {
+      toast.error(`Erro ao processar foto: ${rawFile.name}`);
+      return null;
+    }
+  };
+
   return {
     project, activities,
     mode, setMode, isExporting, setIsExporting, exportType, setExportType,
