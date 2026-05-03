@@ -213,6 +213,7 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
       const activityPhotos = goalActs.flatMap(a => a.photos || []);
       const allGoalPhotos = [...manualPhotos, ...activityPhotos];
       const goalMetas = photoMetadata?.[goal.id] || [];
+      const hasNarrative = !!(goalNarratives[goal.id] && goalNarratives[goal.id].trim());
 
       return (
         <div key={goal.id} className="mb-10">
@@ -224,8 +225,8 @@ const GoalsPreview: React.FC<Props> = ({ section, goals, goalNarratives, goalPho
               {goalActs.map(act => (
                 <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
                   <p><strong>{formatActivityDate(act.date, act.endDate)}</strong>{act.location && ` – ${act.location}`}{act.attendeesCount > 0 && ` – ${act.attendeesCount} participantes`}</p>
-                  <p>{act.description}</p>
-                  {act.results && <p className="text-muted-foreground">Resultados: {act.results}</p>}
+                  {!hasNarrative && <p>{act.description}</p>}
+                  {!hasNarrative && act.results && <p className="text-muted-foreground">Resultados: {act.results}</p>}
                 </div>
               ))}
             </div>
@@ -253,7 +254,7 @@ const OtherPreview: React.FC<Props & { renderPhotos?: () => React.ReactNode }> =
           <div className="mt-4 text-sm">
             {otherActs.map(act => (
               <div key={act.id} className="mb-2 pl-4 border-l-2 border-muted">
-                <p><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
+                <p><strong>{formatActivityDate(act.date)}</strong>{(!otherActionsNarrative || !otherActionsNarrative.trim()) && `: ${act.description}`}</p>
               </div>
             ))}
           </div>
@@ -285,7 +286,7 @@ const CommunicationPreview: React.FC<Props & { renderPhotos?: () => React.ReactN
           <div className="mt-4 text-sm">
             {commActs.map(act => (
               <div key={act.id} className="mb-3">
-                <p><strong>{formatActivityDate(act.date)}</strong>: {act.description}</p>
+                <p><strong>{formatActivityDate(act.date)}</strong>{(!communicationNarrative || !communicationNarrative.trim()) && `: ${act.description}`}</p>
               </div>
             ))}
           </div>
