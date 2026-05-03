@@ -65,6 +65,8 @@ export interface ReportPhotoMeta {
   size: PhotoSize;
   /** Custom width percentage (10-100) for granular control */
   widthPercent?: number;
+  /** Horizontal alignment of the photo within the page */
+  alignment?: 'left' | 'center' | 'right';
 }
 
 export interface ReportData {
