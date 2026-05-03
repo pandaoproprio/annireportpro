@@ -705,6 +705,8 @@ const GoalsSection: React.FC<ExtProps> = ({
               formatActivityDate={formatActivityDate}
               label="atividade(s) do Diário de Bordo vinculadas"
               onInsert={(text) => setGoalNarratives({ ...goalNarratives, [goal.id]: (goalNarratives[goal.id] || '') + '\n' + text })}
+              onEditActivity={onEditActivity}
+              activityOverrides={activityOverrides}
             />
           )}
           <div className="flex items-center justify-between">
