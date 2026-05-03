@@ -48,5 +48,8 @@ export const shouldShowSidebarItem = (
     return context.hasPermission(criticalPermission);
   }
 
-  return true;
+  // Itens sem permission declarada: visíveis apenas para admin/super_admin.
+  // Perfis restritos (oficineiro/voluntario/usuario sem liberação) só veem
+  // o que tem permission explícita liberada.
+  return context.isAdmin;
 };
