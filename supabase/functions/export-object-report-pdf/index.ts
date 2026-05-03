@@ -649,14 +649,8 @@ function buildCoverHtml(payload: ReportPayload): string {
     ? `<p class="cover-meta strong">${escapeHtml(orgName)}</p>`
     : "";
 
-  // Cover page footer (institutional) — rendered in the body, not via Puppeteer template
-  const coverFooterHtml = vc.footerInstitutionalEnabled !== false
-    ? `<div class="institutional-footer">
-        <p><strong>${escapeHtml(vc.footerLine1Text || CEAP_FOOTER.line1)}</strong></p>
-        <p>${escapeHtml(vc.footerLine2Text || CEAP_FOOTER.line2)}</p>
-        <p>${escapeHtml(vc.footerLine3Text || CEAP_FOOTER.line3)}</p>
-      </div>`
-    : "";
+  // Cover page footer is now rendered globally via Puppeteer footerTemplate
+  const coverFooterHtml = "";
 
   return `
     <div class="cover">
