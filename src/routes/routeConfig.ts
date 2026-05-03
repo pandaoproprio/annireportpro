@@ -50,7 +50,7 @@ export interface RouteEntry {
  * Adding or removing a route here will NOT affect the Sidebar or Layout.
  */
 export const protectedRoutes: RouteEntry[] = [
-  { path: '/', element: Dashboard },
+  { path: '/', element: Dashboard, permission: 'dashboard' },
   { path: '/activities', element: ActivityManager, permission: 'diary' },
   { path: '/report', element: ReportGenerator, permission: 'report_object' },
   { path: '/team-report', element: TeamReportGenerator, permission: 'report_team' },
