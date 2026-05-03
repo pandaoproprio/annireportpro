@@ -195,6 +195,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => subscription.unsubscribe();
   }, [fetchProfile, trackLogin]);
 
+  // Realtime: refresh permissions when Super Admin grants/revokes access
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`user-perms-${user.id}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_permissions',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        fetchProfile(user.id);
+      })
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_roles',
+        filter: `user_id=eq.${user.id}`,
+      }, () => {
+        fetchProfile(user.id);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, fetchProfile]);
+
   const signUp = async (email: string, password: string, name?: string) => {
     const redirectUrl = `${window.location.origin}/`;
     const { error } = await supabase.auth.signUp({
