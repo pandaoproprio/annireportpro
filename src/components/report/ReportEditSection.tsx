@@ -523,7 +523,9 @@ const ActivitiesPanel: React.FC<{
   formatActivityDate: (d: string, e?: string) => string;
   label: string;
   onInsert?: (text: string) => void;
-}> = ({ activities, expanded, formatActivityDate, label, onInsert }) => {
+  onEditActivity?: (id: string) => void;
+  activityOverrides?: Record<string, { hidden?: boolean }>;
+}> = ({ activities, expanded, formatActivityDate, label, onInsert, onEditActivity, activityOverrides }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
