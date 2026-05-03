@@ -341,6 +341,11 @@ export const ReportGenerator: React.FC = () => {
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
   };
 
+  const activityOverrides = (state as any).activityOverrides as Record<string, import('@/types').ActivityOverride>;
+  const upsertActivityOverride = (state as any).upsertActivityOverride as (id: string, patch: Partial<import('@/types').ActivityOverride>) => void;
+  const restoreActivityOverride = (state as any).restoreActivityOverride as (id: string) => void;
+  const uploadActivityOverridePhoto = (state as any).uploadActivityOverridePhoto as (id: string, file: File) => Promise<string | null>;
+
   const previewSectionProps = {
     objectText, summary, goalNarratives, goalPhotos,
     otherActionsNarrative, otherActionsPhotos, communicationNarrative, communicationPhotos,
@@ -353,6 +358,9 @@ export const ReportGenerator: React.FC = () => {
     organizationEmail: project.organizationEmail,
     organizationPhone: project.organizationPhone,
     getActivitiesByGoal, getCommunicationActivities, getOtherActivities, formatActivityDate,
+    rawActivities: activities,
+    activityOverrides,
+    onEditActivity: (id: string) => setEditingActivityId(id),
   };
 
   return (
