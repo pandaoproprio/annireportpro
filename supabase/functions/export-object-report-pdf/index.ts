@@ -95,6 +95,7 @@ interface VisualConfig {
   footerLine1Text?: string;
   footerLine2Text?: string;
   footerLine3Text?: string;
+  pageMarginPreset?: "abnt" | "custom";
 }
 
 interface ReportPayload {
@@ -648,14 +649,8 @@ function buildCoverHtml(payload: ReportPayload): string {
     ? `<p class="cover-meta strong">${escapeHtml(orgName)}</p>`
     : "";
 
-  // Cover page footer (institutional) — rendered in the body, not via Puppeteer template
-  const coverFooterHtml = vc.footerInstitutionalEnabled !== false
-    ? `<div class="institutional-footer">
-        <p><strong>${escapeHtml(vc.footerLine1Text || CEAP_FOOTER.line1)}</strong></p>
-        <p>${escapeHtml(vc.footerLine2Text || CEAP_FOOTER.line2)}</p>
-        <p>${escapeHtml(vc.footerLine3Text || CEAP_FOOTER.line3)}</p>
-      </div>`
-    : "";
+  // Cover page footer is now rendered globally via Puppeteer footerTemplate
+  const coverFooterHtml = "";
 
   return `
     <div class="cover">
@@ -1254,9 +1249,6 @@ function buildHtml(payload: ReportPayload): string {
         <thead>
           <tr><td class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</td></tr>
         </thead>
-        <tfoot>
-          <tr><td class="pdf-footer-cell">${buildFooterHtml(payload.visualConfig)}</td></tr>
-        </tfoot>
         <tbody>
           <tr><td>
             ${buildTocHtml(payload.sections)}
@@ -1379,21 +1371,32 @@ Deno.serve(async (req) => {
               fn: "() => window.__imagesReady === true",
               timeout: 12000,
             },
-            options: {
-              format: "A4",
-              printBackground: true,
-              timeout: 50000,
-              preferCSSPageSize: false,
-              displayHeaderFooter: true,
-              margin: {
-                top: "30mm",
-                bottom: "25mm",
-                left: "30mm",
-                right: "20mm",
-              },
-              headerTemplate: '<span></span>',
-              footerTemplate: '<div style="width:100%;text-align:right;padding-right:20mm;font-size:10pt;font-family:serif;"><span class="pageNumber"></span></div>',
-            },
+            options: (() => {
+              const preset = payload.visualConfig?.pageMarginPreset === "custom" ? "custom" : "abnt";
+              const margins = preset === "custom"
+                ? { top: "15mm", bottom: "20mm", left: "15mm", right: "15mm" }
+                : { top: "30mm", bottom: "28mm", left: "30mm", right: "20mm" };
+              const vc = payload.visualConfig || {};
+              const footerEnabled = vc.footerInstitutionalEnabled !== false;
+              const escFt = (s: string) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
+              const l1 = escFt(vc.footerLine1Text || CEAP_FOOTER.line1);
+              const l2 = escFt(vc.footerLine2Text || CEAP_FOOTER.line2);
+              const l3 = escFt(vc.footerLine3Text || CEAP_FOOTER.line3);
+              const instBlock = footerEnabled
+                ? `<div style="text-align:center;font-family:'Times New Roman',serif;color:#4b5563;line-height:1.25;"><div style="font-weight:bold;font-size:8.5pt;">${l1}</div><div style="font-size:7.5pt;">${l2}</div><div style="font-size:7.5pt;">${l3}</div></div>`
+                : "";
+              const footerTpl = `<div style="width:100%;font-size:8pt;padding:0 15mm;-webkit-print-color-adjust:exact;">${instBlock}<div style="text-align:right;font-size:10pt;font-family:'Times New Roman',serif;margin-top:1mm;"><span class="pageNumber"></span></div></div>`;
+              return {
+                format: "A4",
+                printBackground: true,
+                timeout: 50000,
+                preferCSSPageSize: false,
+                displayHeaderFooter: true,
+                margin: margins,
+                headerTemplate: '<span></span>',
+                footerTemplate: footerTpl,
+              };
+            })(),
           }),
         },
       );

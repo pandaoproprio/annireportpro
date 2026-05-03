@@ -69,6 +69,32 @@ export const ReportVisualConfigEditor = React.forwardRef<HTMLDivElement, Props>(
   showCoverConfig = false,
 }, ref) => (
   <div ref={ref} className="space-y-4">
+    {/* Page margins preset */}
+    <Card className="border-l-4 border-l-primary">
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 mb-3 border-b pb-2">
+          <FileText className="w-5 h-5 text-primary" />
+          <h3 className="text-lg font-semibold">Margens da Página</h3>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm">Formatação</Label>
+          <Select
+            value={config.pageMarginPreset || 'abnt'}
+            onValueChange={v => updateConfig({ pageMarginPreset: v as 'abnt' | 'custom' })}
+          >
+            <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="abnt">ABNT (3cm sup/esq · 2cm inf/dir)</SelectItem>
+              <SelectItem value="custom">Personalizado (1,5cm em todas as bordas)</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">
+            A escolha é salva por relatório e aplicada na próxima geração de PDF.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+
     {/* Cover Page (optional) */}
     {showCoverConfig && (
       <Card className="border-l-4 border-l-accent">

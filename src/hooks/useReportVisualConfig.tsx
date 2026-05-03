@@ -71,6 +71,8 @@ export interface ReportVisualConfig {
   footerLine3FontSize: number; // pt (default 7)
   footerLineSpacing: number; // mm between lines (default 3)
   footerTopSpacing: number; // mm above footer (default 4)
+  // Page margins preset
+  pageMarginPreset: 'abnt' | 'custom'; // default 'abnt'
 }
 
 const DEFAULT_CONFIG: ReportVisualConfig = {
@@ -126,6 +128,7 @@ const DEFAULT_CONFIG: ReportVisualConfig = {
   footerLine3FontSize: 7,
   footerLineSpacing: 3,
   footerTopSpacing: 4,
+  pageMarginPreset: 'abnt',
 };
 
 const LEGACY_LOGO_WIDTH_MM = 12;
