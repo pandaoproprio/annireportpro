@@ -351,6 +351,23 @@ export const useActivities = (projectId: string | null) => {
     onSettled: () => invalidate(),
   });
 
+  const linkActivitiesToGoalMutation = useMutation({
+    mutationFn: async ({ goalId, activityIds }: { goalId: string | null; activityIds: string[] }) => {
+      if (!user) throw new Error('Not authenticated');
+      if (activityIds.length === 0) return;
+      let query = supabase
+        .from('activities')
+        .update({ goal_id: goalId })
+        .in('id', activityIds);
+      if (!isAdmin) query = query.eq('user_id', user.id);
+      const { error } = await query;
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidate();
+    },
+  });
+
   const pagination = { page, pageSize, total };
 
   const goToPage = (p: number) => setPage(p);
