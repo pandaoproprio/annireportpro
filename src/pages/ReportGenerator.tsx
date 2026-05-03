@@ -334,6 +334,8 @@ export const ReportGenerator: React.FC = () => {
     expenses, links, setLinks, linkFileNames, setLinkFileNames, linkDisplayNames, setLinkDisplayNames,
     sectionPhotos, sectionDocs,
     photoMetadata, updatePhotoCaption, updatePhotoSize, replacePhotoUrl,
+    updatePhotoAlignment: (state as any).updatePhotoAlignment,
+    hideActivitiesBySection, toggleSectionActivitiesVisibility,
     pageLayouts, setPageLayouts,
     sectionPhotoGroups, setSectionPhotoGroups,
     selectedVideoUrls: state.selectedVideoUrls, setSelectedVideoUrls: state.setSelectedVideoUrls,
