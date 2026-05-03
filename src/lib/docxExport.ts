@@ -616,7 +616,7 @@ export const exportToDocx = async (data: ExportData) => {
 
           docSections.push(
             new Paragraph({
-              text: goal.title,
+              text: formatGoalTitle(idx, goal.title),
               heading: HeadingLevel.HEADING_3,
               spacing: { before: 300, after: 200 },
             })
