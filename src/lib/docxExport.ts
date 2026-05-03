@@ -21,6 +21,7 @@ import {
 import { saveAs } from 'file-saver';
 import { Project, Activity, ActivityType, ExpenseItem, ReportSection, PhotoGroup, ReportPhotoMeta } from '@/types';
 import { ReportVisualConfig } from '@/hooks/useReportVisualConfig';
+import { formatGoalTitle } from '@/lib/goalTitle';
 
 interface ExportData {
   project: Project;
