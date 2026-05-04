@@ -1444,7 +1444,7 @@ Deno.serve(async (req) => {
               const instBlock = footerEnabled
                 ? `<div style="text-align:${footerAlign};font-family:'Times New Roman',serif;color:#4b5563;line-height:1.25;"><div style="font-weight:bold;font-size:8.5pt;">${l1}</div><div style="font-size:7.5pt;">${l2}</div><div style="font-size:7.5pt;">${l3}</div></div>`
                 : "";
-              const footerTpl = `<div style="width:100%;font-size:8pt;padding:0 15mm;-webkit-print-color-adjust:exact;">${instBlock}<div style="text-align:right;font-size:10pt;font-family:'Times New Roman',serif;margin-top:1mm;"><span class="pageNumber"></span></div></div>`;
+              const footerTpl = `<div style="width:100%;font-size:8pt;padding:0 15mm;-webkit-print-color-adjust:exact;border-top:0.25pt solid rgba(0,0,0,0.12);padding-top:4mm;">${instBlock}<div style="text-align:right;font-size:10pt;font-family:'Times New Roman',serif;margin-top:1mm;"><span class="pageNumber"></span></div></div>`;
               return {
                 format: "A4",
                 printBackground: true,
