@@ -97,6 +97,7 @@ interface VisualConfig {
   footerLine3Text?: string;
   pageMarginPreset?: "abnt" | "custom";
   headerBannerHeightMm?: number;
+  footerAlignment?: "left" | "center" | "right";
 }
 
 interface ReportPayload {
@@ -636,7 +637,7 @@ function renderHeaderSlot(config: VisualConfig = {}): string {
 function buildFooterHtml(config: VisualConfig = {}): string {
   if (config.footerInstitutionalEnabled === false) return "";
   return `
-    <div style="font-family:'Times New Roman',serif;color:#4b5563;font-size:8.5pt;line-height:1.25;text-align:center;">
+    <div style="font-family:'Times New Roman',serif;color:#4b5563;font-size:8.5pt;line-height:1.25;text-align:${config.footerAlignment || 'center'};">
       <div style="font-weight:bold;">${escapeHtml(config.footerLine1Text || CEAP_FOOTER.line1)}</div>
       <div>${escapeHtml(config.footerLine2Text || CEAP_FOOTER.line2)}</div>
       <div>${escapeHtml(config.footerLine3Text || CEAP_FOOTER.line3)}</div>
@@ -1435,12 +1436,13 @@ Deno.serve(async (req) => {
                 : { top: "15mm", bottom: "22mm", left: "30mm", right: "20mm" };
               const vc = payload.visualConfig || {};
               const footerEnabled = vc.footerInstitutionalEnabled !== false;
+              const footerAlign = vc.footerAlignment === 'left' || vc.footerAlignment === 'right' ? vc.footerAlignment : 'center';
               const escFt = (s: string) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
               const l1 = escFt(vc.footerLine1Text || CEAP_FOOTER.line1);
               const l2 = escFt(vc.footerLine2Text || CEAP_FOOTER.line2);
               const l3 = escFt(vc.footerLine3Text || CEAP_FOOTER.line3);
               const instBlock = footerEnabled
-                ? `<div style="text-align:center;font-family:'Times New Roman',serif;color:#4b5563;line-height:1.25;"><div style="font-weight:bold;font-size:8.5pt;">${l1}</div><div style="font-size:7.5pt;">${l2}</div><div style="font-size:7.5pt;">${l3}</div></div>`
+                ? `<div style="text-align:${footerAlign};font-family:'Times New Roman',serif;color:#4b5563;line-height:1.25;"><div style="font-weight:bold;font-size:8.5pt;">${l1}</div><div style="font-size:7.5pt;">${l2}</div><div style="font-size:7.5pt;">${l3}</div></div>`
                 : "";
               const footerTpl = `<div style="width:100%;font-size:8pt;padding:0 15mm;-webkit-print-color-adjust:exact;">${instBlock}<div style="text-align:right;font-size:10pt;font-family:'Times New Roman',serif;margin-top:1mm;"><span class="pageNumber"></span></div></div>`;
               return {
