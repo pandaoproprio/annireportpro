@@ -631,6 +631,7 @@ function resolveHeaderHeightMm(config: VisualConfig = {}): number {
 function renderHeaderSlot(config: VisualConfig = {}): string {
   const h = resolveHeaderHeightMm(config);
   return `<div class="report-header-slot" style="height:${h}mm;border-bottom:0.5pt solid #CCCCCC;padding-bottom:2mm;margin-bottom:10mm;display:flex;align-items:center;">${buildHeaderHtml(config)}</div>`;
+}
 
 function buildFooterHtml(config: VisualConfig = {}): string {
   if (config.footerInstitutionalEnabled === false) return "";
