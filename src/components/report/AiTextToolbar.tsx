@@ -77,11 +77,12 @@ export const AiTextToolbar: React.FC<AiTextToolbarProps> = ({
   };
 
   const handleAiAction = async (mode: AiMode) => {
+    const hasDescriptionCtx = !!(descriptionContext && descriptionContext.trim().length >= 10);
     if (mode !== 'generate' && (!text || text.trim().length < 10)) {
       toast.warning('Digite ao menos 10 caracteres para usar esta função.');
       return;
     }
-    if (mode === 'generate' && (!activities || activities.length === 0) && !text) {
+    if (mode === 'generate' && (!activities || activities.length === 0) && !text && !hasDescriptionCtx) {
       toast.warning('Nenhuma atividade ou texto disponível para gerar narrativa.');
       return;
     }
@@ -106,6 +107,7 @@ export const AiTextToolbar: React.FC<AiTextToolbarProps> = ({
         body.projectObject = projectObject;
         body.goalTitle = goalTitle;
         body.goalAudience = goalAudience;
+        if (descriptionContext) body.descriptionContext = descriptionContext;
         if (text) body.text = text;
       } else {
         body.text = text;
