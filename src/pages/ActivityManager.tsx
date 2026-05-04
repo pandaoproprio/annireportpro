@@ -210,6 +210,7 @@ export const ActivityManager: React.FC = () => {
   };
 
   const handleEdit = (activity: Activity) => {
+    console.log('[handleEdit] click', { id: activity.id, isAdmin, createdAt: activity.createdAt, linked: activity.isLinkedToReport });
     const editCheck = canEditActivity(activity.createdAt, isAdmin, activity.isLinkedToReport);
     if (!editCheck.allowed) {
       toast.error(editCheck.reason || 'Edição não permitida');
@@ -224,10 +225,17 @@ export const ActivityManager: React.FC = () => {
       }
       return;
     }
-    setNewActivity({ ...activity });
+    // Normaliza horários para o formato esperado pelo input type="time" (HH:MM)
+    const normTime = (t?: string) => (t ? t.substring(0, 5) : '');
+    setNewActivity({
+      ...activity,
+      startTime: normTime(activity.startTime),
+      endTime: normTime(activity.endTime),
+    });
     setEditingId(activity.id);
     setIsFormOpen(true);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
+    toast.info('Editando atividade...');
   };
 
   const handleDelete = async (id: string) => { setDeletingId(id); };
