@@ -285,8 +285,29 @@ export const ReportVisualConfigEditor = React.forwardRef<HTMLDivElement, Props>(
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 bg-muted/30 rounded-lg p-3">
                   <div className="space-y-1">
-                    <Label className="text-xs">Altura do banner ({config.headerBannerHeightMm}mm)</Label>
-                    <Slider value={[config.headerBannerHeightMm]} min={10} max={60} step={1} onValueChange={([v]) => updateConfig({ headerBannerHeightMm: v })} />
+                    <Label className="text-xs">Altura do banner (mm)</Label>
+                    <div className="flex items-center gap-2">
+                      <Slider
+                        value={[Math.max(15, Math.min(80, config.headerBannerHeightMm ?? 25))]}
+                        min={15}
+                        max={80}
+                        step={1}
+                        onValueChange={([v]) => updateConfig({ headerBannerHeightMm: v })}
+                        className="flex-1"
+                      />
+                      <Input
+                        type="number"
+                        min={15}
+                        max={80}
+                        step={1}
+                        value={Math.max(15, Math.min(80, config.headerBannerHeightMm ?? 25))}
+                        onChange={(e) => {
+                          const n = Number(e.target.value);
+                          if (Number.isFinite(n)) updateConfig({ headerBannerHeightMm: Math.max(15, Math.min(80, Math.round(n))) });
+                        }}
+                        className="h-8 w-20 text-xs"
+                      />
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <Label className="text-xs">Ajuste da imagem</Label>
