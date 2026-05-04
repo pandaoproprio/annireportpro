@@ -16,6 +16,8 @@ interface DbActivity {
   goal_id: string | null;
   date: string;
   end_date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   location: string;
   type: DbActivityType;
   description: string;
@@ -57,6 +59,8 @@ const mapDbToActivity = (db: DbActivity & { is_draft?: boolean; photo_captions?:
   goalId: db.goal_id || undefined,
   date: db.date,
   endDate: db.end_date || undefined,
+  startTime: db.start_time || undefined,
+  endTime: db.end_time || undefined,
   location: db.location,
   type: dbTypeToEnum[db.type],
   description: db.description,
@@ -190,6 +194,8 @@ export const useActivities = (projectId: string | null) => {
           _attendance_files: activity.attendanceFiles || [],
           _expense_records: activity.expenseRecords || [],
           _setor_responsavel: activity.setorResponsavel || null,
+          _start_time: activity.startTime || null,
+          _end_time_value: activity.endTime || null,
         });
         if (rpcErr) throw rpcErr;
         const { data: row, error: fetchErr } = await supabase
@@ -206,6 +212,8 @@ export const useActivities = (projectId: string | null) => {
           goal_id: activity.goalId || null,
           date: activity.date,
           end_date: activity.endDate || null,
+          start_time: activity.startTime || null,
+          end_time: activity.endTime || null,
           location: activity.location,
           type: enumToDbType[activity.type],
           description: activity.description,
@@ -267,6 +275,8 @@ export const useActivities = (projectId: string | null) => {
           goal_id: activity.goalId || null,
           date: activity.date,
           end_date: activity.endDate || null,
+          start_time: activity.startTime || null,
+          end_time: activity.endTime || null,
           location: activity.location,
           type: enumToDbType[activity.type],
           description: activity.description,
