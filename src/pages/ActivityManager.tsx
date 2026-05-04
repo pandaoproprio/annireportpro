@@ -418,8 +418,10 @@ export const ActivityManager: React.FC = () => {
           {isFormOpen && (
             <Card ref={formCardRef} className={`border-l-4 animate-slideDown ${editingId ? 'border-l-warning' : 'border-l-primary'}`}>
               <CardContent className="pt-6">
-                <div className="mb-4 flex justify-between items-center">
-                  <h3 className="text-lg font-semibold text-foreground">{editingId ? 'Editar Atividade' : 'Nova Atividade'}</h3>
+                  <div className="mb-4 flex justify-between items-center">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      {editingId ? (newActivity.isDraft ? 'Consolidar Registro' : 'Editar Atividade') : 'Nova Atividade'}
+                    </h3>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -677,7 +679,7 @@ export const ActivityManager: React.FC = () => {
                     <Button type="submit" disabled={isSaving}>
                       {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                       <Save className="w-4 h-4 mr-2" />
-                      {editingId ? 'Salvar Alterações' : 'Registrar Atividade'}
+                      {editingId ? (newActivity.isDraft ? 'Consolidar Registro' : 'Salvar Alterações') : 'Registrar Atividade'}
                     </Button>
                   </div>
                 </form>
