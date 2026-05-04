@@ -491,6 +491,30 @@ Contexto das atividades realizadas:
 ${(activities || []).map((a: any) => `- ${a.date} (${a.type}): ${a.description}${a.challenges ? ` | Desafios: ${a.challenges}` : ""}`).join("\n")}
 
 Escreva 2-3 parágrafos com FOCO em análise preditiva: projeções de continuidade, riscos futuros, necessidades de adaptação, oportunidades de fortalecimento e tendências do território ou da política pública. Conecte ao compromisso institucional do CEAP.`;
+      } else if (sectionType === "results") {
+        userPrompt = `Com base na DESCRIÇÃO da atividade abaixo, gere uma sugestão de "Resultados Obtidos" — efeitos concretos, impactos imediatos no público e entregas alcançadas com a atividade. Não invente números ou pessoas que não estejam implícitos. Seja objetivo, em 1-2 parágrafos curtos, em tom institucional do CEAP.
+
+Projeto: ${projectName || "—"}
+Objeto: ${projectObject || "—"}
+
+DESCRIÇÃO DA ATIVIDADE:
+${descriptionContext || text || "Nenhuma descrição fornecida."}
+
+${text ? `\nTexto atual de Resultados (use como ponto de partida, se útil):\n${text}` : ""}
+
+Retorne APENAS o texto sugerido para o campo "Resultados Obtidos".`;
+      } else if (sectionType === "challenges") {
+        userPrompt = `Com base na DESCRIÇÃO da atividade abaixo, gere uma sugestão de "Desafios e Observações" — dificuldades enfrentadas, limitações de contexto territorial, riscos observados e aprendizados. Não invente fatos não implícitos. Seja honesto e propositivo, em 1-2 parágrafos curtos, em tom institucional do CEAP.
+
+Projeto: ${projectName || "—"}
+Objeto: ${projectObject || "—"}
+
+DESCRIÇÃO DA ATIVIDADE:
+${descriptionContext || text || "Nenhuma descrição fornecida."}
+
+${text ? `\nTexto atual de Desafios (use como ponto de partida, se útil):\n${text}` : ""}
+
+Retorne APENAS o texto sugerido para o campo "Desafios/Observações".`;
       } else if (sectionType === "generic") {
         userPrompt = `Com base no seguinte contexto, gere um texto institucional no padrão narrativo do CEAP, adequado para um relatório de prestação de contas:
 
