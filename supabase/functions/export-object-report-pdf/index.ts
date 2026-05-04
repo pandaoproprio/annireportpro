@@ -631,7 +631,7 @@ function resolveHeaderHeightMm(config: VisualConfig = {}): number {
 
 function renderHeaderSlot(config: VisualConfig = {}): string {
   const h = resolveHeaderHeightMm(config);
-  return `<div class="report-header-slot" style="height:${h}mm;border-bottom:0.5pt solid #CCCCCC;padding-bottom:2mm;margin-bottom:10mm;display:flex;align-items:center;">${buildHeaderHtml(config)}</div>`;
+  return `<div class="report-header-slot" style="height:${h}mm;border-bottom:0.5pt solid #CCCCCC;padding-bottom:1mm;margin-bottom:12mm;display:flex;align-items:flex-start;">${buildHeaderHtml(config)}</div>`;
 }
 
 function buildFooterHtml(config: VisualConfig = {}): string {
@@ -1041,7 +1041,7 @@ function buildHtml(payload: ReportPayload): string {
           flex-direction: column;
           align-items: center;
           text-align: center;
-          padding: 30mm 0 10mm;
+          padding: 6mm 0 10mm;
         }
         .cover-logo { max-width: 70mm; max-height: 50mm; object-fit: contain; display: block; margin: 0 auto 14mm; }
         .cover-eyebrow { margin: 0 0 6mm; font-size: 11pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
