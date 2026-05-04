@@ -1031,21 +1031,16 @@ function buildHtml(payload: ReportPayload): string {
 
         /* ─── COVER ─── */
         .cover {
-          min-height: 260mm;
-          display: flex;
-          flex-direction: column;
           break-after: page;
           page-break-after: always;
         }
         /* .cover-header é renderizado via renderHeaderSlot() inline */
         .cover-body {
-          flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
           text-align: center;
-          padding: 10mm 0;
+          padding: 30mm 0 10mm;
         }
         .cover-logo { max-width: 70mm; max-height: 50mm; object-fit: contain; display: block; margin: 0 auto 14mm; }
         .cover-eyebrow { margin: 0 0 6mm; font-size: 11pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
