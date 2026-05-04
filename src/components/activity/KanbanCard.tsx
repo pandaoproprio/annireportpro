@@ -4,7 +4,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Activity } from '@/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Calendar, Eye, Edit, Trash2, GripVertical, MapPin, Users } from 'lucide-react';
+import { Calendar, Eye, Edit, Trash2, GripVertical, MapPin, Users, Clock } from 'lucide-react';
 import { canEditActivity } from '@/lib/diaryEditRules';
 import { cn } from '@/lib/utils';
 
@@ -71,6 +71,12 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({
               <Calendar className="w-3 h-3" />
               {new Date(activity.date).toLocaleDateString('pt-BR')}
             </span>
+            {(activity.startTime || activity.endTime) && (
+              <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                <Clock className="w-3 h-3" />
+                {activity.startTime || '—'}{activity.endTime ? `-${activity.endTime}` : ''}
+              </span>
+            )}
             {activity.location && (
               <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
                 <MapPin className="w-3 h-3" />

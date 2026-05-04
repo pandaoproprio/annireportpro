@@ -26,6 +26,7 @@ export type Database = {
           deleted_at: string | null
           description: string
           end_date: string | null
+          end_time: string | null
           expense_records: Json
           goal_id: string | null
           id: string
@@ -37,6 +38,7 @@ export type Database = {
           project_role_snapshot: string | null
           results: string
           setor_responsavel: string | null
+          start_time: string | null
           team_involved: string[]
           type: Database["public"]["Enums"]["activity_type"]
           updated_at: string
@@ -53,6 +55,7 @@ export type Database = {
           deleted_at?: string | null
           description: string
           end_date?: string | null
+          end_time?: string | null
           expense_records?: Json
           goal_id?: string | null
           id?: string
@@ -64,6 +67,7 @@ export type Database = {
           project_role_snapshot?: string | null
           results: string
           setor_responsavel?: string | null
+          start_time?: string | null
           team_involved?: string[]
           type: Database["public"]["Enums"]["activity_type"]
           updated_at?: string
@@ -80,6 +84,7 @@ export type Database = {
           deleted_at?: string | null
           description?: string
           end_date?: string | null
+          end_time?: string | null
           expense_records?: Json
           goal_id?: string | null
           id?: string
@@ -91,6 +96,7 @@ export type Database = {
           project_role_snapshot?: string | null
           results?: string
           setor_responsavel?: string | null
+          start_time?: string | null
           team_involved?: string[]
           type?: Database["public"]["Enums"]["activity_type"]
           updated_at?: string
@@ -4780,6 +4786,7 @@ export type Database = {
           _date: string
           _description: string
           _end_date: string
+          _end_time_value?: string
           _expense_records: Json
           _goal_id: string
           _is_draft: boolean
@@ -4789,6 +4796,7 @@ export type Database = {
           _project_id: string
           _results: string
           _setor_responsavel: string
+          _start_time?: string
           _target_user_id: string
           _team_involved: string[]
           _type: Database["public"]["Enums"]["activity_type"]

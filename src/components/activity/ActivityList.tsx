@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   Calendar, MapPin, Users, Edit, Trash2, Eye, 
-  FileEdit, Play, UserCircle, Lock, Shield
+  FileEdit, UserCircle, Lock, Shield, Clock
 } from 'lucide-react';
 import { canEditActivity, isWithinEditWindow } from '@/lib/diaryEditRules';
 
@@ -73,6 +73,12 @@ export const ActivityList: React.FC<ActivityListProps> = ({
                     {new Date(act.date).toLocaleDateString('pt-BR')}
                     {act.endDate && ` - ${new Date(act.endDate).toLocaleDateString('pt-BR')}`}
                   </span>
+                  {(act.startTime || act.endTime) && (
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      {act.startTime || '—'}{act.endTime ? ` - ${act.endTime}` : ''}
+                    </span>
+                  )}
                   {act.location && (
                     <span className="text-sm text-muted-foreground flex items-center gap-1">
                       <MapPin className="w-3 h-3" />

@@ -134,6 +134,8 @@ export interface Activity {
   goalId?: string;
   date: string;
   endDate?: string;
+  startTime?: string;
+  endTime?: string;
   location: string;
   type: ActivityType;
   description: string;
