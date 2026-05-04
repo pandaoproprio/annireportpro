@@ -97,6 +97,7 @@ interface VisualConfig {
   footerLine3Text?: string;
   pageMarginPreset?: "abnt" | "custom";
   headerBannerHeightMm?: number;
+  footerAlignment?: "left" | "center" | "right";
 }
 
 interface ReportPayload {
