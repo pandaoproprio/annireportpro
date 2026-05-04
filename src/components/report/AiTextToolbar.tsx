@@ -27,7 +27,7 @@ interface AiTextToolbarProps {
   /** Callback when AI produces result */
   onResult: (text: string) => void;
   /** For "generate" mode: section type */
-  sectionType?: 'goal' | 'summary' | 'other' | 'communication' | 'generic';
+  sectionType?: 'goal' | 'summary' | 'other' | 'communication' | 'generic' | 'results' | 'challenges';
   /** For "generate" mode: activities data */
   activities?: any[];
   /** For "generate" mode */
@@ -35,6 +35,8 @@ interface AiTextToolbarProps {
   projectObject?: string;
   goalTitle?: string;
   goalAudience?: string;
+  /** Optional context (e.g. activity description) used to derive results/challenges */
+  descriptionContext?: string;
   /** Whether the toolbar is disabled */
   disabled?: boolean;
   /** Hide generate option (e.g. when no activities are available) */
