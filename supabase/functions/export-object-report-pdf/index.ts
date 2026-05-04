@@ -604,22 +604,22 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   const logoUrl = primaryLogoVisible ? optimizeStorageImageUrl(config.logo!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
   const centerUrl = centerLogoVisible ? optimizeStorageImageUrl(config.logoCenter!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
   const secUrl = secondaryLogoVisible ? optimizeStorageImageUrl(config.logoSecondary!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
-  const logoWidth = Math.max(8, Math.min(70, config.logoConfig?.widthMm ?? 30));
-  const centerLogoWidth = Math.max(8, Math.min(70, config.logoCenterConfig?.widthMm ?? 30));
-  const secondaryLogoWidth = Math.max(8, Math.min(70, config.logoSecondaryConfig?.widthMm ?? 30));
+  const logoWidth = Math.max(8, Math.min(90, config.logoConfig?.widthMm ?? 45));
+  const centerLogoWidth = Math.max(8, Math.min(90, config.logoCenterConfig?.widthMm ?? 45));
+  const secondaryLogoWidth = Math.max(8, Math.min(90, config.logoSecondaryConfig?.widthMm ?? 45));
 
   return `
     <div style="width:100%;display:flex;align-items:flex-start;justify-content:space-between;gap:8mm;">
       <div style="flex:1;display:flex;align-items:flex-start;justify-content:flex-start;gap:3mm;min-width:0;">
-        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="width:${logoWidth}mm;max-height:18mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="width:${logoWidth}mm;max-height:28mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
         ${isNonEmptyString(config.headerLeftText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;">${escapeHtml(config.headerLeftText.trim())}</span>` : ""}
       </div>
       <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;min-width:0;">
-        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="width:${centerLogoWidth}mm;max-height:18mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="width:${centerLogoWidth}mm;max-height:28mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
       <div style="flex:1;display:flex;align-items:flex-start;justify-content:flex-end;gap:3mm;min-width:0;">
         ${isNonEmptyString(config.headerRightText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;text-align:right;">${escapeHtml(config.headerRightText.trim())}</span>` : ""}
-        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="width:${secondaryLogoWidth}mm;max-height:18mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="width:${secondaryLogoWidth}mm;max-height:28mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
     </div>
   `;
