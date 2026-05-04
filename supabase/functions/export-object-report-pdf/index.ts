@@ -621,6 +621,18 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   `;
 }
 
+function resolveHeaderHeightMm(config: VisualConfig = {}): number {
+  const raw = typeof config.headerBannerHeightMm === "number" && Number.isFinite(config.headerBannerHeightMm)
+    ? config.headerBannerHeightMm
+    : 25;
+  return Math.max(15, Math.min(80, raw));
+}
+
+function renderHeaderSlot(config: VisualConfig = {}): string {
+  const h = resolveHeaderHeightMm(config);
+  return `<div class="report-header-slot" style="height:${h}mm;border-bottom:0.5pt solid #CCCCCC;padding-bottom:2mm;margin-bottom:10mm;display:flex;align-items:center;">${buildHeaderHtml(config)}</div>`;
+}
+
 function buildFooterHtml(config: VisualConfig = {}): string {
   if (config.footerInstitutionalEnabled === false) return "";
   return `
@@ -662,7 +674,7 @@ function buildCoverHtml(payload: ReportPayload): string {
 
   return `
     <div class="cover">
-      <div class="cover-header">${buildHeaderHtml(vc)}</div>
+      ${renderHeaderSlot(vc)}
       <div class="cover-body">
         ${logoHtml}
         <p class="cover-eyebrow">RELATÓRIO INSTITUCIONAL</p>
@@ -953,7 +965,7 @@ function buildHtml(payload: ReportPayload): string {
         .pdf-layout thead { display: table-header-group; }
         .pdf-layout tfoot { display: table-footer-group; }
         .pdf-layout td { padding: 0; border: none; vertical-align: top; }
-        .pdf-header-cell { padding-bottom: 12mm; border-bottom: none; }
+        .pdf-header-cell { padding: 0; border-bottom: none; }
         .pdf-footer-cell { padding-top: 2mm; border-top: 1px solid #9ca3af; }
         html, body {
           margin: 0; padding: 0;
@@ -1025,12 +1037,7 @@ function buildHtml(payload: ReportPayload): string {
           break-after: page;
           page-break-after: always;
         }
-        .cover-header {
-          border-bottom: 0.5pt solid #000000;
-          padding-bottom: 4mm;
-          display: flex;
-          align-items: center;
-        }
+        /* .cover-header é renderizado via renderHeaderSlot() inline */
         .cover-body {
           flex: 1;
           display: flex;
@@ -1302,7 +1309,7 @@ function buildHtml(payload: ReportPayload): string {
       ${buildCoverHtml(payload)}
       <table class="pdf-layout">
         <thead>
-          <tr><td class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</td></tr>
+          <tr><td class="pdf-header-cell">${renderHeaderSlot(payload.visualConfig)}</td></tr>
         </thead>
         <tbody>
           <tr><td>
@@ -1428,9 +1435,12 @@ Deno.serve(async (req) => {
             },
             options: (() => {
               const preset = payload.visualConfig?.pageMarginPreset === "custom" ? "custom" : "abnt";
+              const headerH = resolveHeaderHeightMm(payload.visualConfig);
+              // Top margin = altura do header + linha + 10mm de respiro
+              const topMm = headerH + 14;
               const margins = preset === "custom"
-                ? { top: "12mm", bottom: "20mm", left: "15mm", right: "15mm" }
-                : { top: "15mm", bottom: "22mm", left: "30mm", right: "20mm" };
+                ? { top: `${topMm}mm`, bottom: "20mm", left: "15mm", right: "15mm" }
+                : { top: `${topMm}mm`, bottom: "22mm", left: "30mm", right: "20mm" };
               const vc = payload.visualConfig || {};
               const footerEnabled = vc.footerInstitutionalEnabled !== false;
               const escFt = (s: string) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
