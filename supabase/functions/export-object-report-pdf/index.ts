@@ -1435,12 +1435,9 @@ Deno.serve(async (req) => {
             },
             options: (() => {
               const preset = payload.visualConfig?.pageMarginPreset === "custom" ? "custom" : "abnt";
-              const headerH = resolveHeaderHeightMm(payload.visualConfig);
-              // Top margin = altura do header + linha + 10mm de respiro
-              const topMm = headerH + 14;
               const margins = preset === "custom"
-                ? { top: `${topMm}mm`, bottom: "20mm", left: "15mm", right: "15mm" }
-                : { top: `${topMm}mm`, bottom: "22mm", left: "30mm", right: "20mm" };
+                ? { top: "12mm", bottom: "20mm", left: "15mm", right: "15mm" }
+                : { top: "15mm", bottom: "22mm", left: "30mm", right: "20mm" };
               const vc = payload.visualConfig || {};
               const footerEnabled = vc.footerInstitutionalEnabled !== false;
               const escFt = (s: string) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
