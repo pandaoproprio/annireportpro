@@ -1023,8 +1023,8 @@ function buildHtml(payload: ReportPayload): string {
           break-after: page;
           page-break-after: always;
         }
-        .cover-inner { width: 100%; max-width: 150mm; margin: auto auto 0; text-align: center; padding-top: 30mm; }
-        .cover-logo { max-width: 64mm; max-height: 40mm; object-fit: contain; display: block; margin: 0 auto 16mm; }
+        .cover-inner { width: 100%; max-width: 150mm; margin: auto auto 0; text-align: center; padding-top: 12mm; }
+        .cover-logo { max-width: 56mm; max-height: 28mm; object-fit: contain; display: block; margin: 0 auto 10mm; }
         .cover-eyebrow { margin: 0 0 8mm; font-size: 12pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
         .cover-title { margin: 0 0 8mm; font-size: 24pt; line-height: 1.2; text-transform: uppercase; overflow-wrap: anywhere; word-break: break-word; }
         .cover-subtitle, .cover-meta, .cover-project-name { margin: 0 0 6mm; word-break: break-word; }
