@@ -589,8 +589,8 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   if (showBanner) {
     const bannerUrl = optimizeStorageImageUrl(config.headerBannerUrl!.trim(), IMAGE_PRESETS.banner.width, IMAGE_PRESETS.banner.quality);
     return `
-      <div style="width:100%;height:18mm;display:flex;align-items:center;justify-content:center;">
-        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" style="width:100%;height:100%;display:block;object-fit:${bannerFit};" />
+      <div style="width:100%;height:14mm;display:flex;align-items:center;justify-content:center;">
+        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" style="max-width:100%;max-height:14mm;display:block;object-fit:${bannerFit};" />
       </div>
     `;
   }
@@ -600,17 +600,17 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   const secUrl = secondaryLogoVisible ? optimizeStorageImageUrl(config.logoSecondary!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
 
   return `
-    <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:12mm;">
-      <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;gap:4mm;min-width:0;">
-        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="max-height:12mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+    <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8mm;">
+      <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;gap:3mm;min-width:0;">
+        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="max-height:10mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
         ${isNonEmptyString(config.headerLeftText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;">${escapeHtml(config.headerLeftText.trim())}</span>` : ""}
       </div>
       <div style="flex:1;display:flex;align-items:center;justify-content:center;min-width:0;">
-        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="max-height:12mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="max-height:10mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
-      <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:4mm;min-width:0;">
+      <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:3mm;min-width:0;">
         ${isNonEmptyString(config.headerRightText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;text-align:right;">${escapeHtml(config.headerRightText.trim())}</span>` : ""}
-        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="max-height:12mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="max-height:10mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
     </div>
   `;
@@ -1023,8 +1023,8 @@ function buildHtml(payload: ReportPayload): string {
           break-after: page;
           page-break-after: always;
         }
-        .cover-inner { width: 100%; max-width: 150mm; margin: auto auto 0; text-align: center; padding-top: 30mm; }
-        .cover-logo { max-width: 64mm; max-height: 40mm; object-fit: contain; display: block; margin: 0 auto 16mm; }
+        .cover-inner { width: 100%; max-width: 150mm; margin: auto auto 0; text-align: center; padding-top: 12mm; }
+        .cover-logo { max-width: 56mm; max-height: 28mm; object-fit: contain; display: block; margin: 0 auto 10mm; }
         .cover-eyebrow { margin: 0 0 8mm; font-size: 12pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
         .cover-title { margin: 0 0 8mm; font-size: 24pt; line-height: 1.2; text-transform: uppercase; overflow-wrap: anywhere; word-break: break-word; }
         .cover-subtitle, .cover-meta, .cover-project-name { margin: 0 0 6mm; word-break: break-word; }
@@ -1407,8 +1407,8 @@ Deno.serve(async (req) => {
             options: (() => {
               const preset = payload.visualConfig?.pageMarginPreset === "custom" ? "custom" : "abnt";
               const margins = preset === "custom"
-                ? { top: "15mm", bottom: "20mm", left: "15mm", right: "15mm" }
-                : { top: "30mm", bottom: "28mm", left: "30mm", right: "20mm" };
+                ? { top: "12mm", bottom: "20mm", left: "15mm", right: "15mm" }
+                : { top: "18mm", bottom: "22mm", left: "30mm", right: "20mm" };
               const vc = payload.visualConfig || {};
               const footerEnabled = vc.footerInstitutionalEnabled !== false;
               const escFt = (s: string) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
