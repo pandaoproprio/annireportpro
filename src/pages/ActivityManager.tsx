@@ -465,6 +465,14 @@ export const ActivityManager: React.FC = () => {
                       <Input type="date" min={newActivity.date} value={newActivity.endDate || ''} onChange={e => setNewActivity({...newActivity, endDate: e.target.value})} />
                     </div>
                     <div className="space-y-2">
+                      <Label>Hora Início (Opcional)</Label>
+                      <Input type="time" value={newActivity.startTime || ''} onChange={e => setNewActivity({...newActivity, startTime: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Hora Término (Opcional)</Label>
+                      <Input type="time" value={newActivity.endTime || ''} onChange={e => setNewActivity({...newActivity, endTime: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Label>Tipo de Atividade</Label>
                         <Button type="button" variant="ghost" size="sm" onClick={classifyActivity} disabled={isClassifying || !newActivity.description?.trim()} className="text-xs gap-1 h-7 text-primary hover:text-primary" title="Classificar automaticamente com IA">
