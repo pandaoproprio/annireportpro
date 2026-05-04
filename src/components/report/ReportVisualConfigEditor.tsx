@@ -55,7 +55,7 @@ const LogoSlot: React.FC<{
         <Label className="text-[10px]">Largura (mm): {logoConfig.widthMm}</Label>
         <Slider
           value={[logoConfig.widthMm]}
-          min={5} max={60} step={1}
+          min={5} max={90} step={1}
           onValueChange={([v]) => onConfigChange({ widthMm: v })}
         />
       </div>
