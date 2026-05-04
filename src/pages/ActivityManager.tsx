@@ -518,7 +518,7 @@ export const ActivityManager: React.FC = () => {
                         <Label>Desafios/Observações</Label>
                         <div className="flex items-center gap-1">
                           <SpeechToTextButton currentText={newActivity.challenges || ''} onTranscript={(text) => setNewActivity({...newActivity, challenges: text})} />
-                          <AiTextToolbar text={newActivity.challenges || ''} onResult={(text) => setNewActivity({...newActivity, challenges: text})} sectionType="generic" projectName={project?.name} hideGenerate />
+                          <AiTextToolbar text={newActivity.challenges || ''} onResult={(text) => setNewActivity({...newActivity, challenges: text})} sectionType="challenges" projectName={project?.name} projectObject={project?.object} descriptionContext={newActivity.description || ''} hideGenerate={false} />
                         </div>
                       </div>
                       <Textarea rows={2} value={newActivity.challenges} onChange={e => setNewActivity({...newActivity, challenges: e.target.value})} placeholder="Houve algum desafio?" />
