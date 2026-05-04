@@ -52,6 +52,7 @@ export const AiTextToolbar: React.FC<AiTextToolbarProps> = ({
   projectObject,
   goalTitle,
   goalAudience,
+  descriptionContext,
   disabled,
   hideGenerate,
 }) => {
