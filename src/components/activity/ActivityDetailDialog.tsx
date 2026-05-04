@@ -6,7 +6,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import {
-  Calendar, MapPin, Users, Eye, FileEdit, UserCircle, Lock, Paperclip, FileText
+  Calendar, MapPin, Users, Eye, FileEdit, UserCircle, Lock, Paperclip, FileText, Clock
 } from 'lucide-react';
 import { isWithinEditWindow } from '@/lib/diaryEditRules';
 
@@ -90,6 +90,15 @@ export const ActivityDetailDialog: React.FC<ActivityDetailDialogProps> = ({ acti
                   {activity.location || '—'}
                 </p>
               </div>
+              {(activity.startTime || activity.endTime) && (
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase">Horário</p>
+                  <p className="text-sm flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-muted-foreground" />
+                    {activity.startTime || '—'}{activity.endTime ? ` a ${activity.endTime}` : ''}
+                  </p>
+                </div>
+              )}
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground uppercase">Participantes</p>
                 <p className="text-sm flex items-center gap-1">
