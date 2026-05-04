@@ -96,6 +96,7 @@ interface VisualConfig {
   footerLine2Text?: string;
   footerLine3Text?: string;
   pageMarginPreset?: "abnt" | "custom";
+  headerBannerHeightMm?: number;
 }
 
 interface ReportPayload {
@@ -585,12 +586,16 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   const primaryLogoVisible = isNonEmptyString(config.logo) && config.logoConfig?.visible !== false;
   const centerLogoVisible = isNonEmptyString(config.logoCenter) && config.logoCenterConfig?.visible !== false;
   const secondaryLogoVisible = isNonEmptyString(config.logoSecondary) && config.logoSecondaryConfig?.visible !== false;
+  const rawHeight = typeof config.headerBannerHeightMm === "number" && Number.isFinite(config.headerBannerHeightMm)
+    ? config.headerBannerHeightMm
+    : 25;
+  const headerHeightMm = Math.max(15, Math.min(80, rawHeight));
 
   if (showBanner) {
     const bannerUrl = optimizeStorageImageUrl(config.headerBannerUrl!.trim(), IMAGE_PRESETS.banner.width, IMAGE_PRESETS.banner.quality);
     return `
-      <div style="width:100%;height:22mm;display:flex;align-items:center;justify-content:center;">
-        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" style="max-width:100%;max-height:22mm;display:block;object-fit:${bannerFit};" />
+      <div style="width:100%;height:${headerHeightMm}mm;display:flex;align-items:center;justify-content:center;">
+        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" style="max-width:100%;height:${headerHeightMm}mm;max-height:${headerHeightMm}mm;display:block;object-fit:${bannerFit};" />
       </div>
     `;
   }
@@ -600,17 +605,17 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   const secUrl = secondaryLogoVisible ? optimizeStorageImageUrl(config.logoSecondary!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
 
   return `
-    <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8mm;">
+    <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8mm;height:${headerHeightMm}mm;">
       <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;gap:3mm;min-width:0;">
-        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="max-height:20mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="max-height:${headerHeightMm}mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
         ${isNonEmptyString(config.headerLeftText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;">${escapeHtml(config.headerLeftText.trim())}</span>` : ""}
       </div>
       <div style="flex:1;display:flex;align-items:center;justify-content:center;min-width:0;">
-        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="max-height:20mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="max-height:${headerHeightMm}mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
       <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:3mm;min-width:0;">
         ${isNonEmptyString(config.headerRightText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;text-align:right;">${escapeHtml(config.headerRightText.trim())}</span>` : ""}
-        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="max-height:20mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="max-height:${headerHeightMm}mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
     </div>
   `;
