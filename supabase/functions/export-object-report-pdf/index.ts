@@ -657,7 +657,8 @@ function buildCoverHtml(payload: ReportPayload): string {
 
   return `
     <div class="cover">
-      <div class="cover-inner">
+      <div class="cover-header">${buildHeaderHtml(vc)}</div>
+      <div class="cover-body">
         ${logoHtml}
         <p class="cover-eyebrow">RELATÓRIO INSTITUCIONAL</p>
         <h1 class="cover-title">${escapeHtml(coverTitle)}</h1>
@@ -666,7 +667,6 @@ function buildCoverHtml(payload: ReportPayload): string {
         ${fomentoHtml}
         ${orgHtml}
       </div>
-      ${coverFooterHtml}
     </div>
   `;
 }
@@ -1015,16 +1015,29 @@ function buildHtml(payload: ReportPayload): string {
 
         /* ─── COVER ─── */
         .cover {
-          min-height: 240mm;
+          min-height: 260mm;
+          display: flex;
+          flex-direction: column;
+          break-after: page;
+          page-break-after: always;
+        }
+        .cover-header {
+          height: 18mm;
+          border-bottom: 0.5pt solid #000000;
+          padding-bottom: 4mm;
+          display: flex;
+          align-items: center;
+        }
+        .cover-body {
+          flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          break-after: page;
-          page-break-after: always;
+          text-align: center;
+          padding: 10mm 0;
         }
-        .cover-inner { width: 100%; max-width: 150mm; margin: 0 auto; text-align: center; padding-top: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        .cover-logo { max-width: 60mm; max-height: 36mm; object-fit: contain; display: block; margin: 0 auto 12mm; }
+        .cover-logo { max-width: 70mm; max-height: 50mm; object-fit: contain; display: block; margin: 0 auto 14mm; }
         .cover-eyebrow { margin: 0 0 6mm; font-size: 11pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
         .cover-title { margin: 0 0 8mm; font-size: 22pt; line-height: 1.25; text-transform: uppercase; overflow-wrap: break-word; word-break: normal; font-weight: 700; }
         .cover-subtitle, .cover-meta, .cover-project-name { margin: 0 0 6mm; word-break: break-word; }
