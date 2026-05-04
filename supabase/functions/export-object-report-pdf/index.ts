@@ -1002,7 +1002,6 @@ function buildHtml(payload: ReportPayload): string {
         .header-slot-right  { justify-content: flex-end; }
 
         .header-logo {
-          max-height: 18mm;
           max-width: 100%;
           object-fit: contain;
           display: block;
@@ -1027,7 +1026,6 @@ function buildHtml(payload: ReportPayload): string {
           page-break-after: always;
         }
         .cover-header {
-          height: 18mm;
           border-bottom: 0.5pt solid #000000;
           padding-bottom: 4mm;
           display: flex;
