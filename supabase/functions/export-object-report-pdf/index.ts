@@ -948,7 +948,7 @@ function buildHtml(payload: ReportPayload): string {
         .pdf-layout thead { display: table-header-group; }
         .pdf-layout tfoot { display: table-footer-group; }
         .pdf-layout td { padding: 0; border: none; vertical-align: top; }
-        .pdf-header-cell { padding-bottom: 4mm; border-bottom: 1px solid #9ca3af; }
+        .pdf-header-cell { padding-bottom: 12mm; border-bottom: none; }
         .pdf-footer-cell { padding-top: 2mm; border-top: 1px solid #9ca3af; }
         html, body {
           margin: 0; padding: 0;
@@ -1018,15 +1018,15 @@ function buildHtml(payload: ReportPayload): string {
           min-height: 240mm;
           display: flex;
           flex-direction: column;
-          align-items: stretch;
-          justify-content: space-between;
+          align-items: center;
+          justify-content: center;
           break-after: page;
           page-break-after: always;
         }
-        .cover-inner { width: 100%; max-width: 150mm; margin: auto auto 0; text-align: center; padding-top: 12mm; }
-        .cover-logo { max-width: 56mm; max-height: 28mm; object-fit: contain; display: block; margin: 0 auto 10mm; }
-        .cover-eyebrow { margin: 0 0 8mm; font-size: 12pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
-        .cover-title { margin: 0 0 8mm; font-size: 24pt; line-height: 1.2; text-transform: uppercase; overflow-wrap: anywhere; word-break: break-word; }
+        .cover-inner { width: 100%; max-width: 150mm; margin: 0 auto; text-align: center; padding-top: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .cover-logo { max-width: 60mm; max-height: 36mm; object-fit: contain; display: block; margin: 0 auto 12mm; }
+        .cover-eyebrow { margin: 0 0 6mm; font-size: 11pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
+        .cover-title { margin: 0 0 8mm; font-size: 22pt; line-height: 1.25; text-transform: uppercase; overflow-wrap: break-word; word-break: normal; font-weight: 700; }
         .cover-subtitle, .cover-meta, .cover-project-name { margin: 0 0 6mm; word-break: break-word; }
         .cover-project-name { font-size: 16pt; font-weight: 700; }
         .cover-meta.strong { font-weight: 700; }
@@ -1049,8 +1049,14 @@ function buildHtml(payload: ReportPayload): string {
           margin: 0 0 5mm;
         }
 
-        .section-title { font-size: 14pt; text-transform: uppercase; }
-        .subsection-title { font-size: 12.5pt; }
+        .section-title {
+          font-size: 14pt;
+          text-transform: uppercase;
+          border-bottom: 0.5pt solid #000000;
+          padding-bottom: 4px;
+          margin-bottom: 8px;
+        }
+        .subsection-title { font-size: 12.5pt; border-bottom: none; padding-bottom: 0; margin-left: 0; }
         .photo-group-title { font-size: 12pt; }
 
         .body-copy, .section p, .section li, .activity-description {
@@ -1408,7 +1414,7 @@ Deno.serve(async (req) => {
               const preset = payload.visualConfig?.pageMarginPreset === "custom" ? "custom" : "abnt";
               const margins = preset === "custom"
                 ? { top: "12mm", bottom: "20mm", left: "15mm", right: "15mm" }
-                : { top: "18mm", bottom: "22mm", left: "30mm", right: "20mm" };
+                : { top: "15mm", bottom: "22mm", left: "30mm", right: "20mm" };
               const vc = payload.visualConfig || {};
               const footerEnabled = vc.footerInstitutionalEnabled !== false;
               const escFt = (s: string) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
