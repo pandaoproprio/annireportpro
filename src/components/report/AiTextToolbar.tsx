@@ -160,7 +160,8 @@ export const AiTextToolbar: React.FC<AiTextToolbarProps> = ({
   };
 
   const hasText = text && text.trim().length >= 10;
-  const canGenerate = !hideGenerate && ((activities && activities.length > 0) || hasText);
+  const hasDescriptionCtx = !!(descriptionContext && descriptionContext.trim().length >= 10);
+  const canGenerate = !hideGenerate && ((activities && activities.length > 0) || hasText || hasDescriptionCtx);
 
   return (
     <>
