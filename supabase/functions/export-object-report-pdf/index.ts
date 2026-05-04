@@ -604,19 +604,22 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   const logoUrl = primaryLogoVisible ? optimizeStorageImageUrl(config.logo!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
   const centerUrl = centerLogoVisible ? optimizeStorageImageUrl(config.logoCenter!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
   const secUrl = secondaryLogoVisible ? optimizeStorageImageUrl(config.logoSecondary!.trim(), IMAGE_PRESETS.headerLogo.width, IMAGE_PRESETS.headerLogo.quality) : "";
+  const logoWidth = Math.max(8, Math.min(70, config.logoConfig?.widthMm ?? 30));
+  const centerLogoWidth = Math.max(8, Math.min(70, config.logoCenterConfig?.widthMm ?? 30));
+  const secondaryLogoWidth = Math.max(8, Math.min(70, config.logoSecondaryConfig?.widthMm ?? 30));
 
   return `
-    <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8mm;height:${headerHeightMm}mm;">
-      <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;gap:3mm;min-width:0;">
-        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="max-height:${headerHeightMm}mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+    <div style="width:100%;display:flex;align-items:flex-start;justify-content:space-between;gap:8mm;">
+      <div style="flex:1;display:flex;align-items:flex-start;justify-content:flex-start;gap:3mm;min-width:0;">
+        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="width:${logoWidth}mm;max-height:18mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
         ${isNonEmptyString(config.headerLeftText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;">${escapeHtml(config.headerLeftText.trim())}</span>` : ""}
       </div>
-      <div style="flex:1;display:flex;align-items:center;justify-content:center;min-width:0;">
-        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="max-height:${headerHeightMm}mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+      <div style="flex:1;display:flex;align-items:flex-start;justify-content:center;min-width:0;">
+        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="width:${centerLogoWidth}mm;max-height:18mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
-      <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:3mm;min-width:0;">
+      <div style="flex:1;display:flex;align-items:flex-start;justify-content:flex-end;gap:3mm;min-width:0;">
         ${isNonEmptyString(config.headerRightText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;text-align:right;">${escapeHtml(config.headerRightText.trim())}</span>` : ""}
-        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="max-height:${headerHeightMm}mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="width:${secondaryLogoWidth}mm;max-height:18mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
     </div>
   `;
@@ -631,7 +634,9 @@ function resolveHeaderHeightMm(config: VisualConfig = {}): number {
 
 function renderHeaderSlot(config: VisualConfig = {}): string {
   const h = resolveHeaderHeightMm(config);
-  return `<div class="report-header-slot" style="height:${h}mm;border-bottom:0.5pt solid #CCCCCC;padding-bottom:1mm;margin-bottom:12mm;display:flex;align-items:flex-start;">${buildHeaderHtml(config)}</div>`;
+  const isBannerHeader = isNonEmptyString(config.headerBannerUrl) && config.headerBannerVisible !== false;
+  const heightRule = isBannerHeader ? `height:${h}mm;` : "min-height:0;";
+  return `<div class="report-header-slot" style="${heightRule}border-bottom:0.5pt solid #CCCCCC;padding-bottom:1.5mm;margin-bottom:12mm;display:flex;align-items:flex-start;">${buildHeaderHtml(config)}</div>`;
 }
 
 function buildFooterHtml(config: VisualConfig = {}): string {
@@ -1432,8 +1437,8 @@ Deno.serve(async (req) => {
             options: (() => {
               const preset = payload.visualConfig?.pageMarginPreset === "custom" ? "custom" : "abnt";
               const margins = preset === "custom"
-                ? { top: "12mm", bottom: "20mm", left: "15mm", right: "15mm" }
-                : { top: "15mm", bottom: "22mm", left: "30mm", right: "20mm" };
+                ? { top: "12mm", bottom: "30mm", left: "15mm", right: "15mm" }
+                : { top: "15mm", bottom: "32mm", left: "30mm", right: "20mm" };
               const vc = payload.visualConfig || {};
               const footerEnabled = vc.footerInstitutionalEnabled !== false;
               const footerAlign = vc.footerAlignment === 'left' || vc.footerAlignment === 'right' ? vc.footerAlignment : 'center';
@@ -1444,7 +1449,7 @@ Deno.serve(async (req) => {
               const instBlock = footerEnabled
                 ? `<div style="text-align:${footerAlign};font-family:'Times New Roman',serif;color:#4b5563;line-height:1.25;"><div style="font-weight:bold;font-size:8.5pt;">${l1}</div><div style="font-size:7.5pt;">${l2}</div><div style="font-size:7.5pt;">${l3}</div></div>`
                 : "";
-              const footerTpl = `<div style="width:100%;font-size:8pt;padding:0 15mm;-webkit-print-color-adjust:exact;border-top:0.25pt solid rgba(0,0,0,0.12);padding-top:4mm;">${instBlock}<div style="text-align:right;font-size:10pt;font-family:'Times New Roman',serif;margin-top:1mm;"><span class="pageNumber"></span></div></div>`;
+              const footerTpl = `<div style="width:100%;font-size:8pt;padding:0 15mm;-webkit-print-color-adjust:exact;border-top:0.25pt solid rgba(0,0,0,0.12);padding-top:3.5mm;">${instBlock}<div style="text-align:right;font-size:10pt;font-family:'Times New Roman',serif;margin-top:1mm;"><span class="pageNumber"></span></div></div>`;
               return {
                 format: "A4",
                 printBackground: true,
