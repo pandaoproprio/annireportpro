@@ -589,8 +589,8 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   if (showBanner) {
     const bannerUrl = optimizeStorageImageUrl(config.headerBannerUrl!.trim(), IMAGE_PRESETS.banner.width, IMAGE_PRESETS.banner.quality);
     return `
-      <div style="width:100%;height:14mm;display:flex;align-items:center;justify-content:center;">
-        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" style="max-width:100%;max-height:14mm;display:block;object-fit:${bannerFit};" />
+      <div style="width:100%;height:22mm;display:flex;align-items:center;justify-content:center;">
+        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" style="max-width:100%;max-height:22mm;display:block;object-fit:${bannerFit};" />
       </div>
     `;
   }
@@ -602,15 +602,15 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   return `
     <div style="width:100%;display:flex;align-items:center;justify-content:space-between;gap:8mm;">
       <div style="flex:1;display:flex;align-items:center;justify-content:flex-start;gap:3mm;min-width:0;">
-        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="max-height:10mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${primaryLogoVisible ? `<img src="${escapeHtml(logoUrl)}" alt="Logo principal" style="max-height:20mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
         ${isNonEmptyString(config.headerLeftText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;">${escapeHtml(config.headerLeftText.trim())}</span>` : ""}
       </div>
       <div style="flex:1;display:flex;align-items:center;justify-content:center;min-width:0;">
-        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="max-height:10mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${centerLogoVisible ? `<img src="${escapeHtml(centerUrl)}" alt="Logo central" style="max-height:20mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
       <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:3mm;min-width:0;">
         ${isNonEmptyString(config.headerRightText) ? `<span style="font-size:8pt;line-height:1.2;color:#374151;word-break:break-word;text-align:right;">${escapeHtml(config.headerRightText.trim())}</span>` : ""}
-        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="max-height:10mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
+        ${secondaryLogoVisible ? `<img src="${escapeHtml(secUrl)}" alt="Logo secundário" style="max-height:20mm;max-width:100%;object-fit:contain;display:block;" />` : ""}
       </div>
     </div>
   `;
