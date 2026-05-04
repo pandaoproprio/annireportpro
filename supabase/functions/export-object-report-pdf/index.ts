@@ -1031,21 +1031,16 @@ function buildHtml(payload: ReportPayload): string {
 
         /* ─── COVER ─── */
         .cover {
-          min-height: 260mm;
-          display: flex;
-          flex-direction: column;
           break-after: page;
           page-break-after: always;
         }
         /* .cover-header é renderizado via renderHeaderSlot() inline */
         .cover-body {
-          flex: 1;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
           text-align: center;
-          padding: 10mm 0;
+          padding: 30mm 0 10mm;
         }
         .cover-logo { max-width: 70mm; max-height: 50mm; object-fit: contain; display: block; margin: 0 auto 14mm; }
         .cover-eyebrow { margin: 0 0 6mm; font-size: 11pt; letter-spacing: 0.08em; text-transform: uppercase; color: #4b5563; }
@@ -1435,12 +1430,9 @@ Deno.serve(async (req) => {
             },
             options: (() => {
               const preset = payload.visualConfig?.pageMarginPreset === "custom" ? "custom" : "abnt";
-              const headerH = resolveHeaderHeightMm(payload.visualConfig);
-              // Top margin = altura do header + linha + 10mm de respiro
-              const topMm = headerH + 14;
               const margins = preset === "custom"
-                ? { top: `${topMm}mm`, bottom: "20mm", left: "15mm", right: "15mm" }
-                : { top: `${topMm}mm`, bottom: "22mm", left: "30mm", right: "20mm" };
+                ? { top: "12mm", bottom: "20mm", left: "15mm", right: "15mm" }
+                : { top: "15mm", bottom: "22mm", left: "30mm", right: "20mm" };
               const vc = payload.visualConfig || {};
               const footerEnabled = vc.footerInstitutionalEnabled !== false;
               const escFt = (s: string) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
