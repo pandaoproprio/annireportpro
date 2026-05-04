@@ -245,7 +245,18 @@ export const ActivityManager: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent, asDraft = false) => {
     e.preventDefault();
-    if (!project || !newActivity.description || !newActivity.date) return;
+    if (!project) {
+      toast.error('Projeto não encontrado.');
+      return;
+    }
+    if (!newActivity.date) {
+      toast.error('Informe a data de início da atividade.');
+      return;
+    }
+    if (!asDraft && !newActivity.description?.trim()) {
+      toast.error('Informe a descrição da atividade para registrar.');
+      return;
+    }
     if (newActivity.endDate && newActivity.endDate < newActivity.date) {
       toast.error("A data de término não pode ser anterior à data de início.");
       return;
