@@ -1407,8 +1407,8 @@ Deno.serve(async (req) => {
             options: (() => {
               const preset = payload.visualConfig?.pageMarginPreset === "custom" ? "custom" : "abnt";
               const margins = preset === "custom"
-                ? { top: "15mm", bottom: "20mm", left: "15mm", right: "15mm" }
-                : { top: "30mm", bottom: "28mm", left: "30mm", right: "20mm" };
+                ? { top: "12mm", bottom: "20mm", left: "15mm", right: "15mm" }
+                : { top: "18mm", bottom: "22mm", left: "30mm", right: "20mm" };
               const vc = payload.visualConfig || {};
               const footerEnabled = vc.footerInstitutionalEnabled !== false;
               const escFt = (s: string) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]!));
