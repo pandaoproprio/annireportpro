@@ -965,7 +965,7 @@ function buildHtml(payload: ReportPayload): string {
         .pdf-layout thead { display: table-header-group; }
         .pdf-layout tfoot { display: table-footer-group; }
         .pdf-layout td { padding: 0; border: none; vertical-align: top; }
-        .pdf-header-cell { padding-bottom: 12mm; border-bottom: none; }
+        .pdf-header-cell { padding: 0; border-bottom: none; }
         .pdf-footer-cell { padding-top: 2mm; border-top: 1px solid #9ca3af; }
         html, body {
           margin: 0; padding: 0;
@@ -1037,12 +1037,7 @@ function buildHtml(payload: ReportPayload): string {
           break-after: page;
           page-break-after: always;
         }
-        .cover-header {
-          border-bottom: 0.5pt solid #000000;
-          padding-bottom: 4mm;
-          display: flex;
-          align-items: center;
-        }
+        /* .cover-header é renderizado via renderHeaderSlot() inline */
         .cover-body {
           flex: 1;
           display: flex;
@@ -1314,7 +1309,7 @@ function buildHtml(payload: ReportPayload): string {
       ${buildCoverHtml(payload)}
       <table class="pdf-layout">
         <thead>
-          <tr><td class="pdf-header-cell">${buildHeaderHtml(payload.visualConfig)}</td></tr>
+          <tr><td class="pdf-header-cell">${renderHeaderSlot(payload.visualConfig)}</td></tr>
         </thead>
         <tbody>
           <tr><td>
