@@ -621,6 +621,17 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   `;
 }
 
+function resolveHeaderHeightMm(config: VisualConfig = {}): number {
+  const raw = typeof config.headerBannerHeightMm === "number" && Number.isFinite(config.headerBannerHeightMm)
+    ? config.headerBannerHeightMm
+    : 25;
+  return Math.max(15, Math.min(80, raw));
+}
+
+function renderHeaderSlot(config: VisualConfig = {}): string {
+  const h = resolveHeaderHeightMm(config);
+  return `<div class="report-header-slot" style="height:${h}mm;border-bottom:0.5pt solid #CCCCCC;padding-bottom:2mm;margin-bottom:10mm;display:flex;align-items:center;">${buildHeaderHtml(config)}</div>`;
+
 function buildFooterHtml(config: VisualConfig = {}): string {
   if (config.footerInstitutionalEnabled === false) return "";
   return `
@@ -662,7 +673,7 @@ function buildCoverHtml(payload: ReportPayload): string {
 
   return `
     <div class="cover">
-      <div class="cover-header">${buildHeaderHtml(vc)}</div>
+      ${renderHeaderSlot(vc)}
       <div class="cover-body">
         ${logoHtml}
         <p class="cover-eyebrow">RELATÓRIO INSTITUCIONAL</p>
