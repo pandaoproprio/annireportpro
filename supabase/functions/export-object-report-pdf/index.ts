@@ -589,8 +589,8 @@ function buildHeaderHtml(config: VisualConfig = {}): string {
   if (showBanner) {
     const bannerUrl = optimizeStorageImageUrl(config.headerBannerUrl!.trim(), IMAGE_PRESETS.banner.width, IMAGE_PRESETS.banner.quality);
     return `
-      <div style="width:100%;height:18mm;display:flex;align-items:center;justify-content:center;">
-        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" style="width:100%;height:100%;display:block;object-fit:${bannerFit};" />
+      <div style="width:100%;height:14mm;display:flex;align-items:center;justify-content:center;">
+        <img src="${escapeHtml(bannerUrl)}" alt="Cabeçalho institucional" style="max-width:100%;max-height:14mm;display:block;object-fit:${bannerFit};" />
       </div>
     `;
   }
