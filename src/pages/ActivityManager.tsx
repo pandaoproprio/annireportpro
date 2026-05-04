@@ -63,6 +63,7 @@ export const ActivityManager: React.FC = () => {
   const [viewingActivity, setViewingActivity] = useState<Activity | null>(null);
   const [lightboxPhoto, setLightboxPhoto] = useState<string | null>(null);
   const prevActivityCount = useRef(activities.length);
+  const formCardRef = useRef<HTMLDivElement | null>(null);
   
   // Filter State
   const [searchTerm, setSearchTerm] = useState('');
@@ -210,7 +211,6 @@ export const ActivityManager: React.FC = () => {
   };
 
   const handleEdit = (activity: Activity) => {
-    console.log('[handleEdit] click', { id: activity.id, isAdmin, createdAt: activity.createdAt, linked: activity.isLinkedToReport });
     const editCheck = canEditActivity(activity.createdAt, isAdmin, activity.isLinkedToReport);
     if (!editCheck.allowed) {
       toast.error(editCheck.reason || 'Edição não permitida');
@@ -234,8 +234,9 @@ export const ActivityManager: React.FC = () => {
     });
     setEditingId(activity.id);
     setIsFormOpen(true);
-    setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 50);
-    toast.info('Editando atividade...');
+    requestAnimationFrame(() => {
+      formCardRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const handleDelete = async (id: string) => { setDeletingId(id); };
@@ -415,7 +416,7 @@ export const ActivityManager: React.FC = () => {
 
           {/* Form */}
           {isFormOpen && (
-            <Card className={`border-l-4 animate-slideDown ${editingId ? 'border-l-warning' : 'border-l-primary'}`}>
+            <Card ref={formCardRef} className={`border-l-4 animate-slideDown ${editingId ? 'border-l-warning' : 'border-l-primary'}`}>
               <CardContent className="pt-6">
                 <div className="mb-4 flex justify-between items-center">
                   <h3 className="text-lg font-semibold text-foreground">{editingId ? 'Editar Atividade' : 'Nova Atividade'}</h3>
