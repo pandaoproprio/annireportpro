@@ -105,6 +105,8 @@ export const ActivityManager: React.FC = () => {
   const [newActivity, setNewActivity] = useState<Partial<Activity>>({
     date: new Date().toISOString().split('T')[0],
     endDate: '',
+    startTime: '',
+    endTime: '',
     type: ActivityType.EXECUCAO,
     teamInvolved: [],
     photos: [],
@@ -197,7 +199,7 @@ export const ActivityManager: React.FC = () => {
 
   const resetForm = () => {
     setNewActivity({
-      date: new Date().toISOString().split('T')[0], endDate: '', type: ActivityType.EXECUCAO,
+      date: new Date().toISOString().split('T')[0], endDate: '', startTime: '', endTime: '', type: ActivityType.EXECUCAO,
       teamInvolved: [], photos: [], attachments: [], location: '', description: '',
       results: '', challenges: '', attendeesCount: 0, photoCaptions: {},
       attendanceFiles: [], expenseRecords: [],
@@ -248,14 +250,21 @@ export const ActivityManager: React.FC = () => {
       toast.error("A data de término não pode ser anterior à data de início.");
       return;
     }
+    const effectiveEndDate = newActivity.endDate || newActivity.date;
+    if (newActivity.startTime && newActivity.endTime && effectiveEndDate === newActivity.date && newActivity.endTime < newActivity.startTime) {
+      toast.error("A hora de término não pode ser anterior à hora de início.");
+      return;
+    }
     setIsSaving(true);
+    try {
     if (editingId) {
       const updatedActivity: Activity = {
         ...newActivity as Activity, id: editingId, projectId: project.id,
         teamInvolved: newActivity.teamInvolved || [], photos: newActivity.photos || [],
         attachments: newActivity.attachments || [], results: newActivity.results || '',
         challenges: newActivity.challenges || '', attendeesCount: newActivity.attendeesCount || 0,
-        location: newActivity.location || '', endDate: newActivity.endDate, isDraft: asDraft,
+        location: newActivity.location || '', endDate: newActivity.endDate, startTime: newActivity.startTime,
+        endTime: newActivity.endTime, isDraft: asDraft,
         photoCaptions: newActivity.photoCaptions || {}, attendanceFiles: newActivity.attendanceFiles || [],
         expenseRecords: newActivity.expenseRecords || [],
       };
@@ -263,8 +272,9 @@ export const ActivityManager: React.FC = () => {
       toast.success(asDraft ? 'Rascunho salvo!' : 'Atividade atualizada!');
     } else {
       const effectiveTarget = targetUserId && targetUserId !== user?.id ? targetUserId : undefined;
-      await addActivity({
+      const savedActivity = await addActivity({
         projectId: project.id, date: newActivity.date || '', endDate: newActivity.endDate,
+        startTime: newActivity.startTime || undefined, endTime: newActivity.endTime || undefined,
         location: newActivity.location || '', type: newActivity.type || ActivityType.EXECUCAO,
         description: newActivity.description || '', results: newActivity.results || '',
         challenges: newActivity.challenges || '', attendeesCount: newActivity.attendeesCount || 0,
@@ -275,6 +285,7 @@ export const ActivityManager: React.FC = () => {
         setorResponsavel: deriveSetor(role),
         targetUserId: effectiveTarget,
       });
+      if (!savedActivity) throw new Error('Não foi possível salvar a atividade.');
       const targetName = effectiveTarget
         ? registerTargets.find(t => t.user_id === effectiveTarget)?.name
         : null;
@@ -288,8 +299,13 @@ export const ActivityManager: React.FC = () => {
         setRegisterCelebration({ open: true, isDraft: asDraft });
       }
     }
-    setIsSaving(false);
     resetForm();
+    } catch (error: any) {
+      console.error('Erro ao salvar atividade:', error);
+      toast.error(error?.message || 'Erro ao salvar atividade.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
