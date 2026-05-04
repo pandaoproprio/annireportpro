@@ -398,7 +398,7 @@ export const useActivities = (projectId: string | null) => {
       return await addActivityMutation.mutateAsync(activity);
     },
     updateActivity: async (activity: Activity) => {
-      try { await updateActivityMutation.mutateAsync(activity); } catch { /* handled */ }
+      await updateActivityMutation.mutateAsync(activity);
     },
     deleteActivity: async (id: string) => {
       try { await deleteActivityMutation.mutateAsync(id); } catch { /* handled */ }
