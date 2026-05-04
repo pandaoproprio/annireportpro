@@ -508,7 +508,7 @@ export const ActivityManager: React.FC = () => {
                         <Label>Resultados Obtidos</Label>
                         <div className="flex items-center gap-1">
                           <SpeechToTextButton currentText={newActivity.results || ''} onTranscript={(text) => setNewActivity({...newActivity, results: text})} />
-                          <AiTextToolbar text={newActivity.results || ''} onResult={(text) => setNewActivity({...newActivity, results: text})} sectionType="generic" projectName={project?.name} hideGenerate />
+                          <AiTextToolbar text={newActivity.results || ''} onResult={(text) => setNewActivity({...newActivity, results: text})} sectionType="results" projectName={project?.name} projectObject={project?.object} descriptionContext={newActivity.description || ''} hideGenerate={false} />
                         </div>
                       </div>
                       <Textarea rows={2} value={newActivity.results} onChange={e => setNewActivity({...newActivity, results: e.target.value})} placeholder="Quais foram os resultados?" />
